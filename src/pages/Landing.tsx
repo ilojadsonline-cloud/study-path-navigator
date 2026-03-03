@@ -2,8 +2,13 @@ import { motion } from "framer-motion";
 import {
   Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy,
   Star, Zap, CheckCircle2, Clock, BarChart3, Lock, Users, Target,
+  ChevronRight, Eye,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import mockupDashboard from "@/assets/mockup-dashboard.jpg";
+import mockupQuestoes from "@/assets/mockup-questoes.jpg";
+import mockupEdital from "@/assets/mockup-edital.jpg";
 
 const features = [
   { icon: <BookOpen className="w-6 h-6" />, title: "Edital Verticalizado", desc: "Trilha de estudos completa baseada no edital CHOA/CHOM 2024 com 7 disciplinas e links diretos para legislação." },
@@ -32,7 +37,73 @@ const stats = [
   { icon: <Target className="w-5 h-5" />, value: "90", label: "Dias de acesso" },
 ];
 
+const exampleQuestions = [
+  {
+    disciplina: "Estatuto dos Militares (Lei 2.578/12)",
+    enunciado: "De acordo com a Lei nº 2.578/2012, que dispõe sobre o Estatuto dos Militares do Estado do Tocantins, assinale a alternativa CORRETA sobre os deveres do militar estadual:",
+    alternativas: [
+      "O militar pode manifestar-se publicamente sobre assuntos políticos quando estiver de folga.",
+      "O dever de sigilo é restrito apenas aos documentos classificados como ultrassecretos.",
+      "Cumprir e fazer cumprir as leis, regulamentos e ordens das autoridades competentes é dever fundamental do militar estadual.",
+      "A obrigação de manter boa apresentação pessoal é facultativa durante o serviço interno.",
+      "O militar estadual pode recusar ordem superior quando considerá-la inconveniente.",
+    ],
+    gabarito: 2,
+    comentario: "Conforme o Art. 31 da Lei 2.578/2012, são deveres do militar estadual: I – cumprir e fazer cumprir as leis, regulamentos, instruções e ordens das autoridades competentes.",
+  },
+  {
+    disciplina: "RDMETO (Decreto 4.994/14)",
+    enunciado: "Segundo o Regulamento Disciplinar dos Militares Estaduais do Tocantins (RDMETO), Decreto nº 4.994/2014, qual das alternativas abaixo define corretamente uma transgressão disciplinar?",
+    alternativas: [
+      "Qualquer ato praticado pelo militar fora do horário de serviço.",
+      "Toda ação ou omissão contrária às obrigações ou ao decoro da classe, prevista no regulamento.",
+      "Apenas atos que resultem em danos materiais ao Estado.",
+      "Somente condutas que configurem crime militar previsto no CPPM.",
+      "Atos praticados por militares com mais de 10 anos de serviço.",
+    ],
+    gabarito: 1,
+    comentario: "Conforme o Art. 12 do RDMETO, transgressão disciplinar é toda ação ou omissão contrária ao dever militar, às obrigações ou ao decoro da classe, especificada neste Regulamento.",
+  },
+];
+
+const platformPreviews = [
+  {
+    title: "Dashboard de Desempenho",
+    desc: "Visualize seu progresso com gráficos detalhados de acertos, tempo de estudo e evolução por disciplina.",
+    image: mockupDashboard,
+  },
+  {
+    title: "Banco de Questões",
+    desc: "Interface intuitiva com navegação por questões, alternativas claras e correção automática.",
+    image: mockupQuestoes,
+  },
+  {
+    title: "Edital Verticalizado",
+    desc: "Trilha organizada por tópicos com checkboxes, progresso e links diretos para a legislação.",
+    image: mockupEdital,
+  },
+];
+
 const Landing = () => {
+  const [selectedQuestion, setSelectedQuestion] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [activePreview, setActivePreview] = useState(0);
+
+  const currentQuestion = exampleQuestions[selectedQuestion];
+
+  const handleAnswer = (index: number) => {
+    if (showAnswer) return;
+    setSelectedAnswer(index);
+    setShowAnswer(true);
+  };
+
+  const resetQuestion = (qIndex: number) => {
+    setSelectedQuestion(qIndex);
+    setSelectedAnswer(null);
+    setShowAnswer(false);
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden bg-background">
       {/* Background effects */}
@@ -118,6 +189,192 @@ const Landing = () => {
                 <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
               </div>
             ))}
+          </motion.div>
+        </section>
+
+        {/* Conheça a Plataforma - Screenshots */}
+        <section className="max-w-6xl mx-auto px-4 pb-20">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4">
+              <Eye className="w-3.5 h-3.5" />
+              Veja como funciona
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black mb-3">
+              Conheça a <span className="text-gradient-primary">plataforma por dentro</span>
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto text-sm md:text-base">
+              Interface moderna e intuitiva, projetada para maximizar seu tempo de estudo.
+            </p>
+          </motion.div>
+
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Tabs */}
+            <div className="lg:w-72 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+              {platformPreviews.map((p, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActivePreview(i)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-300 shrink-0 ${
+                    activePreview === i
+                      ? "glass-card border-primary/40 glow-primary"
+                      : "hover:bg-secondary/50"
+                  }`}
+                >
+                  <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${activePreview === i ? "text-primary rotate-90" : "text-muted-foreground"}`} />
+                  <div>
+                    <p className={`text-sm font-bold ${activePreview === i ? "text-foreground" : "text-muted-foreground"}`}>{p.title}</p>
+                    <p className="text-xs text-muted-foreground hidden lg:block mt-0.5">{p.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Image */}
+            <motion.div
+              key={activePreview}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+              className="flex-1 glass-card rounded-2xl overflow-hidden border-primary/10"
+            >
+              <img
+                src={platformPreviews[activePreview].image}
+                alt={platformPreviews[activePreview].title}
+                className="w-full h-auto object-cover"
+              />
+              <div className="p-4 border-t border-border/30">
+                <h3 className="font-bold text-sm text-foreground">{platformPreviews[activePreview].title}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{platformPreviews[activePreview].desc}</p>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Exemplo de Questão Interativa */}
+        <section className="max-w-4xl mx-auto px-4 pb-20">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs font-semibold mb-4">
+              <HelpCircle className="w-3.5 h-3.5" />
+              Teste seu conhecimento
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black mb-3">
+              Experimente uma <span className="text-gradient-gold">questão real</span>
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto text-sm md:text-base">
+              Veja como são as questões da nossa plataforma. Clique em uma alternativa para conferir a resposta!
+            </p>
+          </motion.div>
+
+          {/* Question tabs */}
+          <div className="flex gap-2 mb-6 justify-center">
+            {exampleQuestions.map((q, i) => (
+              <button
+                key={i}
+                onClick={() => resetQuestion(i)}
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  selectedQuestion === i
+                    ? "gradient-primary text-primary-foreground glow-primary"
+                    : "glass-card text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Questão {i + 1}
+              </button>
+            ))}
+          </div>
+
+          <motion.div
+            key={selectedQuestion}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card rounded-2xl p-6 md:p-8 border-primary/10"
+          >
+            {/* Discipline badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4">
+              <BookOpen className="w-3 h-3" />
+              {currentQuestion.disciplina}
+            </div>
+
+            {/* Question */}
+            <p className="text-sm md:text-base text-foreground leading-relaxed mb-6 font-medium">
+              {currentQuestion.enunciado}
+            </p>
+
+            {/* Alternatives */}
+            <div className="space-y-3 mb-6">
+              {currentQuestion.alternativas.map((alt, i) => {
+                const letter = String.fromCharCode(65 + i);
+                const isCorrect = i === currentQuestion.gabarito;
+                const isSelected = selectedAnswer === i;
+
+                let borderClass = "border-border/30 hover:border-primary/30";
+                if (showAnswer) {
+                  if (isCorrect) borderClass = "border-green-500/60 bg-green-500/10";
+                  else if (isSelected && !isCorrect) borderClass = "border-red-500/60 bg-red-500/10";
+                  else borderClass = "border-border/20 opacity-60";
+                }
+
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleAnswer(i)}
+                    className={`w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all duration-300 ${borderClass} ${!showAnswer ? "cursor-pointer" : "cursor-default"}`}
+                  >
+                    <span className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
+                      showAnswer && isCorrect ? "bg-green-500/20 text-green-400" :
+                      showAnswer && isSelected && !isCorrect ? "bg-red-500/20 text-red-400" :
+                      "bg-primary/10 text-primary"
+                    }`}>
+                      {letter}
+                    </span>
+                    <span className="text-sm text-foreground/90 leading-relaxed pt-1">{alt}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Answer feedback */}
+            {showAnswer && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`rounded-xl p-4 border ${
+                  selectedAnswer === currentQuestion.gabarito
+                    ? "bg-green-500/5 border-green-500/30"
+                    : "bg-red-500/5 border-red-500/30"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className={`w-4 h-4 ${
+                    selectedAnswer === currentQuestion.gabarito ? "text-green-400" : "text-red-400"
+                  }`} />
+                  <span className={`text-sm font-bold ${
+                    selectedAnswer === currentQuestion.gabarito ? "text-green-400" : "text-red-400"
+                  }`}>
+                    {selectedAnswer === currentQuestion.gabarito ? "Resposta Correta!" : "Resposta Incorreta"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {currentQuestion.comentario}
+                </p>
+              </motion.div>
+            )}
+
+            {/* Info */}
+            {!showAnswer && (
+              <p className="text-xs text-muted-foreground text-center">
+                👆 Clique em uma alternativa para ver a resposta comentada
+              </p>
+            )}
           </motion.div>
         </section>
 
