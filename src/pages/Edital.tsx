@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
+import { BackButton } from "@/components/BackButton";
 import {
   BookOpen, ChevronDown, ChevronUp, ExternalLink, PlayCircle, FileText,
   Scale, Shield, Users, Gavel, BookMarked, Landmark, Brain, Scroll,
