@@ -219,6 +219,7 @@ const Simulados = () => {
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-6">
+        <BackButton />
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl md:text-3xl font-bold">
             <span className="text-gradient-primary">Gerador de Simulado</span>
