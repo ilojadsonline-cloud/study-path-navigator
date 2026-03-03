@@ -24,26 +24,11 @@ interface Questao {
   comentario: string;
 }
 
-function shuffleArray<T>(arr: T[]): T[] {
-  const shuffled = [...arr];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
-
-function shuffleAlternatives(q: Questao) {
-  const alts = [
-    { text: q.alt_a, origIndex: 0 },
-    { text: q.alt_b, origIndex: 1 },
-    { text: q.alt_c, origIndex: 2 },
-    { text: q.alt_d, origIndex: 3 },
-    { text: q.alt_e, origIndex: 4 },
-  ];
-  const shuffled = shuffleArray(alts);
-  const newGabarito = shuffled.findIndex(a => a.origIndex === q.gabarito);
-  return { alternativas: shuffled.map(a => a.text), gabarito: newGabarito };
+function getAlternativas(q: Questao) {
+  return {
+    alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e],
+    gabarito: q.gabarito,
+  };
 }
 
 const Questoes = () => {
