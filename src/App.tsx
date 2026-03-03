@@ -17,6 +17,7 @@ import Assinatura from "./pages/Assinatura";
 import GerarQuestoes from "./pages/GerarQuestoes";
 import EsqueciSenha from "./pages/EsqueciSenha";
 import ResetPassword from "./pages/ResetPassword";
+import Contato from "./pages/Contato";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
