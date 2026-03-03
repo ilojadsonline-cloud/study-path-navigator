@@ -17,6 +17,7 @@ import Assinatura from "./pages/Assinatura";
 import GerarQuestoes from "./pages/GerarQuestoes";
 import EsqueciSenha from "./pages/EsqueciSenha";
 import ResetPassword from "./pages/ResetPassword";
+import Contato from "./pages/Contato";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/questoes" element={<ProtectedRoute><Questoes /></ProtectedRoute>} />
             <Route path="/simulados" element={<ProtectedRoute><Simulados /></ProtectedRoute>} />
             <Route path="/admin/gerar-questoes" element={<ProtectedRoute><GerarQuestoes /></ProtectedRoute>} />
+            <Route path="/contato" element={<ProtectedRoute><Contato /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
