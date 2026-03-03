@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           cpf: string
           created_at: string
+          email: string | null
           id: string
           nome: string
           updated_at: string
@@ -26,6 +27,7 @@ export type Database = {
         Insert: {
           cpf: string
           created_at?: string
+          email?: string | null
           id?: string
           nome: string
           updated_at?: string
@@ -34,6 +36,7 @@ export type Database = {
         Update: {
           cpf?: string
           created_at?: string
+          email?: string | null
           id?: string
           nome?: string
           updated_at?: string
