@@ -8,60 +8,6 @@ const corsHeaders = {
 
 const DISCIPLINES = [
   {
-    disciplina: "Constituição Federal",
-    assuntos: [
-      "Direitos e Garantias Fundamentais (Art. 5º)",
-      "Administração Pública (Art. 37)",
-      "Militares dos Estados (Art. 42)",
-      "Forças Armadas (Art. 142)",
-      "Segurança Pública (Art. 144)",
-    ],
-  },
-  {
-    disciplina: "Direito Administrativo",
-    assuntos: [
-      "Princípios da Administração Pública",
-      "Atos Administrativos",
-      "Poderes Administrativos",
-      "Poder de Polícia",
-      "Responsabilidade Civil do Estado",
-    ],
-  },
-  {
-    disciplina: "Direito Penal Militar",
-    assuntos: [
-      "Aplicação da Lei Penal Militar",
-      "Crime Militar: conceito e elementos",
-      "Excludentes de ilicitude e culpabilidade",
-      "Penas e medidas de segurança",
-      "Crimes em espécie",
-    ],
-  },
-  {
-    disciplina: "Língua Portuguesa",
-    assuntos: [
-      "Interpretação e Compreensão de Textos",
-      "Ortografia e Acentuação",
-      "Concordância Verbal e Nominal",
-      "Regência Verbal e Nominal",
-      "Sintaxe e Pontuação",
-      "Uso da Crase",
-      "Colocação Pronominal",
-    ],
-  },
-  {
-    disciplina: "Raciocínio Lógico",
-    assuntos: [
-      "Lógica Proposicional",
-      "Tabelas-Verdade",
-      "Equivalências e Negações",
-      "Diagramas Lógicos",
-      "Conjuntos e Operações",
-      "Princípio da Contagem",
-      "Probabilidade",
-    ],
-  },
-  {
     disciplina: "Lei nº 2.578/2012",
     assuntos: [
       "Ingresso e Hierarquia",
@@ -109,6 +55,37 @@ const DISCIPLINES = [
       "Recursos Disciplinares",
     ],
   },
+  {
+    disciplina: "Direito Penal Militar",
+    assuntos: [
+      "Aplicação da Lei Penal Militar",
+      "Crime Militar: conceito e elementos",
+      "Excludentes de ilicitude e culpabilidade",
+      "Penas e medidas de segurança",
+      "Crimes em espécie",
+    ],
+  },
+  {
+    disciplina: "Lei Orgânica PM",
+    assuntos: [
+      "Disposições Gerais da Lei 14.751/2023",
+      "Organização e Estrutura das PMs",
+      "Carreira e Direitos dos Militares Estaduais",
+      "Regime Disciplinar e Deveres",
+      "Policiamento Ostensivo e Preservação da Ordem",
+      "Disposições Finais e Transitórias",
+    ],
+  },
+  {
+    disciplina: "POP",
+    assuntos: [
+      "Conceitos e Princípios do POP",
+      "Procedimentos de Abordagem",
+      "Uso da Força e Armamento",
+      "Procedimentos em Ocorrências",
+      "Patrulhamento e Policiamento Ostensivo",
+    ],
+  },
 ];
 
 serve(async (req) => {
@@ -131,13 +108,20 @@ serve(async (req) => {
     const disc = DISCIPLINES[discIndex];
     const dificuldades = ["Fácil", "Médio", "Difícil"];
 
+    let extraInstruction = "";
+    if (disc.disciplina === "Lei Orgânica PM") {
+      extraInstruction = `\n\nIMPORTANTE: Todas as questões devem ser baseadas EXCLUSIVAMENTE no texto da Lei nº 14.751, de 12 de dezembro de 2023 (Lei Orgânica das Polícias Militares). Cite artigos específicos da lei nos comentários.`;
+    } else if (disc.disciplina === "POP") {
+      extraInstruction = `\n\nIMPORTANTE: As questões devem ser baseadas no Procedimento Operacional Padrão (POP) 2024 da PMTO. Foque em protocolos operacionais, técnicas de abordagem, uso da força, e procedimentos padronizados da Polícia Militar do Tocantins.`;
+    }
+
     const prompt = `Você é um especialista em concursos militares do Brasil, especialmente CHOA PMTO (Curso de Habilitação de Oficiais Administrativos da Polícia Militar do Tocantins).
 
 Gere exatamente ${batchSize} questões de múltipla escolha para a disciplina "${disc.disciplina}".
 
 Os assuntos possíveis são: ${disc.assuntos.join(", ")}.
 
-Para cada questão, distribua os assuntos de forma equilibrada e varie a dificuldade entre: ${dificuldades.join(", ")}.
+Para cada questão, distribua os assuntos de forma equilibrada e varie a dificuldade entre: ${dificuldades.join(", ")}.${extraInstruction}
 
 REGRAS IMPORTANTES:
 - Cada questão deve ter 5 alternativas (A, B, C, D, E)
@@ -145,8 +129,9 @@ REGRAS IMPORTANTES:
 - O gabarito deve ser o ÍNDICE da alternativa correta (0=A, 1=B, 2=C, 3=D, 4=E)
 - Varie o gabarito entre as questões (não coloque sempre a mesma letra)
 - O comentário deve explicar POR QUE a alternativa correta está certa e as outras erradas
+- TODAS as questões devem ter embasamento na LEI SECA (texto literal da legislação)
+- Cite artigos, incisos e parágrafos específicos nos comentários
 - Questões devem ser realistas e compatíveis com provas de concurso militar
-- Para legislação estadual (TO), baseie-se no conteúdo real das leis
 
 Responda APENAS com um JSON array válido, sem markdown, sem explicações. Formato:
 [
@@ -161,7 +146,7 @@ Responda APENAS com um JSON array válido, sem markdown, sem explicações. Form
     "alt_d": "Alternativa D",
     "alt_e": "Alternativa E",
     "gabarito": 0,
-    "comentario": "Explicação detalhada..."
+    "comentario": "Explicação detalhada com citação da lei seca..."
   }
 ]`;
 
@@ -189,8 +174,6 @@ Responda APENAS com um JSON array válido, sem markdown, sem explicações. Form
 
     const aiData = await aiResponse.json();
     let content = aiData.choices?.[0]?.message?.content || "";
-
-    // Clean markdown code blocks if present
     content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
     let questoes;
@@ -211,7 +194,6 @@ Responda APENAS com um JSON array válido, sem markdown, sem explicações. Form
       });
     }
 
-    // Validate and sanitize
     const validQuestoes = questoes
       .filter((q: any) => q.enunciado && q.alt_a && q.alt_b && q.alt_c && q.alt_d && q.alt_e && typeof q.gabarito === "number")
       .map((q: any) => ({
@@ -228,7 +210,6 @@ Responda APENAS com um JSON array válido, sem markdown, sem explicações. Form
         comentario: q.comentario || "Sem comentário disponível.",
       }));
 
-    // Insert into database
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);

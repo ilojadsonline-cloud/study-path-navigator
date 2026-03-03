@@ -4,8 +4,8 @@ import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
 import {
   BookOpen, ChevronDown, ChevronUp, ExternalLink, PlayCircle, FileText,
-  Scale, Shield, Users, Gavel, BookMarked, Landmark, Brain, Scroll,
-  MessageSquare, ClipboardList, AlertTriangle, BadgeCheck
+  Shield, Gavel, BookMarked, Landmark, BadgeCheck,
+  ClipboardList, AlertTriangle, FileCheck
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -35,7 +35,7 @@ const disciplinas: Disciplina[] = [
     title: "Estatuto dos Policiais Militares e Bombeiros Militares do TO",
     subtitle: "Lei nº 2.578/2012",
     color: "from-blue-500/20 to-blue-600/20",
-    disciplinaFilter: "Estatuto PMTO",
+    disciplinaFilter: "Lei nº 2.578/2012",
     leiSecaUrl: "https://www.al.to.leg.br/arquivos/lei_2578-2012_66938.PDF",
     leiSecaLabel: "Lei nº 2.578/2012 — AL-TO",
     videoAulaUrl: "https://www.youtube.com/watch?v=M6BBI1WBjlY",
@@ -108,7 +108,7 @@ const disciplinas: Disciplina[] = [
     title: "Organização Básica da PMTO",
     subtitle: "Lei Complementar nº 128/2021",
     color: "from-emerald-500/20 to-emerald-600/20",
-    disciplinaFilter: "Organização Básica",
+    disciplinaFilter: "LC nº 128/2021",
     leiSecaUrl: "https://www.al.to.leg.br/arquivos/lei_128-2021_66731.PDF",
     leiSecaLabel: "LC nº 128/2021 — AL-TO",
     videoAulaUrl: "https://www.youtube.com/watch?v=3A9pGFTdMDw",
@@ -167,7 +167,7 @@ const disciplinas: Disciplina[] = [
     title: "Promoções na PMTO",
     subtitle: "Lei nº 2.575/2012",
     color: "from-amber-500/20 to-amber-600/20",
-    disciplinaFilter: "Promoções PMTO",
+    disciplinaFilter: "Lei nº 2.575/2012",
     leiSecaUrl: "https://central3.to.gov.br/arquivo/269665/",
     leiSecaLabel: "Lei nº 2.575/2012 — Governo TO",
     videoAulaUrl: "https://www.youtube.com/results?search_query=lei+2575+pmto",
@@ -334,107 +334,6 @@ const disciplinas: Disciplina[] = [
     ],
   },
   {
-    id: "const-federal",
-    icon: <Scroll className="w-5 h-5" />,
-    title: "Constituição Federal (Arts. selecionados)",
-    subtitle: "Arts. 5º, 37, 42, 142, 144 e outros",
-    color: "from-sky-500/20 to-sky-600/20",
-    disciplinaFilter: "Constituição Federal",
-    leiSecaUrl: "https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm",
-    leiSecaLabel: "Constituição Federal — Planalto",
-    videoAulaUrl: "https://www.youtube.com/results?search_query=direito+constitucional",
-    videoAulaLabel: "Direito Constitucional — Aulas",
-    items: [
-      {
-        topic: "Direitos e Garantias Fundamentais (Art. 5º)",
-        details: [
-          "Princípio da legalidade, igualdade e dignidade",
-          "Inviolabilidade do direito à vida, liberdade e segurança",
-          "Vedação à tortura e tratamento degradante",
-          "Direito de petição e acesso ao Judiciário",
-          "Habeas corpus, mandado de segurança e habeas data",
-        ],
-      },
-      {
-        topic: "Administração Pública (Art. 37)",
-        details: [
-          "Princípios da Administração: legalidade, impessoalidade, moralidade, publicidade, eficiência",
-          "Acumulação de cargos públicos e suas vedações",
-          "Responsabilidade civil do Estado",
-        ],
-      },
-      {
-        topic: "Militares dos Estados (Art. 42)",
-        details: [
-          "Definição de militares dos estados e do DF",
-          "Patentes e prerrogativas",
-          "Direitos sociais aplicáveis aos militares estaduais",
-          "Vedações constitucionais (sindicalização, greve, filiação partidária)",
-        ],
-      },
-      {
-        topic: "Forças Armadas e Segurança Pública (Arts. 142 e 144)",
-        details: [
-          "Destinação das Forças Armadas",
-          "Órgãos de segurança pública",
-          "Atribuições da Polícia Militar: policiamento ostensivo e preservação da ordem pública",
-          "Subordinação aos Governadores dos Estados",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dir-administrativo",
-    icon: <Scale className="w-5 h-5" />,
-    title: "Noções de Direito Administrativo",
-    subtitle: "Princípios, atos, poderes e responsabilidade",
-    color: "from-orange-500/20 to-orange-600/20",
-    disciplinaFilter: "Direito Administrativo",
-    leiSecaUrl: "https://cdn.novaconcursos.com.br/arquivos-digitais/apostilas/21356/35658/nv-029ma-direito-administrativo-amostra.pdf",
-    leiSecaLabel: "Apostila Direito Administrativo — PDF",
-    videoAulaUrl: "https://www.youtube.com/results?search_query=direito+administrativo+concurso+militar",
-    videoAulaLabel: "Direito Administrativo — Aulas",
-    items: [
-      {
-        topic: "Princípios da Administração Pública",
-        details: [
-          "Legalidade, impessoalidade, moralidade, publicidade e eficiência (LIMPE)",
-          "Supremacia do interesse público",
-          "Princípio da autotutela",
-          "Princípio da razoabilidade e proporcionalidade",
-        ],
-      },
-      {
-        topic: "Atos Administrativos",
-        details: [
-          "Conceito e requisitos: competência, finalidade, forma, motivo e objeto",
-          "Atributos: presunção de legitimidade, imperatividade, autoexecutoriedade",
-          "Classificação dos atos administrativos",
-          "Anulação, revogação e convalidação",
-        ],
-      },
-      {
-        topic: "Poderes Administrativos",
-        details: [
-          "Poder vinculado e poder discricionário",
-          "Poder hierárquico",
-          "Poder disciplinar",
-          "Poder regulamentar",
-          "Poder de polícia: conceito, atributos e limites",
-        ],
-      },
-      {
-        topic: "Responsabilidade Civil do Estado",
-        details: [
-          "Teoria do risco administrativo",
-          "Responsabilidade objetiva e subjetiva",
-          "Ação regressiva contra o agente público",
-          "Excludentes de responsabilidade",
-        ],
-      },
-    ],
-  },
-  {
     id: "dir-penal-militar",
     icon: <AlertTriangle className="w-5 h-5" />,
     title: "Noções de Direito Penal Militar",
@@ -479,108 +378,6 @@ const disciplinas: Disciplina[] = [
           "Penas principais e acessórias",
           "Medidas de segurança: internação e tratamento ambulatorial",
           "Extinção da punibilidade",
-        ],
-      },
-    ],
-  },
-  {
-    id: "portugues",
-    icon: <MessageSquare className="w-5 h-5" />,
-    title: "Língua Portuguesa",
-    subtitle: "Interpretação, gramática e redação oficial",
-    color: "from-teal-500/20 to-teal-600/20",
-    disciplinaFilter: "Língua Portuguesa",
-    leiSecaUrl: "https://www4.planalto.gov.br/centrodeestudos/assuntos/manual-de-redacao-da-presidencia-da-republica/manual-de-redacao.pdf",
-    leiSecaLabel: "Manual de Redação — Planalto (PDF)",
-    videoAulaUrl: "https://www.youtube.com/results?search_query=língua+portuguesa+concurso+militar+2024",
-    videoAulaLabel: "Português para Concursos — Aulas",
-    items: [
-      {
-        topic: "Interpretação e Compreensão de Textos",
-        details: [
-          "Tipologia textual: narração, descrição, dissertação",
-          "Gêneros textuais e suas características",
-          "Identificação de ideias principais e secundárias",
-          "Inferências e pressupostos",
-          "Coesão e coerência textual",
-        ],
-      },
-      {
-        topic: "Gramática e Norma Culta",
-        details: [
-          "Ortografia oficial e acentuação gráfica",
-          "Classes de palavras: substantivo, adjetivo, verbo, advérbio, etc.",
-          "Concordância verbal e nominal",
-          "Regência verbal e nominal",
-          "Uso da crase",
-          "Pontuação",
-        ],
-      },
-      {
-        topic: "Sintaxe",
-        details: [
-          "Termos essenciais, integrantes e acessórios da oração",
-          "Orações coordenadas e subordinadas",
-          "Período composto: classificação e conectivos",
-          "Colocação pronominal: próclise, mesóclise e ênclise",
-        ],
-      },
-      {
-        topic: "Redação Oficial",
-        details: [
-          "Características da redação oficial: impessoalidade, formalidade, concisão, clareza",
-          "Tipos de documentos: ofício, memorando, requerimento, relatório",
-          "Pronomes de tratamento e abreviações",
-        ],
-      },
-    ],
-  },
-  {
-    id: "raciocinio",
-    icon: <Brain className="w-5 h-5" />,
-    title: "Raciocínio Lógico",
-    subtitle: "Lógica, conjuntos, probabilidade e matemática básica",
-    color: "from-indigo-500/20 to-indigo-600/20",
-    disciplinaFilter: "Raciocínio Lógico",
-    leiSecaUrl: "https://apostilas.com.br/Racioc%C3%ADnio%20L%C3%B3gico.pdf",
-    leiSecaLabel: "Apostila Raciocínio Lógico — PDF",
-    videoAulaUrl: "https://www.youtube.com/results?search_query=raciocínio+lógico+concurso+militar",
-    videoAulaLabel: "Raciocínio Lógico — Aulas",
-    items: [
-      {
-        topic: "Lógica Proposicional",
-        details: [
-          "Proposições simples e compostas",
-          "Conectivos lógicos: conjunção, disjunção, condicional, bicondicional, negação",
-          "Tabelas-verdade",
-          "Equivalências lógicas",
-          "Negação de proposições compostas",
-        ],
-      },
-      {
-        topic: "Lógica de Argumentação",
-        details: [
-          "Argumentos válidos e inválidos",
-          "Diagramas lógicos",
-          "Lógica de primeira ordem (quantificadores)",
-          "Silogismos categóricos",
-        ],
-      },
-      {
-        topic: "Conjuntos e Operações",
-        details: [
-          "Representação e operações com conjuntos",
-          "Diagramas de Venn",
-          "Problemas envolvendo conjuntos",
-        ],
-      },
-      {
-        topic: "Noções de Probabilidade e Estatística",
-        details: [
-          "Princípio fundamental da contagem",
-          "Permutação, arranjo e combinação",
-          "Probabilidade simples e condicional",
-          "Médias, moda e mediana",
         ],
       },
     ],
@@ -655,6 +452,66 @@ const disciplinas: Disciplina[] = [
       },
     ],
   },
+  {
+    id: "pop",
+    icon: <FileCheck className="w-5 h-5" />,
+    title: "Procedimento Operacional Padrão (POP)",
+    subtitle: "POP 2024 — PMTO Atualizado",
+    color: "from-orange-500/20 to-orange-600/20",
+    disciplinaFilter: "POP",
+    leiSecaUrl: "https://metodochoa.store/arquivos/POP-2024-PMTO-ATUALIZADO.pdf",
+    leiSecaLabel: "POP 2024 PMTO — PDF Atualizado",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
+    items: [
+      {
+        topic: "Conceitos e Princípios do POP",
+        details: [
+          "Definição e finalidade do Procedimento Operacional Padrão",
+          "Padronização de condutas e protocolos operacionais",
+          "Importância do POP na atividade policial militar",
+          "Responsabilidades na aplicação dos procedimentos",
+        ],
+      },
+      {
+        topic: "Procedimentos de Abordagem",
+        details: [
+          "Abordagem a pessoas: técnicas e protocolos",
+          "Abordagem a veículos: procedimentos e segurança",
+          "Verbalização e comunicação durante abordagens",
+          "Uso de algemas: requisitos legais e procedimentais",
+        ],
+      },
+      {
+        topic: "Uso da Força e Armamento",
+        details: [
+          "Níveis de uso da força: progressão e regressão",
+          "Uso de arma de fogo: princípios e limites",
+          "Técnicas de defesa pessoal e imobilização",
+          "Registro e comunicação do uso da força",
+        ],
+      },
+      {
+        topic: "Procedimentos em Ocorrências",
+        details: [
+          "Atendimento a ocorrências de trânsito",
+          "Ocorrências envolvendo violência doméstica",
+          "Procedimentos em flagrante delito",
+          "Preservação de local de crime",
+          "Condução de presos e custódia",
+        ],
+      },
+      {
+        topic: "Patrulhamento e Policiamento Ostensivo",
+        details: [
+          "Planejamento do patrulhamento",
+          "Técnicas de policiamento ostensivo",
+          "Rondas e pontos-base",
+          "Comunicação via rádio: procedimentos e códigos",
+        ],
+      },
+    ],
+  },
 ];
 
 function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
@@ -668,7 +525,6 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
       transition={{ delay: index * 0.05 }}
       className="glass-card rounded-2xl overflow-hidden border border-border/50"
     >
-      {/* Header */}
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-4 p-5 text-left hover:bg-secondary/30 transition-colors"
@@ -685,7 +541,6 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
         </div>
       </button>
 
-      {/* Content */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -696,7 +551,6 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 space-y-4">
-              {/* Action Buttons */}
               <div className="flex flex-wrap gap-2">
                 <a
                   href={d.leiSecaUrl}
@@ -731,7 +585,6 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
                 )}
               </div>
 
-              {/* Edital Items */}
               <div className="space-y-3">
                 {d.items.map((item, i) => (
                   <div key={i} className="rounded-xl bg-secondary/40 border border-border/30 p-4">
