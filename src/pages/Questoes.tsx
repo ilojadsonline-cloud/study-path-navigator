@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { Filter, CheckCircle, XCircle, Star, ChevronDown, HelpCircle, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { BackButton } from "@/components/BackButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -23,26 +24,11 @@ interface Questao {
   comentario: string;
 }
 
-function shuffleArray<T>(arr: T[]): T[] {
-  const shuffled = [...arr];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
-
-function shuffleAlternatives(q: Questao) {
-  const alts = [
-    { text: q.alt_a, origIndex: 0 },
-    { text: q.alt_b, origIndex: 1 },
-    { text: q.alt_c, origIndex: 2 },
-    { text: q.alt_d, origIndex: 3 },
-    { text: q.alt_e, origIndex: 4 },
-  ];
-  const shuffled = shuffleArray(alts);
-  const newGabarito = shuffled.findIndex(a => a.origIndex === q.gabarito);
-  return { alternativas: shuffled.map(a => a.text), gabarito: newGabarito };
+function getAlternativas(q: Questao) {
+  return {
+    alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e],
+    gabarito: q.gabarito,
+  };
 }
 
 const Questoes = () => {
@@ -85,11 +71,11 @@ const Questoes = () => {
 
     const { data, error } = await query.order("id");
     if (!error && data) {
-      const shuffled = shuffleArray(data as Questao[]).map(q => {
-        const { alternativas, gabarito } = shuffleAlternatives(q);
+      const mapped = (data as Questao[]).map(q => {
+        const { alternativas, gabarito } = getAlternativas(q);
         return { ...q, alternativas, gabaritoShuffled: gabarito };
       });
-      setQuestoes(shuffled);
+      setQuestoes(mapped);
     }
     setLoading(false);
     setSelectedAnswer({});
@@ -133,6 +119,7 @@ const Questoes = () => {
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-6">
+        <BackButton />
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">

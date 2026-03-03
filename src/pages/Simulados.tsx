@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
+import { BackButton } from "@/components/BackButton";
 import { Shuffle, Play, Settings, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowLeft, Loader2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
@@ -59,26 +60,16 @@ const Simulados = () => {
     }
 
     const shuffled = shuffleArray(data).slice(0, numQuestoes[0]);
-    const questoesSimulado: QuestaoSimulado[] = shuffled.map(q => {
-      const alts = [
-        { text: q.alt_a, origIndex: 0 },
-        { text: q.alt_b, origIndex: 1 },
-        { text: q.alt_c, origIndex: 2 },
-        { text: q.alt_d, origIndex: 3 },
-        { text: q.alt_e, origIndex: 4 },
-      ];
-      const shuffledAlts = shuffleArray(alts);
-      return {
-        id: q.id,
-        disciplina: q.disciplina,
-        assunto: q.assunto,
-        dificuldade: q.dificuldade,
-        enunciado: q.enunciado,
-        alternativas: shuffledAlts.map(a => a.text),
-        gabaritoShuffled: shuffledAlts.findIndex(a => a.origIndex === q.gabarito),
-        comentario: q.comentario,
-      };
-    });
+    const questoesSimulado: QuestaoSimulado[] = shuffled.map(q => ({
+      id: q.id,
+      disciplina: q.disciplina,
+      assunto: q.assunto,
+      dificuldade: q.dificuldade,
+      enunciado: q.enunciado,
+      alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e],
+      gabaritoShuffled: q.gabarito,
+      comentario: q.comentario,
+    }));
 
     setSimulado(questoesSimulado);
     setSelectedAnswer({});
@@ -218,6 +209,7 @@ const Simulados = () => {
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-6">
+        <BackButton />
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl md:text-3xl font-bold">
             <span className="text-gradient-primary">Gerador de Simulado</span>
