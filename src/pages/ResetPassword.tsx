@@ -12,25 +12,61 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [error, setError] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Listen for PASSWORD_RECOVERY event
+    // Handle PKCE flow: exchange code from URL query params
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get("code");
+    const errorParam = url.searchParams.get("error");
+    const errorDescription = url.searchParams.get("error_description");
+
+    if (errorParam) {
+      setError(true);
+      toast({ title: "Erro no link", description: errorDescription || errorParam, variant: "destructive" });
+      return;
+    }
+
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
+        if (exchangeError) {
+          console.error("Code exchange error:", exchangeError);
+          setError(true);
+          toast({ title: "Link expirado ou inválido", description: "Solicite um novo link de recuperação.", variant: "destructive" });
+        } else {
+          setSessionReady(true);
+        }
+      });
+      return;
+    }
+
+    // Handle implicit/hash flow
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setSessionReady(true);
       }
     });
 
-    // Also check if we already have a session (user clicked the link)
+    // Check if session already exists (hash was auto-processed)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setSessionReady(true);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Timeout after 5s if nothing works
+    const timeout = setTimeout(() => {
+      if (!sessionReady) {
+        setError(true);
+      }
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,10 +103,30 @@ const ResetPassword = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground mb-2">Senha atualizada!</h1>
+            <p className="text-sm text-muted-foreground">Redirecionando para o painel...</p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
+        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="relative w-full max-w-md text-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
+            <Shield className="w-8 h-8 text-destructive" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground mb-2">Link inválido ou expirado</h1>
             <p className="text-sm text-muted-foreground">
-              Redirecionando para o painel...
+              O link de recuperação pode ter expirado. Solicite um novo.
             </p>
           </div>
+          <Link to="/esqueci-senha" className="inline-block px-6 py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity">
+            Solicitar novo link
+          </Link>
         </motion.div>
       </div>
     );
