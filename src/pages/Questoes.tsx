@@ -71,11 +71,11 @@ const Questoes = () => {
 
     const { data, error } = await query.order("id");
     if (!error && data) {
-      const shuffled = shuffleArray(data as Questao[]).map(q => {
-        const { alternativas, gabarito } = shuffleAlternatives(q);
+      const mapped = (data as Questao[]).map(q => {
+        const { alternativas, gabarito } = getAlternativas(q);
         return { ...q, alternativas, gabaritoShuffled: gabarito };
       });
-      setQuestoes(shuffled);
+      setQuestoes(mapped);
     }
     setLoading(false);
     setSelectedAnswer({});
