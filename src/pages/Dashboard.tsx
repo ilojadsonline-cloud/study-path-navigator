@@ -1,16 +1,137 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { StatCard } from "@/components/StatCard";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp,
-  Trophy, Calendar, Zap
+  Trophy, Calendar, Zap, Loader2
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
+type DisciplinaProgress = {
+  name: string;
+  total: number;
+  corretas: number;
+};
+
+type AtividadeRecente = {
+  text: string;
+  time: string;
+  icon: React.ReactNode;
+};
+
 const Dashboard = () => {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
+
+  const [loading, setLoading] = useState(true);
+  const [totalRespondidas, setTotalRespondidas] = useState(0);
+  const [totalCorretas, setTotalCorretas] = useState(0);
+  const [totalSimulados, setTotalSimulados] = useState(0);
+  const [disciplinas, setDisciplinas] = useState<DisciplinaProgress[]>([]);
+  const [atividades, setAtividades] = useState<AtividadeRecente[]>([]);
+  const [respondidaSemana, setRespondidaSemana] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchStats = async () => {
+      setLoading(true);
+
+      // Fetch all user answers with question discipline
+      const { data: respostas } = await supabase
+        .from("respostas_usuario")
+        .select("id, correta, created_at, questao_id")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      const allRespostas = respostas || [];
+      setTotalRespondidas(allRespostas.length);
+      const corretas = allRespostas.filter(r => r.correta).length;
+      setTotalCorretas(corretas);
+
+      // Respondidas esta semana
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      const semana = allRespostas.filter(r => new Date(r.created_at) >= oneWeekAgo).length;
+      setRespondidaSemana(semana);
+
+      // Fetch simulados
+      const { data: sims } = await supabase
+        .from("simulados")
+        .select("id, disciplina, acertos, total, created_at, finalizado")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      setTotalSimulados((sims || []).length);
+
+      // Build discipline progress from answered questions
+      const questaoIds = [...new Set(allRespostas.map(r => r.questao_id))];
+      let discMap: Record<string, { total: number; corretas: number }> = {};
+
+      if (questaoIds.length > 0) {
+        // Fetch disciplines for answered questions (batch)
+        const { data: questoes } = await supabase
+          .from("questoes")
+          .select("id, disciplina")
+          .in("id", questaoIds);
+
+        const questaoDiscMap: Record<number, string> = {};
+        (questoes || []).forEach(q => { questaoDiscMap[q.id] = q.disciplina; });
+
+        allRespostas.forEach(r => {
+          const disc = questaoDiscMap[r.questao_id];
+          if (!disc) return;
+          if (!discMap[disc]) discMap[disc] = { total: 0, corretas: 0 };
+          discMap[disc].total++;
+          if (r.correta) discMap[disc].corretas++;
+        });
+      }
+
+      const discArray = Object.entries(discMap).map(([name, v]) => ({
+        name,
+        total: v.total,
+        corretas: v.corretas,
+      }));
+      discArray.sort((a, b) => b.total - a.total);
+      setDisciplinas(discArray);
+
+      // Build recent activities
+      const recentActivities: AtividadeRecente[] = [];
+
+      // Recent simulados
+      (sims || []).slice(0, 3).forEach(s => {
+        recentActivities.push({
+          text: `Simulado ${s.disciplina} – ${s.acertos}/${s.total} acertos`,
+          time: formatRelativeTime(s.created_at),
+          icon: <Trophy className="w-4 h-4 text-gold" />,
+        });
+      });
+
+      // Recent answers (grouped by day, last 3 days)
+      if (allRespostas.length > 0 && recentActivities.length < 4) {
+        const today = new Date().toDateString();
+        const answersToday = allRespostas.filter(r => new Date(r.created_at).toDateString() === today).length;
+        if (answersToday > 0) {
+          recentActivities.push({
+            text: `${answersToday} questões respondidas hoje`,
+            time: "Hoje",
+            icon: <CheckCircle className="w-4 h-4 text-success" />,
+          });
+        }
+      }
+
+      setAtividades(recentActivities);
+      setLoading(false);
+    };
+
+    fetchStats();
+  }, [user]);
+
+  const taxaAcertos = totalRespondidas > 0 ? Math.round((totalCorretas / totalRespondidas) * 100) : 0;
+
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -25,79 +146,127 @@ const Dashboard = () => {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Continue sua preparação para o CHOA 2026</p>
           </div>
-          <div className="glass-card rounded-xl px-4 py-2.5 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-            <span className="text-xs font-medium text-success">Assinatura Ativa</span>
-            <span className="text-xs text-muted-foreground">• Expira em 67 dias</span>
-          </div>
         </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Questões Respondidas" value="342" icon={<CheckCircle className="w-5 h-5" />} subtitle="+28 esta semana" />
-          <StatCard title="Taxa de Acertos" value="78%" icon={<Target className="w-5 h-5" />} subtitle="Acima da média" glowing />
-          <StatCard title="Simulados Realizados" value="12" icon={<BookOpen className="w-5 h-5" />} subtitle="3 esta semana" />
-          <StatCard title="Horas de Estudo" value="86h" icon={<Clock className="w-5 h-5" />} subtitle="Meta: 120h" />
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass-card rounded-xl p-5 space-y-4"
-          >
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold">Progresso por Disciplina</h2>
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                title="Questões Respondidas"
+                value={String(totalRespondidas)}
+                icon={<CheckCircle className="w-5 h-5" />}
+                subtitle={respondidaSemana > 0 ? `+${respondidaSemana} esta semana` : "Nenhuma esta semana"}
+              />
+              <StatCard
+                title="Taxa de Acertos"
+                value={totalRespondidas > 0 ? `${taxaAcertos}%` : "—"}
+                icon={<Target className="w-5 h-5" />}
+                subtitle={totalRespondidas > 0 ? `${totalCorretas} corretas` : "Responda questões para ver"}
+                glowing={taxaAcertos >= 70}
+              />
+              <StatCard
+                title="Simulados Realizados"
+                value={String(totalSimulados)}
+                icon={<BookOpen className="w-5 h-5" />}
+                subtitle={totalSimulados > 0 ? "Continue praticando" : "Nenhum ainda"}
+              />
+              <StatCard
+                title="Disciplinas Estudadas"
+                value={String(disciplinas.length)}
+                icon={<Clock className="w-5 h-5" />}
+                subtitle={disciplinas.length > 0 ? "Com questões respondidas" : "Comece a estudar"}
+              />
             </div>
-            {[
-              { name: "Lei nº 2.578/2012", progress: 72, color: "bg-primary" },
-              { name: "LC nº 128/2021", progress: 45, color: "bg-accent" },
-              { name: "Lei nº 2.575/2012", progress: 60, color: "bg-success" },
-              { name: "CPPM", progress: 30, color: "bg-warning" },
-              { name: "RDMETO", progress: 55, color: "bg-gold" },
-            ].map((d) => (
-              <div key={d.name} className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">{d.name}</span>
-                  <span className="font-medium text-foreground">{d.progress}%</span>
-                </div>
-                <Progress value={d.progress} className="h-2" />
-              </div>
-            ))}
-          </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="glass-card rounded-xl p-5 space-y-4"
-          >
-            <div className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-gold" />
-              <h2 className="font-semibold">Últimas Atividades</h2>
-            </div>
-            {[
-              { text: "Simulado CPPM – 38/50 acertos", time: "Há 2 horas", icon: <Zap className="w-4 h-4 text-primary" /> },
-              { text: "Questões Lei 2.578 – 15 resolvidas", time: "Há 5 horas", icon: <CheckCircle className="w-4 h-4 text-success" /> },
-              { text: "Edital Verticalizado – RDMETO", time: "Ontem", icon: <BookOpen className="w-4 h-4 text-accent" /> },
-              { text: "Simulado LC 128 – 42/50 acertos", time: "2 dias atrás", icon: <Trophy className="w-4 h-4 text-gold" /> },
-            ].map((a, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
-                <div className="p-2 rounded-lg bg-primary/10">{a.icon}</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{a.text}</p>
-                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> {a.time}
-                  </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="glass-card rounded-xl p-5 space-y-4"
+              >
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  <h2 className="font-semibold">Progresso por Disciplina</h2>
                 </div>
-              </div>
-            ))}
-          </motion.div>
-        </div>
+                {disciplinas.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BookOpen className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Nenhuma questão respondida ainda.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Responda questões para ver seu progresso aqui.</p>
+                  </div>
+                ) : (
+                  disciplinas.slice(0, 6).map((d) => {
+                    const pct = d.total > 0 ? Math.round((d.corretas / d.total) * 100) : 0;
+                    return (
+                      <div key={d.name} className="space-y-1.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground truncate mr-2">{d.name}</span>
+                          <span className="font-medium text-foreground shrink-0">{pct}% ({d.corretas}/{d.total})</span>
+                        </div>
+                        <Progress value={pct} className="h-2" />
+                      </div>
+                    );
+                  })
+                )}
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="glass-card rounded-xl p-5 space-y-4"
+              >
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-gold" />
+                  <h2 className="font-semibold">Últimas Atividades</h2>
+                </div>
+                {atividades.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Zap className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Nenhuma atividade registrada.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Comece respondendo questões ou fazendo simulados.</p>
+                  </div>
+                ) : (
+                  atividades.map((a, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
+                      <div className="p-2 rounded-lg bg-primary/10">{a.icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{a.text}</p>
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> {a.time}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </motion.div>
+            </div>
+          </>
+        )}
       </div>
     </AppLayout>
   );
 };
+
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return "Agora mesmo";
+  if (diffMin < 60) return `Há ${diffMin} min`;
+  if (diffHours < 24) return `Há ${diffHours}h`;
+  if (diffDays === 1) return "Ontem";
+  if (diffDays < 7) return `${diffDays} dias atrás`;
+  return date.toLocaleDateString("pt-BR");
+}
 
 export default Dashboard;
