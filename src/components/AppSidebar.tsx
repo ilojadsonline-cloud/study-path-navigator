@@ -17,6 +17,7 @@ const menuItems = [
   { title: "Banco de Questões", url: "/questoes", icon: HelpCircle },
   { title: "Simulados", url: "/simulados", icon: Shuffle },
   { title: "Assinatura", url: "/assinatura", icon: CreditCard },
+  { title: "Contato", url: "/contato", icon: MessageSquare },
 ];
 
 export function AppSidebar() {
