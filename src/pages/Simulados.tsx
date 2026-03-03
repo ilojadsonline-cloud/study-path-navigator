@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
+import { BackButton } from "@/components/BackButton";
 import { Shuffle, Play, Settings, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowLeft, Loader2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";

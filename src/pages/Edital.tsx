@@ -762,6 +762,7 @@ export default function Edital() {
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-6">
+        <BackButton />
         <header className="space-y-1">
           <h1 className="text-2xl font-black text-gradient-primary">📋 Edital Verticalizado</h1>
           <p className="text-sm text-muted-foreground">
