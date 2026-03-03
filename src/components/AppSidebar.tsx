@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, BookOpen, HelpCircle, Shuffle,
-  CreditCard, LogOut, Shield,
+  CreditCard, LogOut, Shield, MessageSquare,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
