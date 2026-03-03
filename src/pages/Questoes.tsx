@@ -5,6 +5,8 @@ import { AppLayout } from "@/components/AppLayout";
 import { Filter, CheckCircle, XCircle, Star, ChevronDown, HelpCircle, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface Questao {
   id: number;
@@ -46,6 +48,7 @@ function shuffleAlternatives(q: Questao) {
 const Questoes = () => {
   const [searchParams] = useSearchParams();
   const initialDisciplina = searchParams.get("disciplina") || "Todos";
+  const { user } = useAuth();
 
   const [questoes, setQuestoes] = useState<(Questao & { alternativas: string[]; gabaritoShuffled: number })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,9 +57,21 @@ const Questoes = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterDisciplina, setFilterDisciplina] = useState(initialDisciplina);
   const [filterDificuldade, setFilterDificuldade] = useState("Todos");
+  const [availableDisciplinas, setAvailableDisciplinas] = useState<string[]>([]);
 
-  const disciplinas = ["Todos", "Lei nº 2.578/2012", "LC nº 128/2021", "Lei nº 2.575/2012", "CPPM", "RDMETO"];
   const dificuldades = ["Todos", "Fácil", "Médio", "Difícil"];
+
+  // Fetch available disciplines from DB
+  useEffect(() => {
+    const fetchDisciplinas = async () => {
+      const { data } = await supabase.from("questoes").select("disciplina");
+      if (data) {
+        const unique = [...new Set(data.map(d => d.disciplina))].sort();
+        setAvailableDisciplinas(unique);
+      }
+    };
+    fetchDisciplinas();
+  }, []);
 
   useEffect(() => {
     fetchQuestoes();
@@ -86,8 +101,27 @@ const Questoes = () => {
     setSelectedAnswer(prev => ({ ...prev, [questaoId]: altIndex }));
   };
 
-  const handleReveal = (questaoId: number) => {
+  const handleReveal = async (questaoId: number) => {
+    const q = questoes.find(q => q.id === questaoId);
+    if (!q) return;
+
+    const selected = selectedAnswer[questaoId];
+    const isCorrect = selected === q.gabaritoShuffled;
+
     setRevealed(prev => ({ ...prev, [questaoId]: true }));
+
+    // Save answer to database
+    if (user) {
+      const { error } = await supabase.from("respostas_usuario").insert({
+        user_id: user.id,
+        questao_id: questaoId,
+        resposta: selected,
+        correta: isCorrect,
+      });
+      if (error) {
+        console.error("Erro ao salvar resposta:", error);
+      }
+    }
   };
 
   const getDifficultyColor = (d: string) => {
@@ -131,7 +165,8 @@ const Questoes = () => {
                   onChange={e => setFilterDisciplina(e.target.value)}
                   className="w-full rounded-lg bg-secondary border-none text-sm p-2 text-foreground focus:ring-1 focus:ring-primary outline-none"
                 >
-                  {disciplinas.map(d => <option key={d}>{d}</option>)}
+                  <option>Todos</option>
+                  {availableDisciplinas.map(d => <option key={d}>{d}</option>)}
                 </select>
               </div>
               <div>

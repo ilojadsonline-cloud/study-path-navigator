@@ -30,6 +30,7 @@ const Dashboard = () => {
   const [totalRespondidas, setTotalRespondidas] = useState(0);
   const [totalCorretas, setTotalCorretas] = useState(0);
   const [totalSimulados, setTotalSimulados] = useState(0);
+  const [horasEstudo, setHorasEstudo] = useState(0);
   const [disciplinas, setDisciplinas] = useState<DisciplinaProgress[]>([]);
   const [atividades, setAtividades] = useState<AtividadeRecente[]>([]);
   const [respondidaSemana, setRespondidaSemana] = useState(0);
@@ -66,6 +67,15 @@ const Dashboard = () => {
         .order("created_at", { ascending: false });
 
       setTotalSimulados((sims || []).length);
+
+      // Fetch study hours
+      const { data: sessions } = await supabase
+        .from("study_sessions")
+        .select("duration_seconds")
+        .eq("user_id", user.id);
+
+      const totalSeconds = (sessions || []).reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
+      setHorasEstudo(Math.round((totalSeconds / 3600) * 10) / 10);
 
       // Build discipline progress from answered questions
       const questaoIds = [...new Set(allRespostas.map(r => r.questao_id))];
@@ -175,10 +185,10 @@ const Dashboard = () => {
                 subtitle={totalSimulados > 0 ? "Continue praticando" : "Nenhum ainda"}
               />
               <StatCard
-                title="Disciplinas Estudadas"
-                value={String(disciplinas.length)}
+                title="Horas de Estudo"
+                value={horasEstudo > 0 ? `${horasEstudo}h` : "0h"}
                 icon={<Clock className="w-5 h-5" />}
-                subtitle={disciplinas.length > 0 ? "Com questões respondidas" : "Comece a estudar"}
+                subtitle={horasEstudo > 0 ? "Tempo no site" : "Comece a estudar"}
               />
             </div>
 
