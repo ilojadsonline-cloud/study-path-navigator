@@ -1,0 +1,247 @@
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Shield, Lock, Eye, EyeOff, User, CreditCard, ArrowRight, Loader2, AlertTriangle } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
+import { useToast } from "@/hooks/use-toast";
+
+const Cadastro = () => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [nome, setNome] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [termos, setTermos] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+
+  const sessionId = searchParams.get("session_id");
+
+  useEffect(() => {
+    const verifyPayment = async () => {
+      if (!sessionId) {
+        setVerifyingPayment(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke("verify-payment", {
+          body: { session_id: sessionId },
+        });
+
+        if (error) throw error;
+        if (data?.paid) {
+          setPaymentVerified(true);
+        }
+      } catch (err) {
+        console.error("Erro ao verificar pagamento:", err);
+      }
+      setVerifyingPayment(false);
+    };
+
+    verifyPayment();
+  }, [sessionId]);
+
+  const handleCpfChange = (value: string) => {
+    setCpf(formatCPF(value));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!paymentVerified) {
+      toast({ title: "Pagamento não verificado", description: "Efetue o pagamento antes de criar sua conta.", variant: "destructive" });
+      return;
+    }
+
+    if (!nome || !cpf || !password || !confirmPassword) {
+      toast({ title: "Preencha todos os campos", variant: "destructive" });
+      return;
+    }
+    if (!validateCPF(cpf)) {
+      toast({ title: "CPF inválido", description: "Verifique o CPF informado.", variant: "destructive" });
+      return;
+    }
+    if (password.length < 6) {
+      toast({ title: "Senha muito curta", description: "Mínimo 6 caracteres.", variant: "destructive" });
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast({ title: "Senhas não conferem", variant: "destructive" });
+      return;
+    }
+    if (!termos) {
+      toast({ title: "Aceite os termos de uso", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    const cleanedCpf = cleanCPF(cpf);
+    const generatedEmail = `user${cleanedCpf}@choaapp.com`;
+
+    const { data: cpfExists } = await supabase.rpc("check_cpf_exists", { p_cpf: cleanedCpf });
+    if (cpfExists) {
+      toast({ title: "CPF já cadastrado", description: "Este CPF já possui uma conta.", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: generatedEmail,
+      password,
+      options: { emailRedirectTo: window.location.origin },
+    });
+
+    if (authError) {
+      toast({ title: "Erro no cadastro", description: authError.message, variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+
+    if (authData.user) {
+      const { error: profileError } = await supabase.from("profiles").insert({
+        user_id: authData.user.id,
+        nome,
+        cpf: cleanedCpf,
+      });
+
+      if (profileError) {
+        toast({ title: "Erro ao criar perfil", description: profileError.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      toast({ title: "Conta criada com sucesso!", description: "Você já pode acessar a plataforma." });
+      navigate("/dashboard");
+    }
+
+    setLoading(false);
+  };
+
+  if (verifyingPayment) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Verificando pagamento...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (!paymentVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float" />
+        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="relative w-full max-w-md text-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-8 h-8 text-destructive" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground mb-2">Pagamento Necessário</h1>
+            <p className="text-sm text-muted-foreground">
+              Para criar sua conta, é necessário efetuar o pagamento da assinatura primeiro.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Link
+              to="/assinatura"
+              className="w-full py-3 rounded-xl gradient-gold text-gold-foreground font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity glow-gold"
+            >
+              <CreditCard className="w-4 h-4" />
+              Ir para Assinatura
+            </Link>
+            <Link
+              to="/login"
+              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              Já tem conta? Entrar
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
+      <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float" />
+
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative w-full max-w-md">
+        <div className="text-center mb-6">
+          <div className="w-14 h-14 rounded-2xl gradient-primary glow-primary flex items-center justify-center mx-auto mb-3">
+            <Shield className="w-7 h-7 text-primary-foreground" />
+          </div>
+          <h1 className="text-xl font-black text-gradient-primary">CHOA 2026</h1>
+          <p className="text-xs text-muted-foreground">Pagamento confirmado! Crie sua conta abaixo.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 border border-success/20 mb-2">
+            <div className="w-5 h-5 rounded-full bg-success/20 flex items-center justify-center shrink-0">
+              <svg className="w-3 h-3 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <span className="text-xs font-medium text-success">Pagamento verificado com sucesso</span>
+          </div>
+
+          <h2 className="text-lg font-bold text-center">Cadastro</h2>
+
+          <div className="space-y-3">
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input type="text" value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome completo"
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all" />
+            </div>
+            <div className="relative">
+              <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input type="text" value={cpf} onChange={e => handleCpfChange(e.target.value)} placeholder="CPF" maxLength={14}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all" />
+            </div>
+
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha (mín. 6 caracteres)"
+                className="w-full pl-10 pr-10 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirmar senha"
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all" />
+            </div>
+          </div>
+
+          <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+            <input type="checkbox" checked={termos} onChange={e => setTermos(e.target.checked)} className="rounded border-border mt-0.5" />
+            <span>Aceito os <a href="#" className="text-primary hover:underline">Termos de Uso</a> e <a href="#" className="text-primary hover:underline">Política de Privacidade</a></span>
+          </label>
+
+          <button type="submit" disabled={loading}
+            className="w-full py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+            {loading ? "Criando conta..." : "Criar Conta"}
+          </button>
+
+          <p className="text-center text-xs text-muted-foreground">
+            Já tem conta?{" "}
+            <Link to="/login" className="text-primary font-medium hover:underline">Entrar</Link>
+          </p>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+export default Cadastro;
