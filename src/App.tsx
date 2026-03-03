@@ -33,6 +33,7 @@ const App = () => (
           <StudyTimerProvider />
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/landing" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
             <Route path="/assinatura" element={<Assinatura />} />
