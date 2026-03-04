@@ -19,6 +19,7 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "https://choa-prep-mentor.lovable.app";
 
     const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
       line_items: [
         {
           price: "price_1T7F4eARWUFKTz2d8DMNBEtS",
