@@ -452,66 +452,6 @@ const disciplinas: Disciplina[] = [
       },
     ],
   },
-  {
-    id: "pop",
-    icon: <FileCheck className="w-5 h-5" />,
-    title: "Procedimento Operacional Padrão (POP)",
-    subtitle: "POP 2024 — PMTO Atualizado",
-    color: "from-orange-500/20 to-orange-600/20",
-    disciplinaFilter: "POP",
-    leiSecaUrl: "https://metodochoa.store/arquivos/POP-2024-PMTO-ATUALIZADO.pdf",
-    leiSecaLabel: "POP 2024 PMTO — PDF Atualizado",
-    videoAulaUrl: "",
-    videoAulaLabel: "",
-    items: [
-      {
-        topic: "Conceitos e Princípios do POP",
-        details: [
-          "Definição e finalidade do Procedimento Operacional Padrão",
-          "Padronização de condutas e protocolos operacionais",
-          "Importância do POP na atividade policial militar",
-          "Responsabilidades na aplicação dos procedimentos",
-        ],
-      },
-      {
-        topic: "Procedimentos de Abordagem",
-        details: [
-          "Abordagem a pessoas: técnicas e protocolos",
-          "Abordagem a veículos: procedimentos e segurança",
-          "Verbalização e comunicação durante abordagens",
-          "Uso de algemas: requisitos legais e procedimentais",
-        ],
-      },
-      {
-        topic: "Uso da Força e Armamento",
-        details: [
-          "Níveis de uso da força: progressão e regressão",
-          "Uso de arma de fogo: princípios e limites",
-          "Técnicas de defesa pessoal e imobilização",
-          "Registro e comunicação do uso da força",
-        ],
-      },
-      {
-        topic: "Procedimentos em Ocorrências",
-        details: [
-          "Atendimento a ocorrências de trânsito",
-          "Ocorrências envolvendo violência doméstica",
-          "Procedimentos em flagrante delito",
-          "Preservação de local de crime",
-          "Condução de presos e custódia",
-        ],
-      },
-      {
-        topic: "Patrulhamento e Policiamento Ostensivo",
-        details: [
-          "Planejamento do patrulhamento",
-          "Técnicas de policiamento ostensivo",
-          "Rondas e pontos-base",
-          "Comunicação via rádio: procedimentos e códigos",
-        ],
-      },
-    ],
-  },
 ];
 
 function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {

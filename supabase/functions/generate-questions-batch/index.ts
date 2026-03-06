@@ -76,16 +76,6 @@ const DISCIPLINES = [
       "Disposições Finais e Transitórias",
     ],
   },
-  {
-    disciplina: "POP",
-    assuntos: [
-      "Conceitos e Princípios do POP",
-      "Procedimentos de Abordagem",
-      "Uso da Força e Armamento",
-      "Procedimentos em Ocorrências",
-      "Patrulhamento e Policiamento Ostensivo",
-    ],
-  },
 ];
 
 serve(async (req) => {
