@@ -101,8 +101,6 @@ serve(async (req) => {
     let extraInstruction = "";
     if (disc.disciplina === "Lei Orgânica PM") {
       extraInstruction = `\n\nIMPORTANTE: Todas as questões devem ser baseadas EXCLUSIVAMENTE no texto da Lei nº 14.751, de 12 de dezembro de 2023 (Lei Orgânica das Polícias Militares). Cite artigos específicos da lei nos comentários.`;
-    } else if (disc.disciplina === "POP") {
-      extraInstruction = `\n\nIMPORTANTE: As questões devem ser baseadas no Procedimento Operacional Padrão (POP) 2024 da PMTO. Foque em protocolos operacionais, técnicas de abordagem, uso da força, e procedimentos padronizados da Polícia Militar do Tocantins.`;
     }
 
     const prompt = `Você é um especialista em concursos militares do Brasil, especialmente CHOA PMTO (Curso de Habilitação de Oficiais Administrativos da Polícia Militar do Tocantins).
