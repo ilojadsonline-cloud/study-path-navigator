@@ -1,0 +1,1 @@
+DELETE FROM questoes WHERE disciplina = 'POP';
