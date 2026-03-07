@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle, AlertCircle, ShieldCheck, Trash2, Wrench } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, ShieldCheck, Trash2, Wrench, Pause, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BatchResult {
@@ -17,21 +17,23 @@ interface BatchResult {
 const ValidarQuestoes = () => {
   const [results, setResults] = useState<BatchResult[]>([]);
   const [running, setRunning] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [totals, setTotals] = useState({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
   const [totalQuestoes, setTotalQuestoes] = useState<number | null>(null);
+  const [startOffset, setStartOffset] = useState(105); // Already validated 105 via API
   const { toast } = useToast();
 
   const startValidation = async () => {
     setRunning(true);
-    setTotals({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
+    setPaused(false);
 
-    // Get total count
     const { count } = await supabase.from("questoes").select("*", { count: "exact", head: true });
     const total = count || 0;
     setTotalQuestoes(total);
 
     const batchSize = 5;
-    const numBatches = Math.ceil(total / batchSize);
+    const remaining = total - startOffset;
+    const numBatches = Math.ceil(remaining / batchSize);
 
     const batches: BatchResult[] = Array.from({ length: numBatches }, (_, i) => ({
       batch: i + 1,
@@ -39,14 +41,19 @@ const ValidarQuestoes = () => {
     }));
     setResults([...batches]);
 
-    let runningTotals = { validated: 0, ok: 0, fixed: 0, deleted: 0 };
+    let runningTotals = { ...totals };
 
     for (let i = 0; i < numBatches; i++) {
+      // Check if paused
+      while (paused) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
       batches[i].status = "loading";
       setResults([...batches]);
 
       try {
-        const offset = i * batchSize;
+        const offset = startOffset + i * batchSize;
         const { data, error } = await supabase.functions.invoke("validate-questions", {
           body: { offset, limit: batchSize },
         });
@@ -68,10 +75,15 @@ const ValidarQuestoes = () => {
       } catch (err: any) {
         batches[i].status = "error";
         batches[i].error = err.message;
+
+        // If rate limited or no credits, stop
+        if (err.message?.includes("429") || err.message?.includes("402") || err.message?.includes("Rate limit") || err.message?.includes("Créditos")) {
+          toast({ title: "Pausado", description: err.message, variant: "destructive" });
+          break;
+        }
       }
 
       setResults([...batches]);
-      // Wait between batches to avoid rate limits
       await new Promise((r) => setTimeout(r, 3000));
     }
 
@@ -88,20 +100,34 @@ const ValidarQuestoes = () => {
         <h1 className="text-2xl font-bold text-gradient-primary">Validação de Questões (IA)</h1>
         <p className="text-sm text-muted-foreground">
           A IA revisa cada questão do banco, corrige alternativas problemáticas, ajusta gabaritos e remove questões irrecuperáveis.
+          <br />
+          <strong>Já validadas via API: {startOffset} questões.</strong>
         </p>
 
-        <button
-          onClick={startValidation}
-          disabled={running}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-          {running
-            ? `Validando... (${totals.validated} revisadas)`
-            : `Iniciar Validação${totalQuestoes !== null ? ` (${totalQuestoes} questões)` : ""}`}
-        </button>
+        <div className="flex items-center gap-3">
+          <label className="text-xs text-muted-foreground">Iniciar do offset:</label>
+          <input
+            type="number"
+            value={startOffset}
+            onChange={(e) => setStartOffset(Number(e.target.value))}
+            disabled={running}
+            className="w-24 rounded-lg bg-secondary border-none text-sm p-2 text-foreground"
+          />
+        </div>
 
-        {/* Summary */}
+        <div className="flex gap-3">
+          <button
+            onClick={startValidation}
+            disabled={running}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+            {running
+              ? `Validando... (${totals.validated} revisadas)`
+              : `Iniciar Validação${totalQuestoes !== null ? ` (${totalQuestoes} questões)` : ""}`}
+          </button>
+        </div>
+
         {totals.validated > 0 && (
           <div className="flex gap-4 flex-wrap">
             <div className="glass-card rounded-lg p-3 flex items-center gap-2 text-sm">
@@ -119,7 +145,6 @@ const ValidarQuestoes = () => {
           </div>
         )}
 
-        {/* Batch list */}
         {results.length > 0 && (
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {results.map((r, i) => (
