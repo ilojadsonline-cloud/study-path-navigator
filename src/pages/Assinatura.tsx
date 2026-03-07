@@ -51,6 +51,12 @@ const Assinatura = () => {
             <span className="text-gradient-gold">Plano CHOA Trimestral</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Acesso completo à plataforma por 90 dias</p>
+          {isExpired && (
+            <div className="mt-3 flex items-center justify-center gap-2 text-warning text-xs font-medium">
+              <AlertTriangle className="w-4 h-4" />
+              Sua assinatura expirou. Renove para continuar acessando.
+            </div>
+          )}
         </div>
 
         <div className="glass-card rounded-2xl p-8 relative overflow-hidden glow-gold border-gold/20">
