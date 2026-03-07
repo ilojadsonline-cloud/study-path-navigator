@@ -114,8 +114,14 @@ const Assinatura = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          Já tem conta?{" "}
-          <Link to="/login" className="text-primary font-medium hover:underline">Entrar</Link>
+          {user ? (
+            <Link to="/login" className="text-primary font-medium hover:underline">Voltar ao login</Link>
+          ) : (
+            <>
+              Já tem conta?{" "}
+              <Link to="/login" className="text-primary font-medium hover:underline">Entrar</Link>
+            </>
+          )}
         </p>
       </motion.div>
     </div>
