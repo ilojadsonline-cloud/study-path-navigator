@@ -65,7 +65,19 @@ serve(async (req) => {
 
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      try {
+        const endTimestamp = subscription.current_period_end;
+        logStep("Raw current_period_end", { endTimestamp, type: typeof endTimestamp });
+        if (endTimestamp) {
+          const ms = typeof endTimestamp === 'number' && endTimestamp < 1e12 ? endTimestamp * 1000 : Number(endTimestamp);
+          const date = new Date(ms);
+          if (!isNaN(date.getTime())) {
+            subscriptionEnd = date.toISOString();
+          }
+        }
+      } catch (e) {
+        logStep("Error parsing subscription end date", { error: String(e) });
+      }
       logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
     } else {
       // Also check for past_due or canceled subscriptions to give user info
