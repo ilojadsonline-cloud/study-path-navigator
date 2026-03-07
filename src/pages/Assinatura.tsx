@@ -89,7 +89,7 @@ const Assinatura = () => {
 
           <div className="mt-6 pt-4 border-t border-border/30 text-center">
             <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-              <Mail className="w-3 h-3" /> Contato: <a href="mailto:contato@metodochoa.store" className="text-primary hover:underline">contato@metodochoa.store</a>
+              <Mail className="w-3 h-3" /> Contato: <a href="mailto:contato@metodochoa.com.br" className="text-primary hover:underline">contato@metodochoa.com.br</a>
             </p>
           </div>
         </div>
