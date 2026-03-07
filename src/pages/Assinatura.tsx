@@ -9,6 +9,18 @@ import { useAuth } from "@/contexts/AuthContext";
 const Assinatura = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user, subscribed, subscriptionEnd, checkSubscription } = useAuth();
+  const [searchParams] = useSearchParams();
+  const paymentStatus = searchParams.get("payment");
+
+  useEffect(() => {
+    if (paymentStatus === "success" && user) {
+      // Re-check subscription after successful payment
+      checkSubscription();
+    }
+  }, [paymentStatus, user, checkSubscription]);
+
+  const isExpired = user && !subscribed;
 
   const handleCheckout = async () => {
     setLoading(true);
