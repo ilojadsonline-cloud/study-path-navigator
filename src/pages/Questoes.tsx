@@ -43,9 +43,12 @@ const Questoes = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterDisciplina, setFilterDisciplina] = useState(initialDisciplina);
   const [filterDificuldade, setFilterDificuldade] = useState("Todos");
+  const [filterStatus, setFilterStatus] = useState("Todos");
+  const [answeredIds, setAnsweredIds] = useState<Set<number>>(new Set());
   const [availableDisciplinas, setAvailableDisciplinas] = useState<string[]>([]);
 
   const dificuldades = ["Todos", "Fácil", "Médio", "Difícil"];
+  const statusOptions = ["Todos", "Não resolvidas", "Resolvidas"];
 
   // Fetch available disciplines from DB
   useEffect(() => {
