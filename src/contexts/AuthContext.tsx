@@ -106,12 +106,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Check subscription when user is available
+  // Check admin role and subscription when user is available
   useEffect(() => {
     if (user) {
       setSubscriptionLoading(true);
-      checkSubscription();
+      // Check admin role from user_roles table
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .then(({ data }) => {
+          const admin = (data && data.length > 0) || false;
+          setIsAdmin(admin);
+          if (admin) {
+            // Admin bypasses subscription check
+            setSubscribed(true);
+            setSubscriptionLoading(false);
+          } else {
+            checkSubscription();
+          }
+        });
     } else {
+      setIsAdmin(false);
       setSubscriptionLoading(false);
     }
   }, [user, checkSubscription]);
