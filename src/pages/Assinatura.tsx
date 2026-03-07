@@ -1,13 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, Check, Shield, Zap, Star, Clock, Loader2, Mail } from "lucide-react";
+import { CreditCard, Check, Shield, Zap, Star, Clock, Loader2, Mail, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Assinatura = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user, subscribed, subscriptionEnd, checkSubscription } = useAuth();
+  const [searchParams] = useSearchParams();
+  const paymentStatus = searchParams.get("payment");
+
+  useEffect(() => {
+    if (paymentStatus === "success" && user) {
+      // Re-check subscription after successful payment
+      checkSubscription();
+    }
+  }, [paymentStatus, user, checkSubscription]);
+
+  const isExpired = user && !subscribed;
 
   const handleCheckout = async () => {
     setLoading(true);
@@ -38,6 +51,12 @@ const Assinatura = () => {
             <span className="text-gradient-gold">Plano CHOA Trimestral</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Acesso completo à plataforma por 90 dias</p>
+          {isExpired && (
+            <div className="mt-3 flex items-center justify-center gap-2 text-warning text-xs font-medium">
+              <AlertTriangle className="w-4 h-4" />
+              Sua assinatura expirou. Renove para continuar acessando.
+            </div>
+          )}
         </div>
 
         <div className="glass-card rounded-2xl p-8 relative overflow-hidden glow-gold border-gold/20">
@@ -95,8 +114,14 @@ const Assinatura = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          Já tem conta?{" "}
-          <Link to="/login" className="text-primary font-medium hover:underline">Entrar</Link>
+          {user ? (
+            <Link to="/login" className="text-primary font-medium hover:underline">Voltar ao login</Link>
+          ) : (
+            <>
+              Já tem conta?{" "}
+              <Link to="/login" className="text-primary font-medium hover:underline">Entrar</Link>
+            </>
+          )}
         </p>
       </motion.div>
     </div>

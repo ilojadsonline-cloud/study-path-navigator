@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,9 +17,32 @@ serve(async (req) => {
       apiVersion: "2025-08-27.basil",
     });
 
-    const origin = req.headers.get("origin") || "https://choa-prep-mentor.lovable.app";
+    const origin = req.headers.get("origin") || "https://exam-roadmap-buddy.lovable.app";
+
+    // Try to get user email from auth
+    let customerEmail: string | undefined;
+    let customerId: string | undefined;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      const supabaseClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      );
+      const token = authHeader.replace("Bearer ", "");
+      const { data } = await supabaseClient.auth.getUser(token);
+      if (data?.user?.email) {
+        customerEmail = data.user.email;
+        // Check if customer already exists in Stripe
+        const customers = await stripe.customers.list({ email: customerEmail, limit: 1 });
+        if (customers.data.length > 0) {
+          customerId = customers.data[0].id;
+        }
+      }
+    }
 
     const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      customer_email: customerId ? undefined : customerEmail,
       payment_method_types: ["card"],
       line_items: [
         {
@@ -27,13 +51,8 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${origin}/cadastro?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${origin}/dashboard?payment=success`,
       cancel_url: `${origin}/assinatura?payment=canceled`,
-      custom_text: {
-        submit: {
-          message: "Após o pagamento, você será redirecionado para criar sua conta.",
-        },
-      },
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
