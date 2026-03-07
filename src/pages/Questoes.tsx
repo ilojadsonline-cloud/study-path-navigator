@@ -27,7 +27,7 @@ interface Questao {
 function getAlternativas(q: Questao) {
   return {
     alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e],
-    gabarito: q.gabarito,
+    gabarito: q.gabarito - 1, // Convert 1-based (DB) to 0-based (UI index)
   };
 }
 
