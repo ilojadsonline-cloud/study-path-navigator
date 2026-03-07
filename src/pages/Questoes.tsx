@@ -117,6 +117,7 @@ const Questoes = () => {
     const isCorrect = selected === q.gabaritoShuffled;
 
     setRevealed(prev => ({ ...prev, [questaoId]: true }));
+    setAnsweredIds(prev => new Set([...prev, questaoId]));
 
     // Save answer to database
     if (user) {
