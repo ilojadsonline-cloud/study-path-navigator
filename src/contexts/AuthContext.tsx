@@ -15,6 +15,7 @@ interface AuthContextType {
   subscribed: boolean;
   subscriptionEnd: string | null;
   subscriptionLoading: boolean;
+  isAdmin: boolean;
   checkSubscription: () => Promise<void>;
   signOut: () => Promise<void>;
 }
