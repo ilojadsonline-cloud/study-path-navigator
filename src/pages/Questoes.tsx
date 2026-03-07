@@ -188,6 +188,16 @@ const Questoes = () => {
                   {dificuldades.map(d => <option key={d}>{d}</option>)}
                 </select>
               </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Status</label>
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                  className="w-full rounded-lg bg-secondary border-none text-sm p-2 text-foreground focus:ring-1 focus:ring-primary outline-none"
+                >
+                  {statusOptions.map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
