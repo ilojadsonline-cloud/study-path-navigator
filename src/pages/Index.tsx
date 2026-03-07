@@ -21,8 +21,8 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/landing" className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Divulgação
+            <Link to="/login" className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Entrar
             </Link>
             <Link to="/login" className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Entrar
@@ -45,7 +45,7 @@ const Index = () => {
               <span className="text-foreground">Rumo ao Oficialato</span>
             </h1>
             <p className="text-muted-foreground max-w-xl mx-auto mb-8 text-sm md:text-base">
-              Plataforma completa para preparação do Processo Seletivo Interno da Polícia Militar do Estado do Tocantins.
+              Plataforma de questões e simulados para preparação do Processo Seletivo Interno da Polícia Militar do Estado do Tocantins.
               100% baseada na legislação do Tocantins.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">

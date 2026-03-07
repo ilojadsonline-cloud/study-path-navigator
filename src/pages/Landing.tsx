@@ -150,9 +150,9 @@ const Landing = () => {
               <span className="text-gradient-primary">CHOA começa aqui</span>
             </h1>
             <p className="text-muted-foreground max-w-2xl mx-auto mb-10 text-base md:text-lg leading-relaxed">
-              Plataforma completa e exclusiva para preparação do Processo Seletivo Interno 
+              Plataforma de questões e simulados exclusiva para preparação do Processo Seletivo Interno 
               da <strong className="text-foreground">Polícia Militar do Estado do Tocantins</strong>. 
-              Questões, simulados e edital verticalizado 100% baseados na legislação tocantinense.
+              Edital verticalizado, banco de questões e simulados 100% baseados na legislação tocantinense.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
