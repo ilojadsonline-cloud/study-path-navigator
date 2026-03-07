@@ -20,6 +20,10 @@ const menuItems = [
   { title: "Contato", url: "/contato", icon: MessageSquare },
 ];
 
+const adminItems = [
+  { title: "Painel Admin", url: "/admin", icon: Shield },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
