@@ -16,6 +16,7 @@ import Simulados from "./pages/Simulados";
 import Assinatura from "./pages/Assinatura";
 import GerarQuestoes from "./pages/GerarQuestoes";
 import ValidarQuestoes from "./pages/ValidarQuestoes";
+import AdminPanel from "./pages/AdminPanel";
 import EsqueciSenha from "./pages/EsqueciSenha";
 import ResetPassword from "./pages/ResetPassword";
 import Contato from "./pages/Contato";
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/simulados" element={<ProtectedRoute><Simulados /></ProtectedRoute>} />
             <Route path="/admin/gerar-questoes" element={<ProtectedRoute><GerarQuestoes /></ProtectedRoute>} />
             <Route path="/admin/validar-questoes" element={<ProtectedRoute><ValidarQuestoes /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
             <Route path="/contato" element={<ProtectedRoute><Contato /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
