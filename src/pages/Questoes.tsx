@@ -43,11 +43,14 @@ const Questoes = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterDisciplina, setFilterDisciplina] = useState(initialDisciplina);
   const [filterDificuldade, setFilterDificuldade] = useState("Todos");
+  const [filterStatus, setFilterStatus] = useState("Todos");
+  const [answeredIds, setAnsweredIds] = useState<Set<number>>(new Set());
   const [availableDisciplinas, setAvailableDisciplinas] = useState<string[]>([]);
 
   const dificuldades = ["Todos", "Fácil", "Médio", "Difícil"];
+  const statusOptions = ["Todos", "Não resolvidas", "Resolvidas"];
 
-  // Fetch available disciplines from DB
+  // Fetch available disciplines and answered question IDs
   useEffect(() => {
     const fetchDisciplinas = async () => {
       const { data } = await supabase.from("questoes").select("disciplina");
@@ -56,12 +59,20 @@ const Questoes = () => {
         setAvailableDisciplinas(unique);
       }
     };
+    const fetchAnswered = async () => {
+      if (!user) return;
+      const { data } = await supabase.from("respostas_usuario").select("questao_id").eq("user_id", user.id);
+      if (data) {
+        setAnsweredIds(new Set(data.map(d => d.questao_id)));
+      }
+    };
     fetchDisciplinas();
-  }, []);
+    fetchAnswered();
+  }, [user]);
 
   useEffect(() => {
     fetchQuestoes();
-  }, [filterDisciplina, filterDificuldade]);
+  }, [filterDisciplina, filterDificuldade, filterStatus, answeredIds]);
 
   const fetchQuestoes = async () => {
     setLoading(true);
@@ -71,7 +82,18 @@ const Questoes = () => {
 
     const { data, error } = await query.order("id");
     if (!error && data) {
-      const mapped = (data as Questao[]).map(q => {
+      let filtered = data as Questao[];
+      if (filterStatus === "Resolvidas") {
+        filtered = filtered.filter(q => answeredIds.has(q.id));
+      } else if (filterStatus === "Não resolvidas") {
+        filtered = filtered.filter(q => !answeredIds.has(q.id));
+      }
+      // Shuffle questions (Fisher-Yates)
+      for (let i = filtered.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+      }
+      const mapped = filtered.map(q => {
         const { alternativas, gabarito } = getAlternativas(q);
         return { ...q, alternativas, gabaritoShuffled: gabarito };
       });
@@ -95,6 +117,7 @@ const Questoes = () => {
     const isCorrect = selected === q.gabaritoShuffled;
 
     setRevealed(prev => ({ ...prev, [questaoId]: true }));
+    setAnsweredIds(prev => new Set([...prev, questaoId]));
 
     // Save answer to database
     if (user) {
@@ -143,7 +166,7 @@ const Questoes = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="glass-card rounded-xl p-4 grid grid-cols-2 gap-3"
+              className="glass-card rounded-xl p-4 grid grid-cols-3 gap-3"
             >
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Disciplina</label>
@@ -164,6 +187,16 @@ const Questoes = () => {
                   className="w-full rounded-lg bg-secondary border-none text-sm p-2 text-foreground focus:ring-1 focus:ring-primary outline-none"
                 >
                   {dificuldades.map(d => <option key={d}>{d}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Status</label>
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                  className="w-full rounded-lg bg-secondary border-none text-sm p-2 text-foreground focus:ring-1 focus:ring-primary outline-none"
+                >
+                  {statusOptions.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
             </motion.div>
