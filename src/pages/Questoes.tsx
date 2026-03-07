@@ -72,7 +72,7 @@ const Questoes = () => {
 
   useEffect(() => {
     fetchQuestoes();
-  }, [filterDisciplina, filterDificuldade]);
+  }, [filterDisciplina, filterDificuldade, filterStatus, answeredIds]);
 
   const fetchQuestoes = async () => {
     setLoading(true);
