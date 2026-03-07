@@ -48,7 +48,6 @@ const Index = () => {
               Plataforma de questões e simulados para preparação do Processo Seletivo Interno da Polícia Militar do Estado do Tocantins.
               100% baseada na legislação do Tocantins.
             </p>
-            </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 to="/assinatura"
