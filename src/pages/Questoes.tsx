@@ -50,7 +50,7 @@ const Questoes = () => {
   const dificuldades = ["Todos", "Fácil", "Médio", "Difícil"];
   const statusOptions = ["Todos", "Não resolvidas", "Resolvidas"];
 
-  // Fetch available disciplines from DB
+  // Fetch available disciplines and answered question IDs
   useEffect(() => {
     const fetchDisciplinas = async () => {
       const { data } = await supabase.from("questoes").select("disciplina");
@@ -59,8 +59,16 @@ const Questoes = () => {
         setAvailableDisciplinas(unique);
       }
     };
+    const fetchAnswered = async () => {
+      if (!user) return;
+      const { data } = await supabase.from("respostas_usuario").select("questao_id").eq("user_id", user.id);
+      if (data) {
+        setAnsweredIds(new Set(data.map(d => d.questao_id)));
+      }
+    };
     fetchDisciplinas();
-  }, []);
+    fetchAnswered();
+  }, [user]);
 
   useEffect(() => {
     fetchQuestoes();
