@@ -45,8 +45,9 @@ const Index = () => {
               <span className="text-foreground">Rumo ao Oficialato</span>
             </h1>
             <p className="text-muted-foreground max-w-xl mx-auto mb-8 text-sm md:text-base">
-              Plataforma completa para preparação do Processo Seletivo Interno da Polícia Militar do Estado do Tocantins.
+              Plataforma de questões e simulados para preparação do Processo Seletivo Interno da Polícia Militar do Estado do Tocantins.
               100% baseada na legislação do Tocantins.
+            </p>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
