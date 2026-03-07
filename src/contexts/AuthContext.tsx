@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscribed, setSubscribed] = useState(false);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
