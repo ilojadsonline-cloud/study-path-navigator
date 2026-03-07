@@ -170,8 +170,8 @@ const disciplinas: Disciplina[] = [
     disciplinaFilter: "Lei nº 2.575/2012",
     leiSecaUrl: "https://central3.to.gov.br/arquivo/269665/",
     leiSecaLabel: "Lei nº 2.575/2012 — Governo TO",
-    videoAulaUrl: "https://www.youtube.com/results?search_query=lei+2575+pmto",
-    videoAulaLabel: "Lei 2.575 PMTO — Aulas",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
     items: [
       {
         topic: "Disposições Gerais sobre Promoções",
