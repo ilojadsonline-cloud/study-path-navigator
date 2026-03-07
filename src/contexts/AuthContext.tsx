@@ -133,12 +133,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, checkSubscription]);
 
-  // Auto-refresh subscription every 60 seconds
+  // Auto-refresh subscription every 60 seconds (skip for admins)
   useEffect(() => {
-    if (!user) return;
+    if (!user || isAdmin) return;
     const interval = setInterval(checkSubscription, 60_000);
     return () => clearInterval(interval);
-  }, [user, checkSubscription]);
+  }, [user, isAdmin, checkSubscription]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
