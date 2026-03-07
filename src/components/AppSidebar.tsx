@@ -27,7 +27,7 @@ const adminItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { signOut, profile } = useAuth();
+  const { signOut, profile, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
