@@ -82,7 +82,18 @@ const Questoes = () => {
 
     const { data, error } = await query.order("id");
     if (!error && data) {
-      const mapped = (data as Questao[]).map(q => {
+      let filtered = data as Questao[];
+      if (filterStatus === "Resolvidas") {
+        filtered = filtered.filter(q => answeredIds.has(q.id));
+      } else if (filterStatus === "Não resolvidas") {
+        filtered = filtered.filter(q => !answeredIds.has(q.id));
+      }
+      // Shuffle questions (Fisher-Yates)
+      for (let i = filtered.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+      }
+      const mapped = filtered.map(q => {
         const { alternativas, gabarito } = getAlternativas(q);
         return { ...q, alternativas, gabaritoShuffled: gabarito };
       });
