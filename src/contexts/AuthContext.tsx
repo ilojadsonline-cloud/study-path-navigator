@@ -87,6 +87,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
+          // Set subscriptionLoading synchronously to prevent race condition
+          // where ProtectedRoute sees user but subscriptionLoading=false
+          setSubscriptionLoading(true);
           setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
           setProfile(null);
