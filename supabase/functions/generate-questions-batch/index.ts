@@ -194,7 +194,7 @@ Responda APENAS com um JSON array válido, sem markdown, sem explicações. Form
         alt_c: q.alt_c,
         alt_d: q.alt_d,
         alt_e: q.alt_e,
-        gabarito: Math.min(Math.max(q.gabarito, 0), 4),
+        gabarito: Math.min(Math.max(q.gabarito, 1), 5),
         comentario: q.comentario || "Sem comentário disponível.",
       }));
 
