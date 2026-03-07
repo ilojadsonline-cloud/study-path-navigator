@@ -114,7 +114,7 @@ Para cada questão, distribua os assuntos de forma equilibrada e varie a dificul
 REGRAS IMPORTANTES:
 - Cada questão deve ter 5 alternativas (A, B, C, D, E)
 - Apenas UMA alternativa correta por questão
-- O gabarito deve ser o ÍNDICE da alternativa correta (1=A, 2=B, 3=C, 4=D, 5=E)
+- O gabarito deve ser o ÍNDICE da alternativa correta (0=A, 1=B, 2=C, 3=D, 4=E)
 - Varie o gabarito entre as questões (não coloque sempre a mesma letra)
 - O comentário deve explicar POR QUE a alternativa correta está certa e as outras erradas
 - TODAS as questões devem ter embasamento na LEI SECA (texto literal da legislação)
