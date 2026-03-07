@@ -133,7 +133,7 @@ Responda APENAS com um JSON array válido, sem markdown, sem explicações. Form
     "alt_c": "Alternativa C",
     "alt_d": "Alternativa D",
     "alt_e": "Alternativa E",
-    "gabarito": 1,
+    "gabarito": 0,
     "comentario": "Explicação detalhada com citação da lei seca..."
   }
 ]`;
