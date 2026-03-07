@@ -15,6 +15,7 @@ interface AuthContextType {
   subscribed: boolean;
   subscriptionEnd: string | null;
   subscriptionLoading: boolean;
+  isAdmin: boolean;
   checkSubscription: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   subscribed: false,
   subscriptionEnd: null,
   subscriptionLoading: true,
+  isAdmin: false,
   checkSubscription: async () => {},
   signOut: async () => {},
 });
@@ -41,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscribed, setSubscribed] = useState(false);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -103,12 +106,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Check subscription when user is available
+  // Check admin role and subscription when user is available
   useEffect(() => {
     if (user) {
       setSubscriptionLoading(true);
-      checkSubscription();
+      // Check admin role from user_roles table
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .then(({ data }) => {
+          const admin = (data && data.length > 0) || false;
+          setIsAdmin(admin);
+          if (admin) {
+            // Admin bypasses subscription check
+            setSubscribed(true);
+            setSubscriptionLoading(false);
+          } else {
+            checkSubscription();
+          }
+        });
     } else {
+      setIsAdmin(false);
       setSubscriptionLoading(false);
     }
   }, [user, checkSubscription]);
@@ -130,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, subscribed, subscriptionEnd, subscriptionLoading, checkSubscription, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, loading, subscribed, subscriptionEnd, subscriptionLoading, isAdmin, checkSubscription, signOut }}>
       {children}
     </AuthContext.Provider>
   );
