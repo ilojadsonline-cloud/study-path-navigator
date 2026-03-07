@@ -24,9 +24,6 @@ const Index = () => {
             <Link to="/login" className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Entrar
             </Link>
-            <Link to="/login" className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Entrar
-            </Link>
             <Link to="/assinatura" className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
               Começar Agora
             </Link>
