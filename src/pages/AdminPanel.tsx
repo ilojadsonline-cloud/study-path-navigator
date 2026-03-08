@@ -633,20 +633,21 @@ const AdminPanel = () => {
           <TabsContent value="validar" className="mt-6 space-y-6">
             <div>
               <h2 className="text-lg font-bold mb-1">Validação de Questões via IA</h2>
-              <p className="text-sm text-muted-foreground">A IA revisa, corrige e remove questões problemáticas automaticamente.</p>
+              <p className="text-sm text-muted-foreground">A IA revisa, corrige e remove questões problemáticas automaticamente. Alterações são salvas em tempo real.</p>
             </div>
             <div className="flex flex-wrap gap-4 items-end">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Iniciar do offset</label>
-                <Input type="number" value={valOffset} onChange={(e) => setValOffset(Number(e.target.value))} className="w-24" disabled={valRunning} />
-              </div>
               <Button onClick={startValidation} disabled={valRunning} className="gradient-primary text-primary-foreground font-bold">
                 {valRunning ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Validando... ({valTotals.validated})</> : <><ShieldCheck className="w-4 h-4 mr-2" />Iniciar Validação</>}
               </Button>
-              {valFinished && !valRunning && (
-                <Button onClick={handleSaveValidation} className="bg-green-600 hover:bg-green-700 text-white font-bold">
-                  <Save className="w-4 h-4 mr-2" />Salvar Alterações
+              {valCursor > 0 && !valRunning && (
+                <Button variant="outline" size="sm" onClick={() => setValCursor(0)}>
+                  <RefreshCw className="w-3.5 h-3.5 mr-1" /> Reiniciar do início
                 </Button>
+              )}
+              {valFinished && !valRunning && (
+                <Badge variant="secondary" className="text-sm py-2 px-3 bg-green-500/10 text-green-600">
+                  <CheckCircle className="w-4 h-4 mr-1" /> Todas as alterações foram salvas automaticamente
+                </Badge>
               )}
             </div>
             {valTotals.validated > 0 && (
