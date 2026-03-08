@@ -546,6 +546,42 @@ const AdminPanel = () => {
             )}
           </DialogContent>
         </Dialog>
+        {/* Add User Dialog */}
+        <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>Cadastrar Novo Usuário</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <Input placeholder="Nome completo" value={newUserNome} onChange={(e) => setNewUserNome(e.target.value)} />
+              <Input placeholder="Email" type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} />
+              <Input placeholder="CPF" value={newUserCpf} onChange={(e) => setNewUserCpf(formatCPF(e.target.value))} maxLength={14} />
+              <Input placeholder="Senha (mín. 6 caracteres)" type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAddUser(false)}>Cancelar</Button>
+              <Button onClick={handleAddUser} disabled={addingUser} className="gradient-primary text-primary-foreground font-bold">
+                {addingUser ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <UserPlus className="w-4 h-4 mr-1" />}
+                {addingUser ? "Criando..." : "Criar Usuário"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirm Delete User Dialog */}
+        <Dialog open={!!confirmDeleteUser} onOpenChange={() => setConfirmDeleteUser(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle>Excluir Usuário</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja excluir <strong>{confirmDeleteUser?.nome}</strong>? Todos os dados (respostas, simulados, sessões) serão removidos permanentemente.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmDeleteUser(null)}>Cancelar</Button>
+              <Button variant="destructive" onClick={() => confirmDeleteUser && handleDeleteUser(confirmDeleteUser.user_id)} disabled={!!deletingUserId}>
+                {deletingUserId ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />}
+                {deletingUserId ? "Excluindo..." : "Excluir"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
