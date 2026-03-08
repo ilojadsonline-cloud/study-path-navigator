@@ -22,6 +22,33 @@ type AtividadeRecente = {
   icon: React.ReactNode;
 };
 
+// Helper to fetch all rows bypassing 1000-row limit
+async function fetchAllRows<T>(
+  table: string,
+  select: string,
+  filters: Record<string, string> = {},
+  orderCol = "id"
+): Promise<T[]> {
+  const PAGE = 1000;
+  let allData: T[] = [];
+  let from = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase.from(table).select(select).order(orderCol, { ascending: true }).range(from, from + PAGE - 1);
+    for (const [key, value] of Object.entries(filters)) {
+      query = query.eq(key, value);
+    }
+    const { data, error } = await query;
+    if (error) break;
+    if (!data || data.length === 0) break;
+    allData = allData.concat(data as T[]);
+    if (data.length < PAGE) hasMore = false;
+    from += PAGE;
+  }
+  return allData;
+}
+
 const Dashboard = () => {
   const { user, profile } = useAuth();
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
@@ -41,14 +68,13 @@ const Dashboard = () => {
     const fetchStats = async () => {
       setLoading(true);
 
-      // Fetch all user answers with question discipline
-      const { data: respostas } = await supabase
-        .from("respostas_usuario")
-        .select("id, correta, created_at, questao_id")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      // Fetch ALL user answers (bypassing 1000-row limit)
+      const allRespostas = await fetchAllRows<{ id: number; correta: boolean; created_at: string; questao_id: number }>(
+        "respostas_usuario",
+        "id, correta, created_at, questao_id",
+        { user_id: user.id }
+      );
 
-      const allRespostas = respostas || [];
       setTotalRespondidas(allRespostas.length);
       const corretas = allRespostas.filter(r => r.correta).length;
       setTotalCorretas(corretas);
@@ -59,22 +85,21 @@ const Dashboard = () => {
       const semana = allRespostas.filter(r => new Date(r.created_at) >= oneWeekAgo).length;
       setRespondidaSemana(semana);
 
-      // Fetch simulados
-      const { data: sims } = await supabase
-        .from("simulados")
-        .select("id, disciplina, acertos, total, created_at, finalizado")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      // Fetch ALL simulados
+      const allSims = await fetchAllRows<{ id: number; disciplina: string; acertos: number; total: number; created_at: string; finalizado: boolean }>(
+        "simulados",
+        "id, disciplina, acertos, total, created_at, finalizado",
+        { user_id: user.id }
+      );
+      setTotalSimulados(allSims.length);
 
-      setTotalSimulados((sims || []).length);
-
-      // Fetch study hours
-      const { data: sessions } = await supabase
-        .from("study_sessions")
-        .select("duration_seconds")
-        .eq("user_id", user.id);
-
-      const totalSeconds = (sessions || []).reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
+      // Fetch ALL study sessions
+      const allSessions = await fetchAllRows<{ duration_seconds: number }>(
+        "study_sessions",
+        "id, duration_seconds",
+        { user_id: user.id }
+      );
+      const totalSeconds = allSessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
       setHorasEstudo(Math.round((totalSeconds / 3600) * 10) / 10);
 
       // Build discipline progress from answered questions
@@ -82,14 +107,17 @@ const Dashboard = () => {
       let discMap: Record<string, { total: number; corretas: number }> = {};
 
       if (questaoIds.length > 0) {
-        // Fetch disciplines for answered questions (batch)
-        const { data: questoes } = await supabase
-          .from("questoes")
-          .select("id, disciplina")
-          .in("id", questaoIds);
+        // Fetch in batches of 500 to avoid URL length issues
+        const BATCH = 500;
+        const allQuestoes: { id: number; disciplina: string }[] = [];
+        for (let i = 0; i < questaoIds.length; i += BATCH) {
+          const batch = questaoIds.slice(i, i + BATCH);
+          const { data } = await supabase.from("questoes").select("id, disciplina").in("id", batch);
+          if (data) allQuestoes.push(...data);
+        }
 
         const questaoDiscMap: Record<number, string> = {};
-        (questoes || []).forEach(q => { questaoDiscMap[q.id] = q.disciplina; });
+        allQuestoes.forEach(q => { questaoDiscMap[q.id] = q.disciplina; });
 
         allRespostas.forEach(r => {
           const disc = questaoDiscMap[r.questao_id];
@@ -110,9 +138,8 @@ const Dashboard = () => {
 
       // Build recent activities
       const recentActivities: AtividadeRecente[] = [];
-
-      // Recent simulados
-      (sims || []).slice(0, 3).forEach(s => {
+      const sortedSims = [...allSims].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      sortedSims.slice(0, 3).forEach(s => {
         recentActivities.push({
           text: `Simulado ${s.disciplina} – ${s.acertos}/${s.total} acertos`,
           time: formatRelativeTime(s.created_at),
@@ -120,7 +147,6 @@ const Dashboard = () => {
         });
       });
 
-      // Recent answers (grouped by day, last 3 days)
       if (allRespostas.length > 0 && recentActivities.length < 4) {
         const today = new Date().toDateString();
         const answersToday = allRespostas.filter(r => new Date(r.created_at).toDateString() === today).length;
