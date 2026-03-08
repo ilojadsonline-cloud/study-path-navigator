@@ -96,6 +96,11 @@ const AdminPanel = () => {
   // Confirm delete user dialog
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<EnrichedUser | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  // Edit user dialog
+  const [editUser, setEditUser] = useState<EditUserData | null>(null);
+  const [savingUser, setSavingUser] = useState(false);
+  // Cursor for validation
+  const [valCursor, setValCursor] = useState(0);
 
   const PAGE_SIZE = 20;
 
