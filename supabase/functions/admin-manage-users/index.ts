@@ -81,6 +81,32 @@ serve(async (req) => {
       });
     }
 
+    // ── UPDATE USER PROFILE ──
+    if (action === "update_user") {
+      const { user_id, nome, email, cpf } = params;
+      if (!user_id) throw new Error("user_id é obrigatório");
+
+      const profileUpdates: Record<string, string> = {};
+      if (nome) profileUpdates.nome = nome;
+      if (email) profileUpdates.email = email;
+      if (cpf) profileUpdates.cpf = cpf;
+
+      if (Object.keys(profileUpdates).length > 0) {
+        const { error } = await supabaseAdmin.from("profiles").update(profileUpdates).eq("user_id", user_id);
+        if (error) throw new Error(`Erro ao atualizar perfil: ${error.message}`);
+      }
+
+      // Update email in auth if changed
+      if (email) {
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, { email });
+        if (error) throw new Error(`Erro ao atualizar email auth: ${error.message}`);
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ── TOGGLE ADMIN ──
     if (action === "toggle_admin") {
       const { user_id } = params;
@@ -114,7 +140,7 @@ serve(async (req) => {
 
       if (block) {
         const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
-          ban_duration: "876000h", // ~100 years
+          ban_duration: "876000h",
         });
         if (error) throw new Error(`Erro ao bloquear: ${error.message}`);
       } else {
@@ -170,9 +196,18 @@ serve(async (req) => {
             if (customers.data.length === 0) { u.subscription_end = null; u.subscribed = false; continue; }
             const subs = await stripe.subscriptions.list({ customer: customers.data[0].id, status: "active", limit: 1 });
             if (subs.data.length > 0) {
-              const end = subs.data[0].current_period_end;
-              const ms = typeof end === "number" && end < 1e12 ? end * 1000 : Number(end);
-              u.subscription_end = new Date(ms).toISOString();
+              const sub = subs.data[0];
+              // In basil API, current_period_end is on the item, not the subscription root
+              let endTimestamp = sub.current_period_end;
+              if (endTimestamp === undefined && sub.items?.data?.[0]) {
+                endTimestamp = (sub.items.data[0] as any).current_period_end;
+              }
+              if (endTimestamp) {
+                const ms = typeof endTimestamp === "number" && endTimestamp < 1e12 ? endTimestamp * 1000 : Number(endTimestamp);
+                u.subscription_end = new Date(ms).toISOString();
+              } else {
+                u.subscription_end = null;
+              }
               u.subscribed = true;
             } else {
               u.subscription_end = null;
