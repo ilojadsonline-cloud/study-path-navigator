@@ -822,6 +822,38 @@ const AdminPanel = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* ── Edit User Dialog ── */}
+        <Dialog open={!!editUser} onOpenChange={() => setEditUser(null)}>
+          <DialogContent className="max-w-md">
+            {editUser && (
+              <>
+                <DialogHeader><DialogTitle>Editar Cadastro</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Nome</label>
+                    <Input value={editUser.nome} onChange={(e) => setEditUser({ ...editUser, nome: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Email</label>
+                    <Input type="email" value={editUser.email} onChange={(e) => setEditUser({ ...editUser, email: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">CPF</label>
+                    <Input value={formatCPF(editUser.cpf)} onChange={(e) => setEditUser({ ...editUser, cpf: e.target.value })} maxLength={14} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditUser(null)}>Cancelar</Button>
+                  <Button onClick={handleEditUser} disabled={savingUser} className="gradient-primary text-primary-foreground font-bold">
+                    {savingUser ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+                    {savingUser ? "Salvando..." : "Salvar"}
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
