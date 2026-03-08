@@ -12,9 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
 import {
   Users, HelpCircle, BarChart3, Trash2, Eye, Search, ChevronLeft, ChevronRight,
-  Loader2, Shield, CheckCircle, Wrench, AlertCircle, ShieldCheck, Zap
+  Loader2, Shield, CheckCircle, Wrench, AlertCircle, ShieldCheck, Zap, UserPlus, UserMinus
 } from "lucide-react";
 
 // ── Types ──
@@ -64,6 +65,16 @@ const AdminPanel = () => {
   const [valResults, setValResults] = useState<BatchResult[]>([]);
   const [valTotals, setValTotals] = useState({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
 
+  // Manage Users
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserNome, setNewUserNome] = useState("");
+  const [newUserCpf, setNewUserCpf] = useState("");
+  const [addingUser, setAddingUser] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<UserProfile | null>(null);
+
   const PAGE_SIZE = 20;
 
   useEffect(() => {
@@ -104,6 +115,55 @@ const AdminPanel = () => {
     const { data } = await query.limit(100);
     setUsers(data || []);
     setUsersLoading(false);
+  };
+
+  const handleAddUser = async () => {
+    if (!newUserEmail || !newUserPassword || !newUserNome || !newUserCpf) {
+      toast({ title: "Preencha todos os campos", variant: "destructive" });
+      return;
+    }
+    if (!validateCPF(newUserCpf)) {
+      toast({ title: "CPF inválido", variant: "destructive" });
+      return;
+    }
+    if (newUserPassword.length < 6) {
+      toast({ title: "Senha deve ter no mínimo 6 caracteres", variant: "destructive" });
+      return;
+    }
+    setAddingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: { action: "create", email: newUserEmail, password: newUserPassword, nome: newUserNome, cpf: cleanCPF(newUserCpf) },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Usuário criado com sucesso!" });
+      setShowAddUser(false);
+      setNewUserEmail(""); setNewUserPassword(""); setNewUserNome(""); setNewUserCpf("");
+      loadUsers();
+      loadStats();
+    } catch (err: any) {
+      toast({ title: "Erro ao criar usuário", description: err.message, variant: "destructive" });
+    }
+    setAddingUser(false);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    setDeletingUserId(userId);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: { action: "delete", user_id: userId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Usuário excluído com sucesso!" });
+      setConfirmDeleteUser(null);
+      loadUsers();
+      loadStats();
+    } catch (err: any) {
+      toast({ title: "Erro ao excluir usuário", description: err.message, variant: "destructive" });
+    }
+    setDeletingUserId(null);
   };
 
   const loadQuestoes = async (page = 0) => {
@@ -271,28 +331,36 @@ const AdminPanel = () => {
 
           {/* USERS */}
           <TabsContent value="users" className="mt-6 space-y-4">
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input placeholder="Buscar por nome, CPF ou email..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && loadUsers()} className="pl-9" />
               </div>
               <Button onClick={loadUsers} variant="secondary" size="sm">Buscar</Button>
+              <Button onClick={() => setShowAddUser(true)} size="sm" className="gradient-primary text-primary-foreground font-bold">
+                <UserPlus className="w-4 h-4 mr-1" /> Cadastrar Usuário
+              </Button>
             </div>
             {usersLoading ? (
               <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
             ) : (
               <div className="glass-card rounded-xl overflow-hidden">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Email</TableHead><TableHead>CPF</TableHead><TableHead>Cadastro</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Email</TableHead><TableHead>CPF</TableHead><TableHead>Cadastro</TableHead><TableHead className="w-20">Ações</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {users.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
                     ) : users.map((u) => (
                       <TableRow key={u.user_id}>
                         <TableCell className="font-medium">{u.nome}</TableCell>
                         <TableCell className="text-muted-foreground text-xs">{u.email || "—"}</TableCell>
                         <TableCell className="text-muted-foreground text-xs font-mono">{u.cpf}</TableCell>
                         <TableCell className="text-muted-foreground text-xs">{new Date(u.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                        <TableCell>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setConfirmDeleteUser(u)}>
+                            <UserMinus className="w-3.5 h-3.5" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -476,6 +544,42 @@ const AdminPanel = () => {
                 </DialogFooter>
               </>
             )}
+          </DialogContent>
+        </Dialog>
+        {/* Add User Dialog */}
+        <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>Cadastrar Novo Usuário</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <Input placeholder="Nome completo" value={newUserNome} onChange={(e) => setNewUserNome(e.target.value)} />
+              <Input placeholder="Email" type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} />
+              <Input placeholder="CPF" value={newUserCpf} onChange={(e) => setNewUserCpf(formatCPF(e.target.value))} maxLength={14} />
+              <Input placeholder="Senha (mín. 6 caracteres)" type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAddUser(false)}>Cancelar</Button>
+              <Button onClick={handleAddUser} disabled={addingUser} className="gradient-primary text-primary-foreground font-bold">
+                {addingUser ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <UserPlus className="w-4 h-4 mr-1" />}
+                {addingUser ? "Criando..." : "Criar Usuário"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirm Delete User Dialog */}
+        <Dialog open={!!confirmDeleteUser} onOpenChange={() => setConfirmDeleteUser(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle>Excluir Usuário</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja excluir <strong>{confirmDeleteUser?.nome}</strong>? Todos os dados (respostas, simulados, sessões) serão removidos permanentemente.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmDeleteUser(null)}>Cancelar</Button>
+              <Button variant="destructive" onClick={() => confirmDeleteUser && handleDeleteUser(confirmDeleteUser.user_id)} disabled={!!deletingUserId}>
+                {deletingUserId ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />}
+                {deletingUserId ? "Excluindo..." : "Excluir"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
