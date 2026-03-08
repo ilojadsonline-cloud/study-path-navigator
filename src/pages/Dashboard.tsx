@@ -22,28 +22,20 @@ type AtividadeRecente = {
   icon: React.ReactNode;
 };
 
-// Helper to fetch all rows bypassing 1000-row limit
-async function fetchAllRows<T>(
-  table: string,
-  select: string,
-  filters: Record<string, string> = {},
-  orderCol = "id"
-): Promise<T[]> {
+// Helper to fetch all rows from a specific table bypassing 1000-row limit
+async function fetchAllRespostas(userId: string) {
   const PAGE = 1000;
-  let allData: T[] = [];
+  let allData: { id: number; correta: boolean; created_at: string; questao_id: number }[] = [];
   let from = 0;
-  let hasMore = true;
-
-  while (hasMore) {
-    let query = supabase.from(table).select(select).order(orderCol, { ascending: true }).range(from, from + PAGE - 1);
-    for (const [key, value] of Object.entries(filters)) {
-      query = query.eq(key, value);
-    }
-    const { data, error } = await query;
-    if (error) break;
+  while (true) {
+    const { data } = await supabase.from("respostas_usuario")
+      .select("id, correta, created_at, questao_id")
+      .eq("user_id", userId)
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
     if (!data || data.length === 0) break;
-    allData = allData.concat(data as T[]);
-    if (data.length < PAGE) hasMore = false;
+    allData = allData.concat(data);
+    if (data.length < PAGE) break;
     from += PAGE;
   }
   return allData;
