@@ -331,28 +331,36 @@ const AdminPanel = () => {
 
           {/* USERS */}
           <TabsContent value="users" className="mt-6 space-y-4">
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input placeholder="Buscar por nome, CPF ou email..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && loadUsers()} className="pl-9" />
               </div>
               <Button onClick={loadUsers} variant="secondary" size="sm">Buscar</Button>
+              <Button onClick={() => setShowAddUser(true)} size="sm" className="gradient-primary text-primary-foreground font-bold">
+                <UserPlus className="w-4 h-4 mr-1" /> Cadastrar Usuário
+              </Button>
             </div>
             {usersLoading ? (
               <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
             ) : (
               <div className="glass-card rounded-xl overflow-hidden">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Email</TableHead><TableHead>CPF</TableHead><TableHead>Cadastro</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Email</TableHead><TableHead>CPF</TableHead><TableHead>Cadastro</TableHead><TableHead className="w-20">Ações</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {users.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
                     ) : users.map((u) => (
                       <TableRow key={u.user_id}>
                         <TableCell className="font-medium">{u.nome}</TableCell>
                         <TableCell className="text-muted-foreground text-xs">{u.email || "—"}</TableCell>
                         <TableCell className="text-muted-foreground text-xs font-mono">{u.cpf}</TableCell>
                         <TableCell className="text-muted-foreground text-xs">{new Date(u.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                        <TableCell>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setConfirmDeleteUser(u)}>
+                            <UserMinus className="w-3.5 h-3.5" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
