@@ -131,7 +131,7 @@ const Dashboard = () => {
 
       // Build recent activities
       const recentActivities: AtividadeRecente[] = [];
-      const sortedSims = [...allSims].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const sortedSims = (recentSims || []);
       sortedSims.slice(0, 3).forEach(s => {
         recentActivities.push({
           text: `Simulado ${s.disciplina} – ${s.acertos}/${s.total} acertos`,
