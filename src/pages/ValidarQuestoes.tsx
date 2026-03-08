@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle, AlertCircle, ShieldCheck, Trash2, Wrench, Pause, Play } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, ShieldCheck, Trash2, Wrench, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BatchResult {
@@ -17,23 +17,30 @@ interface BatchResult {
 const ValidarQuestoes = () => {
   const [results, setResults] = useState<BatchResult[]>([]);
   const [running, setRunning] = useState(false);
-  const [paused, setPaused] = useState(false);
   const [totals, setTotals] = useState({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
   const [totalQuestoes, setTotalQuestoes] = useState<number | null>(null);
-  const [startOffset, setStartOffset] = useState(105); // Already validated 105 via API
+  const [afterId, setAfterId] = useState(0);
   const { toast } = useToast();
 
   const startValidation = async () => {
     setRunning(true);
-    setPaused(false);
+    setTotals({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
 
-    const { count } = await supabase.from("questoes").select("*", { count: "exact", head: true });
+    const { count, error: countError } = await supabase
+      .from("questoes")
+      .select("*", { count: "exact", head: true });
+
+    if (countError) {
+      setRunning(false);
+      toast({ title: "Erro ao contar questões", description: countError.message, variant: "destructive" });
+      return;
+    }
+
     const total = count || 0;
     setTotalQuestoes(total);
 
     const batchSize = 5;
-    const remaining = total - startOffset;
-    const numBatches = Math.ceil(remaining / batchSize);
+    const numBatches = Math.max(1, Math.ceil(total / batchSize));
 
     const batches: BatchResult[] = Array.from({ length: numBatches }, (_, i) => ({
       batch: i + 1,
@@ -41,25 +48,27 @@ const ValidarQuestoes = () => {
     }));
     setResults([...batches]);
 
-    let runningTotals = { ...totals };
+    let runningTotals = { validated: 0, ok: 0, fixed: 0, deleted: 0 };
+    let cursor = afterId;
 
     for (let i = 0; i < numBatches; i++) {
-      // Check if paused
-      while (paused) {
-        await new Promise((r) => setTimeout(r, 500));
-      }
-
       batches[i].status = "loading";
       setResults([...batches]);
 
       try {
-        const offset = startOffset + i * batchSize;
         const { data, error } = await supabase.functions.invoke("validate-questions", {
-          body: { offset, limit: batchSize },
+          body: { after_id: cursor, limit: batchSize },
         });
 
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
+
+        if ((data?.validated || 0) === 0) {
+          batches[i].status = "success";
+          batches[i].validated = 0;
+          setResults([...batches]);
+          break;
+        }
 
         batches[i].status = "success";
         batches[i].validated = data?.validated || 0;
@@ -72,15 +81,26 @@ const ValidarQuestoes = () => {
         runningTotals.fixed += data?.fixed || 0;
         runningTotals.deleted += data?.deleted || 0;
         setTotals({ ...runningTotals });
+
+        const nextCursor = data?.last_id || cursor;
+        if (nextCursor === cursor) break;
+        cursor = nextCursor;
+        setAfterId(cursor);
       } catch (err: any) {
         batches[i].status = "error";
         batches[i].error = err.message;
 
-        // If rate limited or no credits, stop
-        if (err.message?.includes("429") || err.message?.includes("402") || err.message?.includes("Rate limit") || err.message?.includes("Créditos")) {
+        if (
+          err.message?.includes("429") ||
+          err.message?.includes("402") ||
+          err.message?.includes("Rate limit") ||
+          err.message?.includes("Créditos")
+        ) {
           toast({ title: "Pausado", description: err.message, variant: "destructive" });
-          break;
         }
+
+        setResults([...batches]);
+        break;
       }
 
       setResults([...batches]);
@@ -99,20 +119,27 @@ const ValidarQuestoes = () => {
       <div className="max-w-3xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold text-gradient-primary">Validação de Questões (IA)</h1>
         <p className="text-sm text-muted-foreground">
-          A IA revisa cada questão do banco, corrige alternativas problemáticas, ajusta gabaritos e remove questões irrecuperáveis.
-          <br />
-          <strong>Já validadas via API: {startOffset} questões.</strong>
+          A IA revisa cada questão do banco, corrige alternativas problemáticas, ajusta gabaritos e remove questões
+          irrecuperáveis.
         </p>
 
-        <div className="flex items-center gap-3">
-          <label className="text-xs text-muted-foreground">Iniciar do offset:</label>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-xs text-muted-foreground">Começar após ID:</label>
           <input
             type="number"
-            value={startOffset}
-            onChange={(e) => setStartOffset(Number(e.target.value))}
+            value={afterId}
+            onChange={(e) => setAfterId(Math.max(0, Number(e.target.value) || 0))}
             disabled={running}
-            className="w-24 rounded-lg bg-secondary border-none text-sm p-2 text-foreground"
+            className="w-28 rounded-lg bg-secondary border-none text-sm p-2 text-foreground"
           />
+          {!running && afterId > 0 && (
+            <button
+              onClick={() => setAfterId(0)}
+              className="flex items-center gap-1 px-3 py-2 rounded-lg bg-secondary text-foreground text-xs font-medium"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Reiniciar
+            </button>
+          )}
         </div>
 
         <div className="flex gap-3">
