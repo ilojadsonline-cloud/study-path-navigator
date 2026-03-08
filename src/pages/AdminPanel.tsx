@@ -26,6 +26,9 @@ interface EnrichedUser {
   user_id: string; nome: string; cpf: string; email: string | null; created_at: string;
   is_admin: boolean; is_blocked: boolean; subscribed: boolean; subscription_end: string | null;
 }
+interface EditUserData {
+  user_id: string; nome: string; email: string; cpf: string;
+}
 interface Questao {
   id: number; disciplina: string; assunto: string; dificuldade: string; enunciado: string;
   alt_a: string; alt_b: string; alt_c: string; alt_d: string; alt_e: string; gabarito: number; comentario: string;
@@ -77,7 +80,7 @@ const AdminPanel = () => {
 
   // Validar Questões
   const [valRunning, setValRunning] = useState(false);
-  const [valOffset, setValOffset] = useState(0);
+  
   const [valResults, setValResults] = useState<BatchResult[]>([]);
   const [valTotals, setValTotals] = useState({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
   const [valFinished, setValFinished] = useState(false);
@@ -93,6 +96,11 @@ const AdminPanel = () => {
   // Confirm delete user dialog
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<EnrichedUser | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  // Edit user dialog
+  const [editUser, setEditUser] = useState<EditUserData | null>(null);
+  const [savingUser, setSavingUser] = useState(false);
+  // Cursor for validation
+  const [valCursor, setValCursor] = useState(0);
 
   const PAGE_SIZE = 20;
 
@@ -216,6 +224,24 @@ const AdminPanel = () => {
     setActionLoading(null);
   };
 
+  const handleEditUser = async () => {
+    if (!editUser) return;
+    setSavingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: { action: "update_user", user_id: editUser.user_id, nome: editUser.nome, email: editUser.email, cpf: cleanCPF(editUser.cpf) },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Usuário atualizado!" });
+      setEditUser(null);
+      loadUsers();
+    } catch (err: any) {
+      toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
+    }
+    setSavingUser(false);
+  };
+
   // ── Questões ──
   const loadQuestoes = async (page = 0) => {
     setQuestoesLoading(true);
@@ -304,24 +330,26 @@ const AdminPanel = () => {
     const { count } = await supabase.from("questoes").select("*", { count: "exact", head: true });
     const total = count || 0;
     const batchSize = 5;
-    const remaining = total - valOffset;
-    const numBatches = Math.ceil(remaining / batchSize);
+    const numBatches = Math.ceil(total / batchSize);
     const batches: BatchResult[] = Array.from({ length: numBatches }, (_, i) => ({ batch: i + 1, status: "pending" as const }));
     setValResults([...batches]);
     let runningTotals = { validated: 0, ok: 0, fixed: 0, deleted: 0 };
+    let cursor = valCursor; // Use cursor-based (after_id) instead of offset
     for (let i = 0; i < numBatches; i++) {
       batches[i].status = "loading"; setValResults([...batches]);
       try {
-        const offset = valOffset + i * batchSize;
-        const { data, error } = await supabase.functions.invoke("validate-questions", { body: { offset, limit: batchSize } });
+        const { data, error } = await supabase.functions.invoke("validate-questions", { body: { limit: batchSize, after_id: cursor } });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
+        if (data?.validated === 0) { batches[i].status = "success"; batches[i].validated = 0; setValResults([...batches]); break; }
         batches[i].status = "success";
         batches[i].validated = data?.validated || 0; batches[i].ok = data?.ok || 0;
         batches[i].fixed = data?.fixed || 0; batches[i].deleted = data?.deleted || 0;
         runningTotals.validated += data?.validated || 0; runningTotals.ok += data?.ok || 0;
         runningTotals.fixed += data?.fixed || 0; runningTotals.deleted += data?.deleted || 0;
         setValTotals({ ...runningTotals });
+        cursor = data?.last_id || cursor;
+        setValCursor(cursor);
       } catch (err: any) {
         batches[i].status = "error"; batches[i].error = err.message;
         if (err.message?.includes("429") || err.message?.includes("402") || err.message?.includes("Rate limit")) {
@@ -477,6 +505,10 @@ const AdminPanel = () => {
                                 {actionLoading === u.user_id + "_block" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
                                   <Ban className={`w-3.5 h-3.5 ${u.is_blocked ? "text-destructive" : "text-muted-foreground"}`} />}
                               </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar cadastro"
+                                onClick={() => setEditUser({ user_id: u.user_id, nome: u.nome, email: u.email || "", cpf: u.cpf })}>
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
                               <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" title="Excluir"
                                 onClick={() => setConfirmDeleteUser(u)}>
                                 <UserMinus className="w-3.5 h-3.5" />
@@ -601,20 +633,21 @@ const AdminPanel = () => {
           <TabsContent value="validar" className="mt-6 space-y-6">
             <div>
               <h2 className="text-lg font-bold mb-1">Validação de Questões via IA</h2>
-              <p className="text-sm text-muted-foreground">A IA revisa, corrige e remove questões problemáticas automaticamente.</p>
+              <p className="text-sm text-muted-foreground">A IA revisa, corrige e remove questões problemáticas automaticamente. Alterações são salvas em tempo real.</p>
             </div>
             <div className="flex flex-wrap gap-4 items-end">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Iniciar do offset</label>
-                <Input type="number" value={valOffset} onChange={(e) => setValOffset(Number(e.target.value))} className="w-24" disabled={valRunning} />
-              </div>
               <Button onClick={startValidation} disabled={valRunning} className="gradient-primary text-primary-foreground font-bold">
                 {valRunning ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Validando... ({valTotals.validated})</> : <><ShieldCheck className="w-4 h-4 mr-2" />Iniciar Validação</>}
               </Button>
-              {valFinished && !valRunning && (
-                <Button onClick={handleSaveValidation} className="bg-green-600 hover:bg-green-700 text-white font-bold">
-                  <Save className="w-4 h-4 mr-2" />Salvar Alterações
+              {valCursor > 0 && !valRunning && (
+                <Button variant="outline" size="sm" onClick={() => setValCursor(0)}>
+                  <RefreshCw className="w-3.5 h-3.5 mr-1" /> Reiniciar do início
                 </Button>
+              )}
+              {valFinished && !valRunning && (
+                <Badge variant="secondary" className="text-sm py-2 px-3 bg-green-500/10 text-green-600">
+                  <CheckCircle className="w-4 h-4 mr-1" /> Todas as alterações foram salvas automaticamente
+                </Badge>
               )}
             </div>
             {valTotals.validated > 0 && (
@@ -787,6 +820,38 @@ const AdminPanel = () => {
                 {deletingUserId ? "Excluindo..." : "Excluir"}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* ── Edit User Dialog ── */}
+        <Dialog open={!!editUser} onOpenChange={() => setEditUser(null)}>
+          <DialogContent className="max-w-md">
+            {editUser && (
+              <>
+                <DialogHeader><DialogTitle>Editar Cadastro</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Nome</label>
+                    <Input value={editUser.nome} onChange={(e) => setEditUser({ ...editUser, nome: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Email</label>
+                    <Input type="email" value={editUser.email} onChange={(e) => setEditUser({ ...editUser, email: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">CPF</label>
+                    <Input value={formatCPF(editUser.cpf)} onChange={(e) => setEditUser({ ...editUser, cpf: e.target.value })} maxLength={14} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditUser(null)}>Cancelar</Button>
+                  <Button onClick={handleEditUser} disabled={savingUser} className="gradient-primary text-primary-foreground font-bold">
+                    {savingUser ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+                    {savingUser ? "Salvando..." : "Salvar"}
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
           </DialogContent>
         </Dialog>
       </div>

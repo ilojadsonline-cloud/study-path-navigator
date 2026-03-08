@@ -13,18 +13,24 @@ serve(async (req) => {
   }
 
   try {
-    const { offset = 0, limit = 5 } = await req.json();
+    const { limit = 5, after_id } = await req.json();
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch a batch of questions to validate
-    const { data: questoes, error: fetchErr } = await supabase
+    // Use cursor-based pagination (by ID) instead of offset to avoid skipping after deletes
+    let query = supabase
       .from("questoes")
       .select("*")
       .order("id", { ascending: true })
-      .range(offset, offset + limit - 1);
+      .limit(limit);
+
+    if (after_id && after_id > 0) {
+      query = query.gt("id", after_id);
+    }
+
+    const { data: questoes, error: fetchErr } = await query;
 
     if (fetchErr) {
       console.error("Fetch error:", fetchErr);
@@ -36,12 +42,13 @@ serve(async (req) => {
 
     if (!questoes || questoes.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: "No more questions to validate", validated: 0, fixed: 0, deleted: 0 }),
+        JSON.stringify({ success: true, message: "No more questions to validate", validated: 0, ok: 0, fixed: 0, deleted: 0, last_id: after_id || 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Build validation prompt
+    const lastId = questoes[questoes.length - 1].id;
+
     const questoesJson = JSON.stringify(
       questoes.map((q) => ({
         id: q.id,
@@ -61,40 +68,44 @@ serve(async (req) => {
 
     const prompt = `Você é um revisor especialista em questões de concursos militares brasileiros (CHOA PMTO).
 
-Analise as questões abaixo e corrija os seguintes problemas:
+As questões DEVEM estar em conformidade com a legislação e o conteúdo do edital verticalizado:
+- Lei nº 2.578/2012 (Estatuto dos Militares do TO)
+- LC nº 128/2021 (Lei Orgânica da PMTO)
+- Lei nº 2.575/2012 (Código Disciplinar Militar do TO)
+- CPPM (Código de Processo Penal Militar – Decreto-Lei nº 1.002/69)
+- RDMETO (Regulamento Disciplinar dos Militares Estaduais do TO)
+- Direito Penal Militar (Código Penal Militar – Decreto-Lei nº 1.001/69)
+- Lei Orgânica PM (organização administrativa e estrutural)
 
 PROBLEMAS A IDENTIFICAR E CORRIGIR:
-1. Alternativas sem sentido, genéricas ou que não se relacionam com o enunciado
-2. Questões com mais de uma alternativa correta - ajuste para que APENAS UMA seja correta
-3. Alternativas com formatação errada (ex: "UM, a, b, c" ao invés de texto correto)
-4. Gabarito apontando para alternativa errada - corrija o índice (0=A, 1=B, 2=C, 3=D, 4=E)
-5. Enunciados confusos ou mal redigidos
-6. Comentários que não explicam corretamente a resposta
-7. Alternativas duplicadas ou muito similares
+1. Questões que NÃO têm embasamento na legislação acima - devem ser EXCLUÍDAS
+2. Alternativas sem sentido, genéricas ou que não se relacionam com o enunciado
+3. Questões com mais de uma alternativa correta - ajuste para que APENAS UMA seja correta
+4. Alternativas com formatação errada (ex: "UM, a, b, c" ao invés de texto correto)
+5. Gabarito apontando para alternativa errada - corrija o índice (0=A, 1=B, 2=C, 3=D, 4=E)
+6. Enunciados confusos ou mal redigidos
+7. Comentários que não explicam corretamente a resposta ou não citam a legislação
+8. Alternativas duplicadas ou muito similares
+9. Questões com conteúdo fora do escopo do edital CHOA PMTO
+10. Alternativas bagunçadas, bugadas ou com texto cortado/incompleto
 
 REGRAS:
 - Mantenha o id original de cada questão
-- Se uma questão está IRRECUPERÁVEL (totalmente sem sentido), marque-a com "deletar": true
-- Se uma questão precisa de correções, forneça a versão corrigida completa
-- Se uma questão está OK, marque-a com "ok": true
+- Se uma questão está IRRECUPERÁVEL (sem sentido, fora do contexto, alternativas bugadas sem conserto), marque com "deletar": true
+- Se uma questão precisa de correções, forneça a versão corrigida COMPLETA
+- Se uma questão está OK e alinhada com a legislação, marque com "ok": true
 - O gabarito DEVE ser 0-indexed (0=A, 1=B, 2=C, 3=D, 4=E)
 - Todas as alternativas devem ser textos completos e coerentes
-- O comentário deve citar artigos da legislação quando aplicável
+- O comentário DEVE citar artigos específicos da legislação quando aplicável
+- Enunciados devem seguir o padrão "De acordo com..." citando a lei específica
 
 Questões para revisar:
 ${questoesJson}
 
 Responda APENAS com um JSON array válido, sem markdown. Formato:
 [
-  {
-    "id": 123,
-    "ok": true
-  },
-  {
-    "id": 456,
-    "deletar": true,
-    "motivo": "Alternativas sem sentido"
-  },
+  { "id": 123, "ok": true },
+  { "id": 456, "deletar": true, "motivo": "Alternativas sem sentido" },
   {
     "id": 789,
     "corrigida": {
@@ -105,7 +116,7 @@ Responda APENAS com um JSON array válido, sem markdown. Formato:
       "alt_d": "Alternativa D corrigida",
       "alt_e": "Alternativa E corrigida",
       "gabarito": 2,
-      "comentario": "Explicação corrigida..."
+      "comentario": "Explicação com citação de artigo..."
     }
   }
 ]`;
@@ -128,16 +139,16 @@ Responda APENAS com um JSON array válido, sem markdown. Formato:
       console.error("AI error:", errText);
       const status = aiResponse.status;
       if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }), {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos.", last_id: after_id || 0 }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos no workspace." }), {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes.", last_id: after_id || 0 }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ error: "AI validation failed", details: errText }), {
+      return new Response(JSON.stringify({ error: "AI validation failed", details: errText, last_id: after_id || 0 }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -152,17 +163,18 @@ Responda APENAS com um JSON array válido, sem markdown. Formato:
     } catch {
       console.error("Parse error:", content.substring(0, 500));
       return new Response(
-        JSON.stringify({ error: "Failed to parse AI response", raw: content.substring(0, 500) }),
+        JSON.stringify({ error: "Failed to parse AI response", raw: content.substring(0, 500), last_id: lastId }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (!Array.isArray(resultados)) {
-      return new Response(JSON.stringify({ error: "AI response is not an array" }), {
+      return new Response(JSON.stringify({ error: "AI response is not an array", last_id: lastId }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Apply changes directly to DB (auto-save)
     let fixed = 0;
     let deleted = 0;
     let okCount = 0;
@@ -172,7 +184,6 @@ Responda APENAS com um JSON array válido, sem markdown. Formato:
       if (!r.id) continue;
 
       if (r.deletar) {
-        // First delete related respostas_usuario
         await supabase.from("respostas_usuario").delete().eq("questao_id", r.id);
         const { error: delErr } = await supabase.from("questoes").delete().eq("id", r.id);
         if (delErr) {
@@ -211,6 +222,7 @@ Responda APENAS com um JSON array válido, sem markdown. Formato:
         ok: okCount,
         fixed,
         deleted,
+        last_id: lastId,
         errors: errors.length > 0 ? errors : undefined,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

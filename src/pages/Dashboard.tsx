@@ -22,6 +22,25 @@ type AtividadeRecente = {
   icon: React.ReactNode;
 };
 
+// Helper to fetch all rows from a specific table bypassing 1000-row limit
+async function fetchAllRespostas(userId: string) {
+  const PAGE = 1000;
+  let allData: { id: number; correta: boolean; created_at: string; questao_id: number }[] = [];
+  let from = 0;
+  while (true) {
+    const { data } = await supabase.from("respostas_usuario")
+      .select("id, correta, created_at, questao_id")
+      .eq("user_id", userId)
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (!data || data.length === 0) break;
+    allData = allData.concat(data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return allData;
+}
+
 const Dashboard = () => {
   const { user, profile } = useAuth();
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
@@ -41,14 +60,9 @@ const Dashboard = () => {
     const fetchStats = async () => {
       setLoading(true);
 
-      // Fetch all user answers with question discipline
-      const { data: respostas } = await supabase
-        .from("respostas_usuario")
-        .select("id, correta, created_at, questao_id")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      // Fetch ALL user answers (bypassing 1000-row limit)
+      const allRespostas = await fetchAllRespostas(user.id);
 
-      const allRespostas = respostas || [];
       setTotalRespondidas(allRespostas.length);
       const corretas = allRespostas.filter(r => r.correta).length;
       setTotalCorretas(corretas);
@@ -59,14 +73,18 @@ const Dashboard = () => {
       const semana = allRespostas.filter(r => new Date(r.created_at) >= oneWeekAgo).length;
       setRespondidaSemana(semana);
 
-      // Fetch simulados
-      const { data: sims } = await supabase
-        .from("simulados")
+      // Fetch simulados (count)
+      const { count: simCount } = await supabase.from("simulados")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      setTotalSimulados(simCount || 0);
+
+      // Fetch recent simulados for activities
+      const { data: recentSims } = await supabase.from("simulados")
         .select("id, disciplina, acertos, total, created_at, finalizado")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      setTotalSimulados((sims || []).length);
+        .order("created_at", { ascending: false })
+        .limit(5);
 
       // Fetch study hours
       const { data: sessions } = await supabase
@@ -82,14 +100,17 @@ const Dashboard = () => {
       let discMap: Record<string, { total: number; corretas: number }> = {};
 
       if (questaoIds.length > 0) {
-        // Fetch disciplines for answered questions (batch)
-        const { data: questoes } = await supabase
-          .from("questoes")
-          .select("id, disciplina")
-          .in("id", questaoIds);
+        // Fetch in batches of 500 to avoid URL length issues
+        const BATCH = 500;
+        const allQuestoes: { id: number; disciplina: string }[] = [];
+        for (let i = 0; i < questaoIds.length; i += BATCH) {
+          const batch = questaoIds.slice(i, i + BATCH);
+          const { data } = await supabase.from("questoes").select("id, disciplina").in("id", batch);
+          if (data) allQuestoes.push(...data);
+        }
 
         const questaoDiscMap: Record<number, string> = {};
-        (questoes || []).forEach(q => { questaoDiscMap[q.id] = q.disciplina; });
+        allQuestoes.forEach(q => { questaoDiscMap[q.id] = q.disciplina; });
 
         allRespostas.forEach(r => {
           const disc = questaoDiscMap[r.questao_id];
@@ -110,9 +131,8 @@ const Dashboard = () => {
 
       // Build recent activities
       const recentActivities: AtividadeRecente[] = [];
-
-      // Recent simulados
-      (sims || []).slice(0, 3).forEach(s => {
+      const sortedSims = (recentSims || []);
+      sortedSims.slice(0, 3).forEach(s => {
         recentActivities.push({
           text: `Simulado ${s.disciplina} – ${s.acertos}/${s.total} acertos`,
           time: formatRelativeTime(s.created_at),
@@ -120,7 +140,6 @@ const Dashboard = () => {
         });
       });
 
-      // Recent answers (grouped by day, last 3 days)
       if (allRespostas.length > 0 && recentActivities.length < 4) {
         const today = new Date().toDateString();
         const answersToday = allRespostas.filter(r => new Date(r.created_at).toDateString() === today).length;

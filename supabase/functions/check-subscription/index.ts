@@ -53,7 +53,6 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    // Check active subscriptions
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: "active",
@@ -66,7 +65,11 @@ serve(async (req) => {
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
       try {
-        const endTimestamp = subscription.current_period_end;
+        // In basil API, current_period_end may be on the item level
+        let endTimestamp = subscription.current_period_end;
+        if (endTimestamp === undefined && subscription.items?.data?.[0]) {
+          endTimestamp = (subscription.items.data[0] as any).current_period_end;
+        }
         logStep("Raw current_period_end", { endTimestamp, type: typeof endTimestamp });
         if (endTimestamp) {
           const ms = typeof endTimestamp === 'number' && endTimestamp < 1e12 ? endTimestamp * 1000 : Number(endTimestamp);
@@ -80,7 +83,6 @@ serve(async (req) => {
       }
       logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
     } else {
-      // Also check for past_due or canceled subscriptions to give user info
       const canceledSubs = await stripe.subscriptions.list({
         customer: customerId,
         status: "canceled",
