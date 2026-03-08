@@ -61,11 +61,7 @@ const Dashboard = () => {
       setLoading(true);
 
       // Fetch ALL user answers (bypassing 1000-row limit)
-      const allRespostas = await fetchAllRows<{ id: number; correta: boolean; created_at: string; questao_id: number }>(
-        "respostas_usuario",
-        "id, correta, created_at, questao_id",
-        { user_id: user.id }
-      );
+      const allRespostas = await fetchAllRespostas(user.id);
 
       setTotalRespondidas(allRespostas.length);
       const corretas = allRespostas.filter(r => r.correta).length;
@@ -77,21 +73,26 @@ const Dashboard = () => {
       const semana = allRespostas.filter(r => new Date(r.created_at) >= oneWeekAgo).length;
       setRespondidaSemana(semana);
 
-      // Fetch ALL simulados
-      const allSims = await fetchAllRows<{ id: number; disciplina: string; acertos: number; total: number; created_at: string; finalizado: boolean }>(
-        "simulados",
-        "id, disciplina, acertos, total, created_at, finalizado",
-        { user_id: user.id }
-      );
-      setTotalSimulados(allSims.length);
+      // Fetch simulados (count)
+      const { count: simCount } = await supabase.from("simulados")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      setTotalSimulados(simCount || 0);
 
-      // Fetch ALL study sessions
-      const allSessions = await fetchAllRows<{ duration_seconds: number }>(
-        "study_sessions",
-        "id, duration_seconds",
-        { user_id: user.id }
-      );
-      const totalSeconds = allSessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
+      // Fetch recent simulados for activities
+      const { data: recentSims } = await supabase.from("simulados")
+        .select("id, disciplina, acertos, total, created_at, finalizado")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      // Fetch study hours
+      const { data: sessions } = await supabase
+        .from("study_sessions")
+        .select("duration_seconds")
+        .eq("user_id", user.id);
+
+      const totalSeconds = (sessions || []).reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
       setHorasEstudo(Math.round((totalSeconds / 3600) * 10) / 10);
 
       // Build discipline progress from answered questions
