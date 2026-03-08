@@ -224,6 +224,24 @@ const AdminPanel = () => {
     setActionLoading(null);
   };
 
+  const handleEditUser = async () => {
+    if (!editUser) return;
+    setSavingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: { action: "update_user", user_id: editUser.user_id, nome: editUser.nome, email: editUser.email, cpf: cleanCPF(editUser.cpf) },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Usuário atualizado!" });
+      setEditUser(null);
+      loadUsers();
+    } catch (err: any) {
+      toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
+    }
+    setSavingUser(false);
+  };
+
   // ── Questões ──
   const loadQuestoes = async (page = 0) => {
     setQuestoesLoading(true);
