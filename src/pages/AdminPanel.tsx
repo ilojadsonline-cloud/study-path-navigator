@@ -330,24 +330,26 @@ const AdminPanel = () => {
     const { count } = await supabase.from("questoes").select("*", { count: "exact", head: true });
     const total = count || 0;
     const batchSize = 5;
-    const remaining = total - valOffset;
-    const numBatches = Math.ceil(remaining / batchSize);
+    const numBatches = Math.ceil(total / batchSize);
     const batches: BatchResult[] = Array.from({ length: numBatches }, (_, i) => ({ batch: i + 1, status: "pending" as const }));
     setValResults([...batches]);
     let runningTotals = { validated: 0, ok: 0, fixed: 0, deleted: 0 };
+    let cursor = valCursor; // Use cursor-based (after_id) instead of offset
     for (let i = 0; i < numBatches; i++) {
       batches[i].status = "loading"; setValResults([...batches]);
       try {
-        const offset = valOffset + i * batchSize;
-        const { data, error } = await supabase.functions.invoke("validate-questions", { body: { offset, limit: batchSize } });
+        const { data, error } = await supabase.functions.invoke("validate-questions", { body: { limit: batchSize, after_id: cursor } });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
+        if (data?.validated === 0) { batches[i].status = "success"; batches[i].validated = 0; setValResults([...batches]); break; }
         batches[i].status = "success";
         batches[i].validated = data?.validated || 0; batches[i].ok = data?.ok || 0;
         batches[i].fixed = data?.fixed || 0; batches[i].deleted = data?.deleted || 0;
         runningTotals.validated += data?.validated || 0; runningTotals.ok += data?.ok || 0;
         runningTotals.fixed += data?.fixed || 0; runningTotals.deleted += data?.deleted || 0;
         setValTotals({ ...runningTotals });
+        cursor = data?.last_id || cursor;
+        setValCursor(cursor);
       } catch (err: any) {
         batches[i].status = "error"; batches[i].error = err.message;
         if (err.message?.includes("429") || err.message?.includes("402") || err.message?.includes("Rate limit")) {
