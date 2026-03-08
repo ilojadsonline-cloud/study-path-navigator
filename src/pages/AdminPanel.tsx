@@ -80,7 +80,7 @@ const AdminPanel = () => {
 
   // Validar Questões
   const [valRunning, setValRunning] = useState(false);
-  const [valOffset, setValOffset] = useState(0);
+  
   const [valResults, setValResults] = useState<BatchResult[]>([]);
   const [valTotals, setValTotals] = useState({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
   const [valFinished, setValFinished] = useState(false);
