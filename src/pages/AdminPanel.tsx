@@ -26,6 +26,9 @@ interface EnrichedUser {
   user_id: string; nome: string; cpf: string; email: string | null; created_at: string;
   is_admin: boolean; is_blocked: boolean; subscribed: boolean; subscription_end: string | null;
 }
+interface EditUserData {
+  user_id: string; nome: string; email: string; cpf: string;
+}
 interface Questao {
   id: number; disciplina: string; assunto: string; dificuldade: string; enunciado: string;
   alt_a: string; alt_b: string; alt_c: string; alt_d: string; alt_e: string; gabarito: number; comentario: string;
