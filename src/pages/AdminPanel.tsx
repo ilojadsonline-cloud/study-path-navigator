@@ -65,6 +65,16 @@ const AdminPanel = () => {
   const [valResults, setValResults] = useState<BatchResult[]>([]);
   const [valTotals, setValTotals] = useState({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
 
+  // Manage Users
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserNome, setNewUserNome] = useState("");
+  const [newUserCpf, setNewUserCpf] = useState("");
+  const [addingUser, setAddingUser] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<UserProfile | null>(null);
+
   const PAGE_SIZE = 20;
 
   useEffect(() => {
