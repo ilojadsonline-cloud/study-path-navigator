@@ -12,9 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
 import {
   Users, HelpCircle, BarChart3, Trash2, Eye, Search, ChevronLeft, ChevronRight,
-  Loader2, Shield, CheckCircle, Wrench, AlertCircle, ShieldCheck, Zap
+  Loader2, Shield, CheckCircle, Wrench, AlertCircle, ShieldCheck, Zap, UserPlus, UserMinus
 } from "lucide-react";
 
 // ── Types ──
