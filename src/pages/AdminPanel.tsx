@@ -117,6 +117,55 @@ const AdminPanel = () => {
     setUsersLoading(false);
   };
 
+  const handleAddUser = async () => {
+    if (!newUserEmail || !newUserPassword || !newUserNome || !newUserCpf) {
+      toast({ title: "Preencha todos os campos", variant: "destructive" });
+      return;
+    }
+    if (!validateCPF(newUserCpf)) {
+      toast({ title: "CPF inválido", variant: "destructive" });
+      return;
+    }
+    if (newUserPassword.length < 6) {
+      toast({ title: "Senha deve ter no mínimo 6 caracteres", variant: "destructive" });
+      return;
+    }
+    setAddingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: { action: "create", email: newUserEmail, password: newUserPassword, nome: newUserNome, cpf: cleanCPF(newUserCpf) },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Usuário criado com sucesso!" });
+      setShowAddUser(false);
+      setNewUserEmail(""); setNewUserPassword(""); setNewUserNome(""); setNewUserCpf("");
+      loadUsers();
+      loadStats();
+    } catch (err: any) {
+      toast({ title: "Erro ao criar usuário", description: err.message, variant: "destructive" });
+    }
+    setAddingUser(false);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    setDeletingUserId(userId);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: { action: "delete", user_id: userId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Usuário excluído com sucesso!" });
+      setConfirmDeleteUser(null);
+      loadUsers();
+      loadStats();
+    } catch (err: any) {
+      toast({ title: "Erro ao excluir usuário", description: err.message, variant: "destructive" });
+    }
+    setDeletingUserId(null);
+  };
+
   const loadQuestoes = async (page = 0) => {
     setQuestoesLoading(true);
     const from = page * PAGE_SIZE;
