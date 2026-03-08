@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import Stripe from "https://esm.sh/stripe@18.5.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,31 +35,23 @@ serve(async (req) => {
 
     const { action, ...params } = await req.json();
 
+    // ── CREATE USER ──
     if (action === "create") {
       const { email, password, nome, cpf } = params;
       if (!email || !password || !nome || !cpf) throw new Error("Campos obrigatórios: email, password, nome, cpf");
 
-      // Check CPF
       const { data: cpfExists } = await supabaseAdmin.rpc("check_cpf_exists", { p_cpf: cpf });
       if (cpfExists) throw new Error("CPF já cadastrado");
 
-      // Create auth user
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
+        email, password, email_confirm: true,
       });
       if (createError) throw new Error(`Erro ao criar usuário: ${createError.message}`);
 
-      // Create profile
       const { error: profileError } = await supabaseAdmin.from("profiles").insert({
-        user_id: newUser.user.id,
-        nome,
-        cpf,
-        email,
+        user_id: newUser.user.id, nome, cpf, email,
       });
       if (profileError) {
-        // Rollback: delete auth user
         await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
         throw new Error(`Erro ao criar perfil: ${profileError.message}`);
       }
@@ -68,14 +61,12 @@ serve(async (req) => {
       });
     }
 
+    // ── DELETE USER ──
     if (action === "delete") {
       const { user_id } = params;
       if (!user_id) throw new Error("user_id é obrigatório");
-
-      // Don't allow deleting yourself
       if (user_id === userData.user.id) throw new Error("Não é possível excluir a si mesmo");
 
-      // Delete related data first
       await supabaseAdmin.from("respostas_usuario").delete().eq("user_id", user_id);
       await supabaseAdmin.from("simulados").delete().eq("user_id", user_id);
       await supabaseAdmin.from("study_sessions").delete().eq("user_id", user_id);
@@ -90,7 +81,137 @@ serve(async (req) => {
       });
     }
 
-    throw new Error("Ação inválida. Use 'create' ou 'delete'.");
+    // ── TOGGLE ADMIN ──
+    if (action === "toggle_admin") {
+      const { user_id } = params;
+      if (!user_id) throw new Error("user_id é obrigatório");
+      if (user_id === userData.user.id) throw new Error("Não é possível alterar seu próprio papel");
+
+      const { data: existingRole } = await supabaseAdmin
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("role", "admin");
+
+      if (existingRole && existingRole.length > 0) {
+        await supabaseAdmin.from("user_roles").delete().eq("user_id", user_id).eq("role", "admin");
+        return new Response(JSON.stringify({ success: true, is_admin: false }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } else {
+        await supabaseAdmin.from("user_roles").insert({ user_id, role: "admin" });
+        return new Response(JSON.stringify({ success: true, is_admin: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // ── BLOCK / UNBLOCK USER ──
+    if (action === "toggle_block") {
+      const { user_id, block } = params;
+      if (!user_id) throw new Error("user_id é obrigatório");
+      if (user_id === userData.user.id) throw new Error("Não é possível bloquear a si mesmo");
+
+      if (block) {
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
+          ban_duration: "876000h", // ~100 years
+        });
+        if (error) throw new Error(`Erro ao bloquear: ${error.message}`);
+      } else {
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
+          ban_duration: "none",
+        });
+        if (error) throw new Error(`Erro ao desbloquear: ${error.message}`);
+      }
+
+      return new Response(JSON.stringify({ success: true, blocked: !!block }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── LIST USERS WITH DETAILS ──
+    if (action === "list_users") {
+      const { search } = params;
+      let query = supabaseAdmin.from("profiles").select("user_id, nome, cpf, email, created_at").order("created_at", { ascending: false });
+      if (search) query = query.or(`nome.ilike.%${search}%,cpf.ilike.%${search}%,email.ilike.%${search}%`);
+      const { data: profiles, error: profilesErr } = await query.limit(100);
+      if (profilesErr) throw new Error(profilesErr.message);
+
+      // Get all admin roles
+      const { data: allAdminRoles } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+      const adminSet = new Set((allAdminRoles || []).map(r => r.user_id));
+
+      // Get auth user details (banned status) for each user
+      const enrichedUsers = [];
+      for (const p of (profiles || [])) {
+        const { data: authData } = await supabaseAdmin.auth.admin.getUserById(p.user_id);
+        const banned = authData?.user?.banned_until
+          ? new Date(authData.user.banned_until) > new Date()
+          : false;
+
+        enrichedUsers.push({
+          ...p,
+          is_admin: adminSet.has(p.user_id),
+          is_blocked: banned,
+        });
+      }
+
+      // Check Stripe subscriptions for all users
+      const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+      if (stripeKey) {
+        const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+        for (const u of enrichedUsers) {
+          if (!u.email) { u.subscription_end = null; u.subscribed = false; continue; }
+          try {
+            const customers = await stripe.customers.list({ email: u.email, limit: 1 });
+            if (customers.data.length === 0) { u.subscription_end = null; u.subscribed = false; continue; }
+            const subs = await stripe.subscriptions.list({ customer: customers.data[0].id, status: "active", limit: 1 });
+            if (subs.data.length > 0) {
+              const end = subs.data[0].current_period_end;
+              const ms = typeof end === "number" && end < 1e12 ? end * 1000 : Number(end);
+              u.subscription_end = new Date(ms).toISOString();
+              u.subscribed = true;
+            } else {
+              u.subscription_end = null;
+              u.subscribed = false;
+            }
+          } catch {
+            u.subscription_end = null;
+            u.subscribed = false;
+          }
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, users: enrichedUsers }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── UPDATE QUESTION ──
+    if (action === "update_question") {
+      const { question_id, updates } = params;
+      if (!question_id || !updates) throw new Error("question_id e updates são obrigatórios");
+
+      const allowed = ["enunciado", "alt_a", "alt_b", "alt_c", "alt_d", "alt_e", "gabarito", "comentario", "disciplina", "assunto", "dificuldade"];
+      const safeUpdates: Record<string, unknown> = {};
+      for (const key of allowed) {
+        if (key in updates) safeUpdates[key] = updates[key];
+      }
+
+      if (Object.keys(safeUpdates).length === 0) throw new Error("Nenhum campo válido para atualizar");
+
+      const { error } = await supabaseAdmin.from("questoes").update(safeUpdates).eq("id", question_id);
+      if (error) throw new Error(`Erro ao atualizar questão: ${error.message}`);
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    throw new Error("Ação inválida.");
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: msg }), {
