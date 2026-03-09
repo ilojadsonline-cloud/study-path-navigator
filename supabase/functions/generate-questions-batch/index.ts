@@ -78,33 +78,107 @@ const DISCIPLINES = [
       "Movimentação e Lotação: classificação, reclassificação, transferências, permutas",
       "Afastamento e Licenciamento: agregação, licenciamento a pedido e ex officio, exclusão, demissão, reforma, reserva remunerada",
     ],
-    leiSeca: `LEI Nº 2.578, DE 20 DE ABRIL DE 2012 - Estado do Tocantins.
-CAPÍTULO I - DISPOSIÇÕES PRELIMINARES
-Art. 1º A presente Lei regula o ingresso na Corporação, a relação jurídica funcional, os direitos, a ética, as obrigações, os deveres, as garantias e as prerrogativas dos Policiais Militares e dos Bombeiros Militares do Estado do Tocantins.
-Art. 2º Os Policiais Militares e os Bombeiros Militares são membros das Forças Públicas Estaduais, que se encontrem em uma das seguintes situações: I – na ativa; II – na inatividade.
-Art. 3º Os membros das Forças Públicas Estaduais, em razão de suas atividades funcionais, são denominados militares estaduais.
+    leiSeca: `LEI Nº 2.578, DE 20 DE ABRIL DE 2012 - Estatuto dos Policiais Militares e Bombeiros Militares do Estado do Tocantins.
 
-CAPÍTULO II - DO INGRESSO
-Art. 7º O ingresso nos Quadros de Oficiais da PMTO e do CBMTO é feito por meio de concurso público de provas ou de provas e títulos.
-Art. 8º O ingresso nos Quadros de Praças da PMTO e do CBMTO é feito por meio de concurso público.
+CAPÍTULO I - DISPOSIÇÕES PRELIMINARES
+Art. 1º Regula o ingresso na Corporação, a relação jurídica funcional, os direitos, a ética, as obrigações, os deveres, as garantias e as prerrogativas dos Policiais Militares e dos Bombeiros Militares do Estado do Tocantins.
+Art. 2º A Polícia Militar e o Corpo de Bombeiros Militar são instituições permanentes, reserva do Exército Brasileiro, diretamente subordinadas ao Governador do Estado.
+Art. 3º Compete: I - à PM o exercício da polícia ostensiva e a preservação da ordem pública; II - ao CBM as atribuições previstas em leis específicas e as ações de defesa civil.
+Art. 4º Os militares constituem categoria de agente público estadual denominado militar (art. 42 CF). Situações: I - na ativa (carreira ou reserva convocada); II - na inatividade (reserva remunerada ou reformados).
+Art. 10. Conceituações: I - Comandante; II - Missão/Tarefa; III - Corporação (PMTO e CBMTO); IV - OM; V - Sede; VI - Serviço Ativo; VII - Efetivo Serviço; VIII - Comissão/Encargo; IX - Função Militar; X - Adição; XI - Inclusão/Nomeação; XII - Declaração; XIII - Movimentação (classificação, transferência, nomeação, designação); XIV - Almanaque; XV - Excedente; XVI - Licenciamento; XVII - Trânsito.
+
+CAPÍTULO II - DO INGRESSO NA CORPORAÇÃO
+Art. 11. Ingresso depende de concurso público, exigindo: I - nacionalidade brasileira; II - idade mínima 18 anos; III - idade máxima 32 anos (inscrição); IV - altura mínima 1,63m (M) e 1,60m (F); V - ensino médio (Praças) ou superior (Oficiais); VI - idoneidade moral; VII - negativa de condenação; VIII - obrigações eleitorais e militares em dia; IX - CNH mínimo "B".
+§4º Avaliação psicológica identifica traços incompatíveis: descontrole emocional, agressividade, impulsividade, oposicionismo a normas.
+§7º Após ingresso, o militar é submetido a curso de formação. §8º Reprovado no curso: exoneração ou recondução.
+§14 Acesso inicial QOPM/QOBM: graduação de Cadete, após conclusão declarado Aspirante a Oficial. §16 Acesso inicial Praças: Aluno-Praça.
 
 CAPÍTULO III - DA HIERARQUIA E DA DISCIPLINA
-Art. 12. A hierarquia militar é a ordenação da autoridade em níveis diferentes, por postos e graduações.
-Art. 13. Disciplina militar é a rigorosa observância e o acatamento integral das leis, regulamentos, normas e disposições.
-Art. 14. Os círculos hierárquicos são âmbitos de convivência entre os militares da mesma categoria.
+Art. 12. Exercício das funções militares é privativo do militar de carreira.
+Art. 13. Hierarquia e disciplina são a base institucional. §1º Hierarquia: ordenação da autoridade em níveis por postos e graduações. §4º Disciplina: rigorosa observância das leis e regulamentos. §6º Regulamento disciplinar: pena de prisão/detenção máximo 30 dias; nenhuma punição sem devido processo legal, ampla defesa e contraditório.
+Punições em ordem de gravidade: 1-advertência; 2-repreensão; 3-detenção; 4-prisão; 5-reforma disciplinar; 6-demissão.
+Art. 14. Círculos hierárquicos: âmbitos de convivência entre militares da mesma categoria.
+Art. 15. Escala hierárquica: I - Oficiais Superiores (Coronel, Tenente-Coronel, Major); II - Oficial Intermediário (Capitão); III - Oficiais Subalternos (1º e 2º Tenente); IV - Praças Especiais (Aspirante, Cadetes); V - Subtenentes e Sargentos; VI - Cabos e Soldados. §1º Posto: grau hierárquico do oficial (ato do Governador). §2º Graduação: grau hierárquico da praça (ato do CG).
+Art. 16. Antiguidade contada da data do ato de inclusão/promoção/nomeação/declaração.
+Art. 17. Precedência: Aspirante superior às demais praças; Aluno CFO superior ao Subtenente.
 
-CAPÍTULO IV - DOS DEVERES, OBRIGAÇÕES E DIREITOS
-Art. 24. Os deveres militares emanam de um conjunto de vínculos racionais, bem como morais, que ligam o militar à Pátria e ao serviço.
-Art. 25. São manifestações essenciais do valor militar: I – o patriotismo; II – o civismo; III – o culto às tradições históricas; IV – a fé na missão; V – o espírito de corpo; VI – o amor à profissão; VII – o aprimoramento técnico-profissional.
-Art. 27. São direitos dos militares: I – estabilidade; II – remuneração; III – férias; IV – licenças.
+CAPÍTULO IV - DO CARGO E DA FUNÇÃO MILITAR
+Art. 20. Subordinação não afeta a dignidade do militar, decorre da estrutura hierarquizada.
+Art. 21. Oficial é preparado para o Comando, Chefia e Direção.
+Art. 22. Subtenentes e Sargentos auxiliam Oficiais.
+Art. 23. Cabos e soldados: atividades de execução.
+Art. 25. Militar responsável integral por decisões, ordens e atos praticados.
+Art. 26. Cargo militar: só pode ser exercido por militar em serviço ativo.
 
-CAPÍTULO V - REGIME DISCIPLINAR
-Art. 43. Transgressão disciplinar é toda ação ou omissão contrária ao dever militar.
-Art. 47. São sanções disciplinares aplicáveis aos militares estaduais: I – advertência; II – repreensão; III – detenção; IV – prisão disciplinar; V – licenciamento e exclusão a bem da disciplina.
+CAPÍTULO V - DAS OBRIGAÇÕES DOS MILITARES
+Art. 32. Manifestações do valor militar: I - servir à comunidade; II - civismo e tradições; III - fé na missão; IV - espírito de corpo; V - amor à profissão; VI - aprimoramento técnico-profissional.
+Art. 33. Preceitos da ética militar: amar a verdade, exercer com eficiência, respeitar dignidade humana, cumprir leis, ser justo e imparcial, zelar pelo preparo, praticar camaradagem, ser discreto, abster-se de uso do posto para facilidades pessoais.
+Art. 34. Proibidos: sindicalização, greve, filiação partidária enquanto na ativa.
+Art. 35. Vedado ao militar da ativa: comerciar ou administrar sociedade (exceto acionista).
+Art. 36-37. Compromisso militar: prestado com caráter solene na presença de tropa.
 
-CAPÍTULO VI - DA RESERVA REMUNERADA E DA REFORMA
-Art. 85. A passagem do militar à situação de reserva remunerada será efetuada: I – a pedido; II – ex officio.
-Art. 91. A reforma será aplicada ao militar que: I – atingir a idade limite de permanência na reserva; II – for julgado incapaz definitivamente para o serviço.`,
+CAPÍTULO VII - DAS TRANSGRESSÕES DISCIPLINARES
+Art. 42. Transgressão disciplinar: infração administrativa que viola preceitos da ética militar. Prescrição: leve 1 ano; média 2 anos; grave 5 anos.
+Art. 44. Transgressões LEVES (12 incisos): não prestar informação, chegar atrasado, descuidar do asseio, faltar a preceitos de civilidade, etc.
+Art. 45. Transgressões MÉDIAS (33 incisos): concorrer para discórdia, deixar de punir transgressor, desconsiderar autoridade, permutar serviço sem permissão, demonstrar desídia, etc.
+Art. 46. Transgressões GRAVES (38 incisos): abandonar serviço, fazer afirmação falsa, exercer função fraudulenta, usar violência, não cumprir ordem, valer-se do cargo para proveito pessoal, extraviar material da Fazenda Pública, envolver-se em negócios ilegais, quebrar cadeia de comando, etc.
+Art. 49. Classificação pode ser alterada motivadamente pelas circunstâncias do art. 43.
+
+CAPÍTULO VIII - DOS PROCESSOS ADMINISTRATIVOS DISCIPLINARES
+Art. 50. Processos: I - sindicância; II - Conselhos de Justificação ou Disciplina.
+Art. 51. Sindicância: processo que apura transgressões, assegurados ampla defesa e contraditório.
+Art. 53. Conclusão em 30 dias, prorrogável por 20.
+Art. 55. Conselhos: avaliam capacidade do militar estável de permanecer no serviço ativo. §1º Oficial: Conselho de Justificação; Praça: Conselho de Disciplina.
+Art. 57. Submetido a Conselho quem: perder nacionalidade, procedimento incorreto, ato contra honra, crime hediondo, condenação penal >2 anos, falta grave estando em comportamento insuficiente/mau.
+Art. 58. Prazo dos Conselhos: 50 dias, prorrogável por 30.
+Art. 59. Conselhos: 3 Oficiais (Presidente, Relator, Secretário).
+
+COMPORTAMENTO MILITAR
+Art. 64-65. Comportamento da praça: excepcional (8 anos sem punição), ótimo (4 anos até 1 detenção), bom (2 anos até 2 prisões), insuficiente (1 ano até 2 prisões), mau (1 ano mais de 2 prisões). Equivalências: 2 repreensões = 1 detenção; 2 detenções = 1 prisão. Praça incluída no comportamento "bom".
+
+CAPÍTULO X - DOS DIREITOS
+Art. 68. Direitos: I - garantia do posto/patente (oficiais); II - garantia da graduação (praças estáveis); III - exoneração/licenciamento voluntário, porte de arma, tratamento de saúde, cursos, licença maternidade (120 dias), paternidade (8 dias), adoção, auxílio-funeral, 13º salário, salário-família, férias 30 dias com 1/3 adicional, devido processo legal.
+Art. 69. Auxílio-natalidade: equivalente ao subsídio do Soldado referência. Parto múltiplo: acrescido 50%.
+Art. 73. Militares remunerados exclusivamente por subsídios.
+Art. 75. Direito ao subsídio: a partir da inclusão ou reversão.
+Art. 76. Suspensão do subsídio: licença interesse particular, deserção, agregação para cargo civil.
+
+CAPÍTULO X - FÉRIAS E LICENÇAS
+Art. 86. Férias: 30 dias, acumuláveis até 2 períodos. Primeiro período: 12 meses de serviço.
+Art. 88. Afastamentos: I - núpcias (8 dias); II - luto (8 dias); III - instalação (10 dias); IV - trânsito (30 dias); V - trabalho acadêmico (10 dias); VI - aniversário (1 dia).
+Art. 90. Licenças: I - interesse particular; II - saúde de familiar; III - saúde própria; IV - maternidade; V - adoção; VI - paternidade; VII - curso de formação (concurso público).
+Art. 91. Licença interesse particular: 10+ anos de serviço, até 2 anos, sem remuneração.
+Art. 92. Licença maternidade: 120 dias; adoção: 120 dias (criança até 1 ano); paternidade: 8 dias.
+Art. 93. Prorrogação maternidade: 60 dias mediante requerimento.
+Art. 99. Recursos disciplinares: pedido de reconsideração (5 dias úteis), recurso hierárquico (5 dias úteis), apelação (15 dias úteis).
+
+CAPÍTULO XI - DAS PRERROGATIVAS
+Art. 101. Prerrogativas: uso de títulos/uniformes/distintivos, honras, cumprimento de pena em OM com precedência hierárquica, foro especial (crimes militares).
+Art. 102. Prisão do militar: somente em flagrante delito, entregue imediatamente à autoridade militar.
+Art. 104-106. Uniformes privativos dos militares; proibido civil usar uniforme similar.
+
+CAPÍTULO XII - DAS SITUAÇÕES ESPECIAIS
+Art. 107. Agregação: militar deixa de ocupar vaga na escala hierárquica. Hipóteses: cargo não militar, aguardar reserva, condenação CPM, incapacidade definitiva, >6 meses em licença saúde, desertor, candidato eletivo (10+ anos), entre outros.
+Art. 108. Reversão: retorno ao quadro quando cessa a agregação.
+Art. 112. Ausente: militar que por mais de 24h consecutivas deixar de comparecer sem comunicar.
+Art. 113-117. Desaparecido (8+ dias), extraviado (30+ dias), falecimento.
+
+CAPÍTULO XIII - DA EXCLUSÃO DO SERVIÇO ATIVO
+Art. 118. Exclusão por: I - reserva remunerada; II - reforma; III - deserção; IV - falecimento; V - extravio.
+Art. 121-122. Reserva remunerada a pedido: 30 anos efetivo serviço + 35 anos contribuição.
+Art. 123. Reserva ex officio: idades limites (Coronel 65 anos, Ten-Cel 63, Major 61, Capitão 59, Oficiais subalternos 58; Subtenente 63, 1ºSgt 60, 2ºSgt 59, 3ºSgt 58, Cabo 57, Soldado 56).
+Art. 125. Reforma: superar 3 anos da idade limite, incapacidade definitiva, >1 ano agregado por incapacidade, condenação CPM, Conselho de Justificação/Disciplina.
+Art. 127. Incapacidade definitiva por: acidente em serviço, doença do serviço, doença grave/incurável, acidente/doença sem relação com serviço. Doenças graves: tuberculose, alienação mental, neoplasia, cegueira, cardiopatia grave, Parkinson, AIDS, etc.
+
+CAPÍTULO XIV - DA DEMISSÃO E EXCLUSÃO
+Art. 132. Exclusão da Corporação por: demissão, exoneração, perda do posto/patente, perda da graduação, licenciamento.
+Art. 133. Exoneração a pedido: sem indenização (tempo >= formação) ou com indenização.
+Art. 139. Demissão a bem da disciplina: incompatibilidade para atividade militar.
+Art. 140. Demissão acarreta perda do grau hierárquico.
+
+CAPÍTULO XV - DO TEMPO DE CONTRIBUIÇÃO
+Art. 141. Tempo de efetivo serviço: contínuo ou não, dia a dia, entre inclusão e exclusão. §2º Divisor: 365 dias = 1 ano.
+Art. 142. Acréscimos: tempo público federal/estadual/municipal anterior, tempo privado, tempo autônomo.`,
   },
   {
     disciplina: "LC nº 128/2021",
