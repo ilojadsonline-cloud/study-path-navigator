@@ -567,7 +567,7 @@ serve(async (req) => {
   }
 
   try {
-    const { limit = 5, after_id } = await req.json();
+    const { limit = 2, after_id } = await req.json();
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
