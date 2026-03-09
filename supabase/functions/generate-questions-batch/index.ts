@@ -300,42 +300,135 @@ Art. 253. Ao preso em flagrante delito é permitido defender-se.`,
     leiNome: "Regulamento Disciplinar dos Militares Estaduais do Tocantins — Decreto nº 4.994/2014",
     fonteUrl: "https://central3.to.gov.br/arquivo/179903/",
     assuntos: [
-      "Disposições Gerais (Arts. 1º a 7º): finalidade, princípios de hierarquia e disciplina, conceito de transgressão disciplinar",
-      "Transgressões Disciplinares (Arts. 8º a 15): classificação (leve, média, grave), relação de transgressões, atenuantes e agravantes, causas de justificação",
-      "Sanções Disciplinares (Arts. 16 a 25): advertência, repreensão, detenção, prisão disciplinar, licenciamento e exclusão a bem da disciplina, aplicação e cumulação",
-      "Comportamento Militar (Arts. 26 a 35): classificação (excepcional, ótimo, bom, regular, insuficiente), critérios de mudança, ficha de alterações, reabilitação, elogios",
-      "Processo Disciplinar (Arts. 36 a 55): sindicância, PAD, contraditório, ampla defesa, recursos, prazos, decisão",
+      "Disposições Gerais e Deontologia Militar (Arts. 1º a 13): finalidade, sujeição ao RDMETO, conceitos (honra, pundonor, decoro, hierarquia, disciplina, transgressão), direitos humanos, manifestações da disciplina, ordens, camaradagem",
+      "Comunicação e Sindicância (Arts. 14 a 29): Parte (comunicação de fato transgressivo), instauração, competência, impedimento, autuação, citação, interrogatório, defesa preliminar",
+      "Instrução Processual (Arts. 30 a 78): testemunhas, ofendido, acareação, reconhecimento, insanidade mental, diligências, carta precatória, revelia, defensor (constituído, dativo, ad hoc)",
+      "Relatório, Solução e Recursos (Arts. 80 a 103): alegações finais, relatório do sindicante, prazo (30 dias + 20 prorrogação), suspensão e interrupção, solução, enquadramento, fase recursal (reconsideração 5 dias úteis, recurso hierárquico 5 dias úteis), modificação (relevação e atenuação), anulação",
+      "Punições Disciplinares (Arts. 104 a 128): advertência, repreensão, detenção, prisão, demissão, pontuação (leve 5pts, média 20pts, grave 30pts), atenuantes (+3pts) e agravantes (-3pts), causas de justificação, exclusão da infração, extinção da punibilidade, prescrição, comportamento das praças, cancelamento e anulação de registro",
+      "Conselhos de Justificação e Disciplina (Arts. 130 a 171): constituição, prazos (50 dias + 30), sessão inaugural, libelo acusatório, instrução, alegações finais, deliberação, relatório, decisão (20 dias), apelação (15 dias úteis), medidas (IPM, reforma, reserva, demissão)",
     ],
-    leiSeca: `DECRETO Nº 4.994, DE 2 DE OUTUBRO DE 2014 - Estado do Tocantins.
-Aprova o Regulamento Disciplinar dos Militares Estaduais do Tocantins - RDMETO.
+    leiSeca: `DECRETO Nº 4.994, DE 14 DE FEVEREIRO DE 2014 - Regulamento Disciplinar dos Militares Estaduais do Tocantins (RDMETO).
 
-Art. 1º O Regulamento Disciplinar dos Militares Estaduais do Tocantins tem por finalidade especificar os deveres, obrigações e proibições dos militares estaduais, definir e classificar as transgressões disciplinares e estabelecer normas relativas à aplicação de sanções disciplinares.
+CAPÍTULO I - DISPOSIÇÕES GERAIS
+Art. 1º O RDMETO tem por finalidade regular os processos administrativos disciplinares de que trata a Lei 2.578/2012.
+Art. 2º Sujeitam-se ao RDMETO: I - militares do Estado (ativa, reserva, agregados, reformados); II - alunos dos cursos de formação; III - militares matriculados em outras corporações; IV - militares designados/cedidos. Parágrafo único: aplica-se também quando no meio civil infrinjam hierarquia, disciplina, ética, pundonor e decoro.
+Art. 3º Conceitos: I - honra pessoal: sentimento de dignidade própria; II - pundonor militar: dever de alto padrão de comportamento ético; III - decoro da classe: valor moral e social da Instituição; IV - hierarquia: ordenação por postos e graduações; V - disciplina: rigorosa observância das leis e regulamentos; VI - transgressão disciplinar: infração administrativa por violação aos preceitos da ética militar.
 
-Art. 2º Os princípios fundamentais da vida militar estadual são a hierarquia e a disciplina.
+DEONTOLOGIA MILITAR E DIREITOS HUMANOS
+Art. 4º A Deontologia Militar reúne valores éticos destinados a elevar a carreira militar à condição de missão.
+Art. 5º Cumpre ao militar obedecer ao Código de Conduta da ONU (Resolução 34/169 de 1979).
+Art. 6º Respeitar e proteger a dignidade da pessoa humana.
+Art. 7º Emprego da força somente quando estritamente necessário (legalidade, necessidade, proporcionalidade).
+Art. 8º Proibido infligir, instigar ou tolerar tortura ou tratamento cruel/desumano.
+Art. 9º Respeitar capacidade e limitações individuais, sem preconceito ou discriminação.
 
-Art. 3º Hierarquia militar é a ordenação da autoridade, em níveis diferentes, por postos e graduações.
+MANIFESTAÇÕES DA DISCIPLINA
+Art. 10. Manifestações essenciais: I - correção de atitudes; II - obediência pronta; III - dedicação integral; IV - colaboração espontânea; V - consciência das responsabilidades.
+Art. 11. Disciplina e respeito à hierarquia são permanentes (ativa e inatividade).
+Art. 12. Ordens devem ser prontamente obedecidas. §1º Superior: responsável pelas ordens; Subordinado: solicitar esclarecimentos. §2º Responsabilidade criminal: subordinado pode requerer confirmação por escrito. §3º Subordinado que exorbitar é responsável pelos excessos.
+Art. 13. Camaradagem é indispensável à família militar.
 
-Art. 4º Disciplina militar é a rigorosa observância e o acatamento integral das leis, regulamentos, normas e disposições.
+COMUNICAÇÃO DE FATO TRANSGRESSIVO
+Art. 14. Comunicação mediante "Parte". §1º Comunicação verbal: formalizada por escrito em até 48 horas. §3º Autoridade competente: pode expedir memorando facultando justificativa em 48 horas.
 
-Art. 7º Transgressão disciplinar é toda ação ou omissão contrária ao dever militar, tipificada neste Regulamento.
+CAPÍTULO II - DA SINDICÂNCIA
+Art. 15. Sindicância: instrumento pelo qual a Administração Militar apura transgressões disciplinares, assegurados devido processo legal, ampla defesa e contraditório. Utilizada também para promoção na carreira e averiguação de danos.
+Art. 17. Competência: autoridades descritas no art. 40 da Lei 2.578/2012. §3º Sindicantes: I - Oficial (superior ou mais antigo que sindicado); II - Aspirante a Oficial (praças inferiores a Subtenente).
+Art. 18. Impedimentos do sindicante: ser parte, orientar parte, noticiar conduta, ser testemunha, ser defensor, ser credor/devedor, ser parente até 3º grau, não ter precedência hierárquica.
+Art. 21. Sindicância instaurada por portaria em boletim: I - reservado (Oficial/Aspirante); II - ostensivo (Praça).
+Art. 26-27. Citação por mandado. Contrafé entregue ao sindicado. Antecedência mínima de 48 horas para interrogatório. §5º Citação por edital: quando sindicado não localizado.
+Art. 28. Interrogatório: sindicado qualificado e cientificado da acusação, informado dos direitos ao contraditório e ampla defesa. §2º Silêncio não importa confissão.
+Art. 30. Defesa preliminar: 3 dias úteis após interrogatório.
+Art. 31. Na defesa preliminar: arrolar até 3 testemunhas, juntar documentos, solicitar diligências.
+Art. 33. Instrução: tomada de depoimentos, acareações, reconhecimentos, diligências.
 
-Art. 8º As transgressões disciplinares classificam-se em: I - leves; II - médias; III - graves.
+OFENDIDO E TESTEMUNHAS
+Art. 41. Ofendido ouvido após interrogatório, não presta compromisso.
+Art. 42-43. Testemunha: presta compromisso de verdade, advertida de falso testemunho. Sem compromisso: doente mental, menor de 14, parentes/cônjuge do sindicado.
+Art. 47. Defensor pode fazer perguntas diretamente às testemunhas.
+Art. 51. Testemunhas do comunicante/ofendido: acusação (até 3). Defesa: até 3.
 
-Art. 9º São circunstâncias atenuantes: I - bom comportamento; II - relevância de serviços prestados; III - ter sido cometida para evitar mal maior; IV - ter confessado a autoria espontaneamente.
+ACAREAÇÃO E RECONHECIMENTO
+Art. 54. Acareação entre: sindicados, testemunhas, ofendidos e combinações.
+Art. 58. Reconhecimento de pessoa: descrição prévia, colocação ao lado de semelhantes.
 
-Art. 10. São circunstâncias agravantes: I - mau comportamento; II - prática durante o serviço; III - reincidência; IV - coautoria.
+INSANIDADE MENTAL
+Art. 61-65. Dúvida sobre sanidade: sindicância suspensa, JMCS emite laudo em até 30 dias. Insanidade temporária: sindicância retomada após restabelecimento. Insanidade permanente: defensor dativo nomeado, arquivamento por extinção da punibilidade.
 
-Art. 11. São causas de justificação: I - ter sido cometida em obediência a ordem superior; II - ter sido cometida para evitar perigo iminente; III - ter sido cometida em legítima defesa.
+ALEGAÇÕES FINAIS E RELATÓRIO
+Art. 80. Alegações finais: 5 dias úteis após instrução. §5º Sindicado defende-se dos fatos, não de capitulações.
+Art. 81-82. Relatório: circunstanciado, com parte expositiva, diligências, argumentos da defesa, análise dos fatos e conclusão. Imparcial, sucinto, conclusivo.
 
-Art. 16. São sanções disciplinares: I - advertência; II - repreensão; III - detenção (até 10 dias); IV - prisão disciplinar (até 30 dias); V - licenciamento e exclusão a bem da disciplina.
+PRAZO DA SINDICÂNCIA
+Art. 83. Conclusão: 30 dias (portaria até recebimento pela autoridade). Prorrogável por 20 dias.
+Art. 85. Interrupção: aditamento da portaria, despacho para diligências, despacho saneador.
+Art. 87. Suspensão: férias, afastamento médico, viagem de serviço, espera de diligência, força maior.
 
-Art. 26. O comportamento militar é a avaliação da conduta do militar estadual, classificado em: I - excepcional; II - ótimo; III - bom; IV - regular; V - insuficiente.
+SOLUÇÃO E ENQUADRAMENTO
+Art. 89. Solução: decisão motivada, publicada em boletim. Autoridade pode concordar, discordar motivadamente, arquivar.
+Art. 92. Despacho saneador: devolução ao sindicante para sanar vícios de nulidade.
+Art. 93. Enquadramento: documento que oficializa a punição após publicação.
 
-Art. 36. A apuração de transgressão disciplinar será realizada mediante sindicância ou processo administrativo disciplinar.
+RECURSOS
+Art. 94. Recursos no âmbito da sindicância: I - pedido de reconsideração (5 dias úteis); II - recurso hierárquico (5 dias úteis). §8º Recurso hierárquico dirigido ao CEM (se instauradora for Corregedor ou inferior) ou autoridade superior. §9º Recurso individual.
+Art. 95. Interposição tempestiva suspende cumprimento da punição.
+Art. 96. Preclusão: não interpor recurso no prazo. Parágrafo único: Não interpor reconsideração elide direito ao recurso hierárquico.
+Art. 98. Recurso não conhecido: fora do prazo, sem legitimidade, dirigido a autoridade incompetente. §4º Não se pode agravar a punição.
 
-Art. 38. O processo administrativo disciplinar será instaurado quando: I - a transgressão for de natureza grave; II - o fato puder resultar em licenciamento ou exclusão.
+MODIFICAÇÃO E ANULAÇÃO
+Art. 100-103. Modificação: relevação (suspensão após 1/3 cumprido) e atenuação (reforma para punição menos rigorosa). Anulação pelo Comandante-Geral.
 
-Art. 42. É assegurado ao militar estadual o contraditório e a ampla defesa.`,
+CAPÍTULO III - PUNIÇÕES DISCIPLINARES
+Art. 104. Punição: sanção administrativa com efeito pedagógico ao punido e aos demais membros.
+Art. 105. Punições em ordem crescente: I - advertência; II - repreensão; III - detenção; IV - prisão; V - demissão.
+Art. 106. Advertência: admoestação verbal, particular, não consta nos assentamentos.
+Art. 107. Repreensão: admoestação escrita, publicada em boletim, consta nos assentamentos.
+Art. 108. Detenção: cerceamento da liberdade, permanece na OM, comparece a atos de instrução e serviço.
+Art. 109. Prisão: confinamento em local designado. Diferentes círculos separados. Presos disciplinares separados dos judiciais.
+Art. 110-111. Demissão (no âmbito da sindicância): exclusão do militar não estável. Motivos: incorrigibilidade, conduta incompatível, condenação penal. Acarreta perda do grau hierárquico.
+
+PONTUAÇÃO PARA APLICAÇÃO
+Art. 112. Pontuação base: leve 5pts negativos, média 20pts negativos, grave 30pts negativos. Atenuante: +3pts. Agravante: -3pts.
+Art. 112, V - Punições: a) Só leves: até 10pts = advertência; acima 10pts = até repreensão. b) Maior gravidade média: <30pts = 1-10 dias detenção; 30-39pts = 11-20 dias; >39pts = 21-30 dias. c) Ao menos uma grave: <40pts = 1-10 dias prisão; 40-48pts = 11-20 dias; >48pts = 21-30 dias. d) Grave + incompatibilidade = demissão (não estável).
+Art. 113. Classificação da transgressão pode ser alterada motivadamente (antecedentes, causas, natureza, consequências).
+
+CAUSAS DE JUSTIFICAÇÃO
+Art. 116. Não há punição quando: I - ação meritória; II - obediência a ordem (não manifestamente ilegal); III - uso imperativo dos meios (perigo, urgência, calamidade, disciplina); IV - força maior/caso fortuito; V - coação irresistível; VI - consequências atingem o próprio transgressor.
+
+EXCLUSÃO DA INFRAÇÃO
+Art. 117. Infração excluída por: I - legítima defesa; II - estado de necessidade; III - estrito cumprimento do dever legal.
+
+EXTINÇÃO DA PUNIBILIDADE
+Art. 118. Extingue-se por: I - morte; II - anistia estadual; III - retroatividade de lei; IV - prescrição; V - causa de justificação; VI - insanidade mental incapacitante e irreversível.
+Art. 119. Prescrição: leve 1 ano; média 2 anos; grave 5 anos. Instauração de processo interrompe prescrição.
+
+ATENUANTES E AGRAVANTES
+Art. 120. Atenuantes: I - comportamento excepcional/ótimo; II - bons serviços prestados; III - evitar mal maior ou defesa própria; IV - confissão na primeira oportunidade.
+Art. 121. Agravantes: I - premeditação; II - comportamento insuficiente/mau; III - reincidência específica; IV - prática simultânea/conexão; V - conluio; VI - durante serviço, em presença de subordinado/tropa/público, com abuso de autoridade. Reincidência específica: mesma capitulação em 5 anos.
+
+COMPORTAMENTO DAS PRAÇAS
+Art. 122-124. Comportamento reflete conduta civil e profissional. Classificação: Excepcional (8 anos sem punição), Ótimo (4 anos até 1 detenção), Bom (2 anos até 2 prisões), Insuficiente (1 ano até 2 prisões), Mau (1 ano mais de 2 prisões). Praça incluída no comportamento "Bom". Equivalência: 2 repreensões = 1 detenção; 4 repreensões = 1 prisão; 2 detenções = 1 prisão; 1 transferência a bem da disciplina = 1 detenção.
+
+CANCELAMENTO E ANULAÇÃO
+Art. 125-128. Cancelamento do registro: retirar da ficha. Condições: prisão: 8 anos sem punição; repreensão/detenção: 4 anos. Anulação pelo CG em até 5 anos por ilegalidade/vício insanável, efeitos retroativos.
+
+CAPÍTULO IV - CONSELHOS DE JUSTIFICAÇÃO E DISCIPLINA
+Art. 130. Avaliam capacidade do militar de permanecer na Corporação. Oficial: Conselho de Justificação; Praça: Conselho de Disciplina.
+Art. 131. Submetido nas situações do art. 57 da Lei 2.578/2012.
+Art. 138-139. Competência: art. 41 da Lei 2.578/2012. Constituição: art. 59 da Lei 2.578/2012.
+Art. 140. Prazo: 50 dias (sessão inaugural até relatório), prorrogável por 30 dias.
+Art. 146-148. Instauração por portaria. Sessão inaugural em até 5 dias após publicação.
+Art. 151. Interrogatório com 48h de antecedência. Membros podem formular perguntas.
+Art. 152-153. Libelo acusatório: qualificação, exposição circunstanciada, tipificação (art. 57), agravantes.
+Art. 154. Defesa preliminar: 3 dias úteis.
+Art. 158. Alegações finais: 5 dias úteis.
+Art. 159-160. Sessão de deliberação secreta. Relatório pelo Relator com medidas do art. 62 da Lei 2.578/2012.
+Art. 161. Decisão da autoridade em 20 dias. Pode devolver para diligências (30 dias). Oficial: autos ao TJ para perda do posto.
+Art. 162-163. Apelação: 15 dias úteis. Competência exclusiva do Chefe do Poder Executivo. Não suspende cumprimento (exceto punições privativas de liberdade).
+Art. 164. Autoridade pode: novas provas, anular, modificar, dar tipificação diversa, manter decisão.
+
+MEDIDAS NO ÂMBITO DOS CONSELHOS
+Art. 165-171. Medidas: I - IPM; II - encaminhamento à autoridade policial; III - reforma disciplinar; IV - reserva remunerada proporcional; V - demissão a bem da disciplina; VI - punição disciplinar; VII - arquivamento. Demissão: exclusão do militar por conduta incompatível, acarreta perda do grau hierárquico.`,
   },
   {
     disciplina: "Direito Penal Militar",
