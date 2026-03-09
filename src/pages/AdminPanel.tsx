@@ -425,6 +425,45 @@ const AdminPanel = () => {
             <TabsTrigger value="validar" className="flex items-center gap-1.5 text-xs"><ShieldCheck className="w-3.5 h-3.5" />Validar</TabsTrigger>
           </TabsList>
 
+          {/* ── REPORTS ── */}
+          <TabsContent value="reports" className="mt-6">
+            {reportsLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+            ) : reports.length === 0 ? (
+              <p className="text-muted-foreground text-center py-12">Nenhum relatório de erro pendente.</p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">{reports.length} relatórios encontrados</p>
+                {reports.map((r: any) => (
+                  <Card key={r.id} className="glass-card border-none">
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={r.status === "resolvido" ? "bg-success/10 text-success border-success/30" : "bg-warning/10 text-warning border-warning/30"}>
+                            {r.status}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">Questão #{r.questao_id}</span>
+                          <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString("pt-BR")}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          {r.status !== "resolvido" && (
+                            <Button size="sm" variant="outline" onClick={() => resolveReport(r.id)} className="text-xs h-7">
+                              <CheckCircle className="w-3 h-3 mr-1" />Resolver
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" onClick={() => deleteReport(r.id)} className="text-xs h-7 text-destructive">
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-sm">{r.motivo}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
           {/* ── STATS ── */}
           <TabsContent value="stats" className="mt-6">
             {statsLoading ? (
