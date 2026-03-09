@@ -105,6 +105,44 @@ const AdminPanel = () => {
   const [reports, setReports] = useState<any[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
 
+  // Notifications
+  const [notifTitle, setNotifTitle] = useState("");
+  const [notifMessage, setNotifMessage] = useState("");
+  const [sendingNotif, setSendingNotif] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifsLoading, setNotifsLoading] = useState(false);
+
+  const loadNotifications = async () => {
+    setNotifsLoading(true);
+    const { data } = await supabase.from("notifications" as any).select("*").order("created_at", { ascending: false }).limit(50);
+    setNotifications((data as any[]) || []);
+    setNotifsLoading(false);
+  };
+
+  const sendNotification = async () => {
+    if (!notifTitle.trim() || !notifMessage.trim()) {
+      toast({ title: "Preencha título e mensagem", variant: "destructive" });
+      return;
+    }
+    setSendingNotif(true);
+    const { error } = await supabase.from("notifications" as any).insert({ title: notifTitle.trim(), message: notifMessage.trim(), created_by: user?.id } as any);
+    setSendingNotif(false);
+    if (error) {
+      toast({ title: "Erro ao enviar notificação", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Notificação enviada com sucesso!" });
+      setNotifTitle("");
+      setNotifMessage("");
+      loadNotifications();
+    }
+  };
+
+  const deleteNotification = async (id: number) => {
+    await supabase.from("notifications" as any).delete().eq("id", id);
+    loadNotifications();
+    toast({ title: "Notificação excluída" });
+  };
+
   const loadReports = async () => {
     setReportsLoading(true);
     const { data } = await supabase.from("question_reports" as any).select("*").order("created_at", { ascending: false }).limit(100);
