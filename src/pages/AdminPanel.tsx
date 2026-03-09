@@ -18,7 +18,7 @@ import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
 import {
   Users, HelpCircle, BarChart3, Trash2, Eye, Search, ChevronLeft, ChevronRight,
   Loader2, Shield, CheckCircle, Wrench, AlertCircle, ShieldCheck, Zap, UserPlus,
-  UserMinus, Ban, ShieldAlert, Pencil, Save, Clock, Crown, RefreshCw
+  UserMinus, Ban, ShieldAlert, Pencil, Save, Clock, Crown, RefreshCw, Flag
 } from "lucide-react";
 
 // ── Types ──
