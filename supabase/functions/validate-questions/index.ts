@@ -687,7 +687,7 @@ Responda APENAS com JSON array válido.`;
           Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "google/gemini-2.0-flash",
           messages: [{ role: "user", content: prompt }],
           temperature: 0.1,
         }),
