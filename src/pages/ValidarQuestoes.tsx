@@ -39,7 +39,7 @@ const ValidarQuestoes = () => {
     const total = count || 0;
     setTotalQuestoes(total);
 
-    const batchSize = 5;
+    const batchSize = 2;
     const numBatches = Math.max(1, Math.ceil(total / batchSize));
 
     const batches: BatchResult[] = Array.from({ length: numBatches }, (_, i) => ({
