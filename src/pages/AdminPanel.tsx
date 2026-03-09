@@ -18,7 +18,7 @@ import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
 import {
   Users, HelpCircle, BarChart3, Trash2, Eye, Search, ChevronLeft, ChevronRight,
   Loader2, Shield, CheckCircle, Wrench, AlertCircle, ShieldCheck, Zap, UserPlus,
-  UserMinus, Ban, ShieldAlert, Pencil, Save, Clock, Crown, RefreshCw
+  UserMinus, Ban, ShieldAlert, Pencil, Save, Clock, Crown, RefreshCw, Flag
 } from "lucide-react";
 
 // ── Types ──
@@ -101,6 +101,27 @@ const AdminPanel = () => {
   const [savingUser, setSavingUser] = useState(false);
   // Cursor for validation
   const [valCursor, setValCursor] = useState(0);
+  // Reports
+  const [reports, setReports] = useState<any[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+
+  const loadReports = async () => {
+    setReportsLoading(true);
+    const { data } = await supabase.from("question_reports" as any).select("*").order("created_at", { ascending: false }).limit(100);
+    setReports((data as any[]) || []);
+    setReportsLoading(false);
+  };
+
+  const resolveReport = async (reportId: number) => {
+    await supabase.from("question_reports" as any).update({ status: "resolvido", resolved_at: new Date().toISOString() } as any).eq("id", reportId);
+    loadReports();
+    toast({ title: "Relatório marcado como resolvido" });
+  };
+
+  const deleteReport = async (reportId: number) => {
+    await supabase.from("question_reports" as any).delete().eq("id", reportId);
+    loadReports();
+  };
 
   const PAGE_SIZE = 20;
 
@@ -393,14 +414,55 @@ const AdminPanel = () => {
         <Tabs defaultValue="stats" onValueChange={(v) => {
           if (v === "users") loadUsers();
           if (v === "questoes") loadQuestoes(0);
+          if (v === "reports") loadReports();
         }}>
           <TabsList className="flex flex-wrap gap-1 h-auto max-w-2xl">
             <TabsTrigger value="stats" className="flex items-center gap-1.5 text-xs"><BarChart3 className="w-3.5 h-3.5" />Estatísticas</TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-1.5 text-xs"><Users className="w-3.5 h-3.5" />Usuários</TabsTrigger>
             <TabsTrigger value="questoes" className="flex items-center gap-1.5 text-xs"><HelpCircle className="w-3.5 h-3.5" />Questões</TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs"><Flag className="w-3.5 h-3.5" />Relatórios</TabsTrigger>
             <TabsTrigger value="gerar" className="flex items-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" />Gerar</TabsTrigger>
             <TabsTrigger value="validar" className="flex items-center gap-1.5 text-xs"><ShieldCheck className="w-3.5 h-3.5" />Validar</TabsTrigger>
           </TabsList>
+
+          {/* ── REPORTS ── */}
+          <TabsContent value="reports" className="mt-6">
+            {reportsLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+            ) : reports.length === 0 ? (
+              <p className="text-muted-foreground text-center py-12">Nenhum relatório de erro pendente.</p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">{reports.length} relatórios encontrados</p>
+                {reports.map((r: any) => (
+                  <Card key={r.id} className="glass-card border-none">
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={r.status === "resolvido" ? "bg-success/10 text-success border-success/30" : "bg-warning/10 text-warning border-warning/30"}>
+                            {r.status}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">Questão #{r.questao_id}</span>
+                          <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString("pt-BR")}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          {r.status !== "resolvido" && (
+                            <Button size="sm" variant="outline" onClick={() => resolveReport(r.id)} className="text-xs h-7">
+                              <CheckCircle className="w-3 h-3 mr-1" />Resolver
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" onClick={() => deleteReport(r.id)} className="text-xs h-7 text-destructive">
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-sm">{r.motivo}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
           {/* ── STATS ── */}
           <TabsContent value="stats" className="mt-6">

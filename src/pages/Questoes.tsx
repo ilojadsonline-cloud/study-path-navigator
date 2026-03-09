@@ -2,13 +2,15 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
-import { Filter, CheckCircle, XCircle, Star, ChevronDown, HelpCircle, Loader2 } from "lucide-react";
+import { Filter, CheckCircle, XCircle, Star, ChevronDown, HelpCircle, Loader2, Flag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/BackButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 interface Questao {
   id: number;
   disciplina: string;
@@ -46,9 +48,36 @@ const Questoes = () => {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [answeredIds, setAnsweredIds] = useState<Set<number>>(new Set());
   const [availableDisciplinas, setAvailableDisciplinas] = useState<string[]>([]);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportQuestaoId, setReportQuestaoId] = useState<number | null>(null);
+  const [reportMotivo, setReportMotivo] = useState("");
+  const [reportSending, setReportSending] = useState(false);
 
   const dificuldades = ["Todos", "Fácil", "Médio", "Difícil"];
   const statusOptions = ["Todos", "Não resolvidas", "Resolvidas"];
+
+  const handleReport = (questaoId: number) => {
+    setReportQuestaoId(questaoId);
+    setReportMotivo("");
+    setReportOpen(true);
+  };
+
+  const submitReport = async () => {
+    if (!user || !reportQuestaoId) return;
+    setReportSending(true);
+    const { error } = await supabase.from("question_reports" as any).insert({
+      questao_id: reportQuestaoId,
+      user_id: user.id,
+      motivo: reportMotivo,
+    } as any);
+    setReportSending(false);
+    if (error) {
+      toast.error("Erro ao enviar relatório");
+    } else {
+      toast.success("Erro reportado com sucesso! Obrigado.");
+      setReportOpen(false);
+    }
+  };
 
   // Fetch available disciplines and answered question IDs
   useEffect(() => {
@@ -232,6 +261,13 @@ const Questoes = () => {
                     </Badge>
                     <span className="text-[10px] text-muted-foreground">{q.assunto}</span>
                   </div>
+                  <button
+                    onClick={() => handleReport(q.id)}
+                    title="Reportar erro nesta questão"
+                    className="shrink-0 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 <p className="text-sm leading-relaxed text-foreground">{q.enunciado}</p>
@@ -296,6 +332,28 @@ const Questoes = () => {
             ))}
           </div>
         )}
+
+        {/* Report Dialog */}
+        <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reportar Erro na Questão</DialogTitle>
+            </DialogHeader>
+            <Textarea
+              placeholder="Descreva o erro encontrado (alternativa incorreta, lei errada, gabarito errado, etc.)"
+              value={reportMotivo}
+              onChange={(e) => setReportMotivo(e.target.value)}
+              rows={4}
+            />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReportOpen(false)}>Cancelar</Button>
+              <Button onClick={submitReport} disabled={reportSending || !reportMotivo.trim()} className="gradient-primary text-primary-foreground font-bold">
+                {reportSending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Flag className="w-4 h-4 mr-1" />}
+                Enviar Relatório
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

@@ -44,6 +44,47 @@ export type Database = {
         }
         Relationships: []
       }
+      question_reports: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          id: number
+          motivo: string
+          questao_id: number
+          resolved_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: number
+          motivo?: string
+          questao_id: number
+          resolved_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: number
+          motivo?: string
+          questao_id?: number
+          resolved_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_reports_questao_id_fkey"
+            columns: ["questao_id"]
+            isOneToOne: false
+            referencedRelation: "questoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       questoes: {
         Row: {
           alt_a: string
