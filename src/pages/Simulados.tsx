@@ -254,7 +254,7 @@ const Simulados = () => {
           <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
             <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <div className="text-xs text-muted-foreground leading-relaxed">
-              <strong className="text-primary">Randomização forte:</strong> Ordem das questões e alternativas embaralhadas a cada simulado. Questões nunca se repetem.
+              <strong className="text-primary">Randomização forte:</strong> Ordem das questões embaralhada a cada simulado para evitar padrões de repetição.
             </div>
           </div>
 
