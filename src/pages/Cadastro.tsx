@@ -216,8 +216,8 @@ const Cadastro = () => {
             </div>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email"
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all" />
+              <input type="email" value={email} onChange={e => !stripeEmail && setEmail(e.target.value)} readOnly={!!stripeEmail} placeholder="Email"
+                className={`w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all ${stripeEmail ? 'opacity-70 cursor-not-allowed' : ''}`} />
             </div>
             <div className="relative">
               <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
