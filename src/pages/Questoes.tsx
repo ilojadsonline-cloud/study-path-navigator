@@ -261,6 +261,13 @@ const Questoes = () => {
                     </Badge>
                     <span className="text-[10px] text-muted-foreground">{q.assunto}</span>
                   </div>
+                  <button
+                    onClick={() => handleReport(q.id)}
+                    title="Reportar erro nesta questão"
+                    className="shrink-0 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 <p className="text-sm leading-relaxed text-foreground">{q.enunciado}</p>
