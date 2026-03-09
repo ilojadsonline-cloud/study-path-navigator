@@ -48,9 +48,36 @@ const Questoes = () => {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [answeredIds, setAnsweredIds] = useState<Set<number>>(new Set());
   const [availableDisciplinas, setAvailableDisciplinas] = useState<string[]>([]);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportQuestaoId, setReportQuestaoId] = useState<number | null>(null);
+  const [reportMotivo, setReportMotivo] = useState("");
+  const [reportSending, setReportSending] = useState(false);
 
   const dificuldades = ["Todos", "Fácil", "Médio", "Difícil"];
   const statusOptions = ["Todos", "Não resolvidas", "Resolvidas"];
+
+  const handleReport = (questaoId: number) => {
+    setReportQuestaoId(questaoId);
+    setReportMotivo("");
+    setReportOpen(true);
+  };
+
+  const submitReport = async () => {
+    if (!user || !reportQuestaoId) return;
+    setReportSending(true);
+    const { error } = await supabase.from("question_reports" as any).insert({
+      questao_id: reportQuestaoId,
+      user_id: user.id,
+      motivo: reportMotivo,
+    } as any);
+    setReportSending(false);
+    if (error) {
+      toast.error("Erro ao enviar relatório");
+    } else {
+      toast.success("Erro reportado com sucesso! Obrigado.");
+      setReportOpen(false);
+    }
+  };
 
   // Fetch available disciplines and answered question IDs
   useEffect(() => {
