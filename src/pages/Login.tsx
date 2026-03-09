@@ -16,6 +16,13 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Redirect when session is available (after auth state change propagates)
+  useEffect(() => {
+    if (session) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [session, navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier || !password) {
@@ -39,10 +46,9 @@ const Login = () => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast({ title: "Erro ao entrar", description: "Email/CPF ou senha incorretos.", variant: "destructive" });
-    } else {
-      navigate("/dashboard");
+      setLoading(false);
     }
-    setLoading(false);
+    // Navigation will happen via useEffect when session updates
   };
 
   return (
