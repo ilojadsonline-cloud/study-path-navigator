@@ -18,7 +18,7 @@ import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
 import {
   Users, HelpCircle, BarChart3, Trash2, Eye, Search, ChevronLeft, ChevronRight,
   Loader2, Shield, CheckCircle, Wrench, AlertCircle, ShieldCheck, Zap, UserPlus,
-  UserMinus, Ban, ShieldAlert, Pencil, Save, Clock, Crown, RefreshCw, Flag
+  UserMinus, Ban, ShieldAlert, Pencil, Save, Clock, Crown, RefreshCw, Flag, Bell, Send
 } from "lucide-react";
 
 // ── Types ──
@@ -45,7 +45,7 @@ const DISCIPLINES = [
 ];
 
 const AdminPanel = () => {
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, loading, user } = useAuth();
   const { toast } = useToast();
 
   // Stats
@@ -104,6 +104,44 @@ const AdminPanel = () => {
   // Reports
   const [reports, setReports] = useState<any[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
+
+  // Notifications
+  const [notifTitle, setNotifTitle] = useState("");
+  const [notifMessage, setNotifMessage] = useState("");
+  const [sendingNotif, setSendingNotif] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifsLoading, setNotifsLoading] = useState(false);
+
+  const loadNotifications = async () => {
+    setNotifsLoading(true);
+    const { data } = await supabase.from("notifications" as any).select("*").order("created_at", { ascending: false }).limit(50);
+    setNotifications((data as any[]) || []);
+    setNotifsLoading(false);
+  };
+
+  const sendNotification = async () => {
+    if (!notifTitle.trim() || !notifMessage.trim()) {
+      toast({ title: "Preencha título e mensagem", variant: "destructive" });
+      return;
+    }
+    setSendingNotif(true);
+    const { error } = await supabase.from("notifications" as any).insert({ title: notifTitle.trim(), message: notifMessage.trim(), created_by: user?.id } as any);
+    setSendingNotif(false);
+    if (error) {
+      toast({ title: "Erro ao enviar notificação", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Notificação enviada com sucesso!" });
+      setNotifTitle("");
+      setNotifMessage("");
+      loadNotifications();
+    }
+  };
+
+  const deleteNotification = async (id: number) => {
+    await supabase.from("notifications" as any).delete().eq("id", id);
+    loadNotifications();
+    toast({ title: "Notificação excluída" });
+  };
 
   const loadReports = async () => {
     setReportsLoading(true);
@@ -415,15 +453,68 @@ const AdminPanel = () => {
           if (v === "users") loadUsers();
           if (v === "questoes") loadQuestoes(0);
           if (v === "reports") loadReports();
+          if (v === "notificacoes") loadNotifications();
         }}>
           <TabsList className="flex flex-wrap gap-1 h-auto max-w-2xl">
             <TabsTrigger value="stats" className="flex items-center gap-1.5 text-xs"><BarChart3 className="w-3.5 h-3.5" />Estatísticas</TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-1.5 text-xs"><Users className="w-3.5 h-3.5" />Usuários</TabsTrigger>
             <TabsTrigger value="questoes" className="flex items-center gap-1.5 text-xs"><HelpCircle className="w-3.5 h-3.5" />Questões</TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs"><Flag className="w-3.5 h-3.5" />Relatórios</TabsTrigger>
+            <TabsTrigger value="notificacoes" className="flex items-center gap-1.5 text-xs"><Bell className="w-3.5 h-3.5" />Notificações</TabsTrigger>
             <TabsTrigger value="gerar" className="flex items-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" />Gerar</TabsTrigger>
             <TabsTrigger value="validar" className="flex items-center gap-1.5 text-xs"><ShieldCheck className="w-3.5 h-3.5" />Validar</TabsTrigger>
           </TabsList>
+
+          {/* ── NOTIFICAÇÕES ── */}
+          <TabsContent value="notificacoes" className="mt-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2"><Send className="w-5 h-5" />Enviar Notificação</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Título</label>
+                  <Input value={notifTitle} onChange={(e) => setNotifTitle(e.target.value)} placeholder="Ex: Nova atualização disponível" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Mensagem</label>
+                  <Textarea value={notifMessage} onChange={(e) => setNotifMessage(e.target.value)} placeholder="Escreva a mensagem da notificação..." rows={4} />
+                </div>
+                <Button onClick={sendNotification} disabled={sendingNotif} className="gradient-primary text-primary-foreground font-bold">
+                  {sendingNotif ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Send className="w-4 h-4 mr-1" />}
+                  {sendingNotif ? "Enviando..." : "Enviar para todos"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Notificações Enviadas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {notifsLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                ) : notifications.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhuma notificação enviada ainda.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {notifications.map((n: any) => (
+                      <div key={n.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm">{n.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
+                          <p className="text-xs text-muted-foreground/60 mt-1">{new Date(n.created_at).toLocaleString("pt-BR")}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => deleteNotification(n.id)} className="text-destructive hover:text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* ── REPORTS ── */}
           <TabsContent value="reports" className="mt-6">
