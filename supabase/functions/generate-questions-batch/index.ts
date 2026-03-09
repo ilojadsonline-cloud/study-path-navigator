@@ -577,42 +577,335 @@ Art. 165-171. Medidas: I - IPM; II - encaminhamento à autoridade policial; III 
     fonteUrl: "http://www.planalto.gov.br/ccivil_03/decreto-lei/del1001.htm",
     assuntos: [
       "Aplicação da Lei Penal Militar (Arts. 1º a 28): princípio de legalidade, retroatividade, tempo e lugar do crime, crimes militares em tempo de paz (Art. 9º), equiparação, conceito de superior e inferior",
-      "Do Crime (Arts. 29 a 41): relação de causalidade, crime consumado e tentado, desistência voluntária, crime impossível, dolo e culpa, erro, coação irresistível, obediência hierárquica",
-      "Exclusão de Crime (Arts. 42 a 47): estado de necessidade, legítima defesa, estrito cumprimento do dever legal, exercício regular de direito, excesso punível",
-      "Imputabilidade (Arts. 48 a 52): inimputáveis, embriaguez, menoridade, doença mental",
-      "Concurso de Agentes (Arts. 53 a 54): coautoria e participação, circunstâncias incomunicáveis",
-      "Penas (Arts. 55 a 97): penas principais (morte, reclusão, detenção, prisão, impedimento, suspensão, reforma), penas acessórias, efeitos da condenação, medidas de segurança",
+      "Do Crime (Arts. 29 a 47): relação de causalidade, crime consumado e tentado, desistência voluntária, crime impossível, dolo e culpa, erro de fato e de direito, coação irresistível, obediência hierárquica, exclusões de crime, estado de necessidade, legítima defesa, excesso punível",
+      "Imputabilidade Penal (Arts. 48 a 52): inimputáveis, doença mental, embriaguez, menoridade",
+      "Concurso de Agentes (Arts. 53 a 54): coautoria e participação, condições pessoais, cabeças, agravação e atenuação",
+      "Penas Principais e Aplicação (Arts. 55 a 97): morte, reclusão, detenção, prisão, impedimento; circunstâncias agravantes e atenuantes, reincidência, concurso de crimes, suspensão condicional da pena, livramento condicional",
+      "Penas Acessórias e Efeitos da Condenação (Arts. 98 a 109): perda de posto e patente, indignidade/incompatibilidade com oficialato, exclusão das forças armadas, perda de função pública",
+      "Medidas de Segurança (Arts. 110 a 120): pessoais (detentivas e não detentivas), patrimoniais, internação, confisco",
+      "Ação Penal e Extinção da Punibilidade (Arts. 121 a 135): ação penal pública, prescrição da pretensão punitiva e executória, reabilitação",
     ],
-    leiSeca: `DECRETO-LEI Nº 1.001/1969 - CÓDIGO PENAL MILITAR - PARTE GERAL
+    leiSeca: `DECRETO-LEI Nº 1.001, DE 21 DE OUTUBRO DE 1969 — CÓDIGO PENAL MILITAR — PARTE GERAL (com alterações da Lei nº 14.688/2023)
+
+TÍTULO I — DA APLICAÇÃO DA LEI PENAL MILITAR
 
 Art. 1º Não há crime sem lei anterior que o defina, nem pena sem prévia cominação legal.
+
 Art. 2º Ninguém pode ser punido por fato que lei posterior deixa de considerar crime, cessando em virtude dela a execução e os efeitos penais da sentença condenatória.
-§1º A lei posterior que, de qualquer outro modo, favorece o agente, aplica-se retroativamente.
+§1º A lei posterior que, de qualquer outro modo, favorece o agente, aplica-se retroativamente, ainda quando já tenha sobrevindo sentença condenatória irrecorrível.
+§2º Para se reconhecer qual a mais favorável, a lei posterior e a anterior devem ser consideradas separadamente, cada qual no conjunto de suas normas aplicáveis ao fato.
+
+Art. 3º As medidas de segurança regem-se pela lei vigente ao tempo da sentença, prevalecendo, entretanto, se diversa, a lei vigente ao tempo da execução.
+
+Art. 4º A lei excepcional ou temporária, embora decorrido o período de sua duração ou cessadas as circunstâncias que a determinaram, aplica-se ao fato praticado durante sua vigência.
+
 Art. 5º Considera-se praticado o crime no momento da ação ou omissão, ainda que outro seja o do resultado.
-Art. 6º Considera-se praticado o fato, no lugar em que se desenvolveu a atividade criminosa, no todo ou em parte.
-Art. 7º Aplica-se a lei penal militar ao crime cometido, no todo ou em parte no território nacional, ou fora dele.
+
+Art. 6º Considera-se praticado o fato, no lugar em que se desenvolveu a atividade criminosa, no todo ou em parte, e ainda que sob forma de participação, bem como onde se produziu ou deveria produzir-se o resultado. Nos crimes omissivos, o fato considera-se praticado no lugar em que deveria realizar-se a ação omitida.
+
+Art. 7º Aplica-se a lei penal militar, sem prejuízo de convenções, tratados e regras de direito internacional, ao crime cometido, no todo ou em parte no território nacional, ou fora dele, ainda que, neste caso, o agente esteja sendo processado ou tenha sido julgado pela justiça estrangeira.
+§1º Para os efeitos da lei penal militar consideram-se como extensão do território nacional as aeronaves e os navios brasileiros, onde quer que se encontrem, sob comando militar ou militarmente utilizados ou ocupados por ordem legal de autoridade competente, ainda que de propriedade privada.
+§2º É também aplicável a lei penal militar ao crime praticado a bordo de aeronaves ou navios estrangeiros, desde que em lugar sujeito à administração militar, e o crime atente contra as instituições militares.
+
+Art. 8º A pena cumprida no estrangeiro atenua a pena imposta no Brasil pelo mesmo crime, quando diversas, ou nela é computada, quando idênticas.
 
 Art. 9º Consideram-se crimes militares, em tempo de paz:
-I - os crimes de que trata este Código, quando definidos de modo diverso na lei penal comum, ou nela não previstos;
-II - os crimes previstos neste Código e os previstos na legislação penal, quando praticados: a) por militar da ativa contra militar na mesma situação; b) por militar da ativa, em lugar sujeito à administração militar, contra militar da reserva ou reformado ou contra civil; c) por militar em serviço ou atuando em razão da função; d) por militar durante o período de manobras ou exercício; e) por militar da ativa contra o patrimônio sob a administração militar.
-III - os crimes praticados por militar da reserva, ou reformado, ou por civil, contra as instituições militares.
+I - os crimes de que trata este Código, quando definidos de modo diverso na lei penal comum, ou nela não previstos, qualquer que seja o agente, salvo disposição especial;
+II - os crimes previstos neste Código, embora também o sejam com igual definição na lei penal comum, quando praticados:
+a) por militar da ativa contra militar na mesma situação;
+b) por militar da ativa, em lugar sujeito à administração militar, contra militar da reserva ou reformado ou contra civil;
+c) por militar em serviço ou atuando em razão da função, em comissão de natureza militar, ou em formatura, ainda que fora do lugar sujeito à administração militar contra militar da reserva, ou reformado, ou civil;
+d) por militar, durante o período de manobras ou exercício, contra militar da reserva ou reformado ou contra civil;
+e) por militar da ativa contra o patrimônio sob a administração militar ou contra a ordem administrativa militar;
+III - os crimes praticados por militar da reserva, ou reformado, ou por civil, contra as instituições militares, considerando-se como tais não só os compreendidos no inciso I, como os do inciso II, nos seguintes casos:
+a) contra o patrimônio sob a administração militar, ou contra a ordem administrativa militar;
+b) em lugar sujeito à administração militar, contra militar da ativa ou contra servidor público das instituições militares ou da Justiça Militar, no exercício de função inerente ao seu cargo;
+c) contra militar em formatura, ou durante o período de prontidão, vigilância, observação, exploração, exercício, acampamento, acantonamento ou manobras;
+d) ainda que fora do lugar sujeito à administração militar, contra militar em função de natureza militar, ou no desempenho de serviço de vigilância, garantia e preservação da ordem pública, administrativa ou judiciária, quando legalmente requisitado para aquele fim, ou em obediência a determinação legal superior.
+§1º Os crimes de que trata este artigo, quando dolosos contra a vida e cometidos por militares contra civil, serão da competência do Tribunal do Júri.
+§2º Os crimes militares de que trata este artigo, incluídos os previstos na legislação penal, quando dolosos contra a vida e cometidos por militares das Forças Armadas contra civil, serão da competência da Justiça Militar da União, se praticados no contexto:
+I – do cumprimento de atribuições que lhes forem estabelecidas pelo Presidente da República ou pelo Ministro de Estado da Defesa;
+II – de ação que envolva a segurança de instituição militar ou de missão militar, mesmo que não beligerante; ou
+III – de atividade de natureza militar, de operação de paz, de garantia da lei e da ordem ou de atribuição subsidiária.
 
-Art. 12. O militar da reserva ou reformado, quando empregado na administração militar, equipara-se ao militar da ativa.
-Art. 22. É militar, para o efeito deste Código, qualquer pessoa que, em tempo de paz ou de guerra, seja incorporada a instituições militares ou nelas matriculada.
-Art. 24. Considera-se superior para fins de aplicação da lei penal militar: I – o militar que ocupa nível hierárquico, posto ou graduação superiores; II – o militar que, em virtude da função, exerce autoridade sobre outro de igual posto ou graduação.
+Art. 10. Consideram-se crimes militares, em tempo de guerra:
+I - os especialmente previstos neste Código para o tempo de guerra;
+II - os crimes militares previstos para o tempo de paz;
+III - os crimes previstos neste Código, embora também o sejam com igual definição na lei penal comum ou especial, quando praticados, qualquer que seja o agente: a) em território nacional, ou estrangeiro, militarmente ocupado; b) em qualquer lugar, se comprometem ou podem comprometer a preparação, a eficiência ou as operações militares;
+IV - os crimes definidos na lei penal comum ou especial, embora não previstos neste Código, quando praticados em zona de efetivas operações militares ou em território estrangeiro, militarmente ocupado.
 
-Art. 29. O resultado de que depende a existência do crime somente é imputável a quem lhe deu causa.
-Art. 30. Diz-se o crime: I - consumado, quando nele se reúnem todos os elementos de sua definição legal; II - tentado, quando, iniciada a execução, não se consuma por circunstâncias alheias à vontade do agente.
-Art. 33. Diz-se o crime: I - doloso, quando o agente quis o resultado ou assumiu o risco de produzi-lo; II - culposo, quando o agente, deixando de empregar a cautela ordinária, não prevê o resultado que podia prever.
-Art. 38. Não é culpado quem comete o crime: a) sob coação irresistível; b) em estrita obediência a ordem direta de superior hierárquico, em matéria de serviços.
+Art. 11. Os militares estrangeiros, quando em comissão ou em estágio em instituições militares, ficam sujeitos à lei penal militar brasileira, ressalvado o disposto em tratados ou em convenções internacionais.
 
-Art. 42. Não há crime quando o agente pratica o fato: I - em estado de necessidade; II - em legítima defesa; III - em estrito cumprimento do dever legal; IV - em exercício regular de direito.
-Art. 43. Considera-se em estado de necessidade quem pratica o fato para preservar direito seu ou alheio, de perigo certo e atual.
+Art. 12. O militar da reserva ou reformado, quando empregado na administração militar, equipara-se ao militar da ativa, para o efeito da aplicação da lei penal militar.
+
+Art. 13. O militar da reserva, ou reformado, conserva as responsabilidades e prerrogativas do posto ou graduação, para o efeito da aplicação da lei penal militar, quando pratica ou contra ele é praticado crime militar.
+
+Art. 14. O defeito do ato de incorporação ou de matrícula não exclui a aplicação da lei penal militar, salvo se alegado ou conhecido antes da prática do crime.
+
+Art. 15. O tempo de guerra, para os efeitos da aplicação da lei penal militar, começa com a declaração ou o reconhecimento do estado de guerra, ou com o decreto de mobilização se nele estiver compreendido aquele reconhecimento; e termina quando ordenada a cessação das hostilidades.
+
+Art. 16. No cômputo dos prazos inclui-se o dia do começo. Contam-se os dias, os meses e os anos pelo calendário comum.
+
+Art. 17. As regras gerais deste Código aplicam-se aos fatos incriminados por lei penal militar especial, se esta não dispõe de modo diverso. Para os efeitos penais, salário mínimo é o maior mensal vigente no país, ao tempo da sentença.
+
+Art. 18. Ficam sujeitos às disposições deste Código os crimes praticados em prejuízo de país em guerra contra país inimigo do Brasil: I - se o crime é praticado por brasileiro; II - se o crime é praticado no território nacional, ou em território estrangeiro, militarmente ocupado por força brasileira, qualquer que seja o agente.
+
+Art. 19. Este Código não compreende as infrações dos regulamentos disciplinares.
+
+Art. 20. Aos crimes praticados em tempo de guerra, salvo disposição especial, aplicam-se as penas cominadas para o tempo de paz, com o aumento de um terço.
+
+Art. 22. É militar, para o efeito da aplicação deste Código, qualquer pessoa que, em tempo de paz ou de guerra, seja incorporada a instituições militares ou nelas matriculada, para servir em posto ou em graduação ou em regime de sujeição à disciplina militar.
+
+Art. 23. Equipara-se ao comandante, para o efeito da aplicação da lei penal militar, toda autoridade com função de direção.
+
+Art. 24. Considera-se superior para fins de aplicação da lei penal militar:
+I – o militar que ocupa nível hierárquico, posto ou graduação superiores, conforme a antiguidade;
+II – o militar que, em virtude da função, exerce autoridade sobre outro de igual posto ou graduação.
+Parágrafo único. O militar sobre o qual se exerce autoridade nas condições descritas nos incisos I e II do caput deste artigo é considerado inferior hierárquico para fins de aplicação da lei penal militar.
+
+Art. 25. Diz-se crime praticado em presença do inimigo, quando o fato ocorre em zona de efetivas operações militares, ou na iminência ou em situação de hostilidade.
+
+Art. 26. Quando a lei penal militar se refere a "brasileiro" ou "nacional", compreende as pessoas enumeradas como brasileiros na Constituição do Brasil. Parágrafo único. Para os efeitos da lei penal militar, são considerados estrangeiros os apátridas e os brasileiros que perderam a nacionalidade.
+
+Art. 27. Para o efeito da aplicação deste Código, consideram-se servidores da Justiça Militar os juízes, os servidores públicos e os auxiliares da Justiça Militar.
+
+Art. 28. Os crimes contra a segurança externa do país ou contra as instituições militares, definidos neste Código, excluem os da mesma natureza definidos em outras leis.
+
+TÍTULO II — DO CRIME
+
+Art. 29. O resultado de que depende a existência do crime somente é imputável a quem lhe deu causa. Considera-se causa a ação ou omissão sem a qual o resultado não teria ocorrido.
+§1º A superveniência de causa relativamente independente exclui a imputação quando, por si só, produziu o resultado. Os fatos anteriores, imputam-se, entretanto, a quem os praticou.
+§2º A omissão é relevante como causa quando o omitente devia e podia agir para evitar o resultado. O dever de agir incumbe a quem tenha por lei obrigação de cuidado, proteção ou vigilância; a quem, de outra forma, assumiu a responsabilidade de impedir o resultado; e a quem, com seu comportamento anterior, criou o risco de sua superveniência.
+
+Art. 30. Diz-se o crime:
+I - consumado, quando nele se reúnem todos os elementos de sua definição legal;
+II - tentado, quando, iniciada a execução, não se consuma por circunstâncias alheias à vontade do agente.
+Parágrafo único. Pune-se a tentativa com a pena correspondente ao crime, diminuída de um a dois terços, podendo o juiz, no caso de excepcional gravidade, aplicar a pena do crime consumado.
+
+Art. 31. O agente que, voluntariamente, desiste de prosseguir na execução ou impede que o resultado se produza, só responde pelos atos já praticados.
+
+Art. 32. Quando, por ineficácia absoluta do meio empregado ou por absoluta impropriedade do objeto, é impossível consumar-se o crime, nenhuma pena é aplicável.
+
+Art. 33. Diz-se o crime:
+I - doloso, quando o agente quis o resultado ou assumiu o risco de produzi-lo;
+II - culposo, quando o agente, deixando de empregar a cautela, atenção, ou diligência ordinária, ou especial, a que estava obrigado em face das circunstâncias, não prevê o resultado que podia prever ou, prevendo-o, supõe levianamente que não se realizaria ou que poderia evitá-lo.
+Parágrafo único. Salvo os casos expressos em lei, ninguém pode ser punido por fato previsto como crime, senão quando o pratica dolosamente.
+
+Art. 34. Pelos resultados que agravam especialmente as penas só responde o agente quando os houver causado, pelo menos, culposamente.
+
+Art. 35. A pena pode ser atenuada ou substituída por outra menos grave quando o agente, salvo em se tratando de crime que atente contra o dever militar, supõe lícito o fato, por ignorância ou erro de interpretação da lei, se escusáveis.
+
+Art. 36. É isento de pena quem, ao praticar o crime, supõe, por erro plenamente escusável, a inexistência de circunstância de fato que o constitui ou a existência de situação de fato que tornaria a ação legítima.
+§1º Se o erro deriva de culpa, a este título responde o agente, se o fato é punível como crime culposo.
+§2º Se o erro é provocado por terceiro, responderá este pelo crime, a título de dolo ou culpa, conforme o caso.
+
+Art. 37. Quando o agente, por erro de percepção ou no uso dos meios de execução, ou outro acidente, atinge uma pessoa em vez de outra, responde como se tivesse praticado o crime contra aquela que realmente pretendia atingir.
+§1º Se, por erro ou outro acidente na execução, é atingido bem jurídico diverso do visado pelo agente, responde este por culpa, se o fato é previsto como crime culposo.
+
+Art. 38. Não é culpado quem comete o crime:
+a) sob coação irresistível ou que lhe suprima a faculdade de agir segundo a própria vontade;
+b) em estrita obediência a ordem direta de superior hierárquico, em matéria de serviços.
+§1º Responde pelo crime o autor da coação ou da ordem.
+§2º Se a ordem do superior tem por objeto a prática de ato manifestamente criminoso, ou há excesso nos atos ou na forma da execução, é punível também o inferior hierárquico.
+
+Art. 39. Não é igualmente culpado quem, para proteger direito próprio ou de pessoa a quem está ligado por estreitas relações de parentesco ou afeição, contra perigo certo e atual, que não provocou, nem podia de outro modo evitar, sacrifica direito alheio, ainda quando superior ao direito protegido, desde que não lhe era razoavelmente exigível conduta diversa.
+
+Art. 40. Nos crimes em que há violação do dever militar, o agente não pode invocar coação irresistível senão quando física ou material.
+
+Art. 41. Nos casos do art. 38, letras a e b, se era possível resistir à coação, ou se a ordem não era manifestamente ilegal; ou, no caso do art. 39, se era razoavelmente exigível o sacrifício do direito ameaçado, o juiz, tendo em vista as condições pessoais do réu, pode atenuar a pena.
+
+Art. 42. Não há crime quando o agente pratica o fato:
+I - em estado de necessidade;
+II - em legítima defesa;
+III - em estrito cumprimento do dever legal;
+IV - em exercício regular de direito.
+Parágrafo único. Não há igualmente crime quando o comandante de navio, aeronave ou praça de guerra, na iminência de perigo ou grave calamidade, compele os subalternos, por meios violentos, a executar serviços e manobras urgentes, para salvar a unidade ou vidas, ou evitar o desânimo, o terror, a desordem, a rendição, a revolta ou o saque.
+
+Art. 43. Considera-se em estado de necessidade quem pratica o fato para preservar direito seu ou alheio, de perigo certo e atual, que não provocou, nem podia de outro modo evitar, desde que o mal causado, por sua natureza e importância, é consideravelmente inferior ao mal evitado, e o agente não era legalmente obrigado a arrostar o perigo.
+
 Art. 44. Entende-se em legítima defesa quem, usando moderadamente dos meios necessários, repele injusta agressão, atual ou iminente, a direito seu ou de outrem.
-Art. 45. O agente que, em qualquer das hipóteses dos arts. 42 a 44, excede culposamente os limites da necessidade ou moderação, é punível, se o fato é previsto como crime culposo.
 
-Art. 55. As penas principais são: I - morte; II - reclusão; III - detenção; IV - prisão; V - impedimento; VI - suspensão do exercício do posto, graduação, cargo ou função; VII - reforma.
-Art. 57. A pena de reclusão e a de detenção podem ser de até 30 anos.`,
+Art. 45. O agente que, em qualquer dos casos de exclusão de crime, excede culposamente os limites da necessidade, responde pelo fato, se este é punível, a título de culpa.
+Parágrafo único. Não é punível o excesso quando resulta de escusável surpresa ou perturbação de ânimo, em face da situação.
+
+Art. 46. O juiz pode atenuar a pena ainda quando punível o fato por excesso doloso.
+
+Art. 47. Deixam de ser elementos constitutivos do crime:
+I - a qualidade de superior ou a de inferior, quando não conhecida do agente;
+II - a qualidade de superior ou a de inferior, a de oficial de dia, de serviço ou de quarto, ou a de sentinela, vigia, ou plantão, quando a ação é praticada em repulsa a agressão.
+
+TÍTULO III — DA IMPUTABILIDADE PENAL
+
+Art. 48. Não é imputável quem, no momento da ação ou da omissão, não possui a capacidade de entender o caráter ilícito do fato ou de determinar-se de acordo com esse entendimento, em virtude de doença mental, de desenvolvimento mental incompleto ou retardado.
+Parágrafo único. Se a doença ou a deficiência mental não suprime, mas diminui consideravelmente a capacidade de entendimento da ilicitude do fato ou a de autodeterminação, não fica excluída a imputabilidade, mas a pena pode ser reduzida de 1/3 a 2/3, sem prejuízo do disposto no art. 113 deste Código.
+
+Art. 49. Não é igualmente imputável o agente que, por embriaguez completa proveniente de caso fortuito ou força maior, era, ao tempo da ação ou da omissão, inteiramente incapaz de entender o caráter criminoso do fato ou de determinar-se de acordo com esse entendimento.
+Parágrafo único. A pena pode ser reduzida de um a dois terços, se o agente por embriaguez proveniente de caso fortuito ou força maior, não possuía, ao tempo da ação ou da omissão, a plena capacidade de entender o caráter criminoso do fato ou de determinar-se de acordo com esse entendimento.
+
+Art. 50. O menor de 18 (dezoito) anos é penalmente inimputável, ficando sujeito às normas estabelecidas na legislação especial.
+
+TÍTULO IV — DO CONCURSO DE AGENTES
+
+Art. 53. Quem, de qualquer modo, concorre para o crime incide nas penas a este cominadas.
+§1º A punibilidade de qualquer dos concorrentes é independente da dos outros, determinando-se segundo a sua própria culpabilidade. Não se comunicam, outrossim, as condições ou circunstâncias de caráter pessoal, salvo quando elementares do crime.
+§2º A pena é agravada em relação ao agente que: I - promove ou organiza a cooperação no crime ou dirige a atividade dos demais agentes; II - coage outrem à execução material do crime; III - instiga ou determina a cometer o crime alguém sujeito à sua autoridade, ou não punível em virtude de condição ou qualidade pessoal; IV - executa o crime, ou nele participa, mediante paga ou promessa de recompensa.
+§3º A pena é atenuada com relação ao agente, cuja participação no crime é de somenos importância.
+§4º Na prática de crime de autoria coletiva necessária, reputam-se cabeças os que dirigem, provocam, instigam ou excitam a ação.
+§5º Quando o crime é cometido por inferiores hierárquicos e um ou mais oficiais, são estes considerados cabeças, assim como os inferiores hierárquicos que exercem função de oficial.
+
+Art. 54. O ajuste, a determinação ou instigação e o auxílio, salvo disposição em contrário, não são puníveis se o crime não chega, pelo menos, a ser tentado.
+
+TÍTULO V — DAS PENAS
+
+CAPÍTULO I — DAS PENAS PRINCIPAIS
+
+Art. 55. As penas principais são: a) morte; b) reclusão; c) detenção; d) prisão; e) impedimento.
+
+Art. 56. A pena de morte é executada por fuzilamento.
+
+Art. 57. A sentença definitiva de condenação à morte é comunicada, logo que passe em julgado, ao Presidente da República, e não pode ser executada senão depois de sete dias após a comunicação.
+Parágrafo único. Se a pena é imposta em zona de operações de guerra, pode ser imediatamente executada, quando o exigir o interesse da ordem e da disciplina militares.
+
+Art. 58. O mínimo da pena de reclusão é de um ano, e o máximo de trinta anos; o mínimo da pena de detenção é de trinta dias, e o máximo de dez anos.
+
+Art. 59. A pena de reclusão ou de detenção até 2 (dois) anos, aplicada a militar, é convertida em pena de prisão e cumprida, quando não cabível a suspensão condicional:
+I - pelo oficial, em recinto de estabelecimento militar;
+II - pela praça, em estabelecimento penal militar.
+
+Art. 61. A pena privativa da liberdade por mais de 2 (dois) anos, aplicada a militar, é cumprida em penitenciária militar e, na falta dessa, em estabelecimento prisional civil.
+
+Art. 62. O civil cumpre a pena aplicada pela Justiça Militar, em estabelecimento prisional civil.
+
+Art. 63. A pena de impedimento sujeita o condenado a permanecer no recinto da unidade, sem prejuízo da instrução militar.
+
+Art. 67. Computam-se na pena privativa de liberdade o tempo de prisão provisória, no Brasil ou no estrangeiro, e o de internação em hospital ou manicômio.
+
+CAPÍTULO II — DA APLICAÇÃO DA PENA
+
+Art. 69. Para fixação da pena privativa de liberdade, o juiz aprecia a gravidade do crime praticado e a personalidade do réu, devendo ter em conta a intensidade do dolo ou grau da culpa, a maior ou menor extensão do dano ou perigo de dano, os meios empregados, o modo de execução, os motivos determinantes, as circunstâncias de tempo e lugar, os antecedentes do réu e sua atitude de insensibilidade, indiferença ou arrependimento após o crime.
+
+Art. 70. São circunstâncias que sempre agravam a pena, quando não integrantes ou qualificativas do crime: a) a reincidência; b) ter o agente cometido o crime: por motivo fútil ou torpe; para facilitar ou assegurar a execução, a ocultação, a impunidade ou vantagem de outro crime; à traição, de emboscada, com surpresa; com emprego de veneno, asfixia, tortura, fogo, explosivo, ou outro meio cruel; contra ascendente, descendente, irmão ou cônjuge; com abuso de poder ou violação de dever inerente a cargo; contra criança, pessoa maior de 60 anos, pessoa enferma, mulher grávida ou pessoa com deficiência; quando o ofendido estava sob imediata proteção da autoridade; em ocasião de calamidade pública; estando de serviço; com emprego de arma ou material de serviço; em auditório da Justiça Militar; em país estrangeiro.
+
+Art. 71. Verifica-se a reincidência quando o agente comete novo crime, depois de transitar em julgado a sentença que o tenha condenado por crime anterior.
+§1º Não se toma em conta, para efeito da reincidência, a condenação anterior, se, entre a data do cumprimento ou extinção da pena e o crime posterior, decorreu período de tempo superior a cinco anos.
+
+Art. 72. São circunstâncias que sempre atenuam a pena: a) ser o agente menor de vinte e um ou maior de setenta anos; b) ser meritório seu comportamento anterior.
+
+Art. 73. Quando a lei determina a agravação ou atenuação da pena sem mencionar o quantum, deve o juiz fixá-lo entre um quinto e um terço, guardados os limites da pena cominada ao crime.
+
+Art. 77. A pena-base será fixada de acordo com o critério definido no art. 69 deste Código e, em seguida, serão consideradas as circunstâncias atenuantes e agravantes e, por último, as causas de diminuição e de aumento de pena.
+
+Art. 79. Quando o agente, mediante mais de uma ação ou omissão, pratica dois ou mais crimes, idênticos ou não, aplicam-se-lhe cumulativamente as penas privativas de liberdade em que haja incorrido (concurso material).
+
+Art. 79-A. Quando o agente, mediante uma só ação ou omissão, pratica dois ou mais crimes, idênticos ou não, aplica-se-lhe a mais grave das penas cabíveis ou, se iguais, somente uma delas, mas aumentada, em qualquer caso, de 1/6 até metade (concurso formal).
+
+Art. 80. Quando o agente, mediante mais de uma ação ou omissão, pratica dois ou mais crimes da mesma espécie e, pelas condições de tempo, lugar, maneira de execução e outras semelhantes, devem os subsequentes ser havidos como continuação do primeiro, aplica-se-lhe a pena de um só dos crimes, se idênticas, ou a mais grave, se diversas, aumentada de 1/6 a 2/3 (crime continuado).
+
+Art. 81. A pena unificada não pode ultrapassar de trinta anos, se é de reclusão, ou de quinze anos, se é de detenção.
+
+CAPÍTULO III — DA SUSPENSÃO CONDICIONAL DA PENA
+
+Art. 84. A execução da pena privativa de liberdade não superior a 2 (dois) anos pode ser suspensa por 3 (três) a 5 (cinco) anos, no caso de pena de reclusão, e por 2 (dois) a 4 (quatro) anos, no caso de pena de detenção, desde que:
+I – o sentenciado não haja sofrido condenação irrecorrível por outro crime a pena privativa da liberdade;
+II – a culpabilidade, os antecedentes, a conduta social e a personalidade do agente, bem como os motivos e as circunstâncias do crime, autorizem a concessão do benefício.
+§2º A execução da pena privativa de liberdade não superior a 4 (quatro) anos poderá ser suspensa por 4 (quatro) a 6 (seis) anos, desde que o condenado seja maior de 70 (setenta) anos de idade ou existam razões de saúde que justifiquem a suspensão.
+
+Art. 86. A suspensão é revogada se, no curso do prazo, o beneficiário: I – é condenado por crime doloso, na Justiça Militar ou na Justiça Comum, por sentença irrecorrível; II - não efetua, sem motivo justificado, a reparação do dano.
+
+Art. 87. Se o prazo expira sem que tenha sido revogada a suspensão, fica extinta a pena privativa de liberdade.
+
+Art. 88. A suspensão condicional da pena não se aplica: I - ao condenado por crime cometido em tempo de guerra; II - em tempo de paz (casos específicos).
+
+CAPÍTULO IV — DO LIVRAMENTO CONDICIONAL
+
+Art. 89. O condenado a pena de reclusão ou de detenção por tempo igual ou superior a dois anos pode ser liberado condicionalmente, desde que:
+I - tenha cumprido: a) metade da pena, se primário; b) dois terços, se reincidente;
+II - tenha reparado, salvo impossibilidade de fazê-lo, o dano causado pelo crime;
+III - sua boa conduta durante a execução da pena, sua adaptação ao trabalho e às circunstâncias atinentes a sua personalidade permitem supor que não voltará a delinquir.
+§2º Se o condenado é primário e menor de vinte e um ou maior de setenta anos, o tempo de cumprimento da pena pode ser reduzido a um terço.
+
+Art. 93. Revoga-se o livramento, se o liberado vem a ser condenado, em sentença irrecorrível, a pena privativa de liberdade: I - por infração penal cometida durante a vigência do benefício; II - por infração penal anterior.
+
+Art. 95. Se, até o seu termo, o livramento não é revogado, considera-se extinta a pena privativa de liberdade.
+
+Art. 96. O livramento condicional não se aplica ao condenado por crime cometido em tempo de guerra.
+
+Art. 97. Em tempo de paz, o livramento condicional por crime contra a segurança externa do país, ou de revolta, motim, aliciação e incitamento, violência contra superior ou militar de serviço, só será concedido após o cumprimento de dois terços da pena.
+
+CAPÍTULO V — DAS PENAS ACESSÓRIAS
+
+Art. 98. São penas acessórias: I - a perda de posto e patente; II - a indignidade para o oficialato; III - a incompatibilidade com o oficialato; IV - a exclusão das forças armadas; V - a perda da função pública, ainda que eletiva; VI - a inabilitação para o exercício de função pública; VII - a incapacidade para o exercício do poder familiar, da tutela ou da curatela; VIII - a suspensão dos direitos políticos.
+
+Art. 99. A perda de posto e patente resulta da condenação a pena privativa de liberdade por tempo superior a 2 (dois) anos, por crimes comuns e militares, e importa a perda das condecorações, desde que submetido o oficial ao julgamento previsto no inciso VI do §3º do art. 142 da Constituição Federal.
+
+Art. 100. Fica sujeito à declaração de indignidade para o oficialato o militar condenado, qualquer que seja a pena, nos crimes de traição, espionagem ou cobardia, ou em qualquer dos definidos nos arts. 161, 235, 240, 242, 243, 244, 245, 251, 252, 303, 304, 311 e 312.
+
+Art. 101. Fica sujeito à declaração de incompatibilidade com o oficialato o militar condenado nos crimes dos arts. 141 e 142.
+
+Art. 102. A condenação da praça a pena privativa de liberdade, por tempo superior a dois anos, importa sua exclusão das forças armadas.
+
+Art. 103. Incorre na perda da função pública o civil: I - condenado a pena privativa de liberdade por crime cometido com abuso de poder ou violação de dever inerente à função pública; II - condenado, por outro crime, a pena privativa de liberdade por mais de dois anos.
+
+Art. 104. Incorre na inabilitação para o exercício de função pública, pelo prazo de dois até vinte anos, o condenado a reclusão por mais de quatro anos, em virtude de crime praticado com abuso de poder ou violação do dever militar ou inerente à função pública.
+
+Art. 106. Durante a execução da pena privativa de liberdade ou da medida de segurança imposta em substituição, ou enquanto perdura a inabilitação para função pública, o condenado não pode votar, nem ser votado.
+
+CAPÍTULO VI — DOS EFEITOS DA CONDENAÇÃO
+
+Art. 109. São efeitos da condenação: I - tornar certa a obrigação de reparar o dano resultante do crime; II - a perda em favor da Fazenda Pública, ressalvado o direito do lesado ou de terceiro de boa-fé: a) dos instrumentos do crime, desde que consistam em coisas cujo fabrico, alienação, uso, porte ou detenção constitua fato ilícito; b) do produto do crime ou de qualquer bem ou valor que constitua proveito auferido pelo agente com a sua prática.
+
+TÍTULO VI — DAS MEDIDAS DE SEGURANÇA
+
+Art. 110. As medidas de segurança são pessoais ou patrimoniais.
+§1º As medidas de segurança pessoais subdividem-se em: I – detentivas: compreendem a internação em estabelecimento de custódia e tratamento ou em seção especial de estabelecimento penal; II – não detentivas: compreendem o tratamento ambulatorial, a interdição de licença para direção de veículos motorizados, o exílio local e a proibição de frequentar determinados lugares.
+§2º As medidas de segurança patrimoniais compreendem a interdição de estabelecimento ou sede de sociedade ou associação e o confisco.
+
+Art. 111. As medidas de segurança somente podem ser impostas: I - aos civis; II – aos militares condenados a pena privativa de liberdade por tempo superior a 2 anos, aos que hajam perdido função, posto ou patente ou aos que tenham sido excluídos das Forças Armadas; III – aos militares, no caso do art. 48; IV – aos militares, no caso do art. 115, com aplicação dos seus §§1º, 2º e 3º.
+
+Art. 112. Quando o agente é inimputável, nos termos do art. 48 deste Código, o juiz poderá determinar sua internação em estabelecimento de custódia e tratamento.
+§1º A internação ou o tratamento ambulatorial será por tempo indeterminado, perdurando enquanto não for averiguada, mediante perícia médica, a cessação da periculosidade, observado que o prazo mínimo deverá ser de 1 a 3 anos.
+
+Art. 113. Na hipótese do parágrafo único do art. 48, e se o condenado necessitar de especial tratamento curativo, a pena privativa de liberdade poderá ser substituída por internação ou por tratamento ambulatorial, pelo prazo mínimo de 1 a 3 anos.
+
+Art. 119. O juiz, embora não apurada a autoria, deve ordenar o confisco dos instrumentos e produtos do crime, desde que consistam em coisas: I - cujo fabrico, alienação, uso, porte ou detenção constitui fato ilícito; II - que, pertencendo às forças armadas ou sendo de uso exclusivo de militares, estejam em poder ou em uso do agente; III - abandonadas, ocultas ou desaparecidas.
+
+TÍTULO VII — DA AÇÃO PENAL
+
+Art. 121. A ação penal é promovida pelo Ministério Público, na forma da lei.
+Parágrafo único. Será admitida ação privada, se a ação pública não for intentada no prazo legal.
+
+TÍTULO VIII — DA EXTINÇÃO DA PUNIBILIDADE
+
+Art. 123. Extingue-se a punibilidade: I - pela morte do agente; II - pela anistia, graça ou indulto; III - pela retroatividade de lei que não mais considera o fato como criminoso; IV - pela prescrição; V - pelo ressarcimento do dano, no peculato culposo (art. 303, §4º); VI - pelo perdão judicial, nos casos previstos em lei.
+
+Art. 124. A prescrição refere-se à pretensão punitiva ou à executória.
+
+Art. 125. A prescrição da pretensão punitiva regula-se pelo máximo da pena privativa de liberdade cominada ao crime, verificando-se:
+I - em trinta anos, se a pena é de morte;
+II - em vinte anos, se o máximo da pena é superior a doze;
+III - em dezesseis anos, se o máximo da pena é superior a oito e não excede a doze;
+IV - em doze anos, se o máximo da pena é superior a quatro e não excede a oito;
+V - em oito anos, se o máximo da pena é superior a dois e não excede a quatro;
+VI - em quatro anos, se o máximo da pena é igual a um ano ou, sendo superior, não excede a dois;
+VII – em 3 (três) anos, se o máximo da pena é inferior a 1 (um) ano.
+§1º Sobrevindo sentença condenatória, de que somente o réu tenha recorrido, a prescrição passa a regular-se pela pena imposta.
+§2º A prescrição da ação penal começa a correr: a) do dia em que o crime se consumou; b) no caso de tentativa, do dia em que cessou a atividade criminosa; c) nos crimes permanentes, do dia em que cessou a permanência; d) nos crimes de falsidade, da data em que o fato se tornou conhecido.
+§5º O curso da prescrição da ação penal interrompe-se: I - pela instauração do processo; II – pela sentença condenatória ou acórdão condenatório recorríveis; III – pelo início ou continuação da execução provisória ou definitiva da pena; IV – pela reincidência.
+
+Art. 129. São reduzidos de metade os prazos da prescrição, quando o criminoso era, ao tempo do crime, menor de vinte e um anos ou maior de setenta.
+
+Art. 130. É imprescritível a execução das penas acessórias.
+
+Art. 131. A prescrição começa a correr, no crime de insubmissão, do dia em que o insubmisso atinge a idade de trinta anos.
+
+Art. 132. No crime de deserção, embora decorrido o prazo da prescrição, esta só extingue a punibilidade quando o desertor atinge a idade de quarenta e cinco anos, e, se oficial, a de sessenta.
+
+Art. 133. A prescrição, embora não alegada, deve ser declarada de ofício.
+
+Art. 134. A reabilitação alcança quaisquer penas impostas por sentença definitiva.
+§1º A reabilitação poderá ser requerida decorridos cinco anos do dia em que for extinta, de qualquer modo, a pena principal ou terminar a execução desta ou da medida de segurança.
+
+Art. 135. Declarada a reabilitação, serão cancelados, mediante averbação, os antecedentes criminais.`,
   },
   {
     disciplina: "Lei Orgânica PM",
