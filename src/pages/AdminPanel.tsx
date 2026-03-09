@@ -45,7 +45,7 @@ const DISCIPLINES = [
 ];
 
 const AdminPanel = () => {
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, loading, user } = useAuth();
   const { toast } = useToast();
 
   // Stats
