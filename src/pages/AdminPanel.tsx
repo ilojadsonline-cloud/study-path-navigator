@@ -414,11 +414,13 @@ const AdminPanel = () => {
         <Tabs defaultValue="stats" onValueChange={(v) => {
           if (v === "users") loadUsers();
           if (v === "questoes") loadQuestoes(0);
+          if (v === "reports") loadReports();
         }}>
           <TabsList className="flex flex-wrap gap-1 h-auto max-w-2xl">
             <TabsTrigger value="stats" className="flex items-center gap-1.5 text-xs"><BarChart3 className="w-3.5 h-3.5" />Estatísticas</TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-1.5 text-xs"><Users className="w-3.5 h-3.5" />Usuários</TabsTrigger>
             <TabsTrigger value="questoes" className="flex items-center gap-1.5 text-xs"><HelpCircle className="w-3.5 h-3.5" />Questões</TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs"><Flag className="w-3.5 h-3.5" />Relatórios</TabsTrigger>
             <TabsTrigger value="gerar" className="flex items-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" />Gerar</TabsTrigger>
             <TabsTrigger value="validar" className="flex items-center gap-1.5 text-xs"><ShieldCheck className="w-3.5 h-3.5" />Validar</TabsTrigger>
           </TabsList>
