@@ -101,6 +101,27 @@ const AdminPanel = () => {
   const [savingUser, setSavingUser] = useState(false);
   // Cursor for validation
   const [valCursor, setValCursor] = useState(0);
+  // Reports
+  const [reports, setReports] = useState<any[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+
+  const loadReports = async () => {
+    setReportsLoading(true);
+    const { data } = await supabase.from("question_reports" as any).select("*").order("created_at", { ascending: false }).limit(100);
+    setReports((data as any[]) || []);
+    setReportsLoading(false);
+  };
+
+  const resolveReport = async (reportId: number) => {
+    await supabase.from("question_reports" as any).update({ status: "resolvido", resolved_at: new Date().toISOString() } as any).eq("id", reportId);
+    loadReports();
+    toast({ title: "Relatório marcado como resolvido" });
+  };
+
+  const deleteReport = async (reportId: number) => {
+    await supabase.from("question_reports" as any).delete().eq("id", reportId);
+    loadReports();
+  };
 
   const PAGE_SIZE = 20;
 
