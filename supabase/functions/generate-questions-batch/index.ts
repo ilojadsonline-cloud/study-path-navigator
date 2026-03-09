@@ -218,25 +218,118 @@ Art. 30. As unidades especiais: Centro Integrado de Operações Aéreas-CIOPAER 
       "Quadros de Acesso: QAA e QAM, requisitos, organização (Arts. 29 a 38)",
       "Impedimentos e Ressalvas: impossibilidade de promoção, preterição, ressarcimento (Arts. 39 a 55)",
     ],
-    leiSeca: `LEI Nº 2.575, DE 20 DE ABRIL DE 2012 - Estado do Tocantins.
-Art. 1º Promoção é ato administrativo cuja finalidade principal é o reconhecimento do mérito e da habilitação do Policial Militar para o exercício de Posto ou Graduação imediatamente superior, mediante preenchimento das vagas existentes, de forma seletiva, gradual e sucessiva.
+    leiSeca: `LEI Nº 2.575, DE 20 DE ABRIL DE 2012 - Dispõe sobre as promoções na Polícia Militar do Estado do Tocantins.
+
+CAPÍTULO I - DISPOSIÇÕES PRELIMINARES
+Art. 1º Promoção é ato administrativo cuja finalidade principal é o reconhecimento do mérito e da habilitação do Policial Militar para o exercício de Posto ou Graduação imediatamente superior, mediante preenchimento das vagas existentes, de forma seletiva, gradual e sucessiva, nos QOD da PMTO, com base no efetivo fixado em lei.
+§1º As formas seletivas, gradual e sucessiva resultam de planejamento para a carreira dos Policiais Militares, em cada quadro, de acordo com as respectivas especialidades.
+§2º O planejamento da carreira policial militar é atribuição da PMTO, resultando em fluxo regular, contínuo e equilibrado.
 Art. 2º Os Oficiais e as Praças da PMTO são promovidos na forma estabelecida nesta Lei.
 Art. 3º As promoções na PMTO são realizadas, anualmente, nos dias 21 de abril e 15 de novembro.
 §1º As promoções pelos critérios de bravura, post-mortem, ressarcimento de preterição, invalidez permanente e tempo de contribuição independem de data.
-Art. 5º O Policial Militar cujo comportamento for inferior a "bom" não pode constar de qualquer QA.
-Art. 7º Guarda-se a proporção de uma promoção pelo critério de antiguidade e uma pelo de merecimento.
-Art. 8º É computada, para efeito de promoção, a vaga decorrente de: I - promoção; II - agregação; III - passagem para a inatividade; IV - demissão; V - exoneração; VI - falecimento; VII - aumento de efetivo; VIII - modificação no QOD.
-Art. 11. A CPO é presidida pelo Comandante Geral, composta por natos (CHEM e SCHEM) e efetivos (quatro Oficiais Superiores).
-Art. 12. A CPP é presidida pelo Chefe do Estado Maior.
-Art. 21. São critérios de promoção: I - antiguidade; II - merecimento; III - escolha; IV - bravura; V - post-mortem; VI - tempo de contribuição; VII - invalidez permanente.
-Art. 22. A promoção por antiguidade decorre da precedência hierárquica.
-Art. 23. A promoção por merecimento pressupõe o conjunto de qualidades e atributos que distinguem o Policial Militar.
-Art. 24. A promoção por escolha efetua-se por ato do Chefe do Poder Executivo para o Posto de Coronel.
-Art. 25. A promoção por bravura resulta de ato não comum de coragem e abnegação.
-Art. 26. A promoção post-mortem expressa reconhecimento ao PM falecido no cumprimento do dever.
-Art. 27. A promoção por tempo de contribuição é concedida ao PM que complete o tempo necessário à reserva remunerada.
-Art. 28. A promoção por invalidez é deferida ao PM julgado definitivamente incapaz para o serviço militar.
-Art. 31. O ingresso nos QA pressupõe: I - interstício; II - condições de saúde; III - requisitos peculiares; IV - pontuação positiva na avaliação.`,
+§2º Excepcionalmente, o Chefe do Poder Executivo pode fixar data diferente para promoção dos concluintes de cursos de formação ou habilitação.
+Art. 4º O PM que, por ter sido transferido mediante requerimento, fruído licença a pedido, ou desempenhado função civil ou cargo público temporário não eletivo, não satisfazer os requisitos, é responsável único pela sua não inclusão em QA.
+Art. 5º O PM cujo comportamento for inferior a "bom" não pode constar de qualquer QA. Parágrafo único: comportamento do Oficial classificado conforme previsto para Praça no Estatuto.
+Art. 6º O PM deve levar ao conhecimento do CG ato ou fato grave que possa influir na avaliação do colega. Investigação a cargo de integrante da Comissão de Promoção.
+Art. 7º Guarda-se a proporção de uma promoção pelo critério de antiguidade e uma pelo de merecimento. Parágrafo único: preenchimento contínuo em relação às promoções da data anterior.
+
+CAPÍTULO II - DA ABERTURA DE VAGAS
+Art. 8º Vaga computada para promoção decorrente de: I - promoção; II - agregação; III - passagem para inatividade; IV - demissão; V - exoneração; VI - falecimento; VII - aumento de efetivo; VIII - modificação no QOD. Parágrafo único: quantitativo definido por ato do Chefe do Poder Executivo (Oficiais) ou CG (Praças).
+Art. 9º Vaga aberta na data da publicação dos atos do art. 8º. §1º Promoção a um Posto/Graduação acarreta abertura de vaga no grau imediatamente inferior. §2º Não preenche vaga o PM promovido que permaneça agregado.
+Art. 10. Na promoção por ressarcimento de preterição, inexistindo vaga, é considerado excedente o PM mais moderno.
+
+CAPÍTULO III - DAS COMISSÕES DE PROMOÇÃO
+Art. 11. CPO presidida pelo CG, membros: natos (CHEM e SCHEM) e efetivos (4 Oficiais Superiores, Coronéis e Ten-Cel). Substituição: CG pelo CHEM; demais por indicação do CG.
+Art. 12. CPP presidida pelo CHEM, membros: natos (SCHEM e DGP) e efetivos (4 Oficiais, preferencialmente superiores).
+Art. 13. Decisões da CPP submetidas ao CG para homologação e publicação em BG.
+Art. 14. CPO e CPP reúnem-se com totalidade dos membros.
+Art. 15. Decisões por maioria simples; Presidente com voto de qualidade.
+Art. 16. Ausência justificada apenas por doença ou necessidade do serviço.
+Art. 17. CG baixa regimentos internos da CPO e CPP.
+Art. 18. Secretaria executada pelo Chefe da 2ª Seção do EM.
+Art. 19. Competências da CPO: I - organizar QA (art. 32); II - publicar QA em Boletim Reservado; III - conhecer recursos sobre QA; IV - propor exclusão de Oficial do QA; V - fixar datas limites para documentos; VI - apreciar promoções por bravura, invalidez e post-mortem; VII - apreciar conceito (art. 44); VIII - selecionar elogios e punições; IX - organizar relação de impedidos; X - deliberar sobre concluintes de CHO; XI - deliberar sobre agregados a reverter; XII - deliberar sobre exclusão de impedidos; XIII - deliberar sobre impedimento temporário por IPM; XIV - organizar relação de avaliados com pontuações; XV - proceder diligências necessárias.
+Art. 20. CPP: mesmas competências da CPO no que couber.
+
+CAPÍTULO IV - DOS CRITÉRIOS
+Art. 21. Critérios de promoção: I - antiguidade; II - merecimento; III - escolha; IV - bravura; V - post-mortem; VI - tempo de contribuição; VII - invalidez permanente. Parágrafo único: pode ser promovido em ressarcimento de preterição o PM preterido.
+Art. 22. Promoção por antiguidade decorre da precedência hierárquica de um PM sobre os demais de igual Posto/Graduação do mesmo quadro.
+Art. 23. Promoção por merecimento pressupõe o conjunto de qualidades e atributos que distinguem e realçam o valor do PM entre os pares, avaliados no decurso da carreira.
+Art. 24. Promoção por escolha: ato do Chefe do Poder Executivo, ascensão ao Posto de Coronel do Ten-Cel qualificado para altos cargos de comando, chefia ou direção.
+Art. 25. Promoção por bravura resulta de ato não comum de coragem, audácia e abnegação, ultrapassando limites do cumprimento do dever.
+Art. 26. Promoção post-mortem expressa reconhecimento ao PM falecido no cumprimento do dever ou em consequência dele, ou reconhecer direito à promoção não conferido em razão do óbito.
+Art. 27. Promoção por tempo de contribuição concedida ao PM que complete o tempo necessário à transferência a pedido para a reserva remunerada.
+Art. 28. Promoção por invalidez deferida ao PM ativo ou inativo julgado definitivamente incapaz para o serviço militar pela JMCS, em razão de ferimento ou enfermidade decorrente do cumprimento do dever, comprovado por sindicância ou IPM.
+Art. 29. Promoções por antiguidade, merecimento e escolha dependem de prévia inclusão do PM no QA respectivo.
+
+CAPÍTULO V - DAS PROMOÇÕES POR MERECIMENTO, ANTIGUIDADE E ESCOLHA
+Seção I - Quadros de Acesso
+Art. 30. QA: quantitativo nominal dos PMs habilitados à promoção, organizados por critério, grau hierárquico e quadro da carreira.
+Art. 31. Ingresso nos QA pressupõe: I - interstício; II - condições de saúde (inspeção médica oficial); III - requisitos peculiares a cada Posto/Graduação; IV - pontuação positiva na avaliação profissional e moral. Parágrafo único: inciso IV não se aplica a antiguidade e escolha.
+Art. 32. Relação nominal nos QA: I - QAA: precedência hierárquica no almanaque; II - QAM: pontuação decrescente na avaliação; III - QAE: antiguidade dos Ten-Cel no almanaque. §1º QA não excede o quantitativo de vagas. §2º Desempate no merecimento: pela antiguidade.
+Art. 33. Não se inclui/exclui do QA o PM: I - que não satisfizer condições do art. 31; II - que estiver: a) sub judice ou em IPM por fato infamante; b) submetido a procedimento de indignidade; c) em cumprimento de pena restritiva de liberdade; d) agregado (exceto art. 142, §3º, III CF, para antiguidade); e) em licença interesse particular ou saúde familiar >6 meses; III - ausente ou desertor; IV - incapacitado definitivamente; V - desaparecido ou extraviado; VI - falecido; VII - condenado definitivamente por crime doloso; VIII - licenciado ou transferido para inatividade; IX - revertido a menos de 60 dias da data da promoção.
+Art. 34. QA organizados separadamente por quadros e publicados até 15 dias antes da promoção. §1º QA em Boletim Reservado (Oficiais) e BG (Praças).
+Art. 35. PM que não satisfizer condições de curso, interstício ou serviço arregimentado mas possa satisfazê-las, pode ser incluído sob condição. Parágrafo único: exigência de curso não se aplica quando não oportunizado pela Corporação.
+Art. 36. Interstício mínimo: I - Praças: a) Soldado 60 meses; b) Cabo 48 meses; c) 3ºSgt 24 meses; d) 2ºSgt 24 meses; e) 1ºSgt 24 meses. II - Oficiais: a) Aspirante 6 meses; b) 2ºTen 24 meses; c) 1ºTen 36 meses; d) Capitão 36 meses; e) Major 36 meses; f) Ten-Cel 36 meses.
+Art. 37. Interstício pode ser reduzido à metade por ato do Chefe do Poder Executivo (Oficiais) ou CG (Praças).
+
+Seção II - Da Condição de Saúde
+Art. 38. Higidez indispensável ao exercício no novo Posto/Graduação. §1º Saúde verificada em inspeção médica oficial. §2º Incapacidade física temporária não impede ingresso no QA nem promoção. §3º Incapacidade definitiva: situação definida nos termos da lei.
+
+Seção III - Das Condições Peculiares
+Art. 39. Atividades peculiares: I - cursos; II - serviço arregimentado; III - exercício de função específica.
+§1º Cursos: a) CHC (promoção a Cabo); b) CHS (promoção a 3º, 2º e 1ºSgt); c) CAS (promoção a Subtenente); d) CFO/CHO (promoção até Capitão); e) CAO (promoção a Major e Ten-Cel); f) CSP (promoção a Coronel - revogado pela Lei 2.765/2013).
+§4º Serviço arregimentado: tempo no exercício de funções militares previstas nos QOD.
+§5º Computado como arregimentado: tempo na Casa Militar e órgãos de direção, apoio, execução e especiais.
+§6º Mínimo 1/3 do interstício em serviço arregimentado para ingresso no QA.
+§7º Exigência de curso não se aplica quando não oportunizado pela Corporação ao PM que complete o interstício.
+Art. 40. Função específica: execução das atividades previstas para o Posto/Graduação, incluindo substituições eventuais.
+
+Seção IV - Da Avaliação Profissional e Moral
+Art. 41. Pontuação final do QAM: diferença entre pontos positivos e negativos. §1º Classificação resulta do valor positivo. §2º Não se inclui no QAM o PM cujos negativos superem os positivos.
+Art. 42. Valores numéricos positivos: I - tempo de efetivo serviço: 2 pts/semestre; II - tempo no Posto/Graduação atual: 3 pts/semestre; III - exercício em atividade PM no grau atual: 10 pts/6 meses; IV - média final no curso de formação/habilitação/aperfeiçoamento: >=9 (30pts), 8-8,99 (20pts), 7-7,99 (10pts); V - curso civil MEC (não exigido para acesso): graduação 10pts, especialização 5pts, mestrado 15pts, doutorado 20pts, pós-doutorado 30pts; VI - classificação geral em curso: 1º lugar 15pts, 2º 10pts, 3º 5pts; VII - curso profissionalizante militar >=150h: >=9 (7pts), 8-8,99 (5pts), 7-7,99 (3pts); VIII - elogio individual em boletim: Ação Meritória Excepcional 10pts, Ação Destacada 5pts; IX - comportamento militar: excepcional 15pts, ótimo 10pts, bom 5pts; X - pontuação do Conceito Profissional e Moral; XI - trabalho técnico-científico de interesse institucional: 10pts (uma vez); XII - curso/estágio profissionalizante 40-150h: 1pt cada, até 10 cursos; XIII - atividade Pioneiros Mirins: 1pt/12 meses.
+Art. 43. Valores numéricos negativos: I - punições disciplinares: a) prisão: 20pts + dias da punição; b) detenção: 10pts + 1pt/2 dias; c) repreensão: 5pts + igual por reincidência; II - sentença penal condenatória transitada em julgado: 100pts; III - desligamento de curso: falta de aproveitamento 40pts, motivo disciplinar 50pts, desistência 30pts; IV - conclusão em segunda época: 30pts; V - dispensa de função/serviço por motivo disciplinar: 20pts. §2º Punições dos últimos 5 anos. §3º Sentença até reabilitação penal.
+
+Seção V - Do Conceito Profissional e Moral
+Art. 44. Conceito graduado de 0 a 130 pontos, atribuído individualmente pelo Comandante ao qual subordinado nos últimos 6 meses.
+§1º Quesitos: I - contribuição para hierarquia e disciplina; II - interesse no aprimoramento intelectual e profissional; III - consciência ética e respeito aos direitos/deveres da cidadania; IV - destemor e segurança nas atitudes; V - disponibilidade e compromisso com resultado; VI - criatividade; VII - iniciativa no exercício profissional; VIII - apresentação e higiene pessoais; IX - esforço de aprimoramento físico; X - zelo com bens da Fazenda Pública; XI - relacionamento em sociedade; XII - pontualidade e assiduidade; XIII - organização e qualidade.
+§2º Pontuação por quesito: Excelente 10pts, Muito Bom 8pts, Bom 5pts, Regular 3pts, Insuficiente 0pts.
+§3º Valor final: soma dos valores de cada quesito. §4º Conceito final: média aritmética dos avaliadores.
+Art. 45. Somente figura no QAM o PM com mínimo de 65 pontos no Conceito Profissional e Moral.
+Art. 46. Conceito inferior a 65 e superior a 120 deve ser justificado pelo avaliador.
+
+Seção VI - Da Promoção do Tenente Coronel
+Art. 47. Promoção de Ten-Cel a Coronel pelo critério de escolha.
+Art. 48. Chefe do Poder Executivo efetiva a promoção em lista dos Ten-Cel que atendam requisitos do art. 31. Parágrafo único: não cabe recurso administrativo.
+
+CAPÍTULO VI - DA PROMOÇÃO POR BRAVURA, POST-MORTEM, TEMPO DE CONTRIBUIÇÃO E INVALIDEZ
+Art. 49. Ato de bravura comprovado em sindicância instaurada para esse fim. §1º Ato apreciado uma só vez. §2º Decai em 1 ano o direito de requerer promoção por bravura.
+Art. 50. Inexistindo vaga, promovido por bravura ocupa a primeira que abrir. Parágrafo único: não altera sequência do art. 7º.
+Art. 51. PM promovido por bravura que não atenda requisitos da nova posição deve cumpri-los. §1º Corporação providencia matrícula no curso. §2º Transferido para reserva ex-officio se não adquirir diplomação no prazo.
+Art. 52. PM promovido post-mortem quando: I - óbito: a) em ação de manutenção da ordem pública; b) em consequência de ferimento/doença contraída em ação; c) em acidente a serviço; II - ao falecer, já cumpria condições de acesso e integrava a faixa de concorrentes. Parágrafo único: independe de Posto superior, vaga, interstício ou curso.
+Art. 53. Óbito no cumprimento do dever comprovado em sindicância ou IPM.
+Art. 54. Requisitos para promoção por tempo de contribuição: I - 30 anos de contribuição (homem), 25 anos (mulher); II - não ser Coronel. §1º Independe de Posto superior, vaga, interstício ou curso. §2º Subtenente promovido a 2ºTen. §3º Promoção precede ato de transferência para reserva.
+Art. 55. PM promovido por invalidez quando julgado pela JMCS definitivamente incapaz em consequência de: I - ferimento/doença em ação de manutenção da ordem pública; II - acidente a serviço ou doença que nele tenha causa eficiente.
+Art. 56. Promoção por invalidez independe de Posto superior, vaga, interstício ou curso.
+Art. 57. PM do último Posto que satisfaça requisitos de invalidez tem subsídio acrescido do percentual da Lei 1.775/2007.
+
+CAPÍTULO VII - DOS RECURSOS
+Art. 58. Recurso contra composição de QA ou preterição dirigido ao CG, encaminhado à comissão de promoção.
+Art. 59. Recurso contra promoção efetivada: I - ao CG (Praças); II - ao Chefe do Poder Executivo (Oficiais).
+Art. 60. Prazo de 10 dias da publicação oficial para recorrer da composição do QA. Parágrafo único: recurso solucionado em 90 dias.
+Art. 61. Ressarcimento de preterição quando: I - comprovado erro administrativo; II - cessada situação de desaparecimento/extravio; III - absolvido no processo; IV - julgado apto por Conselho.
+
+CAPÍTULO VIII - DOS CURSOS DE HABILITAÇÃO E APERFEIÇOAMENTO
+Art. 62. Matrícula exige: I - comportamento mínimo Bom; II - sem sentença condenatória transitada em julgado; III - apto em inspeção médica. Parágrafo único - cursos específicos: I - CSP: Coronel ou Ten-Cel do QOPM, designado pelo CG por antiguidade; II - CAO: Capitão do QOPM, designado pelo CG por antiguidade; III - CHOA: Subtenente ou 1ºSgt do QPPM, diplomado no CAS, aprovado em seleção ou convocado (art. 64); IV - CHOM: Subtenente ou 1ºSgt do QPE; V - CAS: 1ºSgt do QPPM, designado pelo CG por antiguidade; VI - CHS: Cabo, aprovado em seleção ou convocado (art. 65); VII - CHC: Soldado, aprovado em seleção ou convocado (art. 66).
+Art. 63. Vagas CHOA e CHOM: I - 30% Subtenentes com 24+ meses e 17 anos de serviço, por antiguidade; II - 70% Subtenentes ou 1ºSgt com 24+ meses, por seleção interna.
+Art. 64. Vagas CHS: I - 30% Cabos com 48+ meses e 9 anos de serviço, por antiguidade; II - 70% Cabos com 48+ meses, por seleção interna.
+Art. 65. Vagas CHC: I - 30% Soldados com 60+ meses, por antiguidade; II - 70% Soldados com 60+ meses, por seleção interna.
+Art. 66. Praças do QPPM, QPS e QPE concorrem às vagas em edital nos respectivos quadros.
+
+CAPÍTULO IX - DISPOSIÇÕES GERAIS E FINAIS
+Art. 67. Não há promoção onde houver excedente, salvo ressarcimento de preterição.
+Art. 68. Primeira vaga preenchida pelo critério de antiguidade.
+Art. 69. Revogam-se as Leis 127/1990 e 1.381/2003.
+Art. 70. Esta Lei entra em vigor na data de sua publicação.`,
   },
   {
     disciplina: "CPPM",
