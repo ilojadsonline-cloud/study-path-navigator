@@ -21,6 +21,7 @@ const Cadastro = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
 
+  const [stripeEmail, setStripeEmail] = useState("");
   const sessionId = searchParams.get("session_id");
 
   useEffect(() => {
@@ -38,6 +39,11 @@ const Cadastro = () => {
         if (error) throw error;
         if (data?.paid) {
           setPaymentVerified(true);
+          // Pre-fill email from Stripe so check-subscription will match
+          if (data.customer_email) {
+            setStripeEmail(data.customer_email);
+            setEmail(data.customer_email);
+          }
         }
       } catch (err) {
         console.error("Erro ao verificar pagamento:", err);
