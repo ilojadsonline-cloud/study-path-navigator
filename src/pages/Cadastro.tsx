@@ -214,10 +214,15 @@ const Cadastro = () => {
               <input type="text" value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome completo"
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all" />
             </div>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input type="email" value={email} onChange={e => !stripeEmail && setEmail(e.target.value)} readOnly={!!stripeEmail} placeholder="Email"
-                className={`w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all ${stripeEmail ? 'opacity-70 cursor-not-allowed' : ''}`} />
+            <div>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input type="email" value={email} onChange={e => !stripeEmail && setEmail(e.target.value)} readOnly={!!stripeEmail} placeholder="Email"
+                  className={`w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all ${stripeEmail ? 'opacity-70 cursor-not-allowed' : ''}`} />
+              </div>
+              {stripeEmail && (
+                <p className="text-[10px] text-muted-foreground mt-1 ml-1">Email vinculado ao pagamento (não pode ser alterado)</p>
+              )}
             </div>
             <div className="relative">
               <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
