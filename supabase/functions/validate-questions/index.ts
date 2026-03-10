@@ -13,12 +13,12 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const afterId = body.after_id ?? 0;
-    const limit = Math.min(body.limit || 5, 10); // Limite baixo para evitar timeout da IA
+    const limit = Math.min(body.limit || 10, 20); // Limite para evitar timeout
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
 
-    // 1. Buscar questões que precisam de reparo
+    // 1. Buscar questões para validar/reparar
     const { data: questions, error } = await supabase
       .from("questoes")
       .select("*")
@@ -34,32 +34,42 @@ serve(async (req) => {
     if (legalRows) legalRows.forEach(row => legalTexts[row.disciplina] = row.content);
 
     let fixedCount = 0;
+    let okCount = 0;
+    const results = [];
 
     for (const q of questions) {
       const lawText = legalTexts[q.disciplina];
-      if (!lawText) continue;
+      if (!lawText) {
+        okCount++; // Se não tem lei para comparar, mantemos como está
+        results.push({ id: q.id, status: "pular", motivo: "Sem texto legal" });
+        continue;
+      }
 
-      const prompt = `Você é um revisor jurídico. A questão abaixo tem erros de referência legal ou conteúdo. 
-      Corrija a questão para que ela fique 100% fiel ao texto legal fornecido.
+      // Verificação rápida: o artigo citado no comentário existe na lei?
+      const cited = q.comentario?.match(/art(?:igo)?\.?\s*(\d+)/i);
+      const artNum = cited ? cited[1] : null;
+      const artExists = artNum && (lawText.toLowerCase().includes(`art. ${artNum}`) || lawText.toLowerCase().includes(`artigo ${artNum}`));
+
+      if (artExists) {
+        okCount++;
+        results.push({ id: q.id, status: "ok", motivo: "Artigo validado" });
+        continue;
+      }
+
+      // Se o artigo não existe ou não foi citado, usamos a IA para REPARAR
+      const prompt = `Você é um revisor jurídico. Corrija a questão para que ela fique 100% fiel ao texto legal fornecido.
       
 TEXTO LEGAL (${q.disciplina}):
-${lawText.substring(0, 30000)}
+${lawText.substring(0, 25000)}
 
 QUESTÃO ORIGINAL:
-Enunciado: ${q.enunciado}
+ID: ${q.id} | Enunciado: ${q.enunciado}
 A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
-Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)}
-Comentário Atual: ${q.comentario}
-
-TAREFA:
-1. Identifique o artigo CORRETO no texto legal que trata do assunto do enunciado.
-2. Se as alternativas estiverem erradas, reescreva-as para que apenas UMA seja correta conforme a lei.
-3. Escreva um comentário NOVO citando o artigo/parágrafo/inciso REAL.
-4. Defina o gabarito correto (0-4).
+Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário Atual: ${q.comentario}
 
 Responda APENAS em JSON:
 {
-  "enunciado": "enunciado corrigido se necessário",
+  "enunciado": "enunciado corrigido",
   "alt_a": "...", "alt_b": "...", "alt_c": "...", "alt_d": "...", "alt_e": "...",
   "gabarito": 0,
   "comentario": "Comentário corrigido com citação real da lei"
@@ -81,17 +91,25 @@ Responda APENAS em JSON:
         content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         const corrected = JSON.parse(content);
 
-        // Atualizar a questão no banco de dados
+        // Atualizar no banco
         await supabase.from("questoes").update(corrected).eq("id", q.id);
         fixedCount++;
+        results.push({ id: q.id, status: "corrigida", motivo: "IA reparou a questão" });
       }
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 400));
     }
 
-    return new Response(JSON.stringify({ success: true, fixed: fixedCount, last_id: questions[questions.length-1]?.id }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      total_processado: questions.length,
+      ok: okCount, 
+      corrigidas: fixedCount, 
+      detalhes: results,
+      last_id: questions[questions.length-1]?.id 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ success: false, error: String(err) }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
