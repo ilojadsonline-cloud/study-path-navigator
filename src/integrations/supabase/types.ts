@@ -138,6 +138,47 @@ export type Database = {
           },
         ]
       }
+      question_reviews: {
+        Row: {
+          ai_summary: string | null
+          created_at: string
+          id: number
+          issues: Json
+          questao_id: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          created_at?: string
+          id?: never
+          issues?: Json
+          questao_id: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          ai_summary?: string | null
+          created_at?: string
+          id?: never
+          issues?: Json
+          questao_id?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_reviews_questao_id_fkey"
+            columns: ["questao_id"]
+            isOneToOne: true
+            referencedRelation: "questoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       questoes: {
         Row: {
           alt_a: string
