@@ -39,7 +39,7 @@ const ValidarQuestoes = () => {
     const total = count || 0;
     setTotalQuestoes(total);
 
-    const batchSize = 2;
+    const batchSize = 25;
     const numBatches = Math.max(1, Math.ceil(total / batchSize));
 
     const batches: BatchResult[] = Array.from({ length: numBatches }, (_, i) => ({
@@ -57,10 +57,14 @@ const ValidarQuestoes = () => {
 
       try {
         const { data, error } = await supabase.functions.invoke("validate-questions", {
-          body: { after_id: cursor, limit: batchSize },
+          body: { after_id: cursor, limit: batchSize, mode: "rules", auto_delete: true },
         });
 
         if (error) throw error;
+        if (data?.paused) {
+          toast({ title: "Pausado", description: data?.error || "Validação pausada.", variant: "destructive" });
+          break;
+        }
         if (data?.error) throw new Error(data.error);
 
         if ((data?.validated || 0) === 0) {
@@ -104,7 +108,7 @@ const ValidarQuestoes = () => {
       }
 
       setResults([...batches]);
-      await new Promise((r) => setTimeout(r, 5000));
+      await new Promise((r) => setTimeout(r, 600));
     }
 
     setRunning(false);
@@ -117,10 +121,10 @@ const ValidarQuestoes = () => {
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-gradient-primary">Validação de Questões (IA)</h1>
+        <h1 className="text-2xl font-bold text-gradient-primary">Validação de Questões (Sem IA)</h1>
         <p className="text-sm text-muted-foreground">
-          A IA revisa cada questão do banco, corrige alternativas problemáticas, ajusta gabaritos e remove questões
-          irrecuperáveis.
+          Esta validação usa regras objetivas de conformidade (estrutura, gabarito, alternativas e citação legal), corrige
+          formatação automaticamente e exclui itens irrecuperáveis.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">

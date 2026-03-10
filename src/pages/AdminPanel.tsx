@@ -388,7 +388,7 @@ const AdminPanel = () => {
     setValTotals({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
     const { count } = await supabase.from("questoes").select("*", { count: "exact", head: true });
     const total = count || 0;
-    const batchSize = 5;
+    const batchSize = 25;
     const numBatches = Math.ceil(total / batchSize);
     const batches: BatchResult[] = Array.from({ length: numBatches }, (_, i) => ({ batch: i + 1, status: "pending" as const }));
     setValResults([...batches]);
@@ -397,8 +397,14 @@ const AdminPanel = () => {
     for (let i = 0; i < numBatches; i++) {
       batches[i].status = "loading"; setValResults([...batches]);
       try {
-        const { data, error } = await supabase.functions.invoke("validate-questions", { body: { limit: batchSize, after_id: cursor } });
+        const { data, error } = await supabase.functions.invoke("validate-questions", {
+          body: { limit: batchSize, after_id: cursor, mode: "rules", auto_delete: true },
+        });
         if (error) throw error;
+        if (data?.paused) {
+          toast({ title: "Pausado", description: data?.error || "Validação pausada pelo provedor.", variant: "destructive" });
+          break;
+        }
         if (data?.error) throw new Error(data.error);
         if (data?.validated === 0) { batches[i].status = "success"; batches[i].validated = 0; setValResults([...batches]); break; }
         batches[i].status = "success";
@@ -407,7 +413,9 @@ const AdminPanel = () => {
         runningTotals.validated += data?.validated || 0; runningTotals.ok += data?.ok || 0;
         runningTotals.fixed += data?.fixed || 0; runningTotals.deleted += data?.deleted || 0;
         setValTotals({ ...runningTotals });
-        cursor = data?.last_id || cursor;
+        const nextCursor = data?.last_id || cursor;
+        if (nextCursor === cursor) break;
+        cursor = nextCursor;
         setValCursor(cursor);
       } catch (err: any) {
         batches[i].status = "error"; batches[i].error = err.message;
@@ -416,7 +424,7 @@ const AdminPanel = () => {
         }
       }
       setValResults([...batches]);
-      await new Promise(r => setTimeout(r, 3000));
+      await new Promise(r => setTimeout(r, 600));
     }
     setValRunning(false); setValFinished(true);
     toast({ title: "Validação concluída!", description: `${runningTotals.validated} revisadas, ${runningTotals.fixed} corrigidas, ${runningTotals.deleted} excluídas.` });
@@ -785,8 +793,8 @@ const AdminPanel = () => {
           {/* ── VALIDAR ── */}
           <TabsContent value="validar" className="mt-6 space-y-6">
             <div>
-              <h2 className="text-lg font-bold mb-1">Validação de Questões via IA</h2>
-              <p className="text-sm text-muted-foreground">A IA revisa, corrige e remove questões problemáticas automaticamente. Alterações são salvas em tempo real.</p>
+              <h2 className="text-lg font-bold mb-1">Validação de Questões por Regras (sem IA)</h2>
+              <p className="text-sm text-muted-foreground">Validação determinística com base nas regras definidas: estrutura, alternativas, gabarito e referência legal no comentário. Correções e exclusões são aplicadas em tempo real.</p>
             </div>
             <div className="flex flex-wrap gap-4 items-end">
               <Button onClick={startValidation} disabled={valRunning} className="gradient-primary text-primary-foreground font-bold">
