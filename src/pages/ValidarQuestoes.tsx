@@ -39,7 +39,7 @@ const ValidarQuestoes = () => {
     const total = count || 0;
     setTotalQuestoes(total);
 
-    const batchSize = 2;
+    const batchSize = 25;
     const numBatches = Math.max(1, Math.ceil(total / batchSize));
 
     const batches: BatchResult[] = Array.from({ length: numBatches }, (_, i) => ({
@@ -57,10 +57,14 @@ const ValidarQuestoes = () => {
 
       try {
         const { data, error } = await supabase.functions.invoke("validate-questions", {
-          body: { after_id: cursor, limit: batchSize },
+          body: { after_id: cursor, limit: batchSize, mode: "rules", auto_delete: true },
         });
 
         if (error) throw error;
+        if (data?.paused) {
+          toast({ title: "Pausado", description: data?.error || "Validação pausada.", variant: "destructive" });
+          break;
+        }
         if (data?.error) throw new Error(data.error);
 
         if ((data?.validated || 0) === 0) {
@@ -104,7 +108,7 @@ const ValidarQuestoes = () => {
       }
 
       setResults([...batches]);
-      await new Promise((r) => setTimeout(r, 5000));
+      await new Promise((r) => setTimeout(r, 600));
     }
 
     setRunning(false);
