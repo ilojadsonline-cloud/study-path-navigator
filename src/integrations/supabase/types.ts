@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      discipline_legal_texts: {
+        Row: {
+          content: string
+          created_at: string
+          disciplina: string
+          id: number
+          lei_nome: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          disciplina: string
+          id?: never
+          lei_nome: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          disciplina?: string
+          id?: never
+          lei_nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_reads: {
         Row: {
           id: number
@@ -133,6 +160,47 @@ export type Database = {
             foreignKeyName: "question_reports_questao_id_fkey"
             columns: ["questao_id"]
             isOneToOne: false
+            referencedRelation: "questoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_reviews: {
+        Row: {
+          ai_summary: string | null
+          created_at: string
+          id: number
+          issues: Json
+          questao_id: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          created_at?: string
+          id?: never
+          issues?: Json
+          questao_id: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          ai_summary?: string | null
+          created_at?: string
+          id?: never
+          issues?: Json
+          questao_id?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_reviews_questao_id_fkey"
+            columns: ["questao_id"]
+            isOneToOne: true
             referencedRelation: "questoes"
             referencedColumns: ["id"]
           },

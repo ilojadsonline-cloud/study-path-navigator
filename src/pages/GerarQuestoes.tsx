@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle, AlertCircle, Zap } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, Zap, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const disciplinas = [
@@ -26,20 +26,42 @@ const GerarQuestoes = () => {
   const [results, setResults] = useState<BatchResult[]>([]);
   const [running, setRunning] = useState(false);
   const [totalGeradas, setTotalGeradas] = useState(0);
+  const [batchesPerDiscipline, setBatchesPerDiscipline] = useState(3);
+  const [batchSize, setBatchSize] = useState(5);
+  const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([...disciplinas]);
+  const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
   const { toast } = useToast();
 
+  useEffect(() => {
+    const checkTexts = async () => {
+      const { data } = await supabase
+        .from("discipline_legal_texts")
+        .select("disciplina");
+      if (data) setLoadedTexts(data.map((r: any) => r.disciplina));
+    };
+    checkTexts();
+  }, []);
+
+  const toggleDiscipline = (d: string) => {
+    setSelectedDisciplines((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
+    );
+  };
+
   const generateAll = async () => {
+    const activeDisciplines = selectedDisciplines.filter((d) => loadedTexts.includes(d));
+    if (activeDisciplines.length === 0) {
+      toast({ title: "Erro", description: "Nenhuma disciplina com texto legal carregado. Vá em 'Textos Legais' para fazer o upload.", variant: "destructive" });
+      return;
+    }
+
     setRunning(true);
     setTotalGeradas(0);
 
-    // Each discipline gets ~58 more questions (460/8 ≈ 58), so 6 batches of 10 each
-    const batchesPerDiscipline = 6;
-    const batchSize = 10;
-
     const batches: BatchResult[] = [];
-    for (let d = 0; d < disciplinas.length; d++) {
+    for (const d of activeDisciplines) {
       for (let b = 0; b < batchesPerDiscipline; b++) {
-        batches.push({ disciplina: disciplinas[d], batch: b + 1, status: "pending" });
+        batches.push({ disciplina: d, batch: b + 1, status: "pending" });
       }
     }
     setResults([...batches]);
@@ -50,12 +72,19 @@ const GerarQuestoes = () => {
       setResults([...batches]);
 
       try {
-        const discIndex = Math.floor(i / batchesPerDiscipline);
+        const discIndex = disciplinas.indexOf(batches[i].disciplina);
         const { data, error } = await supabase.functions.invoke("generate-questions-batch", {
           body: { disciplina_index: discIndex, batch_size: batchSize },
         });
 
         if (error) throw error;
+        if (data?.paused) {
+          batches[i].status = "error";
+          batches[i].error = data.error || "Rate limit";
+          toast({ title: "Pausado", description: data.error, variant: "destructive" });
+          setResults([...batches]);
+          break;
+        }
         if (data?.error) throw new Error(data.error);
 
         const inserted = data?.inserted || data?.generated || 0;
@@ -69,20 +98,81 @@ const GerarQuestoes = () => {
       }
 
       setResults([...batches]);
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 3000)); // Longer delay for Groq rate limits
     }
 
     setRunning(false);
     toast({ title: "Geração concluída!", description: `${total} questões geradas no total.` });
   };
 
+  const missingTexts = selectedDisciplines.filter((d) => !loadedTexts.includes(d));
+
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-gradient-primary">Gerador de Questões (Admin)</h1>
+        <h1 className="text-2xl font-bold text-gradient-primary">Gerador de Questões (Groq AI)</h1>
         <p className="text-sm text-muted-foreground">
-          Gera ~480 questões via IA para alcançar 1000 no banco. São 8 disciplinas × 6 lotes × 10 questões.
+          Gera questões via Groq (Llama 3.3 70B) usando exclusivamente o texto legal carregado para cada disciplina. Não consome créditos do Lovable.
         </p>
+
+        {missingTexts.length > 0 && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-xs">
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div>
+              <strong>Textos legais não carregados:</strong> {missingTexts.join(", ")}.
+              <br />Vá em <strong>Admin → Textos Legais</strong> para fazer upload antes de gerar.
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium">Disciplinas:</h3>
+          <div className="flex flex-wrap gap-2">
+            {disciplinas.map((d) => {
+              const loaded = loadedTexts.includes(d);
+              const selected = selectedDisciplines.includes(d);
+              return (
+                <button
+                  key={d}
+                  onClick={() => toggleDiscipline(d)}
+                  disabled={running}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    selected
+                      ? loaded
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-destructive/20 text-destructive border border-destructive/30"
+                      : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {d} {loaded ? "✓" : "⚠"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-muted-foreground">Lotes por disciplina:</label>
+            <input
+              type="number"
+              value={batchesPerDiscipline}
+              onChange={(e) => setBatchesPerDiscipline(Math.max(1, Number(e.target.value) || 1))}
+              disabled={running}
+              className="w-16 rounded-lg bg-secondary border-none text-sm p-2 text-foreground"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-muted-foreground">Questões por lote:</label>
+            <input
+              type="number"
+              value={batchSize}
+              onChange={(e) => setBatchSize(Math.max(1, Math.min(10, Number(e.target.value) || 5)))}
+              disabled={running}
+              className="w-16 rounded-lg bg-secondary border-none text-sm p-2 text-foreground"
+            />
+          </div>
+        </div>
 
         <button
           onClick={generateAll}
@@ -90,11 +180,11 @@ const GerarQuestoes = () => {
           className="flex items-center gap-2 px-6 py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-          {running ? `Gerando... (${totalGeradas} criadas)` : "Iniciar Geração (~480 Questões)"}
+          {running ? `Gerando... (${totalGeradas} criadas)` : `Iniciar Geração`}
         </button>
 
         {results.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-96 overflow-y-auto">
             {results.map((r, i) => (
               <div key={i} className="flex items-center gap-3 glass-card rounded-lg p-3 text-sm">
                 {r.status === "loading" && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
@@ -104,7 +194,7 @@ const GerarQuestoes = () => {
                 <span className="font-medium">{r.disciplina}</span>
                 <span className="text-muted-foreground">Lote {r.batch}</span>
                 {r.geradas !== undefined && <span className="text-success ml-auto">+{r.geradas}</span>}
-                {r.error && <span className="text-destructive text-xs ml-auto">{r.error}</span>}
+                {r.error && <span className="text-destructive text-xs ml-auto truncate max-w-xs">{r.error}</span>}
               </div>
             ))}
           </div>
