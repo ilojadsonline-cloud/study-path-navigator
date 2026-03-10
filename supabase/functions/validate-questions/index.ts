@@ -789,14 +789,22 @@ Responda APENAS com JSON array válido.`;
         const status = aiResponse.status;
         const errText = await aiResponse.text();
         if (status === 429 || status === 402) {
+          // Return 200 to avoid generic "non-2xx" client error; UI already handles data.error
           return new Response(
             JSON.stringify({
-              error: status === 429 ? "Rate limit exceeded. Tente novamente em alguns segundos." : "Créditos insuficientes.",
-              last_id: questoes.length > 0 ? questoes[questoes.indexOf(groupQuestoes[0]) > 0 ? questoes.indexOf(groupQuestoes[0]) - 1 : 0].id : after_id || 0,
+              success: false,
+              paused: true,
+              error: status === 429
+                ? "Rate limit exceeded. Tente novamente em alguns segundos."
+                : "Créditos insuficientes no provedor de IA (Groq).",
+              provider_status: status,
+              last_id: after_id || 0,
               validated: okCount + fixed + deleted,
-              ok: okCount, fixed, deleted,
+              ok: okCount,
+              fixed,
+              deleted,
             }),
-            { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
         errors.push(`AI error for ${disciplina}: ${errText.slice(0, 200)}`);
