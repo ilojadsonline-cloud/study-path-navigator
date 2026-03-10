@@ -763,15 +763,23 @@ ${JSON.stringify(payload)}
 
 Responda APENAS com JSON array válido.`;
 
-      // Call AI with a strong model for accuracy
-      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      // Call Groq API directly (no Lovable credits consumed)
+      const groqKey = Deno.env.get("GROQ_API_KEY");
+      if (!groqKey) {
+        return new Response(
+          JSON.stringify({ error: "GROQ_API_KEY não configurada." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const aiResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
+          Authorization: `Bearer ${groqKey}`,
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "llama-3.3-70b-versatile",
           messages: [{ role: "user", content: prompt }],
           temperature: 0.1,
         }),
