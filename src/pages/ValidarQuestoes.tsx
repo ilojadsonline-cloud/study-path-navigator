@@ -121,10 +121,10 @@ const ValidarQuestoes = () => {
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-gradient-primary">Validação de Questões (IA)</h1>
+        <h1 className="text-2xl font-bold text-gradient-primary">Validação de Questões (Sem IA)</h1>
         <p className="text-sm text-muted-foreground">
-          A IA revisa cada questão do banco, corrige alternativas problemáticas, ajusta gabaritos e remove questões
-          irrecuperáveis.
+          Esta validação usa regras objetivas de conformidade (estrutura, gabarito, alternativas e citação legal), corrige
+          formatação automaticamente e exclui itens irrecuperáveis.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
