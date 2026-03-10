@@ -988,6 +988,7 @@ Responda APENAS com JSON array válido.`;
     return new Response(
       JSON.stringify({
         success: true,
+        mode,
         validated: questoes.length,
         ok: okCount,
         fixed,
