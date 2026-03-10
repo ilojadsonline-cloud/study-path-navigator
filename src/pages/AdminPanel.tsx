@@ -793,8 +793,8 @@ const AdminPanel = () => {
           {/* ── VALIDAR ── */}
           <TabsContent value="validar" className="mt-6 space-y-6">
             <div>
-              <h2 className="text-lg font-bold mb-1">Validação de Questões via IA</h2>
-              <p className="text-sm text-muted-foreground">A IA revisa, corrige e remove questões problemáticas automaticamente. Alterações são salvas em tempo real.</p>
+              <h2 className="text-lg font-bold mb-1">Validação de Questões por Regras (sem IA)</h2>
+              <p className="text-sm text-muted-foreground">Validação determinística com base nas regras definidas: estrutura, alternativas, gabarito e referência legal no comentário. Correções e exclusões são aplicadas em tempo real.</p>
             </div>
             <div className="flex flex-wrap gap-4 items-end">
               <Button onClick={startValidation} disabled={valRunning} className="gradient-primary text-primary-foreground font-bold">
