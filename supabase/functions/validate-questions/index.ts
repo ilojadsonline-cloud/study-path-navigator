@@ -732,9 +732,76 @@ serve(async (req) => {
         continue;
       }
 
+      // Modo determinístico (sem IA): aplica regras estruturais e legais
+      if (mode !== "ai") {
+        for (const original of groupQuestoes) {
+          const normalizedEnunciado = normalizeWhitespace(original.enunciado);
+          const normalizedComentario = normalizeWhitespace(original.comentario);
+          const normalizedAlternatives = ALT_KEYS.map((key) => stripAlternativePrefix(String(original[key] ?? "")));
+
+          const hasPlaceholderAlternatives = normalizedAlternatives.some(
+            (alt) => alt.length < 4 || PLACEHOLDER_ALT_REGEX.test(alt),
+          );
+          const hasDuplicateAlternatives = new Set(normalizedAlternatives.map((alt) => alt.toLowerCase())).size !== ALT_KEYS.length;
+          const gabarito = Number(original.gabarito);
+          const invalidGabarito = !Number.isInteger(gabarito) || gabarito < 0 || gabarito > 4;
+          const hasLegalReference = COMMENT_LEGAL_REF_REGEX.test(normalizedComentario);
+          const legalReferenceInLaw = hasLegalReference && hasLegalReferenceInLaw(normalizedComentario, leg.leiSeca);
+          const tooShort = normalizedEnunciado.length < 35;
+
+          const mustDelete = (
+            tooShort
+            || hasPlaceholderAlternatives
+            || hasDuplicateAlternatives
+            || invalidGabarito
+            || !hasLegalReference
+            || !legalReferenceInLaw
+          );
+
+          if (mustDelete) {
+            if (auto_delete) {
+              await supabase.from("respostas_usuario").delete().eq("questao_id", original.id);
+              const { error: delErr } = await supabase.from("questoes").delete().eq("id", original.id);
+              if (delErr) errors.push(`Delete ${original.id}: ${delErr.message}`);
+              else deleted++;
+            } else {
+              errors.push(`Invalid ${original.id}: critérios não atendidos`);
+              okCount++;
+            }
+            continue;
+          }
+
+          const update: Record<string, unknown> = {};
+
+          if (normalizedEnunciado !== normalizeWhitespace(original.enunciado)) {
+            update.enunciado = normalizedEnunciado;
+          }
+
+          ALT_KEYS.forEach((key, index) => {
+            const oldValue = normalizeWhitespace(original[key]);
+            const newValue = normalizedAlternatives[index];
+            if (newValue && newValue !== oldValue) {
+              update[key] = newValue;
+            }
+          });
+
+          if (normalizedComentario !== normalizeWhitespace(original.comentario)) {
+            update.comentario = normalizedComentario;
+          }
+
+          if (Object.keys(update).length > 0) {
+            const { error: upErr } = await supabase.from("questoes").update(update).eq("id", original.id);
+            if (upErr) errors.push(`Update ${original.id}: ${upErr.message}`);
+            else fixed++;
+          } else {
+            okCount++;
+          }
+        }
+
+        continue;
+      }
+
       // Build payload for this group
-      const payload = groupQuestoes.map((q) => ({
-        id: q.id,
         disciplina: q.disciplina,
         assunto: q.assunto,
         dificuldade: q.dificuldade,
