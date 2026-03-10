@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.verify-payment]
 verify_jwt = false
+
+[functions.store-legal-text]
+verify_jwt = false
+
+[functions.admin-manage-users]
+verify_jwt = false

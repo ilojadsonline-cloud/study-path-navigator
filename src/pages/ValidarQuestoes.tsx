@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle, AlertCircle, ShieldCheck, Trash2, Wrench, RefreshCw } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, ShieldCheck, Trash2, Wrench, RefreshCw, Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BatchResult {
@@ -20,6 +20,7 @@ const ValidarQuestoes = () => {
   const [totals, setTotals] = useState({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
   const [totalQuestoes, setTotalQuestoes] = useState<number | null>(null);
   const [afterId, setAfterId] = useState(0);
+  const [mode, setMode] = useState<"rules" | "ai">("rules");
   const { toast } = useToast();
 
   const startValidation = async () => {
@@ -39,7 +40,7 @@ const ValidarQuestoes = () => {
     const total = count || 0;
     setTotalQuestoes(total);
 
-    const batchSize = 25;
+    const batchSize = mode === "ai" ? 5 : 25;
     const numBatches = Math.max(1, Math.ceil(total / batchSize));
 
     const batches: BatchResult[] = Array.from({ length: numBatches }, (_, i) => ({
@@ -57,12 +58,15 @@ const ValidarQuestoes = () => {
 
       try {
         const { data, error } = await supabase.functions.invoke("validate-questions", {
-          body: { after_id: cursor, limit: batchSize, mode: "rules", auto_delete: true },
+          body: { after_id: cursor, limit: batchSize, mode, auto_delete: true },
         });
 
         if (error) throw error;
         if (data?.paused) {
+          batches[i].status = "error";
+          batches[i].error = data?.error || "Pausado pelo rate limit";
           toast({ title: "Pausado", description: data?.error || "Validação pausada.", variant: "destructive" });
+          setResults([...batches]);
           break;
         }
         if (data?.error) throw new Error(data.error);
@@ -93,22 +97,12 @@ const ValidarQuestoes = () => {
       } catch (err: any) {
         batches[i].status = "error";
         batches[i].error = err.message;
-
-        if (
-          err.message?.includes("429") ||
-          err.message?.includes("402") ||
-          err.message?.includes("Rate limit") ||
-          err.message?.includes("Créditos")
-        ) {
-          toast({ title: "Pausado", description: err.message, variant: "destructive" });
-        }
-
         setResults([...batches]);
         break;
       }
 
       setResults([...batches]);
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, mode === "ai" ? 2000 : 600));
     }
 
     setRunning(false);
@@ -121,11 +115,32 @@ const ValidarQuestoes = () => {
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-gradient-primary">Validação de Questões (Sem IA)</h1>
+        <h1 className="text-2xl font-bold text-gradient-primary">Validação de Questões</h1>
         <p className="text-sm text-muted-foreground">
-          Esta validação usa regras objetivas de conformidade (estrutura, gabarito, alternativas e citação legal), corrige
-          formatação automaticamente e exclui itens irrecuperáveis.
+          Valida e corrige questões do banco. O modo <strong>Regras</strong> usa verificação estrutural sem custo.
+          O modo <strong>IA (Groq)</strong> faz análise semântica confrontando com o texto legal — não consome créditos do Lovable.
         </p>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => setMode("rules")}
+            disabled={running}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+              mode === "rules" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" /> Regras (Rápido)
+          </button>
+          <button
+            onClick={() => setMode("ai")}
+            disabled={running}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+              mode === "ai" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+            }`}
+          >
+            <Brain className="w-3.5 h-3.5" /> IA Groq (Profundo)
+          </button>
+        </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-xs text-muted-foreground">Começar após ID:</label>
