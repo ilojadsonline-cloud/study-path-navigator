@@ -802,6 +802,7 @@ serve(async (req) => {
       }
 
       // Build payload for this group
+      const payload = groupQuestoes.map((q) => ({
         disciplina: q.disciplina,
         assunto: q.assunto,
         dificuldade: q.dificuldade,
