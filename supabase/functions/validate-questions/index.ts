@@ -8,6 +8,8 @@ const corsHeaders = {
 };
 
 const ALT_KEYS = ["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const;
+const COMMENT_LEGAL_REF_REGEX = /(?:art(?:igos?)?\.?\s*\d+[º°]?|anexo\s+[ivxlcdm\d]+)/i;
+const PLACEHOLDER_ALT_REGEX = /^(?:[a-e]|i{1,3}|iv|v|um|dois|tr[eê]s|quatro|cinco|verdadeiro|falso)$/i;
 
 function normalizeWhitespace(text: unknown): string {
   return String(text ?? "").replace(/\s+/g, " ").trim();
@@ -19,6 +21,23 @@ function stripAlternativePrefix(text: string): string {
   cleaned = cleaned.replace(/^[a-e]\s*[:)\-.–]\s*/i, "");
   cleaned = cleaned.replace(/^(?:\d+|i{1,3}|iv|v|um|dois|tr[eê]s|quatro|cinco)\s*[:)\-.–]\s*/i, "");
   return normalizeWhitespace(cleaned);
+}
+
+function extractArticleNumbers(text: string): string[] {
+  const matches = [...text.matchAll(/art(?:igo|igos)?\.?\s*(\d+[a-z]?)/gi)];
+  return [...new Set(matches.map((m) => m[1].toLowerCase().replace(/[^\da-z]/g, "")))];
+}
+
+function hasLegalReferenceInLaw(comment: string, lawText: string): boolean {
+  const citedArticles = extractArticleNumbers(comment);
+  if (citedArticles.length === 0) return false;
+
+  const normalizedLaw = normalizeWhitespace(lawText).toLowerCase();
+  return citedArticles.some((article) => (
+    normalizedLaw.includes(`art. ${article}`)
+    || normalizedLaw.includes(`art ${article}`)
+    || normalizedLaw.includes(`artigo ${article}`)
+  ));
 }
 
 // ── LEGISLATION DATABASE (same as generate-questions-batch) ──
