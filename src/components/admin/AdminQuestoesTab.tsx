@@ -171,7 +171,7 @@ export function AdminQuestoesTab() {
                 <div className="space-y-2">
                   {[viewQuestion.alt_a, viewQuestion.alt_b, viewQuestion.alt_c, viewQuestion.alt_d, viewQuestion.alt_e].map((alt, i) => (
                     <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-sm ${i === viewQuestion.gabarito ? "bg-primary/10 border border-primary/30" : "bg-muted/30"}`}>
-                      <span className="font-bold text-xs mt-0.5">{["A", "B", "C", "D", "E"][i]})</span>
+                      <span className="font-bold text-xs mt-0.5" translate="no">{["A", "B", "C", "D", "E"][i]})</span>
                       <span>{alt}</span>
                       {i === viewQuestion.gabarito && <CheckCircle className="w-4 h-4 text-primary shrink-0 ml-auto" />}
                     </div>
@@ -232,7 +232,7 @@ export function AdminQuestoesTab() {
                     <div className="flex items-center gap-1 mt-2">
                       <input type="radio" name="gabarito" checked={editQuestion.gabarito === i}
                         onChange={() => setEditQuestion({ ...editQuestion, gabarito: i })} className="accent-primary" />
-                      <span className="text-xs font-bold">{["A", "B", "C", "D", "E"][i]}</span>
+                      <span translate="no" className="text-xs font-bold">{["A", "B", "C", "D", "E"][i]}</span>
                     </div>
                     <Textarea value={editQuestion[key]} onChange={(e) => setEditQuestion({ ...editQuestion, [key]: e.target.value })} rows={1} className="flex-1" />
                   </div>

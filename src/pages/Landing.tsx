@@ -329,7 +329,7 @@ const Landing = () => {
                     onClick={() => handleAnswer(i)}
                     className={`w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all duration-300 ${borderClass} ${!showAnswer ? "cursor-pointer" : "cursor-default"}`}
                   >
-                    <span className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
+                    <span translate="no" className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
                       showAnswer && isCorrect ? "bg-green-500/20 text-green-400" :
                       showAnswer && isSelected && !isCorrect ? "bg-red-500/20 text-red-400" :
                       "bg-primary/10 text-primary"
