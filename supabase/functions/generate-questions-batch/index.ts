@@ -183,13 +183,9 @@ Formato JSON array (SEM markdown, SEM \`\`\`):
       }),
     });
 
+    console.log("DeepSeek response status:", aiResponse.status);
     if (aiResponse.status === 429) {
       return new Response(JSON.stringify({ error: "Rate limit do DeepSeek atingido. Aguarde 1 minuto.", paused: true }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (aiResponse.status === 402 || aiResponse.status === 401) {
-      return new Response(JSON.stringify({ error: "Chave DeepSeek inválida ou sem créditos. Verifique em platform.deepseek.com.", paused: true }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -197,7 +193,7 @@ Formato JSON array (SEM markdown, SEM \`\`\`):
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("DeepSeek API error:", aiResponse.status, errText);
-      return new Response(JSON.stringify({ error: `DeepSeek API error: ${aiResponse.status}` }), {
+      return new Response(JSON.stringify({ error: `DeepSeek API error (${aiResponse.status}): ${errText.substring(0, 200)}` }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
