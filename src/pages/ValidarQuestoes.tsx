@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle, AlertCircle, ShieldCheck, Trash2, Wrench, RefreshCw, Brain } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, ShieldCheck, Trash2, Wrench, RefreshCw, Brain, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BatchResult {
@@ -23,8 +23,9 @@ const ValidarQuestoes = () => {
   const [mode, setMode] = useState<"rules" | "ai">("rules");
   const { toast } = useToast();
 
-  const startValidation = async () => {
+  const runValidation = async (selectedMode: "rules" | "ai") => {
     setRunning(true);
+    setResults([]);
     setTotals({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
 
     const { count, error: countError } = await supabase
@@ -40,12 +41,10 @@ const ValidarQuestoes = () => {
     const total = count || 0;
     setTotalQuestoes(total);
 
-    const batchSize = mode === "ai" ? 5 : 25;
+    const batchSize = selectedMode === "ai" ? 5 : 20;
     const numBatches = Math.max(1, Math.ceil(total / batchSize));
-
     const batches: BatchResult[] = Array.from({ length: numBatches }, (_, i) => ({
-      batch: i + 1,
-      status: "pending" as const,
+      batch: i + 1, status: "pending" as const,
     }));
     setResults([...batches]);
 
@@ -58,14 +57,14 @@ const ValidarQuestoes = () => {
 
       try {
         const { data, error } = await supabase.functions.invoke("validate-questions", {
-          body: { after_id: cursor, limit: batchSize, mode, auto_delete: true },
+          body: { after_id: cursor, limit: batchSize, mode: selectedMode },
         });
 
         if (error) throw error;
         if (data?.paused) {
           batches[i].status = "error";
           batches[i].error = data?.error || "Pausado pelo rate limit";
-          toast({ title: "Pausado", description: data?.error || "Validação pausada.", variant: "destructive" });
+          toast({ title: "Pausado", description: data?.error, variant: "destructive" });
           setResults([...batches]);
           break;
         }
@@ -102,25 +101,27 @@ const ValidarQuestoes = () => {
       }
 
       setResults([...batches]);
-      await new Promise((r) => setTimeout(r, mode === "ai" ? 2000 : 600));
+      await new Promise((r) => setTimeout(r, selectedMode === "ai" ? 2000 : 600));
     }
 
     setRunning(false);
     toast({
       title: "Validação concluída!",
-      description: `${runningTotals.validated} revisadas, ${runningTotals.fixed} corrigidas, ${runningTotals.deleted} excluídas.`,
+      description: `${runningTotals.validated} revisadas · ${runningTotals.ok} OK · ${runningTotals.fixed} corrigidas · ${runningTotals.deleted} excluídas`,
     });
   };
 
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-gradient-primary">Validação de Questões</h1>
+        <h1 className="text-2xl font-bold text-gradient-primary">Validação & Reparo de Questões</h1>
         <p className="text-sm text-muted-foreground">
-          Valida e corrige questões do banco. O modo <strong>Regras</strong> usa verificação estrutural sem custo.
-          O modo <strong>IA (Groq)</strong> faz análise semântica confrontando com o texto legal — não consome créditos do Lovable.
+          <strong>Regras:</strong> verificação estrutural + artigos citados vs. texto legal. Rápido, sem custo.
+          <br />
+          <strong>Reparar (IA Groq):</strong> reescreve questões incorretas usando o texto legal. Sem créditos Lovable.
         </p>
 
+        {/* Mode buttons */}
         <div className="flex gap-2">
           <button
             onClick={() => setMode("rules")}
@@ -129,7 +130,7 @@ const ValidarQuestoes = () => {
               mode === "rules" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
             }`}
           >
-            <ShieldCheck className="w-3.5 h-3.5" /> Regras (Rápido)
+            <ShieldCheck className="w-3.5 h-3.5" /> Regras (Limpar)
           </button>
           <button
             onClick={() => setMode("ai")}
@@ -138,10 +139,11 @@ const ValidarQuestoes = () => {
               mode === "ai" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
             }`}
           >
-            <Brain className="w-3.5 h-3.5" /> IA Groq (Profundo)
+            <Brain className="w-3.5 h-3.5" /> Reparar com IA
           </button>
         </div>
 
+        {/* Cursor control */}
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-xs text-muted-foreground">Começar após ID:</label>
           <input
@@ -161,36 +163,55 @@ const ValidarQuestoes = () => {
           )}
         </div>
 
-        <div className="flex gap-3">
+        {/* Action buttons */}
+        <div className="flex gap-3 flex-wrap">
           <button
-            onClick={startValidation}
+            onClick={() => runValidation(mode)}
             disabled={running}
             className="flex items-center gap-2 px-6 py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
             {running
-              ? `Validando... (${totals.validated} revisadas)`
-              : `Iniciar Validação${totalQuestoes !== null ? ` (${totalQuestoes} questões)` : ""}`}
+              ? `Processando... (${totals.validated} revisadas)`
+              : mode === "ai" ? "Reparar Tudo (IA)" : "Validar Tudo (Regras)"}
           </button>
         </div>
 
+        {/* Summary cards */}
         {totals.validated > 0 && (
           <div className="flex gap-4 flex-wrap">
             <div className="glass-card rounded-lg p-3 flex items-center gap-2 text-sm">
               <CheckCircle className="w-4 h-4 text-success" />
-              <span className="font-medium">{totals.ok} OK</span>
+              <div>
+                <span className="font-bold text-lg">{totals.ok}</span>
+                <span className="text-muted-foreground ml-1">Validadas OK</span>
+              </div>
             </div>
             <div className="glass-card rounded-lg p-3 flex items-center gap-2 text-sm">
               <Wrench className="w-4 h-4 text-primary" />
-              <span className="font-medium">{totals.fixed} Corrigidas</span>
+              <div>
+                <span className="font-bold text-lg">{totals.fixed}</span>
+                <span className="text-muted-foreground ml-1">Corrigidas</span>
+              </div>
             </div>
             <div className="glass-card rounded-lg p-3 flex items-center gap-2 text-sm">
               <Trash2 className="w-4 h-4 text-destructive" />
-              <span className="font-medium">{totals.deleted} Excluídas</span>
+              <div>
+                <span className="font-bold text-lg">{totals.deleted}</span>
+                <span className="text-muted-foreground ml-1">Excluídas</span>
+              </div>
+            </div>
+            <div className="glass-card rounded-lg p-3 flex items-center gap-2 text-sm">
+              <Zap className="w-4 h-4 text-accent-foreground" />
+              <div>
+                <span className="font-bold text-lg">{totals.validated}</span>
+                <span className="text-muted-foreground ml-1">Total Processadas</span>
+              </div>
             </div>
           </div>
         )}
 
+        {/* Batch log */}
         {results.length > 0 && (
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {results.map((r, i) => (
