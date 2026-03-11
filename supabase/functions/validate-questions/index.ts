@@ -271,14 +271,13 @@ Responda APENAS em JSON:
 }`;
 
       try {
-        const aiResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${GROQ_API_KEY}` },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
           body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
+            model: "google/gemini-2.5-flash",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.1,
-            response_format: { type: "json_object" },
           }),
         });
 
