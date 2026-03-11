@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle, AlertCircle, ShieldCheck, Trash2, Wrench, RefreshCw, Brain, Zap } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, ShieldCheck, Trash2, Wrench, RefreshCw, Brain, Zap, StopCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BatchResult {
@@ -21,10 +21,12 @@ const ValidarQuestoes = () => {
   const [totalQuestoes, setTotalQuestoes] = useState<number | null>(null);
   const [afterId, setAfterId] = useState(0);
   const [mode, setMode] = useState<"rules" | "ai">("rules");
+  const stopRef = useRef(false);
   const { toast } = useToast();
 
   const runValidation = async (selectedMode: "rules" | "ai") => {
     setRunning(true);
+    stopRef.current = false;
     setResults([]);
     setTotals({ validated: 0, ok: 0, fixed: 0, deleted: 0 });
 
@@ -38,21 +40,20 @@ const ValidarQuestoes = () => {
       return;
     }
 
-    const total = count || 0;
-    setTotalQuestoes(total);
+    setTotalQuestoes(count || 0);
 
     const batchSize = selectedMode === "ai" ? 5 : 20;
-    const numBatches = Math.max(1, Math.ceil(total / batchSize));
-    const batches: BatchResult[] = Array.from({ length: numBatches }, (_, i) => ({
-      batch: i + 1, status: "pending" as const,
-    }));
-    setResults([...batches]);
-
+    const batches: BatchResult[] = [];
     let runningTotals = { validated: 0, ok: 0, fixed: 0, deleted: 0 };
     let cursor = afterId;
+    let batchNum = 0;
+    let consecutiveEmpty = 0;
 
-    for (let i = 0; i < numBatches; i++) {
-      batches[i].status = "loading";
+    // Continuous loop — keeps going until the edge function returns 0 questions
+    while (!stopRef.current) {
+      batchNum++;
+      const batch: BatchResult = { batch: batchNum, status: "loading" };
+      batches.push(batch);
       setResults([...batches]);
 
       try {
@@ -61,54 +62,75 @@ const ValidarQuestoes = () => {
         });
 
         if (error) throw error;
+
         if (data?.paused) {
-          batches[i].status = "error";
-          batches[i].error = data?.error || "Pausado pelo rate limit";
+          batch.status = "error";
+          batch.error = data?.error || "Pausado pelo rate limit";
           toast({ title: "Pausado", description: data?.error, variant: "destructive" });
           setResults([...batches]);
           break;
         }
+
         if (data?.error) throw new Error(data.error);
 
-        if ((data?.validated || 0) === 0) {
-          batches[i].status = "success";
-          batches[i].validated = 0;
+        const validated = data?.validated || 0;
+
+        if (validated === 0) {
+          consecutiveEmpty++;
+          // If 2 consecutive empty batches, we're truly done
+          if (consecutiveEmpty >= 2) {
+            batch.status = "success";
+            batch.validated = 0;
+            setResults([...batches]);
+            break;
+          }
+          // Maybe there are questions with higher IDs (gaps from deletions)
+          // Jump cursor forward
+          cursor = (data?.last_id || cursor) + 1;
+          batch.status = "success";
+          batch.validated = 0;
           setResults([...batches]);
-          break;
+          await new Promise(r => setTimeout(r, 300));
+          continue;
         }
 
-        batches[i].status = "success";
-        batches[i].validated = data?.validated || 0;
-        batches[i].ok = data?.ok || 0;
-        batches[i].fixed = data?.fixed || 0;
-        batches[i].deleted = data?.deleted || 0;
+        consecutiveEmpty = 0;
+        batch.status = "success";
+        batch.validated = validated;
+        batch.ok = data?.ok || 0;
+        batch.fixed = data?.fixed || 0;
+        batch.deleted = data?.deleted || 0;
 
-        runningTotals.validated += data?.validated || 0;
+        runningTotals.validated += validated;
         runningTotals.ok += data?.ok || 0;
         runningTotals.fixed += data?.fixed || 0;
         runningTotals.deleted += data?.deleted || 0;
         setTotals({ ...runningTotals });
 
         const nextCursor = data?.last_id || cursor;
-        if (nextCursor === cursor) break;
-        cursor = nextCursor;
+        // Even if cursor didn't advance (all deleted), try next ID
+        cursor = nextCursor === cursor ? cursor + batchSize : nextCursor;
         setAfterId(cursor);
       } catch (err: any) {
-        batches[i].status = "error";
-        batches[i].error = err.message;
+        batch.status = "error";
+        batch.error = err.message;
         setResults([...batches]);
         break;
       }
 
       setResults([...batches]);
-      await new Promise((r) => setTimeout(r, selectedMode === "ai" ? 2000 : 600));
+      await new Promise(r => setTimeout(r, selectedMode === "ai" ? 2000 : 600));
     }
 
     setRunning(false);
     toast({
-      title: "Validação concluída!",
+      title: stopRef.current ? "Validação interrompida" : "Validação concluída!",
       description: `${runningTotals.validated} revisadas · ${runningTotals.ok} OK · ${runningTotals.fixed} corrigidas · ${runningTotals.deleted} excluídas`,
     });
+  };
+
+  const handleStop = () => {
+    stopRef.current = true;
   };
 
   return (
@@ -116,7 +138,7 @@ const ValidarQuestoes = () => {
       <div className="max-w-3xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold text-gradient-primary">Validação & Reparo de Questões</h1>
         <p className="text-sm text-muted-foreground">
-          <strong>Regras:</strong> verificação estrutural + artigos citados vs. texto legal. Rápido, sem custo.
+          <strong>Regras:</strong> verificação estrutural + confronto literal de artigos. Rápido, sem custo.
           <br />
           <strong>Reparar (IA Groq):</strong> reescreve questões incorretas usando o texto legal. Sem créditos Lovable.
         </p>
@@ -153,6 +175,9 @@ const ValidarQuestoes = () => {
             disabled={running}
             className="w-28 rounded-lg bg-secondary border-none text-sm p-2 text-foreground"
           />
+          {totalQuestoes !== null && (
+            <span className="text-xs text-muted-foreground">({totalQuestoes} questões no banco)</span>
+          )}
           {!running && afterId > 0 && (
             <button
               onClick={() => setAfterId(0)}
@@ -175,6 +200,14 @@ const ValidarQuestoes = () => {
               ? `Processando... (${totals.validated} revisadas)`
               : mode === "ai" ? "Reparar Tudo (IA)" : "Validar Tudo (Regras)"}
           </button>
+          {running && (
+            <button
+              onClick={handleStop}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm hover:opacity-90 transition-opacity"
+            >
+              <StopCircle className="w-4 h-4" /> Parar
+            </button>
+          )}
         </div>
 
         {/* Summary cards */}
