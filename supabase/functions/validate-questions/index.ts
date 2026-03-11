@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 const ALT_KEYS = ["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const;
+type ArticleBlock = { artNum: string; text: string; normText: string };
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -20,8 +21,8 @@ function normalizeWhitespace(text: unknown): string {
 }
 
 /** Parse law text into article blocks: { artNum: "5", text: "full text of article 5..." } */
-function parseArticleBlocks(lawText: string): Array<{ artNum: string; text: string }> {
-  const blocks: Array<{ artNum: string; text: string }> = [];
+function parseArticleBlocks(lawText: string): ArticleBlock[] {
+  const blocks: ArticleBlock[] = [];
   const regex = /Art\.?\s*(\d+)/gi;
   const positions: Array<{ num: string; pos: number }> = [];
   let m: RegExpExecArray | null;
@@ -31,35 +32,43 @@ function parseArticleBlocks(lawText: string): Array<{ artNum: string; text: stri
   for (let i = 0; i < positions.length; i++) {
     const start = positions[i].pos;
     const end = i + 1 < positions.length ? positions[i + 1].pos : lawText.length;
-    blocks.push({ artNum: positions[i].num, text: lawText.substring(start, end) });
+    const text = lawText.substring(start, end);
+    blocks.push({ artNum: positions[i].num, text, normText: normalize(text) });
   }
   return blocks;
 }
 
-/** Find which article block contains a text snippet */
-function findArticleForText(snippet: string, lawText: string, blocks: Array<{ artNum: string; text: string }>): string | null {
-  if (!snippet || snippet.length < 15) return null;
-  const normSnippet = normalize(snippet);
+function findUniqueArticleMatch(probe: string, blocks: ArticleBlock[]): string | null {
+  const matches = blocks.filter(block => block.normText.includes(probe));
+  return matches.length === 1 ? `Art. ${matches[0].artNum}` : null;
+}
 
-  // Search progressively shorter prefixes of the snippet
-  for (let len = normSnippet.length; len >= Math.min(20, normSnippet.length); len -= 5) {
-    const probe = normSnippet.substring(0, len);
-    for (const block of blocks) {
-      if (normalize(block.text).includes(probe)) {
-        return `Art. ${block.artNum}`;
-      }
+/** Find which article block contains a text snippet */
+function findArticleForText(snippet: string, blocks: ArticleBlock[]): string | null {
+  const cleanedSnippet = normalizeWhitespace(snippet);
+  if (!cleanedSnippet || cleanedSnippet.length < 15) return null;
+  const normSnippet = normalize(cleanedSnippet);
+  if (normSnippet.length < 15) return null;
+
+  if (normSnippet.length >= 25) {
+    const exactMatch = findUniqueArticleMatch(normSnippet, blocks);
+    if (exactMatch) return exactMatch;
+  }
+
+  const words = normSnippet.split(" ").filter(w => w.length > 2);
+  for (const windowSize of [12, 10, 8, 6, 5]) {
+    if (words.length < windowSize) continue;
+    for (let start = 0; start <= words.length - windowSize; start++) {
+      const probe = words.slice(start, start + windowSize).join(" ");
+      const uniqueMatch = findUniqueArticleMatch(probe, blocks);
+      if (uniqueMatch) return uniqueMatch;
     }
   }
 
-  // Fallback: try word-level matching (at least 5 consecutive words)
-  const words = normSnippet.split(" ").filter(w => w.length > 2);
-  if (words.length >= 5) {
-    const probe5 = words.slice(0, 5).join(" ");
-    for (const block of blocks) {
-      if (normalize(block.text).includes(probe5)) {
-        return `Art. ${block.artNum}`;
-      }
-    }
+  for (let len = Math.min(normSnippet.length, 120); len >= 25; len -= 10) {
+    const probe = normSnippet.substring(0, len);
+    const uniqueMatch = findUniqueArticleMatch(probe, blocks);
+    if (uniqueMatch) return uniqueMatch;
   }
 
   return null;
@@ -71,19 +80,68 @@ function extractAllCitedArticles(text: string): string[] {
   return [...new Set(matches.map(m => m.match(/\d+/)?.[0] || "").filter(Boolean))];
 }
 
+function extractCommentEvidenceSnippets(comment: string): string[] {
+  const snippets = Array.from(
+    comment.matchAll(/["“”'‘’]([^"“”'‘’]{20,500})["“”'‘’]/g),
+    (match) => normalizeWhitespace(match[1]),
+  ).filter(Boolean);
+
+  const colonTail = normalizeWhitespace(
+    comment
+      .split(":")
+      .slice(1)
+      .join(":")
+      .replace(/^["“”'‘’]+|["“”'‘’]+$/g, ""),
+  );
+
+  if (colonTail.length >= 20) snippets.push(colonTail);
+  return [...new Set(snippets)];
+}
+
+function detectCommentEvidenceArticle(comment: string, blocks: ArticleBlock[]): string | null {
+  for (const snippet of extractCommentEvidenceSnippets(comment)) {
+    const article = findArticleForText(snippet, blocks);
+    if (article) return article;
+  }
+  return null;
+}
+
 /** Check if a specific article number exists in the law text */
-function articleExistsInLaw(artNum: string, blocks: Array<{ artNum: string; text: string }>): boolean {
+function articleExistsInLaw(artNum: string, blocks: ArticleBlock[]): boolean {
   return blocks.some(b => b.artNum === artNum);
 }
 
 /** Validate ALL cited articles exist in law */
-function validateAllCitations(comment: string, blocks: Array<{ artNum: string; text: string }>): { valid: boolean; missing: string[] } {
+function validateAllCitations(comment: string, blocks: ArticleBlock[]): { valid: boolean; missing: string[] } {
   const cited = extractAllCitedArticles(comment);
   const missing: string[] = [];
   for (const artNum of cited) {
     if (!articleExistsInLaw(artNum, blocks)) missing.push(`Art. ${artNum}`);
   }
   return { valid: missing.length === 0, missing };
+}
+
+function reconcileCommentArticle(comment: string, targetArticle: string): string {
+  let nextComment = normalizeWhitespace(comment);
+  const targetNum = targetArticle.match(/\d+/)?.[0];
+  if (!targetNum) return nextComment;
+
+  const citedArts = extractAllCitedArticles(nextComment);
+  if (citedArts.length > 0) {
+    for (const artNum of citedArts) {
+      if (artNum !== targetNum) {
+        nextComment = nextComment.replace(new RegExp(`Art\\.?\\s*${artNum}(?!\\d)`, "gi"), targetArticle);
+      }
+    }
+  }
+
+  if (extractAllCitedArticles(nextComment).length === 0) {
+    nextComment = /^conforme\b/i.test(nextComment)
+      ? nextComment.replace(/^conforme\b\s*/i, `Conforme o ${targetArticle}: `)
+      : `Conforme o ${targetArticle}: ${nextComment}`;
+  }
+
+  return normalizeWhitespace(nextComment);
 }
 
 /** Cross-validate enunciado vs comment references */
