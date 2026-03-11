@@ -284,14 +284,15 @@ Responda APENAS em JSON:
         if (!aiResponse.ok) {
           const errText = await aiResponse.text();
           // Rate limit — pause
-          if (aiResponse.status === 429) {
+          if (aiResponse.status === 429 || aiResponse.status === 402) {
+            const msg = aiResponse.status === 429 ? "Rate limit atingido. Aguarde e retome." : "Créditos insuficientes.";
             return new Response(JSON.stringify({
-              success: true, paused: true, error: "Rate limit Groq. Aguarde e retome.",
+              success: true, paused: true, error: msg,
               validated: okCount + fixedCount + deletedCount, ok: okCount, fixed: fixedCount, deleted: deletedCount,
               last_id: q.id, details,
             }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
-          throw new Error(`Groq ${aiResponse.status}: ${errText.substring(0, 200)}`);
+          throw new Error(`AI Gateway ${aiResponse.status}: ${errText.substring(0, 200)}`);
         }
 
         const aiData = await aiResponse.json();
