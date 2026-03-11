@@ -419,15 +419,68 @@ JSON array:
       batchFingerprints.add(fp);
 
       // ── Validate ALL cited articles exist in law ──
+      const correctAltKey = ALT_KEYS[q.gabarito];
+      const correctAltText = q[correctAltKey] as string;
+      const literalArticle = findArticleForText(correctAltText, blocks);
+      const evidenceArticle = detectCommentEvidenceArticle(q.comentario, blocks);
+      const resolvedArticle = evidenceArticle || literalArticle;
       const citationCheck = validateAllCitations(q.comentario, blocks);
-      if (!citationCheck.valid) {
-        // Try auto-fix: find real article from correct answer text
-        const correctAltKey = ALT_KEYS[q.gabarito];
-        const correctAltText = q[correctAltKey] as string;
-        const realArticle = findArticleForText(correctAltText, blocks);
 
-        if (realArticle) {
-          // Replace hallucinated articles with real one
+      if (!citationCheck.valid) {
+        if (resolvedArticle) {
+          q.comentario = reconcileCommentArticle(q.comentario, resolvedArticle);
+          const recheck = validateAllCitations(q.comentario, blocks);
+          if (!recheck.valid) {
+            discarded++;
+            questoesRevisaoManual.push({ motivo: `Artigos inexistentes: ${recheck.missing.join(", ")} (auto-correção falhou)` });
+            console.log(`[GERAR] Q${idx+1} descartada: artigos inexistentes após correção`);
+            continue;
+          }
+          console.log(`[GERAR] Q${idx+1} AUTO-FIX: artigo corrigido para ${resolvedArticle}`);
+        } else {
+          discarded++;
+          questoesRevisaoManual.push({ motivo: `Artigos inexistentes: ${citationCheck.missing.join(", ")}` });
+          console.log(`[GERAR] Q${idx+1} descartada: ${citationCheck.missing.join(", ")}`);
+          continue;
+        }
+      }
+
+      // ── Validate at least one article is cited ──
+      const citedArts = extractAllCitedArticles(q.comentario);
+      if (citedArts.length === 0) {
+        if (resolvedArticle) {
+          q.comentario = reconcileCommentArticle(q.comentario, resolvedArticle);
+        }
+      }
+
+      const finalCitedArts = extractAllCitedArticles(q.comentario);
+      if (finalCitedArts.length === 0) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: "Comentário sem citação de artigo" });
+        console.log(`[GERAR] Q${idx+1} descartada: sem artigo no comentário`);
+        continue;
+      }
+
+      // ── Cross-validation: enunciado vs comment ──
+      const crossCheck = crossValidateReferences(q.enunciado, q.comentario);
+      if (!crossCheck.valid) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: crossCheck.reason });
+        console.log(`[GERAR] Q${idx+1} descartada: ${crossCheck.reason}`);
+        continue;
+      }
+
+      // ── Verify correct answer text is in the law (article block matching) ──
+      if (resolvedArticle) {
+        const resolvedNum = resolvedArticle.match(/\d+/)?.[0];
+        const commentCitedArts = extractAllCitedArticles(q.comentario);
+        if (resolvedNum && commentCitedArts.length > 0 && !commentCitedArts.includes(resolvedNum)) {
+          console.log(`[GERAR] Q${idx+1} AUTO-FIX: comentário cita Art. ${commentCitedArts.join(",")} mas evidência aponta para ${resolvedArticle}`);
+          q.comentario = reconcileCommentArticle(q.comentario, resolvedArticle);
+        }
+      }
+
+      const approvedArts = extractAllCitedArticles(q.comentario);
           for (const miss of citationCheck.missing) {
             const missNum = miss.match(/\d+/)?.[0];
             if (missNum) {
