@@ -168,7 +168,7 @@ const Simulados = () => {
                     return (
                       <button key={ai} onClick={() => { if (!revealed[q.id]) setSelectedAnswer(prev => ({ ...prev, [q.id]: ai })); }}
                         className={`w-full text-left flex items-start gap-3 p-3 rounded-lg border text-sm transition-all duration-200 ${altClass}`}>
-                        <span className="w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5">
+                        <span className="w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5" translate="no">
                           {String.fromCharCode(65 + ai)}
                         </span>
                         <span className="flex-1">{alt}</span>
