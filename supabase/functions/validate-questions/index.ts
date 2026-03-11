@@ -262,10 +262,11 @@ serve(async (req) => {
         continue;
       }
 
-      // ── STEP A: Comprehensive Validation ──────────────────────
       const correctAltKey = ALT_KEYS[q.gabarito] || "alt_a";
       const correctAltText: string = q[correctAltKey] || "";
-      const realArticle = findArticleForText(correctAltText, lawText, blocks);
+      const literalArticle = findArticleForText(correctAltText, blocks);
+      const evidenceArticle = detectCommentEvidenceArticle(q.comentario || "", blocks);
+      const realArticle = evidenceArticle || literalArticle;
       const commentCitedArts = extractAllCitedArticles(q.comentario || "");
 
       let needsFix = false;
