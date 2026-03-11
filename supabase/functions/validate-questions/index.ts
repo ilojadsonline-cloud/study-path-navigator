@@ -13,11 +13,12 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const afterId = body.after_id ?? 0;
-    const limit = Math.min(body.limit || 5, 10);
+    const limit = Math.min(body.limit || 5, 10); // Lotes pequenos para evitar timeout
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
 
+    // 1. Buscar questões para validar
     const { data: questions, error } = await supabase
       .from("questoes")
       .select("*")
@@ -27,42 +28,44 @@ serve(async (req) => {
 
     if (error) throw error;
 
+    // 2. Buscar textos legais para referência
     const { data: legalRows } = await supabase.from("discipline_legal_texts").select("disciplina, content");
     const legalTexts: Record<string, string> = {};
     if (legalRows) legalRows.forEach(row => legalTexts[row.disciplina] = row.content);
 
     let fixedCount = 0;
     let okCount = 0;
+    const results = [];
 
     for (const q of questions) {
       const lawText = legalTexts[q.disciplina];
       if (!lawText) {
         okCount++;
+        results.push({ id: q.id, status: "pular", motivo: "Sem texto legal" });
         continue;
       }
 
-      // PROMPT ULTRA-RIGOROSO PARA CORREÇÃO DE COMENTÁRIOS E ARTIGOS
-      const prompt = `Você é um auditor jurídico militar. A questão abaixo tem erros de citação de artigos no comentário.
-Corrija a questão para que ela seja 100% fiel ao texto legal fornecido.
-
+      // PROMPT DE AUDITORIA DE CONFRONTO DIRETO (O MESMO QUE USEI NO SCRIPT)
+      const prompt = `Você é um auditor jurídico militar rigoroso. Analise se a questão abaixo é 100% FIEL ao texto legal fornecido.
+      
 TEXTO LEGAL (${q.disciplina}):
 ${lawText.substring(0, 30000)}
 
 QUESTÃO:
-Enunciado: ${q.enunciado}
-Alternativas: A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
-Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)}
-Comentário Atual: ${q.comentario}
+ID: ${q.id} | Enunciado: ${q.enunciado}
+A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
+Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário Atual: ${q.comentario}
 
 SUA TAREFA:
-1. Localize no texto legal o artigo EXATO que fundamenta a resposta correta.
-2. Se o comentário atual citar um artigo que não existe ou que não trata desse assunto, REESCREVA o comentário.
-3. O novo comentário DEVE citar o número do artigo, parágrafo e inciso corretamente (ex: "Conforme o Art. 10, § 1º, inciso II...").
-4. Se o enunciado ou alternativas estiverem juridicamente errados, corrija-os também.
-5. Mantenha o gabarito (0-4) coerente com a alternativa correta.
+1. O artigo citado no comentário EXISTE no texto legal acima?
+2. O conteúdo do comentário está de acordo com o que diz o artigo citado?
+3. Se houver QUALQUER erro de citação ou conteúdo, REESCREVA a questão (enunciado, alternativas, gabarito e comentário) para que ela fique 100% correta conforme a lei seca.
+4. O comentário DEVE citar o artigo/parágrafo/inciso literal (ex: "Conforme o Art. 10, § 1º...").
 
 Responda APENAS em JSON:
 {
+  "valida": true/false,
+  "motivo_erro": "se houver erro, explique aqui",
   "enunciado": "texto corrigido",
   "alt_a": "...", "alt_b": "...", "alt_c": "...", "alt_d": "...", "alt_e": "...",
   "gabarito": 0,
@@ -76,6 +79,7 @@ Responda APENAS em JSON:
           model: "llama-3.3-70b-versatile",
           messages: [{ role: "user", content: prompt }],
           temperature: 0.1,
+          response_format: { type: "json_object" }
         }),
       });
 
@@ -83,16 +87,35 @@ Responda APENAS em JSON:
         const aiData = await aiResponse.json();
         let content = aiData.choices?.[0]?.message?.content || "";
         content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-        const corrected = JSON.parse(content);
+        const result = JSON.parse(content);
 
-        // Atualizar no banco de dados
-        await supabase.from("questoes").update(corrected).eq("id", q.id);
-        fixedCount++;
+        if (result.valida === false) {
+          // Garantir gabarito numérico 0-4
+          let gabaritoNum = parseInt(result.gabarito);
+          if (isNaN(gabaritoNum)) gabaritoNum = 0;
+          result.gabarito = Math.max(0, min(4, gabaritoNum));
+
+          // Atualizar no banco
+          const { valida, motivo_erro, ...updateData } = result;
+          await supabase.from("questoes").update(updateData).eq("id", q.id);
+          fixedCount++;
+          results.push({ id: q.id, status: "corrigida", motivo: result.motivo_erro });
+        } else {
+          okCount++;
+          results.push({ id: q.id, status: "ok", motivo: "Validada contra a lei seca" });
+        }
       }
       await new Promise(r => setTimeout(r, 500));
     }
 
-    return new Response(JSON.stringify({ success: true, ok: okCount, corrigidas: fixedCount, last_id: questions[questions.length-1]?.id }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      total_processado: questions.length,
+      ok: okCount, 
+      corrigidas: fixedCount, 
+      detalhes: results,
+      last_id: questions[questions.length-1]?.id 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
