@@ -238,7 +238,7 @@ serve(async (req) => {
         continue;
       }
 
-      // ── AI mode: rewrite with Groq ────────────────────────────
+      // ── AI mode: rewrite with Lovable AI ─────────────────────
 
       const prompt = `Você é um auditor jurídico militar rigoroso. Analise se a questão abaixo é 100% FIEL ao texto legal fornecido.
 
