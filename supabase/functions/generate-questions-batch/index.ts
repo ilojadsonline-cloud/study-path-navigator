@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 const ALT_KEYS = ["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const;
+type ArticleBlock = { artNum: string; text: string; normText: string };
 
 function normalizeWhitespace(text: unknown): string {
   return String(text ?? "").replace(/\s+/g, " ").trim();
@@ -31,8 +32,8 @@ function hasDuplicateAlts(alts: string[]): boolean {
 }
 
 /** Parse law text into article blocks */
-function parseArticleBlocks(lawText: string): Array<{ artNum: string; text: string }> {
-  const blocks: Array<{ artNum: string; text: string }> = [];
+function parseArticleBlocks(lawText: string): ArticleBlock[] {
+  const blocks: ArticleBlock[] = [];
   const regex = /Art\.?\s*(\d+)/gi;
   const positions: Array<{ num: string; pos: number }> = [];
   let m: RegExpExecArray | null;
@@ -42,34 +43,46 @@ function parseArticleBlocks(lawText: string): Array<{ artNum: string; text: stri
   for (let i = 0; i < positions.length; i++) {
     const start = positions[i].pos;
     const end = i + 1 < positions.length ? positions[i + 1].pos : lawText.length;
-    blocks.push({ artNum: positions[i].num, text: lawText.substring(start, end) });
+    const text = lawText.substring(start, end);
+    blocks.push({ artNum: positions[i].num, text, normText: normalize(text) });
   }
   return blocks;
 }
 
+function findUniqueArticleMatch(probe: string, blocks: ArticleBlock[]): string | null {
+  const matches = blocks.filter(block => block.normText.includes(probe));
+  return matches.length === 1 ? `Art. ${matches[0].artNum}` : null;
+}
+
 /** Find which article block contains a text snippet */
-function findArticleForText(snippet: string, blocks: Array<{ artNum: string; text: string }>): string | null {
-  if (!snippet || snippet.length < 15) return null;
-  const normSnippet = normalize(snippet);
+function findArticleForText(snippet: string, blocks: ArticleBlock[]): string | null {
+  const cleanedSnippet = normalizeWhitespace(snippet);
+  if (!cleanedSnippet || cleanedSnippet.length < 15) return null;
 
-  for (let len = normSnippet.length; len >= Math.min(20, normSnippet.length); len -= 5) {
+  const normSnippet = normalize(cleanedSnippet);
+  if (normSnippet.length < 15) return null;
+
+  if (normSnippet.length >= 25) {
+    const exactMatch = findUniqueArticleMatch(normSnippet, blocks);
+    if (exactMatch) return exactMatch;
+  }
+
+  const words = normSnippet.split(" ").filter(word => word.length > 2);
+  for (const windowSize of [12, 10, 8, 6, 5]) {
+    if (words.length < windowSize) continue;
+    for (let start = 0; start <= words.length - windowSize; start++) {
+      const probe = words.slice(start, start + windowSize).join(" ");
+      const uniqueMatch = findUniqueArticleMatch(probe, blocks);
+      if (uniqueMatch) return uniqueMatch;
+    }
+  }
+
+  for (let len = Math.min(normSnippet.length, 120); len >= 25; len -= 10) {
     const probe = normSnippet.substring(0, len);
-    for (const block of blocks) {
-      if (normalize(block.text).includes(probe)) {
-        return `Art. ${block.artNum}`;
-      }
-    }
+    const uniqueMatch = findUniqueArticleMatch(probe, blocks);
+    if (uniqueMatch) return uniqueMatch;
   }
 
-  const words = normSnippet.split(" ").filter(w => w.length > 2);
-  if (words.length >= 5) {
-    const probe5 = words.slice(0, 5).join(" ");
-    for (const block of blocks) {
-      if (normalize(block.text).includes(probe5)) {
-        return `Art. ${block.artNum}`;
-      }
-    }
-  }
   return null;
 }
 
@@ -78,17 +91,66 @@ function extractAllCitedArticles(text: string): string[] {
   return [...new Set(matches.map(m => m.match(/\d+/)?.[0] || "").filter(Boolean))];
 }
 
-function articleExistsInBlocks(artNum: string, blocks: Array<{ artNum: string; text: string }>): boolean {
+function extractCommentEvidenceSnippets(comment: string): string[] {
+  const snippets = Array.from(
+    comment.matchAll(/["“”'‘’]([^"“”'‘’]{20,500})["“”'‘’]/g),
+    (match) => normalizeWhitespace(match[1]),
+  ).filter(Boolean);
+
+  const colonTail = normalizeWhitespace(
+    comment
+      .split(":")
+      .slice(1)
+      .join(":")
+      .replace(/^["“”'‘’]+|["“”'‘’]+$/g, ""),
+  );
+
+  if (colonTail.length >= 20) snippets.push(colonTail);
+  return [...new Set(snippets)];
+}
+
+function detectCommentEvidenceArticle(comment: string, blocks: ArticleBlock[]): string | null {
+  for (const snippet of extractCommentEvidenceSnippets(comment)) {
+    const article = findArticleForText(snippet, blocks);
+    if (article) return article;
+  }
+  return null;
+}
+
+function articleExistsInBlocks(artNum: string, blocks: ArticleBlock[]): boolean {
   return blocks.some(b => b.artNum === artNum);
 }
 
-function validateAllCitations(comment: string, blocks: Array<{ artNum: string; text: string }>): { valid: boolean; missing: string[] } {
+function validateAllCitations(comment: string, blocks: ArticleBlock[]): { valid: boolean; missing: string[] } {
   const cited = extractAllCitedArticles(comment);
   const missing: string[] = [];
   for (const artNum of cited) {
     if (!articleExistsInBlocks(artNum, blocks)) missing.push(`Art. ${artNum}`);
   }
   return { valid: missing.length === 0, missing };
+}
+
+function reconcileCommentArticle(comment: string, targetArticle: string): string {
+  let nextComment = normalizeWhitespace(comment);
+  const targetNum = targetArticle.match(/\d+/)?.[0];
+  if (!targetNum) return nextComment;
+
+  const citedArts = extractAllCitedArticles(nextComment);
+  if (citedArts.length > 0) {
+    for (const artNum of citedArts) {
+      if (artNum !== targetNum) {
+        nextComment = nextComment.replace(new RegExp(`Art\\.?\\s*${artNum}(?!\\d)`, "gi"), targetArticle);
+      }
+    }
+  }
+
+  if (extractAllCitedArticles(nextComment).length === 0) {
+    nextComment = /^conforme\b/i.test(nextComment)
+      ? nextComment.replace(/^conforme\b\s*/i, `Conforme o ${targetArticle}: `)
+      : `Conforme o ${targetArticle}: ${nextComment}`;
+  }
+
+  return normalizeWhitespace(nextComment);
 }
 
 function crossValidateReferences(enunciado: string, comment: string): { valid: boolean; reason: string } {
@@ -357,21 +419,16 @@ JSON array:
       batchFingerprints.add(fp);
 
       // ── Validate ALL cited articles exist in law ──
+      const correctAltKey = ALT_KEYS[q.gabarito];
+      const correctAltText = q[correctAltKey] as string;
+      const literalArticle = findArticleForText(correctAltText, blocks);
+      const evidenceArticle = detectCommentEvidenceArticle(q.comentario, blocks);
+      const resolvedArticle = evidenceArticle || literalArticle;
       const citationCheck = validateAllCitations(q.comentario, blocks);
-      if (!citationCheck.valid) {
-        // Try auto-fix: find real article from correct answer text
-        const correctAltKey = ALT_KEYS[q.gabarito];
-        const correctAltText = q[correctAltKey] as string;
-        const realArticle = findArticleForText(correctAltText, blocks);
 
-        if (realArticle) {
-          // Replace hallucinated articles with real one
-          for (const miss of citationCheck.missing) {
-            const missNum = miss.match(/\d+/)?.[0];
-            if (missNum) {
-              q.comentario = q.comentario.replace(new RegExp(`Art\\.?\\s*${missNum}(?!\\d)`, "gi"), realArticle);
-            }
-          }
+      if (!citationCheck.valid) {
+        if (resolvedArticle) {
+          q.comentario = reconcileCommentArticle(q.comentario, resolvedArticle);
           const recheck = validateAllCitations(q.comentario, blocks);
           if (!recheck.valid) {
             discarded++;
@@ -379,7 +436,7 @@ JSON array:
             console.log(`[GERAR] Q${idx+1} descartada: artigos inexistentes após correção`);
             continue;
           }
-          console.log(`[GERAR] Q${idx+1} AUTO-FIX: artigo corrigido para ${realArticle}`);
+          console.log(`[GERAR] Q${idx+1} AUTO-FIX: artigo corrigido para ${resolvedArticle}`);
         } else {
           discarded++;
           questoesRevisaoManual.push({ motivo: `Artigos inexistentes: ${citationCheck.missing.join(", ")}` });
@@ -391,6 +448,13 @@ JSON array:
       // ── Validate at least one article is cited ──
       const citedArts = extractAllCitedArticles(q.comentario);
       if (citedArts.length === 0) {
+        if (resolvedArticle) {
+          q.comentario = reconcileCommentArticle(q.comentario, resolvedArticle);
+        }
+      }
+
+      const finalCitedArts = extractAllCitedArticles(q.comentario);
+      if (finalCitedArts.length === 0) {
         discarded++;
         questoesRevisaoManual.push({ motivo: "Comentário sem citação de artigo" });
         console.log(`[GERAR] Q${idx+1} descartada: sem artigo no comentário`);
@@ -407,26 +471,19 @@ JSON array:
       }
 
       // ── Verify correct answer text is in the law (article block matching) ──
-      const correctAltKey = ALT_KEYS[q.gabarito];
-      const correctAltText = q[correctAltKey] as string;
-      const foundArticle = findArticleForText(correctAltText, blocks);
-
-      if (foundArticle) {
-        // If comment cites a DIFFERENT article than where the answer actually is, fix it
-        const foundNum = foundArticle.match(/\d+/)?.[0];
+      if (resolvedArticle) {
+        const resolvedNum = resolvedArticle.match(/\d+/)?.[0];
         const commentCitedArts = extractAllCitedArticles(q.comentario);
-        if (foundNum && commentCitedArts.length > 0 && !commentCitedArts.includes(foundNum)) {
-          console.log(`[GERAR] Q${idx+1} AUTO-FIX: comentário cita Art. ${commentCitedArts.join(",")} mas resposta está no ${foundArticle}`);
-          for (const artNum of commentCitedArts) {
-            if (!articleExistsInBlocks(artNum, blocks) || artNum !== foundNum) {
-              q.comentario = q.comentario.replace(new RegExp(`Art\\.?\\s*${artNum}(?!\\d)`, "gi"), foundArticle);
-            }
-          }
+        if (resolvedNum && commentCitedArts.length > 0 && !commentCitedArts.includes(resolvedNum)) {
+          console.log(`[GERAR] Q${idx+1} AUTO-FIX: comentário cita Art. ${commentCitedArts.join(",")} mas evidência aponta para ${resolvedArticle}`);
+          q.comentario = reconcileCommentArticle(q.comentario, resolvedArticle);
         }
       }
 
+      const approvedArts = extractAllCitedArticles(q.comentario);
+
       validQuestions.push(q);
-      console.log(`[GERAR] Q${idx+1} APROVADA: ${citedArts.map(a => `Art. ${a}`).join(", ")} ${foundArticle ? `(confronto: ${foundArticle})` : ""}`);
+      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} ${resolvedArticle ? `(conferido: ${resolvedArticle})` : ""}`);
     }
 
     // Insert valid questions
