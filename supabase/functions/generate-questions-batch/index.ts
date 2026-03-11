@@ -541,7 +541,7 @@ JSON array:
       }
 
       validQuestions.push(q);
-      console.log(`[GERAR] Q${idx+1} APROVADA: ${citedArts.map(a => `Art. ${a}`).join(", ")} ${foundArticle ? `(confronto: ${foundArticle})` : ""}`);
+      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} ${resolvedArticle ? `(conferido: ${resolvedArticle})` : ""}`);
     }
 
     // Insert valid questions

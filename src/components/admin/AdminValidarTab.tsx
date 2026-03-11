@@ -131,7 +131,7 @@ export function AdminValidarTab() {
         <p className="text-sm text-muted-foreground">
           <strong>Regras:</strong> verificação estrutural + confronto literal de artigos. Rápido, sem custo.
           <br />
-          <strong>Reparar (IA Groq):</strong> reescreve questões incorretas usando o texto legal. Sem créditos Lovable.
+          <strong>Reparar (IA DeepSeek):</strong> reescreve questões incorretas usando o texto legal. Sem créditos Lovable.
         </p>
       </div>
 
