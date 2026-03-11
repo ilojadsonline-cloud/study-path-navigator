@@ -481,64 +481,6 @@ JSON array:
       }
 
       const approvedArts = extractAllCitedArticles(q.comentario);
-          for (const miss of citationCheck.missing) {
-            const missNum = miss.match(/\d+/)?.[0];
-            if (missNum) {
-              q.comentario = q.comentario.replace(new RegExp(`Art\\.?\\s*${missNum}(?!\\d)`, "gi"), realArticle);
-            }
-          }
-          const recheck = validateAllCitations(q.comentario, blocks);
-          if (!recheck.valid) {
-            discarded++;
-            questoesRevisaoManual.push({ motivo: `Artigos inexistentes: ${recheck.missing.join(", ")} (auto-correção falhou)` });
-            console.log(`[GERAR] Q${idx+1} descartada: artigos inexistentes após correção`);
-            continue;
-          }
-          console.log(`[GERAR] Q${idx+1} AUTO-FIX: artigo corrigido para ${realArticle}`);
-        } else {
-          discarded++;
-          questoesRevisaoManual.push({ motivo: `Artigos inexistentes: ${citationCheck.missing.join(", ")}` });
-          console.log(`[GERAR] Q${idx+1} descartada: ${citationCheck.missing.join(", ")}`);
-          continue;
-        }
-      }
-
-      // ── Validate at least one article is cited ──
-      const citedArts = extractAllCitedArticles(q.comentario);
-      if (citedArts.length === 0) {
-        discarded++;
-        questoesRevisaoManual.push({ motivo: "Comentário sem citação de artigo" });
-        console.log(`[GERAR] Q${idx+1} descartada: sem artigo no comentário`);
-        continue;
-      }
-
-      // ── Cross-validation: enunciado vs comment ──
-      const crossCheck = crossValidateReferences(q.enunciado, q.comentario);
-      if (!crossCheck.valid) {
-        discarded++;
-        questoesRevisaoManual.push({ motivo: crossCheck.reason });
-        console.log(`[GERAR] Q${idx+1} descartada: ${crossCheck.reason}`);
-        continue;
-      }
-
-      // ── Verify correct answer text is in the law (article block matching) ──
-      const correctAltKey = ALT_KEYS[q.gabarito];
-      const correctAltText = q[correctAltKey] as string;
-      const foundArticle = findArticleForText(correctAltText, blocks);
-
-      if (foundArticle) {
-        // If comment cites a DIFFERENT article than where the answer actually is, fix it
-        const foundNum = foundArticle.match(/\d+/)?.[0];
-        const commentCitedArts = extractAllCitedArticles(q.comentario);
-        if (foundNum && commentCitedArts.length > 0 && !commentCitedArts.includes(foundNum)) {
-          console.log(`[GERAR] Q${idx+1} AUTO-FIX: comentário cita Art. ${commentCitedArts.join(",")} mas resposta está no ${foundArticle}`);
-          for (const artNum of commentCitedArts) {
-            if (!articleExistsInBlocks(artNum, blocks) || artNum !== foundNum) {
-              q.comentario = q.comentario.replace(new RegExp(`Art\\.?\\s*${artNum}(?!\\d)`, "gi"), foundArticle);
-            }
-          }
-        }
-      }
 
       validQuestions.push(q);
       console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} ${resolvedArticle ? `(conferido: ${resolvedArticle})` : ""}`);

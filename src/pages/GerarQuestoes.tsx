@@ -97,8 +97,19 @@ const GerarQuestoes = () => {
         batches[i].error = err.message;
       }
 
+      setResults([...batches]);
       await new Promise((r) => setTimeout(r, 3000)); // Delay maior para evitar rate limit do DeepSeek
-...
+    }
+
+    setRunning(false);
+    toast({ title: "Geração concluída!", description: `${total} questões geradas no total.` });
+  };
+
+  const missingTexts = selectedDisciplines.filter((d) => !loadedTexts.includes(d));
+
+  return (
+    <AppLayout>
+      <div className="max-w-3xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold text-gradient-primary">Gerador de Questões (DeepSeek)</h1>
         <p className="text-sm text-muted-foreground">
           Gera questões via DeepSeek (modelo deepseek-chat) usando exclusivamente o texto legal carregado para cada disciplina. Não consome créditos do Lovable.

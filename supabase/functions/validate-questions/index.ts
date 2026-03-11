@@ -456,18 +456,14 @@ Corrija a questão. Responda APENAS JSON (sem markdown):
         } else {
           let finalComment = normalizeWhitespace(result.comentario || q.comentario);
 
-          // Post-AI validation: verify ALL cited articles exist
+          const detectedFinalArticle = detectCommentEvidenceArticle(finalComment, blocks);
+          const enforcedArticle = detectedFinalArticle || realArticle;
+
           const postCheck = validateAllCitations(finalComment, blocks);
           if (!postCheck.valid) {
             console.log(`[VALIDAR] #${q.id} IA ALUCINANDO: ${postCheck.missing.join(", ")}`);
-            // If we know the real article, try replacing hallucinated ones
-            if (realArticle) {
-              for (const miss of postCheck.missing) {
-                const missNum = miss.match(/\d+/)?.[0];
-                if (missNum) {
-                  finalComment = finalComment.replace(new RegExp(`Art\\.?\\s*${missNum}(?!\\d)`, "gi"), realArticle);
-                }
-              }
+            if (enforcedArticle) {
+              finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
               const recheck = validateAllCitations(finalComment, blocks);
               if (!recheck.valid) {
                 questoesRevisaoManual.push({ id: q.id, motivo: `IA alucinação persistente: ${recheck.missing.join(", ")}` });
@@ -489,16 +485,9 @@ Corrija a questão. Responda APENAS JSON (sem markdown):
             }
           }
 
-          // Force correct article if we have literal confirmation
-          if (realArticle) {
-            const aiCitedArts = extractAllCitedArticles(finalComment);
-            const realNum = realArticle.match(/\d+/)?.[0];
-            if (realNum && aiCitedArts.length > 0 && !aiCitedArts.includes(realNum)) {
-              for (const artNum of aiCitedArts) {
-                finalComment = finalComment.replace(new RegExp(`Art\\.?\\s*${artNum}(?!\\d)`, "gi"), realArticle);
-              }
-              console.log(`[VALIDAR] #${q.id} FORÇADO: artigo → ${realArticle}`);
-            }
+          if (enforcedArticle) {
+            finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
+            console.log(`[VALIDAR] #${q.id} FORÇADO: artigo → ${enforcedArticle}`);
           }
 
           // Cross-validate final result
