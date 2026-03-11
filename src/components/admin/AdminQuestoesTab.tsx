@@ -232,7 +232,7 @@ export function AdminQuestoesTab() {
                     <div className="flex items-center gap-1 mt-2">
                       <input type="radio" name="gabarito" checked={editQuestion.gabarito === i}
                         onChange={() => setEditQuestion({ ...editQuestion, gabarito: i })} className="accent-primary" />
-                      <span className="text-xs font-bold">{["A", "B", "C", "D", "E"][i]}</span>
+                      <span translate="no" className="text-xs font-bold">{["A", "B", "C", "D", "E"][i]}</span>
                     </div>
                     <Textarea value={editQuestion[key]} onChange={(e) => setEditQuestion({ ...editQuestion, [key]: e.target.value })} rows={1} className="flex-1" />
                   </div>
