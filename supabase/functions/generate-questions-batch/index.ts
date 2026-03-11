@@ -140,9 +140,9 @@ serve(async (req) => {
     }
 
     const leiSeca = legalTextRow.content;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY não configurada" }), {
+    const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
+    if (!DEEPSEEK_API_KEY) {
+      return new Response(JSON.stringify({ error: "DEEPSEEK_API_KEY não configurada" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
