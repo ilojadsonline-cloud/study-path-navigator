@@ -115,7 +115,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     // 1. Fetch questions batch
     const { data: questions, error } = await supabase
@@ -238,7 +238,7 @@ serve(async (req) => {
         continue;
       }
 
-      // ── AI mode: rewrite with Groq ────────────────────────────
+      // ── AI mode: rewrite with Lovable AI ─────────────────────
 
       const prompt = `Você é um auditor jurídico militar rigoroso. Analise se a questão abaixo é 100% FIEL ao texto legal fornecido.
 
@@ -271,28 +271,28 @@ Responda APENAS em JSON:
 }`;
 
       try {
-        const aiResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${GROQ_API_KEY}` },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
           body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
+            model: "google/gemini-2.5-flash",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.1,
-            response_format: { type: "json_object" },
           }),
         });
 
         if (!aiResponse.ok) {
           const errText = await aiResponse.text();
           // Rate limit — pause
-          if (aiResponse.status === 429) {
+          if (aiResponse.status === 429 || aiResponse.status === 402) {
+            const msg = aiResponse.status === 429 ? "Rate limit atingido. Aguarde e retome." : "Créditos insuficientes.";
             return new Response(JSON.stringify({
-              success: true, paused: true, error: "Rate limit Groq. Aguarde e retome.",
+              success: true, paused: true, error: msg,
               validated: okCount + fixedCount + deletedCount, ok: okCount, fixed: fixedCount, deleted: deletedCount,
               last_id: q.id, details,
             }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
-          throw new Error(`Groq ${aiResponse.status}: ${errText.substring(0, 200)}`);
+          throw new Error(`AI Gateway ${aiResponse.status}: ${errText.substring(0, 200)}`);
         }
 
         const aiData = await aiResponse.json();

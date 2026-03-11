@@ -103,9 +103,9 @@ export function AdminGerarTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-bold mb-1">Gerar Questões via IA (Groq)</h2>
+        <h2 className="text-lg font-bold mb-1">Gerar Questões via IA</h2>
         <p className="text-sm text-muted-foreground">
-          Gera questões via Groq (Llama 3.3 70B) usando exclusivamente o texto legal. Não consome créditos Lovable.
+          Gera questões via Lovable AI (Gemini 2.5 Flash) usando exclusivamente o texto legal. 
         </p>
       </div>
 
