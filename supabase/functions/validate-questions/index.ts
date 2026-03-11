@@ -339,17 +339,9 @@ serve(async (req) => {
         continue;
       }
 
-      // ── STEP C: Rules mode — fix or delete ────────────────────
       if (mode === "rules") {
-        // Try auto-fix: if we know the real article, replace wrong references
-        if (realArticle && commentCitedArts.length > 0 && fixReason.includes("cita")) {
-          let newComment = q.comentario;
-          const realNum = realArticle.match(/\d+/)?.[0];
-          for (const artNum of commentCitedArts) {
-            if (artNum !== realNum) {
-              newComment = newComment.replace(new RegExp(`Art\\.?\\s*${artNum}(?!\\d)`, "gi"), realArticle);
-            }
-          }
+        if (realArticle && (commentCitedArts.length === 0 || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita"))) {
+          const newComment = reconcileCommentArticle(q.comentario, realArticle);
           const recheck = validateAllCitations(newComment, blocks);
           if (recheck.valid) {
             await supabase.from("questoes").update({ comentario: newComment }).eq("id", q.id);
@@ -366,7 +358,6 @@ serve(async (req) => {
           console.log(`[VALIDAR] #${q.id} CORRIGIDA: gabarito clamped`);
           continue;
         }
-        // Can't fix — delete
         questoesRevisaoManual.push({ id: q.id, motivo: fixReason });
         await supabase.from("questoes").delete().eq("id", q.id);
         deletedCount++;
