@@ -169,13 +169,16 @@ Assuntos possíveis: ${disc.assuntos.join(", ")}
 Formato JSON array (SEM markdown, SEM \`\`\`):
 [{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}]`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.1,
+        model: "deepseek-chat",
+        messages: [
+          { role: "system", content: "Você é um especialista rigoroso em questões jurídicas para concursos militares. Gere questões precisas baseadas exclusivamente no texto legal fornecido. Responda APENAS com JSON válido, sem markdown." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
         max_tokens: 8000,
       }),
     });

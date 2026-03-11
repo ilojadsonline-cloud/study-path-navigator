@@ -105,7 +105,7 @@ export function AdminGerarTab() {
       <div>
         <h2 className="text-lg font-bold mb-1">Gerar Questões via IA</h2>
         <p className="text-sm text-muted-foreground">
-          Gera questões via Lovable AI (Gemini 2.5 Flash) usando exclusivamente o texto legal. 
+          Gera questões via DeepSeek (modelo deepseek-chat) usando exclusivamente o texto legal. 
         </p>
       </div>
 
