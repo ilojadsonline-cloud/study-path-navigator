@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
-import { Shuffle, Play, Settings, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { Shuffle, Play, Settings, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowLeft, Loader2, RotateCcw } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +39,8 @@ function shuffleArray<T>(arr: T[]): T[] {
 const Simulados = () => {
   const [numQuestoes, setNumQuestoes] = useState([20]);
   const [disciplina, setDisciplina] = useState("Todas as Disciplinas");
+  // Store simulado in ref to prevent re-shuffling on re-renders
+  const simuladoRef = useRef<QuestaoSimulado[]>([]);
   const [simulado, setSimulado] = useState<QuestaoSimulado[]>([]);
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
@@ -71,12 +73,18 @@ const Simulados = () => {
       comentario: q.comentario,
     }));
 
+    simuladoRef.current = questoesSimulado;
     setSimulado(questoesSimulado);
     setSelectedAnswer({});
     setRevealed({});
     setFinished(false);
     setStarted(true);
     setLoading(false);
+  };
+
+  const reiniciarSimulado = () => {
+    // Re-shuffle and generate a brand new simulado
+    gerarSimulado();
   };
 
   const finalizarSimulado = () => {
@@ -111,20 +119,32 @@ const Simulados = () => {
                 <p className="text-xs text-muted-foreground">{disciplina} • {simulado.length} questões</p>
               </div>
             </div>
-            {!finished && (
-              <div className="text-right">
-                <p className="text-sm font-bold text-foreground">{respondidas}/{simulado.length}</p>
-                <p className="text-[10px] text-muted-foreground">respondidas</p>
-              </div>
-            )}
-            {finished && (
-              <div className="text-right">
-                <p className="text-2xl font-bold text-gradient-primary">{acertos}/{simulado.length}</p>
-                <p className={`text-xs font-medium ${(acertos / simulado.length) >= 0.7 ? 'text-success' : 'text-warning'}`}>
-                  {Math.round((acertos / simulado.length) * 100)}% de acerto
-                </p>
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {!finished && (
+                <button
+                  onClick={reiniciarSimulado}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-primary/15 text-xs font-medium transition-colors"
+                  title="Reiniciar Simulado (nova randomização)"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Reiniciar
+                </button>
+              )}
+              {!finished && (
+                <div className="text-right">
+                  <p className="text-sm font-bold text-foreground">{respondidas}/{simulado.length}</p>
+                  <p className="text-[10px] text-muted-foreground">respondidas</p>
+                </div>
+              )}
+              {finished && (
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gradient-primary">{acertos}/{simulado.length}</p>
+                  <p className={`text-xs font-medium ${(acertos / simulado.length) >= 0.7 ? 'text-success' : 'text-warning'}`}>
+                    {Math.round((acertos / simulado.length) * 100)}% de acerto
+                  </p>
+                </div>
+              )}
+            </div>
           </motion.div>
 
           {finished && (
@@ -138,7 +158,8 @@ const Simulados = () => {
                   <p className="text-xs text-muted-foreground">Revise as questões abaixo</p>
                 </div>
               </div>
-              <button onClick={() => { setStarted(false); setFinished(false); }} className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold">
+              <button onClick={reiniciarSimulado} className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold flex items-center gap-1.5">
+                <RotateCcw className="w-3.5 h-3.5" />
                 Novo Simulado
               </button>
             </motion.div>
@@ -214,7 +235,7 @@ const Simulados = () => {
           <h1 className="text-2xl md:text-3xl font-bold">
             <span className="text-gradient-primary">Gerador de Simulado</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Monte seu simulado personalizado com randomização forte</p>
+          <p className="text-sm text-muted-foreground mt-1">Monte seu simulado personalizado — a ordem é mantida até você reiniciar</p>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-xl p-6 space-y-6">
@@ -254,7 +275,7 @@ const Simulados = () => {
           <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
             <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <div className="text-xs text-muted-foreground leading-relaxed">
-              <strong className="text-primary">Randomização forte:</strong> Ordem das questões embaralhada a cada simulado para evitar padrões de repetição.
+              <strong className="text-primary">Ordem estável:</strong> As questões são embaralhadas ao gerar e mantidas até você clicar em "Reiniciar Simulado" ou atualizar a página (F5).
             </div>
           </div>
 

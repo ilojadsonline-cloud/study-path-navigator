@@ -6,9 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp,
-  Trophy, Calendar, Zap, Loader2
+  Trophy, Calendar, Zap, Loader2, FileText
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 type DisciplinaProgress = {
   name: string;
@@ -20,9 +21,10 @@ type AtividadeRecente = {
   text: string;
   time: string;
   icon: React.ReactNode;
+  sortDate: Date;
 };
 
-// Helper to fetch all rows from a specific table bypassing 1000-row limit
+// Helper to fetch all rows bypassing 1000-row limit
 async function fetchAllRespostas(userId: string) {
   const PAGE = 1000;
   let allData: { id: number; correta: boolean; created_at: string; questao_id: number }[] = [];
@@ -40,6 +42,12 @@ async function fetchAllRespostas(userId: string) {
   }
   return allData;
 }
+
+const CHART_COLORS = {
+  success: "hsl(142, 71%, 45%)",
+  destructive: "hsl(0, 84%, 60%)",
+  muted: "hsl(215, 20%, 25%)",
+};
 
 const Dashboard = () => {
   const { user, profile } = useAuth();
@@ -73,7 +81,7 @@ const Dashboard = () => {
       const semana = allRespostas.filter(r => new Date(r.created_at) >= oneWeekAgo).length;
       setRespondidaSemana(semana);
 
-      // Fetch simulados (count)
+      // Fetch simulados (exact COUNT from Supabase)
       const { count: simCount } = await supabase.from("simulados")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id);
@@ -95,12 +103,11 @@ const Dashboard = () => {
       const totalSeconds = (sessions || []).reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
       setHorasEstudo(Math.round((totalSeconds / 3600) * 10) / 10);
 
-      // Build discipline progress from answered questions
+      // Build discipline progress
       const questaoIds = [...new Set(allRespostas.map(r => r.questao_id))];
       let discMap: Record<string, { total: number; corretas: number }> = {};
 
       if (questaoIds.length > 0) {
-        // Fetch in batches of 500 to avoid URL length issues
         const BATCH = 500;
         const allQuestoes: { id: number; disciplina: string }[] = [];
         for (let i = 0; i < questaoIds.length; i += BATCH) {
@@ -129,30 +136,68 @@ const Dashboard = () => {
       discArray.sort((a, b) => b.total - a.total);
       setDisciplinas(discArray);
 
-      // Build recent activities
+      // Build recent activities from REAL data
       const recentActivities: AtividadeRecente[] = [];
-      const sortedSims = (recentSims || []);
-      sortedSims.slice(0, 3).forEach(s => {
+
+      // Add simulados activities
+      (recentSims || []).forEach(s => {
         recentActivities.push({
           text: `Simulado ${s.disciplina} – ${s.acertos}/${s.total} acertos`,
           time: formatRelativeTime(s.created_at),
           icon: <Trophy className="w-4 h-4 text-gold" />,
+          sortDate: new Date(s.created_at),
         });
       });
 
-      if (allRespostas.length > 0 && recentActivities.length < 4) {
-        const today = new Date().toDateString();
-        const answersToday = allRespostas.filter(r => new Date(r.created_at).toDateString() === today).length;
-        if (answersToday > 0) {
-          recentActivities.push({
-            text: `${answersToday} questões respondidas hoje`,
-            time: "Hoje",
-            icon: <CheckCircle className="w-4 h-4 text-success" />,
-          });
+      // Group recent answers by discipline and day
+      if (allRespostas.length > 0) {
+        const recentAnswers = [...allRespostas]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 200); // last 200 answers
+
+        // Group by day + discipline
+        const dayDiscGroups: Record<string, { count: number; disc: string; date: string; corretas: number }> = {};
+
+        // We need discipline info for answers
+        const answerQIds = [...new Set(recentAnswers.map(r => r.questao_id))];
+        const answerQuestoes: Record<number, string> = {};
+        if (answerQIds.length > 0) {
+          const BATCH = 500;
+          for (let i = 0; i < answerQIds.length; i += BATCH) {
+            const batch = answerQIds.slice(i, i + BATCH);
+            const { data } = await supabase.from("questoes").select("id, disciplina").in("id", batch);
+            if (data) data.forEach(q => { answerQuestoes[q.id] = q.disciplina; });
+          }
         }
+
+        recentAnswers.forEach(r => {
+          const disc = answerQuestoes[r.questao_id] || "Geral";
+          const dayKey = new Date(r.created_at).toDateString();
+          const key = `${dayKey}|${disc}`;
+          if (!dayDiscGroups[key]) {
+            dayDiscGroups[key] = { count: 0, disc, date: r.created_at, corretas: 0 };
+          }
+          dayDiscGroups[key].count++;
+          if (r.correta) dayDiscGroups[key].corretas++;
+        });
+
+        Object.values(dayDiscGroups)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 5)
+          .forEach(g => {
+            const pct = g.count > 0 ? Math.round((g.corretas / g.count) * 100) : 0;
+            recentActivities.push({
+              text: `Respondeu ${g.count} questões de ${g.disc} (${pct}% acerto)`,
+              time: formatRelativeTime(g.date),
+              icon: <FileText className="w-4 h-4 text-primary" />,
+              sortDate: new Date(g.date),
+            });
+          });
       }
 
-      setAtividades(recentActivities);
+      // Sort all activities by date and take top 5
+      recentActivities.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
+      setAtividades(recentActivities.slice(0, 5));
       setLoading(false);
     };
 
@@ -160,6 +205,20 @@ const Dashboard = () => {
   }, [user]);
 
   const taxaAcertos = totalRespondidas > 0 ? Math.round((totalCorretas / totalRespondidas) * 100) : 0;
+  const totalErros = totalRespondidas - totalCorretas;
+
+  const doughnutData = totalRespondidas > 0
+    ? [
+        { name: "Acertos", value: totalCorretas },
+        { name: "Erros", value: totalErros },
+      ]
+    : [{ name: "Vazio", value: 1 }];
+
+  const getProgressColor = (pct: number) => {
+    if (pct >= 70) return "bg-success";
+    if (pct >= 50) return "bg-warning";
+    return "bg-destructive";
+  };
 
   return (
     <AppLayout>
@@ -190,13 +249,57 @@ const Dashboard = () => {
                 icon={<CheckCircle className="w-5 h-5" />}
                 subtitle={respondidaSemana > 0 ? `+${respondidaSemana} esta semana` : "Nenhuma esta semana"}
               />
-              <StatCard
-                title="Taxa de Acertos"
-                value={totalRespondidas > 0 ? `${taxaAcertos}%` : "—"}
-                icon={<Target className="w-5 h-5" />}
-                subtitle={totalRespondidas > 0 ? `${totalCorretas} corretas` : "Responda questões para ver"}
-                glowing={taxaAcertos >= 70}
-              />
+
+              {/* Doughnut Chart Card for Taxa de Acertos */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="glass-card rounded-xl p-5 relative overflow-hidden group hover:border-primary/30 transition-all duration-300"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="p-2.5 rounded-lg bg-primary/10 text-primary">
+                    <Target className="w-5 h-5" />
+                  </div>
+                </div>
+                {totalRespondidas > 0 ? (
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={doughnutData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={18}
+                            outerRadius={30}
+                            dataKey="value"
+                            strokeWidth={0}
+                          >
+                            <Cell fill={CHART_COLORS.success} />
+                            <Cell fill={CHART_COLORS.destructive} />
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-foreground">{taxaAcertos}%</h3>
+                      <p className="text-[10px] text-muted-foreground">
+                        <span className="text-success">{totalCorretas} ✓</span>
+                        {" · "}
+                        <span className="text-destructive">{totalErros} ✗</span>
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="text-2xl font-bold text-foreground">—</h3>
+                    <p className="text-[10px] text-muted-foreground mt-1">Responda questões para ver</p>
+                  </>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">Taxa de Acertos</p>
+              </motion.div>
+
               <StatCard
                 title="Simulados Realizados"
                 value={String(totalSimulados)}
@@ -207,7 +310,7 @@ const Dashboard = () => {
                 title="Horas de Estudo"
                 value={horasEstudo > 0 ? `${horasEstudo}h` : "0h"}
                 icon={<Clock className="w-5 h-5" />}
-                subtitle={horasEstudo > 0 ? "Tempo no site" : "Comece a estudar"}
+                subtitle="Tempo ativo de estudo"
               />
             </div>
 
@@ -231,13 +334,21 @@ const Dashboard = () => {
                 ) : (
                   disciplinas.slice(0, 6).map((d) => {
                     const pct = d.total > 0 ? Math.round((d.corretas / d.total) * 100) : 0;
+                    const colorClass = getProgressColor(pct);
                     return (
                       <div key={d.name} className="space-y-1.5">
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground truncate mr-2">{d.name}</span>
-                          <span className="font-medium text-foreground shrink-0">{pct}% ({d.corretas}/{d.total})</span>
+                          <span className={`font-medium shrink-0 ${pct >= 70 ? 'text-success' : pct >= 50 ? 'text-warning' : 'text-destructive'}`}>
+                            {pct}% ({d.corretas}/{d.total})
+                          </span>
                         </div>
-                        <Progress value={pct} className="h-2" />
+                        <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className={`h-full rounded-full transition-all ${colorClass}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
                       </div>
                     );
                   })

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+
 interface Questao {
   id: number;
   disciplina: string;
@@ -53,6 +54,9 @@ const Questoes = () => {
   const [reportMotivo, setReportMotivo] = useState("");
   const [reportSending, setReportSending] = useState(false);
 
+  // Track the last filter key that triggered a fetch to avoid re-shuffling on re-renders
+  const lastFilterKeyRef = useRef<string>("");
+
   const dificuldades = ["Todos", "Fácil", "Médio", "Difícil"];
   const statusOptions = ["Todos", "Não resolvidas", "Resolvidas"];
 
@@ -79,7 +83,6 @@ const Questoes = () => {
     }
   };
 
-  // Fetch available disciplines and answered question IDs
   useEffect(() => {
     const fetchDisciplinas = async () => {
       const { data } = await supabase.from("questoes").select("disciplina");
@@ -104,6 +107,11 @@ const Questoes = () => {
   }, [filterDisciplina, filterDificuldade, filterStatus]);
 
   const fetchQuestoes = async () => {
+    // Build a filter key — only re-shuffle when filters actually change
+    const filterKey = `${filterDisciplina}|${filterDificuldade}|${filterStatus}`;
+    if (filterKey === lastFilterKeyRef.current && questoes.length > 0) return;
+    lastFilterKeyRef.current = filterKey;
+
     setLoading(true);
     let query = supabase.from("questoes").select("*");
     if (filterDisciplina !== "Todos") query = query.eq("disciplina", filterDisciplina);
@@ -117,7 +125,7 @@ const Questoes = () => {
       } else if (filterStatus === "Não resolvidas") {
         filtered = filtered.filter(q => !answeredIds.has(q.id));
       }
-      // Shuffle questions (Fisher-Yates)
+      // Shuffle once per filter change (Fisher-Yates)
       for (let i = filtered.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
@@ -148,7 +156,6 @@ const Questoes = () => {
     setRevealed(prev => ({ ...prev, [questaoId]: true }));
     setAnsweredIds(prev => new Set([...prev, questaoId]));
 
-    // Save answer to database
     if (user) {
       const { error } = await supabase.from("respostas_usuario").insert({
         user_id: user.id,
@@ -201,7 +208,7 @@ const Questoes = () => {
                 <label className="text-xs text-muted-foreground mb-1 block">Disciplina</label>
                 <select
                   value={filterDisciplina}
-                  onChange={e => setFilterDisciplina(e.target.value)}
+                  onChange={e => { lastFilterKeyRef.current = ""; setFilterDisciplina(e.target.value); }}
                   className="w-full rounded-lg bg-secondary border-none text-sm p-2 text-foreground focus:ring-1 focus:ring-primary outline-none"
                 >
                   <option>Todos</option>
@@ -212,7 +219,7 @@ const Questoes = () => {
                 <label className="text-xs text-muted-foreground mb-1 block">Dificuldade</label>
                 <select
                   value={filterDificuldade}
-                  onChange={e => setFilterDificuldade(e.target.value)}
+                  onChange={e => { lastFilterKeyRef.current = ""; setFilterDificuldade(e.target.value); }}
                   className="w-full rounded-lg bg-secondary border-none text-sm p-2 text-foreground focus:ring-1 focus:ring-primary outline-none"
                 >
                   {dificuldades.map(d => <option key={d}>{d}</option>)}
@@ -222,7 +229,7 @@ const Questoes = () => {
                 <label className="text-xs text-muted-foreground mb-1 block">Status</label>
                 <select
                   value={filterStatus}
-                  onChange={e => setFilterStatus(e.target.value)}
+                  onChange={e => { lastFilterKeyRef.current = ""; setFilterStatus(e.target.value); }}
                   className="w-full rounded-lg bg-secondary border-none text-sm p-2 text-foreground focus:ring-1 focus:ring-primary outline-none"
                 >
                   {statusOptions.map(s => <option key={s}>{s}</option>)}
@@ -293,7 +300,7 @@ const Questoes = () => {
                         onClick={() => handleAnswer(q.id, ai)}
                         className={`w-full text-left flex items-start gap-3 p-3 rounded-lg border text-sm transition-all duration-200 ${altClass}`}
                       >
-                      <span className="w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5" translate="no">
+                        <span className="w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5" translate="no">
                           {String.fromCharCode(65 + ai)}
                         </span>
                         <span className="flex-1">{alt}</span>
@@ -333,7 +340,6 @@ const Questoes = () => {
           </div>
         )}
 
-        {/* Report Dialog */}
         <Dialog open={reportOpen} onOpenChange={setReportOpen}>
           <DialogContent>
             <DialogHeader>
