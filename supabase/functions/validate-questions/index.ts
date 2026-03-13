@@ -264,9 +264,23 @@ serve(async (req) => {
 
       const correctAltKey = ALT_KEYS[q.gabarito] || "alt_a";
       const correctAltText: string = q[correctAltKey] || "";
+
+      // Ultra-precise: search correct answer text literally in the law
       const literalArticle = findArticleForText(correctAltText, blocks);
+      // Also check evidence snippets quoted in comment
       const evidenceArticle = detectCommentEvidenceArticle(q.comentario || "", blocks);
-      const realArticle = evidenceArticle || literalArticle;
+      // Also try to match each alternative text to find the strongest match
+      let bestLiteralMatch: string | null = literalArticle;
+      if (!bestLiteralMatch) {
+        // Try longer substrings of the correct alternative
+        const altWords = correctAltText.split(/\s+/).filter(w => w.length > 3);
+        for (let winSize = Math.min(altWords.length, 15); winSize >= 5 && !bestLiteralMatch; winSize--) {
+          for (let s = 0; s <= altWords.length - winSize && !bestLiteralMatch; s++) {
+            bestLiteralMatch = findArticleForText(altWords.slice(s, s + winSize).join(" "), blocks);
+          }
+        }
+      }
+      const realArticle = bestLiteralMatch || evidenceArticle;
       const commentCitedArts = extractAllCitedArticles(q.comentario || "");
 
       let needsFix = false;

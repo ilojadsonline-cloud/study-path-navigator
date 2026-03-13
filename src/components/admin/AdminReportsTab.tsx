@@ -4,12 +4,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, Trash2 } from "lucide-react";
+import { Loader2, CheckCircle, Trash2, Pencil } from "lucide-react";
+import { QuestionEditDialog } from "./QuestionEditDialog";
+import type { Questao } from "./AdminQuestoesTab";
 
 export function AdminReportsTab() {
   const { toast } = useToast();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editQuestion, setEditQuestion] = useState<Questao | null>(null);
+  const [savingQuestion, setSavingQuestion] = useState(false);
 
   useEffect(() => { loadReports(); }, []);
 
@@ -31,6 +35,42 @@ export function AdminReportsTab() {
     loadReports();
   };
 
+  const openEditQuestion = async (questaoId: number) => {
+    const { data } = await supabase.from("questoes").select("*").eq("id", questaoId).single();
+    if (data) {
+      setEditQuestion(data as Questao);
+    } else {
+      toast({ title: "Questão não encontrada", description: `ID #${questaoId} pode ter sido excluída.`, variant: "destructive" });
+    }
+  };
+
+  const handleSaveQuestion = async () => {
+    if (!editQuestion) return;
+    setSavingQuestion(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: {
+          action: "update_question",
+          question_id: editQuestion.id,
+          updates: {
+            enunciado: editQuestion.enunciado,
+            alt_a: editQuestion.alt_a, alt_b: editQuestion.alt_b, alt_c: editQuestion.alt_c,
+            alt_d: editQuestion.alt_d, alt_e: editQuestion.alt_e,
+            gabarito: editQuestion.gabarito, comentario: editQuestion.comentario,
+            disciplina: editQuestion.disciplina, assunto: editQuestion.assunto, dificuldade: editQuestion.dificuldade,
+          },
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Questão atualizada!" });
+      setEditQuestion(null);
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+    }
+    setSavingQuestion(false);
+  };
+
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
   if (reports.length === 0) return <p className="text-muted-foreground text-center py-12">Nenhum relatório de erro pendente.</p>;
@@ -46,7 +86,15 @@ export function AdminReportsTab() {
                 <Badge variant="outline" className={r.status === "resolvido" ? "bg-success/10 text-success border-success/30" : "bg-warning/10 text-warning border-warning/30"}>
                   {r.status}
                 </Badge>
-                <span className="text-xs text-muted-foreground">Questão #{r.questao_id}</span>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="text-xs p-0 h-auto text-primary underline"
+                  onClick={() => openEditQuestion(r.questao_id)}
+                >
+                  <Pencil className="w-3 h-3 mr-1" />
+                  Questão #{r.questao_id} — Editar
+                </Button>
                 <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString("pt-BR")}</span>
               </div>
               <div className="flex gap-1">
@@ -64,6 +112,14 @@ export function AdminReportsTab() {
           </CardContent>
         </Card>
       ))}
+
+      <QuestionEditDialog
+        question={editQuestion}
+        onClose={() => setEditQuestion(null)}
+        onSave={handleSaveQuestion}
+        saving={savingQuestion}
+        onChange={setEditQuestion}
+      />
     </div>
   );
 }

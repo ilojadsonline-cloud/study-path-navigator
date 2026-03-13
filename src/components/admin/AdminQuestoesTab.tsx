@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,10 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  Trash2, Eye, Search, ChevronLeft, ChevronRight, Loader2, CheckCircle, Pencil, Save,
+  Trash2, Eye, Search, ChevronLeft, ChevronRight, Loader2, CheckCircle, Pencil, Save, ChevronsLeft, ChevronsRight, Hash,
 } from "lucide-react";
+import { QuestionViewDialog } from "./QuestionViewDialog";
+import { QuestionEditDialog } from "./QuestionEditDialog";
 
-interface Questao {
+export interface Questao {
   id: number; disciplina: string; assunto: string; dificuldade: string; enunciado: string;
   alt_a: string; alt_b: string; alt_c: string; alt_d: string; alt_e: string; gabarito: number; comentario: string;
 }
@@ -27,11 +29,15 @@ export function AdminQuestoesTab() {
   const [total, setTotal] = useState(0);
   const [disciplinaFilter, setDisciplinaFilter] = useState("todas");
   const [search, setSearch] = useState("");
+  const [idSearch, setIdSearch] = useState("");
   const [disciplinas, setDisciplinas] = useState<string[]>([]);
   const [viewQuestion, setViewQuestion] = useState<Questao | null>(null);
   const [editQuestion, setEditQuestion] = useState<Questao | null>(null);
   const [savingQuestion, setSavingQuestion] = useState(false);
   const [confirmDeleteQ, setConfirmDeleteQ] = useState<Questao | null>(null);
+  const [goToPageInput, setGoToPageInput] = useState("");
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   useEffect(() => {
     loadDisciplinas();
@@ -55,6 +61,28 @@ export function AdminQuestoesTab() {
     setQuestoes((data as Questao[]) || []);
     setPage(p);
     setLoading(false);
+  };
+
+  const searchById = async () => {
+    const id = parseInt(idSearch);
+    if (isNaN(id)) return;
+    setLoading(true);
+    const { data } = await supabase.from("questoes").select("*").eq("id", id);
+    if (data && data.length > 0) {
+      setQuestoes(data as Questao[]);
+      setTotal(1);
+      setPage(0);
+    } else {
+      setQuestoes([]);
+      setTotal(0);
+      toast({ title: "Questão não encontrada", description: `ID #${id} não existe.`, variant: "destructive" });
+    }
+    setLoading(false);
+  };
+
+  const clearIdSearch = () => {
+    setIdSearch("");
+    loadQuestoes(0);
   };
 
   const deleteQuestion = async (id: number) => {
@@ -92,11 +120,42 @@ export function AdminQuestoesTab() {
     setSavingQuestion(false);
   };
 
+  // Called from Reports tab to open edit directly
+  const openEditById = useCallback(async (id: number) => {
+    const { data } = await supabase.from("questoes").select("*").eq("id", id).single();
+    if (data) setEditQuestion(data as Questao);
+  }, []);
+
   const gabaritoLabel = (g: number) => ["A", "B", "C", "D", "E"][g] || "?";
+
+  const goToPage = () => {
+    const p = parseInt(goToPageInput);
+    if (!isNaN(p) && p >= 1 && p <= totalPages) {
+      loadQuestoes(p - 1);
+      setGoToPageInput("");
+    }
+  };
 
   return (
     <div className="space-y-4">
+      {/* Filters Row */}
       <div className="flex flex-wrap gap-3">
+        {/* ID Search */}
+        <div className="relative w-36">
+          <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar ID..."
+            value={idSearch}
+            onChange={(e) => setIdSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && searchById()}
+            className="pl-9"
+            type="number"
+          />
+        </div>
+        {idSearch && (
+          <Button onClick={clearIdSearch} variant="ghost" size="sm" className="text-xs">Limpar ID</Button>
+        )}
+
         <Select value={disciplinaFilter} onValueChange={setDisciplinaFilter}>
           <SelectTrigger className="w-52"><SelectValue placeholder="Disciplina" /></SelectTrigger>
           <SelectContent>
@@ -147,112 +206,85 @@ export function AdminQuestoesTab() {
               </TableBody>
             </Table>
           </div>
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Página {page + 1} de {Math.max(1, Math.ceil(total / PAGE_SIZE))}</p>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" disabled={page === 0} onClick={() => loadQuestoes(page - 1)}><ChevronLeft className="w-4 h-4" /></Button>
-              <Button size="sm" variant="outline" disabled={(page + 1) * PAGE_SIZE >= total} onClick={() => loadQuestoes(page + 1)}><ChevronRight className="w-4 h-4" /></Button>
+
+          {/* Full Pagination */}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-xs text-muted-foreground">Página {page + 1} de {totalPages} · {total} questões</p>
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="outline" disabled={page === 0} onClick={() => loadQuestoes(0)} title="Primeira página">
+                <ChevronsLeft className="w-4 h-4" />
+              </Button>
+              <Button size="sm" variant="outline" disabled={page === 0} onClick={() => loadQuestoes(page - 1)}>
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+
+              {/* Page number buttons */}
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 7) {
+                  pageNum = i;
+                } else if (page < 3) {
+                  pageNum = i;
+                } else if (page > totalPages - 4) {
+                  pageNum = totalPages - 7 + i;
+                } else {
+                  pageNum = page - 3 + i;
+                }
+                return (
+                  <Button
+                    key={pageNum}
+                    size="sm"
+                    variant={pageNum === page ? "default" : "outline"}
+                    onClick={() => loadQuestoes(pageNum)}
+                    className="w-8 h-8 p-0 text-xs"
+                  >
+                    {pageNum + 1}
+                  </Button>
+                );
+              })}
+
+              <Button size="sm" variant="outline" disabled={(page + 1) * PAGE_SIZE >= total} onClick={() => loadQuestoes(page + 1)}>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              <Button size="sm" variant="outline" disabled={page >= totalPages - 1} onClick={() => loadQuestoes(totalPages - 1)} title="Última página">
+                <ChevronsRight className="w-4 h-4" />
+              </Button>
+
+              {/* Go to page */}
+              <div className="flex items-center gap-1 ml-2">
+                <Input
+                  placeholder="Pág."
+                  value={goToPageInput}
+                  onChange={(e) => setGoToPageInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && goToPage()}
+                  className="w-16 h-8 text-xs"
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                />
+                <Button size="sm" variant="outline" onClick={goToPage} className="h-8 text-xs">Ir</Button>
+              </div>
             </div>
           </div>
         </>
       )}
 
       {/* View Question Dialog */}
-      <Dialog open={!!viewQuestion} onOpenChange={() => setViewQuestion(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          {viewQuestion && (
-            <>
-              <DialogHeader><DialogTitle className="text-sm font-mono text-muted-foreground">Questão #{viewQuestion.id}</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">{viewQuestion.disciplina} · {viewQuestion.assunto} · {viewQuestion.dificuldade}</p>
-                  <p className="text-sm">{viewQuestion.enunciado}</p>
-                </div>
-                <div className="space-y-2">
-                  {[viewQuestion.alt_a, viewQuestion.alt_b, viewQuestion.alt_c, viewQuestion.alt_d, viewQuestion.alt_e].map((alt, i) => (
-                    <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-sm ${i === viewQuestion.gabarito ? "bg-primary/10 border border-primary/30" : "bg-muted/30"}`}>
-                      <span className="font-bold text-xs mt-0.5" translate="no">{["A", "B", "C", "D", "E"][i]})</span>
-                      <span>{alt}</span>
-                      {i === viewQuestion.gabarito && <CheckCircle className="w-4 h-4 text-primary shrink-0 ml-auto" />}
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-muted/30 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-muted-foreground mb-1">Comentário:</p>
-                  <p className="text-sm">{viewQuestion.comentario}</p>
-                </div>
-              </div>
-              <DialogFooter className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => { setEditQuestion({ ...viewQuestion }); setViewQuestion(null); }}>
-                  <Pencil className="w-4 h-4 mr-1" /> Editar
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => { setConfirmDeleteQ(viewQuestion); setViewQuestion(null); }}>
-                  <Trash2 className="w-4 h-4 mr-1" /> Excluir
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <QuestionViewDialog
+        question={viewQuestion}
+        onClose={() => setViewQuestion(null)}
+        onEdit={(q) => { setEditQuestion({ ...q }); setViewQuestion(null); }}
+        onDelete={(q) => { setConfirmDeleteQ(q); setViewQuestion(null); }}
+      />
 
       {/* Edit Question Dialog */}
-      <Dialog open={!!editQuestion} onOpenChange={() => setEditQuestion(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          {editQuestion && (
-            <>
-              <DialogHeader><DialogTitle>Editar Questão #{editQuestion.id}</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground">Disciplina</label>
-                    <Input value={editQuestion.disciplina} onChange={(e) => setEditQuestion({ ...editQuestion, disciplina: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Assunto</label>
-                    <Input value={editQuestion.assunto} onChange={(e) => setEditQuestion({ ...editQuestion, assunto: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Dificuldade</label>
-                    <Select value={editQuestion.dificuldade} onValueChange={(v) => setEditQuestion({ ...editQuestion, dificuldade: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Fácil">Fácil</SelectItem>
-                        <SelectItem value="Médio">Médio</SelectItem>
-                        <SelectItem value="Difícil">Difícil</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Enunciado</label>
-                  <Textarea value={editQuestion.enunciado} onChange={(e) => setEditQuestion({ ...editQuestion, enunciado: e.target.value })} rows={3} />
-                </div>
-                {(["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const).map((key, i) => (
-                  <div key={key} className="flex items-start gap-2">
-                    <div className="flex items-center gap-1 mt-2">
-                      <input type="radio" name="gabarito" checked={editQuestion.gabarito === i}
-                        onChange={() => setEditQuestion({ ...editQuestion, gabarito: i })} className="accent-primary" />
-                      <span translate="no" className="text-xs font-bold">{["A", "B", "C", "D", "E"][i]}</span>
-                    </div>
-                    <Textarea value={editQuestion[key]} onChange={(e) => setEditQuestion({ ...editQuestion, [key]: e.target.value })} rows={1} className="flex-1" />
-                  </div>
-                ))}
-                <div>
-                  <label className="text-xs text-muted-foreground">Comentário</label>
-                  <Textarea value={editQuestion.comentario} onChange={(e) => setEditQuestion({ ...editQuestion, comentario: e.target.value })} rows={3} />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEditQuestion(null)}>Cancelar</Button>
-                <Button onClick={handleSaveQuestion} disabled={savingQuestion} className="gradient-primary text-primary-foreground font-bold">
-                  {savingQuestion ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
-                  {savingQuestion ? "Salvando..." : "Salvar"}
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <QuestionEditDialog
+        question={editQuestion}
+        onClose={() => setEditQuestion(null)}
+        onSave={handleSaveQuestion}
+        saving={savingQuestion}
+        onChange={setEditQuestion}
+      />
 
       {/* Confirm Delete Question Dialog */}
       <Dialog open={!!confirmDeleteQ} onOpenChange={() => setConfirmDeleteQ(null)}>
