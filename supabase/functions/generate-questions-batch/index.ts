@@ -320,10 +320,13 @@ REGRAS PEDAGÓGICAS (CRÍTICAS):
 ARTIGOS DISPONÍVEIS NESTA LEI: ${availableArticles}
 ATENÇÃO: Cite SOMENTE artigos desta lista. Qualquer artigo fora desta lista é PROIBIDO.`;
 
+    // Truncate legal text to avoid timeout — 18K chars is enough context
+    const truncatedLei = leiSeca.substring(0, 18000);
+
     const prompt = `Gere exatamente ${batchSize} questões de múltipla escolha para "${disc.disciplina}" (${disc.leiNome}).
 
-TEXTO LEGAL COMPLETO:
-${leiSeca.substring(0, 32000)}
+TEXTO LEGAL (trecho principal):
+${truncatedLei}
 
 MÉTODO DE CRIAÇÃO (siga rigorosamente):
 1) Escolha um artigo/parágrafo/inciso do texto legal acima.
