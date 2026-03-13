@@ -433,7 +433,7 @@ Corrija a questão (reescrevendo como caso prático se necessário). Responda AP
           body: JSON.stringify({
             model: "deepseek-chat",
             messages: [
-              { role: "system", content: "Você é um auditor jurídico que corrige questões de concurso. Responda APENAS JSON válido, sem markdown." },
+              { role: "system", content: "Você é um professor de concurso militar de elite E auditor jurídico. Você corrige questões transformando-as em casos práticos com pegadinhas inteligentes. Responda APENAS JSON válido, sem markdown." },
               { role: "user", content: prompt },
             ],
             temperature: 0.1,
