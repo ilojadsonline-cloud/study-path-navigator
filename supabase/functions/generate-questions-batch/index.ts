@@ -320,10 +320,13 @@ REGRAS PEDAGÓGICAS (CRÍTICAS):
 ARTIGOS DISPONÍVEIS NESTA LEI: ${availableArticles}
 ATENÇÃO: Cite SOMENTE artigos desta lista. Qualquer artigo fora desta lista é PROIBIDO.`;
 
+    // Truncate legal text to avoid timeout — 18K chars is enough context
+    const truncatedLei = leiSeca.substring(0, 18000);
+
     const prompt = `Gere exatamente ${batchSize} questões de múltipla escolha para "${disc.disciplina}" (${disc.leiNome}).
 
-TEXTO LEGAL COMPLETO:
-${leiSeca.substring(0, 32000)}
+TEXTO LEGAL (trecho principal):
+${truncatedLei}
 
 MÉTODO DE CRIAÇÃO (siga rigorosamente):
 1) Escolha um artigo/parágrafo/inciso do texto legal acima.
@@ -351,19 +354,36 @@ REGRAS TÉCNICAS:
 JSON array:
 [{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o Art. X da ${disc.leiNome}: '...'"}]`;
 
-    const aiResponse = await fetch("https://api.deepseek.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.3,
-        max_tokens: 8000,
-      }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 50000); // 50s timeout
+
+    let aiResponse: Response;
+    try {
+      aiResponse = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.3,
+          max_tokens: 4096,
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchErr: any) {
+      clearTimeout(timeoutId);
+      const isTimeout = fetchErr.name === "AbortError";
+      console.error(`[GERAR] Fetch ${isTimeout ? "timeout" : "error"}:`, String(fetchErr));
+      return new Response(JSON.stringify({
+        status: "erro", mensagem: isTimeout ? "DeepSeek demorou demais (timeout 50s). Tente com menos questões." : `Erro de conexão: ${fetchErr.message}`,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isTimeout ? "TIMEOUT" : "FETCH_ERROR", descricao: String(fetchErr) }] },
+        error: String(fetchErr), timestamp,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    clearTimeout(timeoutId);
 
     console.log(`[GERAR] DeepSeek status: ${aiResponse.status}`);
 
