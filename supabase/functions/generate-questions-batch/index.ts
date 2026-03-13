@@ -302,15 +302,20 @@ serve(async (req) => {
 
     console.log(`[GERAR] Iniciando: "${disc.disciplina}", batch=${batchSize}, artigos disponíveis: ${blocks.length}`);
 
-    const systemPrompt = `Você é um especialista jurídico EXTREMAMENTE PRECISO em concursos militares. Sua prioridade ABSOLUTA é a fidelidade literal ao texto legal fornecido.
+    const systemPrompt = `Você é um PROFESSOR DE CONCURSO MILITAR de elite, especialista em criar questões que testam a COMPREENSÃO PRÁTICA da lei, não a memorização de números de artigos.
 
-REGRAS INVIOLÁVEIS:
+REGRAS INVIOLÁVEIS DE CONTEÚDO:
 - NUNCA invente, alucine ou fabrique artigos, parágrafos, incisos ou trechos de lei.
 - Use EXCLUSIVAMENTE o texto legal fornecido. É TERMINANTEMENTE PROIBIDO usar conhecimento externo.
 - ANTES de citar qualquer "Art. X", CONFIRME que esse artigo existe na lista de artigos disponíveis.
-- O comentário DEVE conter a transcrição LITERAL de um trecho do artigo citado.
-- Se o enunciado menciona "Art. X", o comentário DEVE citar o MESMO "Art. X".
 - Responda APENAS com JSON válido, sem markdown, sem \`\`\`.
+
+REGRAS PEDAGÓGICAS (CRÍTICAS):
+1. PROIBIDO DECOREBA DE NÚMERO: NUNCA crie questões do tipo "O que dispõe o Art. X?", "Qual artigo trata de Y?", "Segundo o Art. X, ...". O número do artigo aparece SOMENTE no comentário como fundamentação.
+2. FOCO EM CASOS PRÁTICOS (FATOS TÍPICOS): O enunciado DEVE descrever uma SITUAÇÃO CONCRETA do cotidiano militar (ex: "O Soldado Silva, durante uma abordagem...", "O Cabo Pereira, em período de férias, decidiu...", "Um Tenente recebeu ordem de seu Comandante para..."). O candidato deve APLICAR a regra da lei ao caso concreto.
+3. PEGADINHAS INTELIGENTES (TROCADILHOS): As alternativas incorretas DEVEM usar trocadilhos jurídicos comuns em provas: trocar "deverá" por "poderá", "exclusivamente" por "preferencialmente", inverter prazos, trocar "vedado" por "facultado", alterar quórum, trocar "suspensão" por "cassação". O objetivo é testar ATENÇÃO AOS DETALHES do texto legal.
+4. DISTRATORES FORTES: As alternativas incorretas devem ser PLAUSÍVEIS — baseadas em interpretações erradas comuns da própria lei, não em absurdos óbvios.
+5. TOM PROFISSIONAL E DESAFIADOR: Estilo de banca examinadora séria (CESPE/CEBRASPE, FGV).
 
 ARTIGOS DISPONÍVEIS NESTA LEI: ${availableArticles}
 ATENÇÃO: Cite SOMENTE artigos desta lista. Qualquer artigo fora desta lista é PROIBIDO.`;
@@ -320,14 +325,28 @@ ATENÇÃO: Cite SOMENTE artigos desta lista. Qualquer artigo fora desta lista é
 TEXTO LEGAL COMPLETO:
 ${leiSeca.substring(0, 32000)}
 
-INSTRUÇÕES:
-1) PRIMEIRO localize um artigo específico no texto acima, DEPOIS formule a questão sobre ele.
-2) O comentário DEVE incluir: "Conforme o Art. X da ${disc.leiNome}: '[transcrição literal do trecho]'."
-3) Cite SOMENTE artigos da lista: ${availableArticles}
-4) 5 alternativas distintas (A-E), sem prefixo. Cada alternativa substancialmente diferente.
-5) gabarito = inteiro: 0=A, 1=B, 2=C, 3=D, 4=E.
-6) Distribua: ~30% Fácil, ~50% Médio, ~20% Difícil.
-7) Assuntos possíveis: ${disc.assuntos.join(", ")}
+MÉTODO DE CRIAÇÃO (siga rigorosamente):
+1) Escolha um artigo/parágrafo/inciso do texto legal acima.
+2) Identifique a REGRA DE CONDUTA que ele estabelece (o que é obrigatório, proibido, facultado, os prazos, as condições).
+3) Crie uma HISTÓRIA CURTA (2-3 linhas) descrevendo um policial militar em uma situação que envolve essa regra. Use nomes fictícios (Soldado Silva, Cabo Pereira, Sargento Lima, Tenente Rocha, Capitão Almeida).
+4) Formule a pergunta: "Nessa situação, de acordo com a legislação vigente, ..." ou "Diante desse cenário, é correto afirmar que...".
+5) Crie 5 alternativas (A-E) sem prefixo de letra:
+   - A CORRETA deve refletir LITERALMENTE o que a lei diz.
+   - As INCORRETAS devem usar TROCADILHOS SUTIS: trocar verbos (deverá/poderá), inverter prazos, alterar condições, mudar sujeitos.
+6) O COMENTÁRIO deve: "Conforme o Art. X da ${disc.leiNome}: '[transcrição literal do trecho]'." — explicando por que o caso se enquadra naquele artigo.
+
+PROIBIÇÕES ABSOLUTAS NO ENUNCIADO:
+- "O que diz o Art. X?"
+- "Qual artigo trata de...?"  
+- "Segundo o Art. X, ..."
+- "De acordo com o Art. X, ..."
+- Qualquer menção direta ao número de artigo no enunciado.
+
+REGRAS TÉCNICAS:
+- Cite SOMENTE artigos da lista: ${availableArticles}
+- gabarito = inteiro: 0=A, 1=B, 2=C, 3=D, 4=E.
+- Distribua: ~30% Fácil, ~50% Médio, ~20% Difícil.
+- Assuntos possíveis: ${disc.assuntos.join(", ")}
 
 JSON array:
 [{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o Art. X da ${disc.leiNome}: '...'"}]`;

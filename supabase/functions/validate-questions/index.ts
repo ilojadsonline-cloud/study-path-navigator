@@ -386,7 +386,7 @@ serve(async (req) => {
         }
       }
 
-      const prompt = `Você é um auditor jurídico EXTREMAMENTE RIGOROSO e preciso.
+      const prompt = `Você é um PROFESSOR DE CONCURSO MILITAR de elite E auditor jurídico EXTREMAMENTE RIGOROSO.
 A questão abaixo tem um ERRO CONFIRMADO: "${fixReason}".
 ${realArticle ? `A busca literal confirmou que o conteúdo correto está no ${realArticle} do texto legal.` : "O conteúdo correto NÃO foi localizado no texto legal."}
 
@@ -396,6 +396,12 @@ REGRAS INVIOLÁVEIS:
 3. ${realArticle ? `O comentário DEVE obrigatoriamente citar o ${realArticle} (confirmado por busca literal no texto da lei).` : "Se não encontrar base legal para esta questão, responda valida=false."}
 4. VERIFIQUE que cada "Art. X" que você citar EXISTE no texto fornecido.
 5. Gabarito: 0=A, 1=B, 2=C, 3=D, 4=E.
+
+REGRAS PEDAGÓGICAS (OBRIGATÓRIAS na reescrita):
+- PROIBIDO DECOREBA: O enunciado NÃO PODE mencionar número de artigo. NUNCA "O que diz o Art. X?", "Segundo o Art. X...", "De acordo com o Art. X...". Se o enunciado atual faz isso, REESCREVA como um CASO PRÁTICO.
+- CASO PRÁTICO: O enunciado deve descrever uma SITUAÇÃO CONCRETA do cotidiano militar com personagens fictícios (Soldado Silva, Cabo Pereira, Sargento Lima, etc.). O candidato aplica a lei ao caso.
+- PEGADINHAS INTELIGENTES: Alternativas incorretas devem usar trocadilhos jurídicos (trocar "deverá"/"poderá", inverter prazos, trocar "vedado"/"facultado"). Distratores plausíveis.
+- O número do artigo aparece SOMENTE no comentário como fundamentação.
 ${articleContext}
 
 TEXTO LEGAL COMPLETO (${q.disciplina}):
@@ -406,7 +412,7 @@ Enunciado: ${q.enunciado}
 A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
 Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário Atual: ${q.comentario}
 
-Corrija a questão. Responda APENAS JSON (sem markdown):
+Corrija a questão (reescrevendo como caso prático se necessário). Responda APENAS JSON (sem markdown):
 {"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o Art. X da ...: '...'"}`;
 
       try {
