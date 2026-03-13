@@ -331,6 +331,17 @@ serve(async (req) => {
         }
       }
 
+      // Check 7: Anti-decoreba — enunciado must NOT reference article numbers directly
+      if (!needsFix) {
+        const enunciadoLower = q.enunciado.toLowerCase();
+        const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
+        if (decoreba.test(enunciadoLower)) {
+          needsFix = true;
+          fixReason = "Questão decoreba: enunciado cita número de artigo (deve ser caso prático)";
+          console.log(`[VALIDAR] #${q.id} PROBLEMA: decoreba`);
+        }
+      }
+
       // ── STEP B: No fix needed ─────────────────────────────────
       if (!needsFix) {
         okCount++;

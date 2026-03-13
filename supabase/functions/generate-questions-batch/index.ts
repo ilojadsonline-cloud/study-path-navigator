@@ -430,6 +430,13 @@ JSON array:
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: alternativas duplicadas`); continue;
       }
 
+      // ── Anti-decoreba check: reject questions that ask about article numbers ──
+      const enunciadoLower = q.enunciado.toLowerCase();
+      const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
+      if (decoreba.test(enunciadoLower)) {
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: decoreba (cita artigo no enunciado)`); continue;
+      }
+
       // ── Duplicate detection ──
       const fp = buildFingerprint(q.enunciado);
       if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) {
