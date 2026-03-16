@@ -201,6 +201,29 @@ const Dashboard = () => {
       // Sort all activities by date and take top 5
       recentActivities.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
       setAtividades(recentActivities.slice(0, 5));
+
+      // Check for incomplete simulado
+      const { data: progressData } = await supabase
+        .from("simulado_progress" as any)
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (progressData) {
+        const p = progressData as any;
+        let respostas: Record<string, number> = {};
+        try {
+          respostas = typeof p.respostas === "string" ? JSON.parse(p.respostas) : p.respostas || {};
+        } catch { respostas = {}; }
+        setIncompleteSimulado({
+          disciplina: p.disciplina,
+          respondidas: Object.keys(respostas).length,
+          total: p.total,
+        });
+      } else {
+        setIncompleteSimulado(null);
+      }
+
       setLoading(false);
     };
 
