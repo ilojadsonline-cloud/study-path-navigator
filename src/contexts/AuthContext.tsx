@@ -137,7 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         currentUserId = currentSession?.user?.id ?? null;
 
         if (!currentSession?.access_token || !currentUserId) {
-          await handleExpiredSession();
+          const cached = user ? getCachedSubscription(user.id) : null;
+          if (cached) {
+            setSubscribed(cached.subscribed);
+            setSubscriptionEnd(cached.subscriptionEnd);
+          }
           return;
         }
 
