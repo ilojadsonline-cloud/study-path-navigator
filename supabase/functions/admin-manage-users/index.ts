@@ -7,6 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[ADMIN-USERS] ${step}${detailsStr}`);
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -70,6 +75,8 @@ serve(async (req) => {
       await supabaseAdmin.from("respostas_usuario").delete().eq("user_id", user_id);
       await supabaseAdmin.from("simulados").delete().eq("user_id", user_id);
       await supabaseAdmin.from("study_sessions").delete().eq("user_id", user_id);
+      await supabaseAdmin.from("notification_reads").delete().eq("user_id", user_id);
+      await supabaseAdmin.from("question_reports").delete().eq("user_id", user_id);
       await supabaseAdmin.from("user_roles").delete().eq("user_id", user_id);
       await supabaseAdmin.from("profiles").delete().eq("user_id", user_id);
 
@@ -96,7 +103,6 @@ serve(async (req) => {
         if (error) throw new Error(`Erro ao atualizar perfil: ${error.message}`);
       }
 
-      // Update email in auth if changed
       if (email) {
         const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, { email });
         if (error) throw new Error(`Erro ao atualizar email auth: ${error.message}`);
@@ -158,10 +164,14 @@ serve(async (req) => {
     // ── LIST USERS WITH DETAILS ──
     if (action === "list_users") {
       const { search } = params;
+      logStep("Loading users", { search });
+      
       let query = supabaseAdmin.from("profiles").select("user_id, nome, cpf, email, created_at").order("created_at", { ascending: false });
       if (search) query = query.or(`nome.ilike.%${search}%,cpf.ilike.%${search}%,email.ilike.%${search}%`);
       const { data: profiles, error: profilesErr } = await query.limit(100);
       if (profilesErr) throw new Error(profilesErr.message);
+
+      logStep("Profiles loaded", { count: profiles?.length });
 
       // Get all admin roles
       const { data: allAdminRoles } = await supabaseAdmin
@@ -170,56 +180,69 @@ serve(async (req) => {
         .eq("role", "admin");
       const adminSet = new Set((allAdminRoles || []).map(r => r.user_id));
 
-      // Get auth user details (banned status) for each user
-      const enrichedUsers = [];
-      for (const p of (profiles || [])) {
-        const { data: authData } = await supabaseAdmin.auth.admin.getUserById(p.user_id);
-        const banned = authData?.user?.banned_until
-          ? new Date(authData.user.banned_until) > new Date()
-          : false;
-
-        enrichedUsers.push({
-          ...p,
-          is_admin: adminSet.has(p.user_id),
-          is_blocked: banned,
-        });
+      // Parallelize auth user lookups (batch of 10)
+      const profilesList = profiles || [];
+      const enrichedUsers: any[] = [];
+      
+      // Process auth lookups in parallel batches of 10
+      for (let i = 0; i < profilesList.length; i += 10) {
+        const batch = profilesList.slice(i, i + 10);
+        const results = await Promise.all(
+          batch.map(async (p) => {
+            try {
+              const { data: authData } = await supabaseAdmin.auth.admin.getUserById(p.user_id);
+              const banned = authData?.user?.banned_until
+                ? new Date(authData.user.banned_until) > new Date()
+                : false;
+              return { ...p, is_admin: adminSet.has(p.user_id), is_blocked: banned, subscribed: false, subscription_end: null };
+            } catch {
+              return { ...p, is_admin: adminSet.has(p.user_id), is_blocked: false, subscribed: false, subscription_end: null };
+            }
+          })
+        );
+        enrichedUsers.push(...results);
       }
 
-      // Check Stripe subscriptions for all users
+      logStep("Auth data loaded");
+
+      // Check Stripe subscriptions in parallel (batch of 5 to avoid rate limits)
       const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
       if (stripeKey) {
         const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-        for (const u of enrichedUsers) {
-          if (!u.email) { u.subscription_end = null; u.subscribed = false; continue; }
-          try {
-            const customers = await stripe.customers.list({ email: u.email, limit: 1 });
-            if (customers.data.length === 0) { u.subscription_end = null; u.subscribed = false; continue; }
-            const subs = await stripe.subscriptions.list({ customer: customers.data[0].id, status: "active", limit: 1 });
-            if (subs.data.length > 0) {
-              const sub = subs.data[0];
-              // In basil API, current_period_end is on the item, not the subscription root
-              let endTimestamp = sub.current_period_end;
-              if (endTimestamp === undefined && sub.items?.data?.[0]) {
-                endTimestamp = (sub.items.data[0] as any).current_period_end;
+        
+        // Collect all unique emails
+        const emailUsers = enrichedUsers.filter(u => u.email);
+        
+        for (let i = 0; i < emailUsers.length; i += 5) {
+          const batch = emailUsers.slice(i, i + 5);
+          await Promise.all(
+            batch.map(async (u) => {
+              try {
+                const customers = await stripe.customers.list({ email: u.email, limit: 1 });
+                if (customers.data.length === 0) return;
+                const subs = await stripe.subscriptions.list({ customer: customers.data[0].id, status: "active", limit: 1 });
+                if (subs.data.length > 0) {
+                  const sub = subs.data[0];
+                  let endTimestamp = sub.current_period_end;
+                  if (endTimestamp === undefined && sub.items?.data?.[0]) {
+                    endTimestamp = (sub.items.data[0] as any).current_period_end;
+                  }
+                  if (endTimestamp) {
+                    const ms = typeof endTimestamp === "number" && endTimestamp < 1e12 ? endTimestamp * 1000 : Number(endTimestamp);
+                    u.subscription_end = new Date(ms).toISOString();
+                  }
+                  u.subscribed = true;
+                }
+              } catch {
+                // ignore individual Stripe errors
               }
-              if (endTimestamp) {
-                const ms = typeof endTimestamp === "number" && endTimestamp < 1e12 ? endTimestamp * 1000 : Number(endTimestamp);
-                u.subscription_end = new Date(ms).toISOString();
-              } else {
-                u.subscription_end = null;
-              }
-              u.subscribed = true;
-            } else {
-              u.subscription_end = null;
-              u.subscribed = false;
-            }
-          } catch {
-            u.subscription_end = null;
-            u.subscribed = false;
-          }
+            })
+          );
         }
+        logStep("Stripe data loaded");
       }
 
+      logStep("Returning users", { count: enrichedUsers.length });
       return new Response(JSON.stringify({ success: true, users: enrichedUsers }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -249,6 +272,7 @@ serve(async (req) => {
     throw new Error("Ação inválida.");
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
+    logStep("ERROR", { message: msg });
     return new Response(JSON.stringify({ error: msg }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
