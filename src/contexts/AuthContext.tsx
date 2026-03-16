@@ -137,7 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         currentUserId = currentSession?.user?.id ?? null;
 
         if (!currentSession?.access_token || !currentUserId) {
-          await handleExpiredSession();
+          const cached = user ? getCachedSubscription(user.id) : null;
+          if (cached) {
+            setSubscribed(cached.subscribed);
+            setSubscriptionEnd(cached.subscriptionEnd);
+          }
           return;
         }
 
@@ -146,7 +150,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (error) {
           if (isAuthSessionError(error)) {
-            await handleExpiredSession();
+            if (cached) {
+              setSubscribed(cached.subscribed);
+              setSubscriptionEnd(cached.subscriptionEnd);
+            }
             return;
           }
 
@@ -171,7 +178,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCachedSubscription(currentUserId, sub, end);
       } catch (err) {
         if (isAuthSessionError(err)) {
-          await handleExpiredSession();
+          if (currentUserId) {
+            const cached = getCachedSubscription(currentUserId);
+            if (cached) {
+              setSubscribed(cached.subscribed);
+              setSubscriptionEnd(cached.subscriptionEnd);
+            }
+          }
           return;
         }
 
@@ -199,27 +212,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [handleExpiredSession]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        void fetchProfile(session.user.id);
-        const cached = getCachedSubscription(session.user.id);
-
-        if (cached) {
-          setSubscribed(cached.subscribed);
-          setSubscriptionEnd(cached.subscriptionEnd);
-          setSubscriptionLoading(false);
-        }
-      } else {
-        lastCheckedUserRef.current = null;
-        setSubscriptionLoading(false);
-      }
-
-      setLoading(false);
-    });
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -233,6 +225,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSubscribed(cached.subscribed);
           setSubscriptionEnd(cached.subscriptionEnd);
           setSubscriptionLoading(false);
+        } else {
+          setSubscriptionLoading(true);
         }
 
         setTimeout(() => {
@@ -251,6 +245,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if ((event === "TOKEN_REFRESHED" || event === "SIGNED_OUT") && !session) {
         resetAuthState();
       }
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        void fetchProfile(session.user.id);
+        const cached = getCachedSubscription(session.user.id);
+
+        if (cached) {
+          setSubscribed(cached.subscribed);
+          setSubscriptionEnd(cached.subscriptionEnd);
+          setSubscriptionLoading(false);
+        } else {
+          setSubscriptionLoading(true);
+        }
+      } else {
+        lastCheckedUserRef.current = null;
+        setSubscriptionLoading(false);
+      }
+
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();

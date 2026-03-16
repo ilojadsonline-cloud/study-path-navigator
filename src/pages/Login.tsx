@@ -8,7 +8,7 @@ import { isCPF, cleanCPF } from "@/lib/cpf";
 import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
-  const { session } = useAuth();
+  const { session, subscriptionLoading, subscribed } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -16,12 +16,10 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect when session is available (after auth state change propagates)
   useEffect(() => {
-    if (session) {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [session, navigate]);
+    if (!session || subscriptionLoading) return;
+    navigate(subscribed ? "/dashboard" : "/assinatura", { replace: true });
+  }, [session, subscriptionLoading, subscribed, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
