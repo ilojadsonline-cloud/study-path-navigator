@@ -6,8 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp,
-  Trophy, Calendar, Zap, Loader2, FileText
+  Trophy, Calendar, Zap, Loader2, FileText, PlayCircle
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
@@ -51,6 +52,7 @@ const CHART_COLORS = {
 
 const Dashboard = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
 
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,7 @@ const Dashboard = () => {
   const [disciplinas, setDisciplinas] = useState<DisciplinaProgress[]>([]);
   const [atividades, setAtividades] = useState<AtividadeRecente[]>([]);
   const [respondidaSemana, setRespondidaSemana] = useState(0);
+  const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -198,6 +201,29 @@ const Dashboard = () => {
       // Sort all activities by date and take top 5
       recentActivities.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
       setAtividades(recentActivities.slice(0, 5));
+
+      // Check for incomplete simulado
+      const { data: progressData } = await supabase
+        .from("simulado_progress" as any)
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (progressData) {
+        const p = progressData as any;
+        let respostas: Record<string, number> = {};
+        try {
+          respostas = typeof p.respostas === "string" ? JSON.parse(p.respostas) : p.respostas || {};
+        } catch { respostas = {}; }
+        setIncompleteSimulado({
+          disciplina: p.disciplina,
+          respondidas: Object.keys(respostas).length,
+          total: p.total,
+        });
+      } else {
+        setIncompleteSimulado(null);
+      }
+
       setLoading(false);
     };
 
@@ -242,6 +268,32 @@ const Dashboard = () => {
           </div>
         ) : (
           <>
+            {incompleteSimulado && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card rounded-xl p-4 flex items-center justify-between border border-warning/30 bg-warning/5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-warning/15">
+                    <PlayCircle className="w-5 h-5 text-warning" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Simulado Incompleto</p>
+                    <p className="text-xs text-muted-foreground">
+                      {incompleteSimulado.disciplina} • {incompleteSimulado.respondidas}/{incompleteSimulado.total} respondidas
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate("/simulados")}
+                  className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <PlayCircle className="w-3.5 h-3.5" />
+                  Continuar
+                </button>
+              </motion.div>
+            )}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 title="Questões Respondidas"

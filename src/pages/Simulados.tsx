@@ -1,11 +1,13 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
-import { Shuffle, Play, Settings, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowLeft, Loader2, RotateCcw } from "lucide-react";
+import { Shuffle, Settings, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowLeft, Loader2, RotateCcw } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const disciplinasOpcoes = [
   "Todas as Disciplinas",
@@ -36,19 +38,156 @@ function shuffleArray<T>(arr: T[]): T[] {
   return shuffled;
 }
 
+// ─── Save / Load progress helpers ───
+
+async function saveProgress(
+  userId: string,
+  disciplina: string,
+  questaoIds: number[],
+  respostas: Record<number, number>,
+  total: number
+) {
+  const { error } = await supabase.from("simulado_progress" as any).upsert(
+    {
+      user_id: userId,
+      disciplina,
+      questao_ids: questaoIds,
+      respostas: JSON.stringify(respostas),
+      total,
+    } as any,
+    { onConflict: "user_id" }
+  );
+  if (error) console.error("Erro ao salvar progresso:", error);
+}
+
+async function deleteProgress(userId: string) {
+  await supabase.from("simulado_progress" as any).delete().eq("user_id", userId);
+}
+
+async function loadProgress(userId: string) {
+  const { data, error } = await supabase
+    .from("simulado_progress" as any)
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+  if (error || !data) return null;
+  return data as any;
+}
+
+// ─── Component ───
+
 const Simulados = () => {
+  const { user } = useAuth();
   const [numQuestoes, setNumQuestoes] = useState([20]);
   const [disciplina, setDisciplina] = useState("Todas as Disciplinas");
-  // Store simulado in ref to prevent re-shuffling on re-renders
   const simuladoRef = useRef<QuestaoSimulado[]>([]);
   const [simulado, setSimulado] = useState<QuestaoSimulado[]>([]);
   const [loading, setLoading] = useState(false);
+  const [resumeLoading, setResumeLoading] = useState(true);
   const [started, setStarted] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<Record<number, number>>({});
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [finished, setFinished] = useState(false);
 
-  const gerarSimulado = async () => {
+  // ─── Memoize question list to prevent re-renders from changing order ───
+  const stableSimulado = useMemo(() => simulado, [simulado]);
+
+  // ─── Check for saved progress on mount ───
+  useEffect(() => {
+    if (!user) { setResumeLoading(false); return; }
+    let cancelled = false;
+
+    (async () => {
+      const progress = await loadProgress(user.id);
+      if (cancelled || !progress) { setResumeLoading(false); return; }
+
+      // Restore the simulado from saved question IDs
+      const ids: number[] = progress.questao_ids;
+      if (!ids || ids.length === 0) { setResumeLoading(false); return; }
+
+      const { data } = await supabase.from("questoes").select("*").in("id", ids);
+      if (cancelled || !data) { setResumeLoading(false); return; }
+
+      // Preserve saved order
+      const orderMap = new Map(ids.map((id, i) => [id, i]));
+      data.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+
+      const questoes: QuestaoSimulado[] = data.map(q => ({
+        id: q.id,
+        disciplina: q.disciplina,
+        assunto: q.assunto,
+        dificuldade: q.dificuldade,
+        enunciado: q.enunciado,
+        alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e],
+        gabaritoShuffled: q.gabarito,
+        comentario: q.comentario,
+      }));
+
+      let savedAnswers: Record<number, number> = {};
+      try {
+        savedAnswers = typeof progress.respostas === "string"
+          ? JSON.parse(progress.respostas)
+          : progress.respostas || {};
+        // Convert string keys to number keys
+        const numericAnswers: Record<number, number> = {};
+        Object.entries(savedAnswers).forEach(([k, v]) => {
+          numericAnswers[Number(k)] = v as number;
+        });
+        savedAnswers = numericAnswers;
+      } catch { savedAnswers = {}; }
+
+      simuladoRef.current = questoes;
+      setSimulado(questoes);
+      setSelectedAnswer(savedAnswers);
+      setDisciplina(progress.disciplina || "Todas as Disciplinas");
+      setStarted(true);
+      setResumeLoading(false);
+      toast.info("Simulado incompleto restaurado!");
+    })();
+
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // ─── Save progress whenever answers change ───
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!user || !started || finished || simulado.length === 0) return;
+
+    // Debounce saves to avoid spamming DB
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveProgress(
+        user.id,
+        disciplina,
+        simulado.map(q => q.id),
+        selectedAnswer,
+        simulado.length
+      );
+    }, 500);
+
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [selectedAnswer, user, started, finished, simulado, disciplina]);
+
+  // ─── Beforeunload warning ───
+  useEffect(() => {
+    if (!started || finished) return;
+
+    const respondidas = Object.keys(selectedAnswer).length;
+    if (respondidas === 0) return;
+
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [started, finished, selectedAnswer]);
+
+  // ─── Generate simulado ───
+  const gerarSimulado = useCallback(async () => {
     setLoading(true);
     let query = supabase.from("questoes").select("*");
     if (disciplina !== "Todas as Disciplinas") {
@@ -80,21 +219,42 @@ const Simulados = () => {
     setFinished(false);
     setStarted(true);
     setLoading(false);
-  };
+  }, [disciplina, numQuestoes]);
 
   const reiniciarSimulado = () => {
-    // Re-shuffle and generate a brand new simulado
+    if (user) deleteProgress(user.id);
     gerarSimulado();
   };
 
-  const finalizarSimulado = () => {
+  const finalizarSimulado = useCallback(async () => {
     const newRevealed: Record<number, boolean> = {};
-    simulado.forEach(q => { newRevealed[q.id] = true; });
+    stableSimulado.forEach(q => { newRevealed[q.id] = true; });
     setRevealed(newRevealed);
     setFinished(true);
-  };
 
-  const acertos = simulado.filter(q => selectedAnswer[q.id] === q.gabaritoShuffled).length;
+    // Delete progress and save to simulados table
+    if (user) {
+      await deleteProgress(user.id);
+
+      const acertos = stableSimulado.filter(q => selectedAnswer[q.id] === q.gabaritoShuffled).length;
+      await supabase.from("simulados").insert({
+        user_id: user.id,
+        disciplina,
+        questao_ids: stableSimulado.map(q => q.id),
+        total: stableSimulado.length,
+        acertos,
+        finalizado: true,
+      });
+    }
+  }, [stableSimulado, selectedAnswer, user, disciplina]);
+
+  const voltarParaConfig = useCallback(() => {
+    if (user && !finished) deleteProgress(user.id);
+    setStarted(false);
+    setFinished(false);
+  }, [user, finished]);
+
+  const acertos = stableSimulado.filter(q => selectedAnswer[q.id] === q.gabaritoShuffled).length;
   const respondidas = Object.keys(selectedAnswer).length;
 
   const getDifficultyColor = (d: string) => {
@@ -103,20 +263,30 @@ const Simulados = () => {
     return "bg-destructive/15 text-destructive border-destructive/30";
   };
 
+  if (resumeLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
   if (started) {
     return (
       <AppLayout>
         <div className="max-w-4xl mx-auto space-y-6">
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={() => { setStarted(false); setFinished(false); }} className="p-2 rounded-lg bg-secondary hover:bg-primary/15 transition-colors">
+              <button onClick={voltarParaConfig} className="p-2 rounded-lg bg-secondary hover:bg-primary/15 transition-colors">
                 <ArrowLeft className="w-4 h-4" />
               </button>
               <div>
                 <h1 className="text-xl font-bold">
                   <span className="text-gradient-primary">Simulado</span>
                 </h1>
-                <p className="text-xs text-muted-foreground">{disciplina} • {simulado.length} questões</p>
+                <p className="text-xs text-muted-foreground">{disciplina} • {stableSimulado.length} questões</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -132,15 +302,15 @@ const Simulados = () => {
               )}
               {!finished && (
                 <div className="text-right">
-                  <p className="text-sm font-bold text-foreground">{respondidas}/{simulado.length}</p>
+                  <p className="text-sm font-bold text-foreground">{respondidas}/{stableSimulado.length}</p>
                   <p className="text-[10px] text-muted-foreground">respondidas</p>
                 </div>
               )}
               {finished && (
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-gradient-primary">{acertos}/{simulado.length}</p>
-                  <p className={`text-xs font-medium ${(acertos / simulado.length) >= 0.7 ? 'text-success' : 'text-warning'}`}>
-                    {Math.round((acertos / simulado.length) * 100)}% de acerto
+                  <p className="text-2xl font-bold text-gradient-primary">{acertos}/{stableSimulado.length}</p>
+                  <p className={`text-xs font-medium ${(acertos / stableSimulado.length) >= 0.7 ? 'text-success' : 'text-warning'}`}>
+                    {Math.round((acertos / stableSimulado.length) * 100)}% de acerto
                   </p>
                 </div>
               )}
@@ -150,8 +320,8 @@ const Simulados = () => {
           {finished && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-xl p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-xl ${(acertos / simulado.length) >= 0.7 ? 'bg-success/15' : 'bg-warning/15'}`}>
-                  <CheckCircle className={`w-5 h-5 ${(acertos / simulado.length) >= 0.7 ? 'text-success' : 'text-warning'}`} />
+                <div className={`p-3 rounded-xl ${(acertos / stableSimulado.length) >= 0.7 ? 'bg-success/15' : 'bg-warning/15'}`}>
+                  <CheckCircle className={`w-5 h-5 ${(acertos / stableSimulado.length) >= 0.7 ? 'text-success' : 'text-warning'}`} />
                 </div>
                 <div>
                   <p className="font-bold text-sm">Simulado Finalizado!</p>
@@ -166,7 +336,7 @@ const Simulados = () => {
           )}
 
           <div className="space-y-6">
-            {simulado.map((q, qi) => (
+            {stableSimulado.map((q, qi) => (
               <motion.div key={q.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(qi * 0.03, 0.3) }} className="glass-card rounded-xl p-5 space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -214,7 +384,7 @@ const Simulados = () => {
             ))}
           </div>
 
-          {!finished && respondidas === simulado.length && simulado.length > 0 && (
+          {!finished && respondidas === stableSimulado.length && stableSimulado.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <button onClick={finalizarSimulado} className="w-full py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity glow-primary">
                 <CheckCircle className="w-4 h-4" />
@@ -235,7 +405,7 @@ const Simulados = () => {
           <h1 className="text-2xl md:text-3xl font-bold">
             <span className="text-gradient-primary">Gerador de Simulado</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Monte seu simulado personalizado — a ordem é mantida até você reiniciar</p>
+          <p className="text-sm text-muted-foreground mt-1">Monte seu simulado personalizado — seu progresso é salvo automaticamente</p>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-xl p-6 space-y-6">
@@ -275,7 +445,7 @@ const Simulados = () => {
           <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
             <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <div className="text-xs text-muted-foreground leading-relaxed">
-              <strong className="text-primary">Ordem estável:</strong> As questões são embaralhadas ao gerar e mantidas até você clicar em "Reiniciar Simulado" ou atualizar a página (F5).
+              <strong className="text-primary">Salvamento automático:</strong> Suas respostas são salvas a cada clique. Se você sair, poderá continuar de onde parou.
             </div>
           </div>
 
