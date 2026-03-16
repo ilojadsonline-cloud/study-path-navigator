@@ -150,7 +150,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (error) {
           if (isAuthSessionError(error)) {
-            await handleExpiredSession();
+            if (cached) {
+              setSubscribed(cached.subscribed);
+              setSubscriptionEnd(cached.subscriptionEnd);
+            }
             return;
           }
 
