@@ -212,27 +212,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [handleExpiredSession]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        void fetchProfile(session.user.id);
-        const cached = getCachedSubscription(session.user.id);
-
-        if (cached) {
-          setSubscribed(cached.subscribed);
-          setSubscriptionEnd(cached.subscriptionEnd);
-          setSubscriptionLoading(false);
-        }
-      } else {
-        lastCheckedUserRef.current = null;
-        setSubscriptionLoading(false);
-      }
-
-      setLoading(false);
-    });
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -246,6 +225,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSubscribed(cached.subscribed);
           setSubscriptionEnd(cached.subscriptionEnd);
           setSubscriptionLoading(false);
+        } else {
+          setSubscriptionLoading(true);
         }
 
         setTimeout(() => {
@@ -264,6 +245,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if ((event === "TOKEN_REFRESHED" || event === "SIGNED_OUT") && !session) {
         resetAuthState();
       }
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        void fetchProfile(session.user.id);
+        const cached = getCachedSubscription(session.user.id);
+
+        if (cached) {
+          setSubscribed(cached.subscribed);
+          setSubscriptionEnd(cached.subscriptionEnd);
+          setSubscriptionLoading(false);
+        } else {
+          setSubscriptionLoading(true);
+        }
+      } else {
+        lastCheckedUserRef.current = null;
+        setSubscriptionLoading(false);
+      }
+
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
