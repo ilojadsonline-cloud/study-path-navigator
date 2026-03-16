@@ -178,7 +178,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCachedSubscription(currentUserId, sub, end);
       } catch (err) {
         if (isAuthSessionError(err)) {
-          await handleExpiredSession();
+          if (currentUserId) {
+            const cached = getCachedSubscription(currentUserId);
+            if (cached) {
+              setSubscribed(cached.subscribed);
+              setSubscriptionEnd(cached.subscriptionEnd);
+            }
+          }
           return;
         }
 
