@@ -268,6 +268,32 @@ const Dashboard = () => {
           </div>
         ) : (
           <>
+            {incompleteSimulado && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card rounded-xl p-4 flex items-center justify-between border border-warning/30 bg-warning/5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-warning/15">
+                    <PlayCircle className="w-5 h-5 text-warning" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Simulado Incompleto</p>
+                    <p className="text-xs text-muted-foreground">
+                      {incompleteSimulado.disciplina} • {incompleteSimulado.respondidas}/{incompleteSimulado.total} respondidas
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate("/simulados")}
+                  className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <PlayCircle className="w-3.5 h-3.5" />
+                  Continuar
+                </button>
+              </motion.div>
+            )}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 title="Questões Respondidas"
