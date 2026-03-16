@@ -296,12 +296,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
   }, [user, checkSubscription]);
 
+  // Re-check subscription every 10 minutes (not 60s) to avoid mid-session disruptions
   useEffect(() => {
     if (!user || isAdmin) return;
 
     const interval = setInterval(() => {
       void checkSubscription();
-    }, 60_000);
+    }, 10 * 60_000);
 
     return () => clearInterval(interval);
   }, [user, isAdmin, checkSubscription]);
