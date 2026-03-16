@@ -52,6 +52,7 @@ const CHART_COLORS = {
 
 const Dashboard = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
 
   const [loading, setLoading] = useState(true);
@@ -62,6 +63,7 @@ const Dashboard = () => {
   const [disciplinas, setDisciplinas] = useState<DisciplinaProgress[]>([]);
   const [atividades, setAtividades] = useState<AtividadeRecente[]>([]);
   const [respondidaSemana, setRespondidaSemana] = useState(0);
+  const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
 
   useEffect(() => {
     if (!user) return;
