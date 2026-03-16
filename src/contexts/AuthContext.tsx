@@ -35,7 +35,6 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
-// Cache helpers
 const SUBSCRIPTION_CACHE_KEY = "choa_sub_cache";
 
 function getCachedSubscription(userId: string) {
@@ -43,27 +42,38 @@ function getCachedSubscription(userId: string) {
     const raw = localStorage.getItem(SUBSCRIPTION_CACHE_KEY);
     if (!raw) return null;
     const cached = JSON.parse(raw);
-    // Only use cache if same user and less than 5 minutes old
+
     if (cached.userId === userId && Date.now() - cached.timestamp < 5 * 60 * 1000) {
       return cached;
     }
   } catch {}
+
   return null;
 }
 
 function setCachedSubscription(userId: string, subscribed: boolean, subscriptionEnd: string | null) {
   try {
-    localStorage.setItem(SUBSCRIPTION_CACHE_KEY, JSON.stringify({
-      userId,
-      subscribed,
-      subscriptionEnd,
-      timestamp: Date.now(),
-    }));
+    localStorage.setItem(
+      SUBSCRIPTION_CACHE_KEY,
+      JSON.stringify({
+        userId,
+        subscribed,
+        subscriptionEnd,
+        timestamp: Date.now(),
+      }),
+    );
   } catch {}
 }
 
 function clearCachedSubscription() {
-  try { localStorage.removeItem(SUBSCRIPTION_CACHE_KEY); } catch {}
+  try {
+    localStorage.removeItem(SUBSCRIPTION_CACHE_KEY);
+  } catch {}
+}
+
+function isAuthSessionError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /auth session missing|session not found|refresh token|jwt|authorization/i.test(message);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -76,45 +86,106 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Deduplication: prevent multiple concurrent subscription checks
   const checkInFlightRef = useRef<Promise<void> | null>(null);
   const lastCheckedUserRef = useRef<string | null>(null);
 
-  const fetchProfile = async (userId: string) => {
+  const resetAuthState = useCallback(() => {
+    lastCheckedUserRef.current = null;
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setSubscribed(false);
+    setSubscriptionEnd(null);
+    setSubscriptionLoading(false);
+    setIsAdmin(false);
+    clearCachedSubscription();
+  }, []);
+
+  const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
       .select("nome, cpf")
       .eq("user_id", userId)
       .single();
+
     setProfile(data);
-  };
+  }, []);
+
+  const signOut = useCallback(async () => {
+    resetAuthState();
+    await supabase.auth.signOut();
+  }, [resetAuthState]);
+
+  const handleExpiredSession = useCallback(async () => {
+    console.warn("Sessão inválida/expirada detectada durante validação da assinatura.");
+    await signOut();
+  }, [signOut]);
 
   const checkSubscription = useCallback(async () => {
-    // If there's already a check in flight, reuse it
     if (checkInFlightRef.current) {
       return checkInFlightRef.current;
     }
 
     const promise = (async () => {
+      let currentUserId: string | null = null;
+
       try {
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
+
+        currentUserId = currentSession?.user?.id ?? null;
+
+        if (!currentSession?.access_token || !currentUserId) {
+          await handleExpiredSession();
+          return;
+        }
+
+        const cached = getCachedSubscription(currentUserId);
         const { data, error } = await supabase.functions.invoke("check-subscription");
+
         if (error) {
+          if (isAuthSessionError(error)) {
+            await handleExpiredSession();
+            return;
+          }
+
           console.error("Error checking subscription:", error);
+
+          if (cached) {
+            setSubscribed(cached.subscribed);
+            setSubscriptionEnd(cached.subscriptionEnd);
+            return;
+          }
+
           setSubscribed(false);
           setSubscriptionEnd(null);
-        } else {
-          const sub = data?.subscribed ?? false;
-          const end = data?.subscription_end ?? null;
-          setSubscribed(sub);
-          setSubscriptionEnd(end);
-          // Cache the result
-          const currentUser = (await supabase.auth.getUser()).data.user;
-          if (currentUser) {
-            setCachedSubscription(currentUser.id, sub, end);
+          return;
+        }
+
+        const sub = data?.subscribed ?? false;
+        const end = data?.subscription_end ?? null;
+
+        setSubscribed(sub);
+        setSubscriptionEnd(end);
+        setCachedSubscription(currentUserId, sub, end);
+      } catch (err) {
+        if (isAuthSessionError(err)) {
+          await handleExpiredSession();
+          return;
+        }
+
+        console.error("Error checking subscription:", err);
+
+        if (currentUserId) {
+          const cached = getCachedSubscription(currentUserId);
+          if (cached) {
+            setSubscribed(cached.subscribed);
+            setSubscriptionEnd(cached.subscriptionEnd);
+            return;
           }
         }
-      } catch (err) {
-        console.error("Error checking subscription:", err);
+
         setSubscribed(false);
         setSubscriptionEnd(null);
       } finally {
@@ -125,61 +196,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkInFlightRef.current = promise;
     return promise;
-  }, []);
+  }, [handleExpiredSession]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+
       if (session?.user) {
-        fetchProfile(session.user.id);
-        // Use cache for instant feedback while Edge Function loads
+        void fetchProfile(session.user.id);
         const cached = getCachedSubscription(session.user.id);
+
         if (cached) {
           setSubscribed(cached.subscribed);
           setSubscriptionEnd(cached.subscriptionEnd);
-          // Still mark as loading so the fresh check runs, but don't block UI
           setSubscriptionLoading(false);
         }
       } else {
+        lastCheckedUserRef.current = null;
         setSubscriptionLoading(false);
       }
+
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
 
-        if (session?.user) {
-          // Use cache immediately to avoid blocking
-          const cached = getCachedSubscription(session.user.id);
-          if (cached) {
-            setSubscribed(cached.subscribed);
-            setSubscriptionEnd(cached.subscriptionEnd);
-          }
-          setTimeout(() => fetchProfile(session.user.id), 0);
-        } else {
-          setProfile(null);
-          setSubscribed(false);
-          setSubscriptionEnd(null);
+      if (session?.user) {
+        const cached = getCachedSubscription(session.user.id);
+
+        if (cached) {
+          setSubscribed(cached.subscribed);
+          setSubscriptionEnd(cached.subscriptionEnd);
           setSubscriptionLoading(false);
-          clearCachedSubscription();
         }
 
-        // Handle expired refresh tokens
-        if (event === "TOKEN_REFRESHED" && !session) {
-          clearCachedSubscription();
-          supabase.auth.signOut();
-        }
+        setTimeout(() => {
+          void fetchProfile(session.user.id);
+        }, 0);
+      } else {
+        lastCheckedUserRef.current = null;
+        setProfile(null);
+        setSubscribed(false);
+        setSubscriptionEnd(null);
+        setSubscriptionLoading(false);
+        setIsAdmin(false);
+        clearCachedSubscription();
       }
-    );
+
+      if ((event === "TOKEN_REFRESHED" || event === "SIGNED_OUT") && !session) {
+        resetAuthState();
+      }
+    });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchProfile, resetAuthState]);
 
-  // Check admin role and subscription when user changes
   useEffect(() => {
     if (!user) {
       setIsAdmin(false);
@@ -187,54 +263,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Skip if we already checked this user (prevents duplicate calls)
     if (lastCheckedUserRef.current === user.id) return;
     lastCheckedUserRef.current = user.id;
 
-    // Check admin role from user_roles table
     supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .eq("role", "admin")
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Error checking admin role:", error);
+        }
+
         const admin = (data && data.length > 0) || false;
         setIsAdmin(admin);
+
         if (admin) {
           setSubscribed(true);
+          setSubscriptionEnd(null);
           setSubscriptionLoading(false);
           setCachedSubscription(user.id, true, null);
-        } else {
-          // Only call if no cache (otherwise we already set subscriptionLoading=false)
-          const cached = getCachedSubscription(user.id);
-          if (!cached) {
-            setSubscriptionLoading(true);
-          }
-          checkSubscription();
+          return;
         }
+
+        const cached = getCachedSubscription(user.id);
+        if (!cached) {
+          setSubscriptionLoading(true);
+        }
+
+        void checkSubscription();
       });
   }, [user, checkSubscription]);
 
-  // Auto-refresh subscription every 60 seconds (skip for admins)
   useEffect(() => {
     if (!user || isAdmin) return;
-    const interval = setInterval(checkSubscription, 60_000);
+
+    const interval = setInterval(() => {
+      void checkSubscription();
+    }, 60_000);
+
     return () => clearInterval(interval);
   }, [user, isAdmin, checkSubscription]);
 
-  const signOut = async () => {
-    clearCachedSubscription();
-    lastCheckedUserRef.current = null;
-    await supabase.auth.signOut();
-    setSession(null);
-    setUser(null);
-    setProfile(null);
-    setSubscribed(false);
-    setSubscriptionEnd(null);
-  };
-
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, subscribed, subscriptionEnd, subscriptionLoading, isAdmin, checkSubscription, signOut }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user,
+        profile,
+        loading,
+        subscribed,
+        subscriptionEnd,
+        subscriptionLoading,
+        isAdmin,
+        checkSubscription,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
