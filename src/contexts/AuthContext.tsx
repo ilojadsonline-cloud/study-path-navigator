@@ -80,6 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
+        // Keep subscriptionLoading true until the user effect handles it
+        setSubscriptionLoading(true);
+      } else {
+        setSubscriptionLoading(false);
       }
       setLoading(false);
     });
