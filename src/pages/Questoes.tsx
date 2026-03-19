@@ -60,7 +60,7 @@ const Questoes = () => {
   const lastFilterKeyRef = useRef<string>("");
 
   const dificuldades = ["Todos", "Fácil", "Médio", "Difícil"];
-  const statusOptions = ["Todos", "Não resolvidas", "Resolvidas"];
+  const statusOptions = ["Não resolvidas", "Todas", "Resolvidas", "Apenas Erradas"];
 
   const handleReport = (questaoId: number) => {
     setReportQuestaoId(questaoId);
