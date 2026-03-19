@@ -46,8 +46,10 @@ const Questoes = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterDisciplina, setFilterDisciplina] = useState(initialDisciplina);
   const [filterDificuldade, setFilterDificuldade] = useState("Todos");
-  const [filterStatus, setFilterStatus] = useState("Todos");
+  const [filterStatus, setFilterStatus] = useState("Não resolvidas");
   const [answeredIds, setAnsweredIds] = useState<Set<number>>(new Set());
+  const [wrongIds, setWrongIds] = useState<Set<number>>(new Set());
+  const [allAnsweredInDisciplina, setAllAnsweredInDisciplina] = useState(false);
   const [availableDisciplinas, setAvailableDisciplinas] = useState<string[]>([]);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportQuestaoId, setReportQuestaoId] = useState<number | null>(null);
@@ -58,7 +60,7 @@ const Questoes = () => {
   const lastFilterKeyRef = useRef<string>("");
 
   const dificuldades = ["Todos", "Fácil", "Médio", "Difícil"];
-  const statusOptions = ["Todos", "Não resolvidas", "Resolvidas"];
+  const statusOptions = ["Não resolvidas", "Todas", "Resolvidas", "Apenas Erradas"];
 
   const handleReport = (questaoId: number) => {
     setReportQuestaoId(questaoId);
@@ -93,9 +95,10 @@ const Questoes = () => {
     };
     const fetchAnswered = async () => {
       if (!user) return;
-      const { data } = await supabase.from("respostas_usuario").select("questao_id").eq("user_id", user.id);
+      const { data } = await supabase.from("respostas_usuario").select("questao_id, correta").eq("user_id", user.id);
       if (data) {
         setAnsweredIds(new Set(data.map(d => d.questao_id)));
+        setWrongIds(new Set(data.filter(d => !d.correta).map(d => d.questao_id)));
       }
     };
     fetchDisciplinas();
@@ -120,11 +123,18 @@ const Questoes = () => {
     const { data, error } = await query.order("id");
     if (!error && data) {
       let filtered = data as Questao[];
+      const totalBeforeStatusFilter = filtered.length;
       if (filterStatus === "Resolvidas") {
         filtered = filtered.filter(q => answeredIds.has(q.id));
       } else if (filterStatus === "Não resolvidas") {
         filtered = filtered.filter(q => !answeredIds.has(q.id));
+      } else if (filterStatus === "Apenas Erradas") {
+        filtered = filtered.filter(q => wrongIds.has(q.id));
       }
+      // Check if all questions in this discipline have been answered
+      setAllAnsweredInDisciplina(
+        filterStatus === "Não resolvidas" && filtered.length === 0 && totalBeforeStatusFilter > 0
+      );
       // Shuffle once per filter change (Fisher-Yates)
       for (let i = filtered.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -243,6 +253,22 @@ const Questoes = () => {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
+        ) : allAnsweredInDisciplina ? (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-16 glass-card rounded-xl space-y-4">
+            <CheckCircle className="w-12 h-12 text-success mx-auto" />
+            <p className="text-lg font-bold text-foreground">Parabéns! 🎉</p>
+            <p className="text-sm text-muted-foreground">
+              Você concluiu todas as questões{filterDisciplina !== "Todos" ? ` de ${filterDisciplina}` : ""}!
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" onClick={() => { lastFilterKeyRef.current = ""; setFilterStatus("Resolvidas"); }}>
+                Revisar Respondidas
+              </Button>
+              <Button variant="outline" onClick={() => { lastFilterKeyRef.current = ""; setFilterStatus("Apenas Erradas"); }}>
+                Revisar Erradas
+              </Button>
+            </div>
+          </motion.div>
         ) : questoes.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
             <p className="text-lg font-medium">Nenhuma questão encontrada</p>
