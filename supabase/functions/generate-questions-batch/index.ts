@@ -31,7 +31,6 @@ function hasDuplicateAlts(alts: string[]): boolean {
   return new Set(norm).size !== norm.length;
 }
 
-/** Parse law text into article blocks */
 function parseArticleBlocks(lawText: string): ArticleBlock[] {
   const blocks: ArticleBlock[] = [];
   const regex = /Art\.?\s*(\d+)/gi;
@@ -54,11 +53,9 @@ function findUniqueArticleMatch(probe: string, blocks: ArticleBlock[]): string |
   return matches.length === 1 ? `Art. ${matches[0].artNum}` : null;
 }
 
-/** Find which article block contains a text snippet */
 function findArticleForText(snippet: string, blocks: ArticleBlock[]): string | null {
   const cleanedSnippet = normalizeWhitespace(snippet);
   if (!cleanedSnippet || cleanedSnippet.length < 15) return null;
-
   const normSnippet = normalize(cleanedSnippet);
   if (normSnippet.length < 15) return null;
 
@@ -93,18 +90,12 @@ function extractAllCitedArticles(text: string): string[] {
 
 function extractCommentEvidenceSnippets(comment: string): string[] {
   const snippets = Array.from(
-    comment.matchAll(/["“”'‘’]([^"“”'‘’]{20,500})["“”'‘’]/g),
+    comment.matchAll(/["""''']([^"""''']{20,500})["""''']/g),
     (match) => normalizeWhitespace(match[1]),
   ).filter(Boolean);
-
   const colonTail = normalizeWhitespace(
-    comment
-      .split(":")
-      .slice(1)
-      .join(":")
-      .replace(/^["“”'‘’]+|["“”'‘’]+$/g, ""),
+    comment.split(":").slice(1).join(":").replace(/^["""''']+|["""''']+$/g, ""),
   );
-
   if (colonTail.length >= 20) snippets.push(colonTail);
   return [...new Set(snippets)];
 }
@@ -166,6 +157,21 @@ function crossValidateReferences(enunciado: string, comment: string): { valid: b
 
 function buildFingerprint(enunciado: string): string {
   return normalize(enunciado).replace(/\s+/g, "").substring(0, 80);
+}
+
+/** Build a semantic fingerprint: article number + key legal terms from comment/answer.
+ *  Two questions about the same article and same legal concept will collide. */
+function buildSemanticFingerprint(comentario: string, correctAltText: string): string {
+  const arts = extractAllCitedArticles(comentario);
+  const artPart = arts.sort().join(",");
+  // Extract key legal terms from the correct answer (normalized, sorted, deduped)
+  const keyTerms = normalize(correctAltText)
+    .split(" ")
+    .filter(w => w.length > 4)
+    .sort()
+    .slice(0, 8)
+    .join(" ");
+  return `${artPart}|${keyTerms}`.substring(0, 100);
 }
 
 const DISCIPLINES = [
@@ -246,6 +252,12 @@ const DISCIPLINES = [
   },
 ];
 
+const APPROACH_TYPES = [
+  "TEORIA_PURA",       // Literalidade da lei
+  "CASO_PRATICO",      // Cenário hipotético
+  "PEGADINHA_DETALHE",  // Troca de termos sutis
+] as const;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -294,13 +306,56 @@ serve(async (req) => {
       }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch existing fingerprints for dedup
+    // Fetch existing questions for dedup (fingerprint + semantic)
     const { data: existingQ } = await supabase
-      .from("questoes").select("enunciado").eq("disciplina", disc.disciplina).order("id", { ascending: false }).limit(500);
+      .from("questoes").select("enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito")
+      .eq("disciplina", disc.disciplina).order("id", { ascending: false }).limit(500);
+    
     const existingFingerprints = new Set<string>();
-    if (existingQ) existingQ.forEach(eq => existingFingerprints.add(buildFingerprint(eq.enunciado)));
+    const existingSemanticFPs = new Set<string>();
+    const recentTopicSummaries: string[] = [];
+    
+    if (existingQ) {
+      existingQ.forEach((eq, idx) => {
+        existingFingerprints.add(buildFingerprint(eq.enunciado));
+        // Build semantic fingerprint from comment + correct answer
+        const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
+        const correctText = eq[correctKey] || "";
+        existingSemanticFPs.add(buildSemanticFingerprint(eq.comentario || "", correctText));
+        // Collect last 50 summaries for the prompt
+        if (idx < 50) {
+          const arts = extractAllCitedArticles(eq.comentario || "");
+          const artRef = arts.length > 0 ? `Art. ${arts[0]}` : "?";
+          // Truncate enunciado to key phrase
+          const shortEnunciado = eq.enunciado.substring(0, 80).replace(/\s+/g, " ");
+          recentTopicSummaries.push(`- ${artRef}: ${shortEnunciado}`);
+        }
+      });
+    }
 
-    console.log(`[GERAR] Iniciando: "${disc.disciplina}", batch=${batchSize}, artigos disponíveis: ${blocks.length}`);
+    console.log(`[GERAR] Iniciando: "${disc.disciplina}", batch=${batchSize}, artigos=${blocks.length}, existentes=${existingQ?.length || 0}, semânticas=${existingSemanticFPs.size}`);
+
+    // Assign approach types to each question in the batch
+    const approachAssignments: string[] = [];
+    for (let i = 0; i < batchSize; i++) {
+      approachAssignments.push(APPROACH_TYPES[i % 3]);
+    }
+
+    const recentTopicsBlock = recentTopicSummaries.length > 0
+      ? `\n\nQUESTÕES JÁ EXISTENTES (NÃO REPITA o mesmo núcleo jurídico — artigo + regra + resposta):\n${recentTopicSummaries.join("\n")}\n\nSe já existe questão sobre determinado inciso/parágrafo/regra, ESCOLHA outro dispositivo da mesma lei. A diversidade de artigos abordados é OBRIGATÓRIA.`
+      : "";
+
+    const approachInstructions = approachAssignments.map((a, i) => {
+      const num = i + 1;
+      switch (a) {
+        case "TEORIA_PURA":
+          return `Questão ${num}: TEORIA PURA — Teste a literalidade da lei. O enunciado apresenta uma afirmativa e o candidato deve identificar se está de acordo com a lei. Use "Sobre [tema], é correto afirmar que..." ou "Assinale a alternativa correta sobre [tema]".`;
+        case "CASO_PRATICO":
+          return `Questão ${num}: CASO PRÁTICO — Crie um cenário hipotético detalhado (2-3 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, etc.) em situação concreta do cotidiano militar. O candidato deve APLICAR a regra da lei ao caso.`;
+        case "PEGADINHA_DETALHE":
+          return `Questão ${num}: PEGADINHA DE DETALHE — Foque em termos que geram confusão: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos, troca de competências. A alternativa correta é literal; as incorretas trocam UM detalhe sutil.`;
+      }
+    }).join("\n");
 
     const systemPrompt = `Você é um PROFESSOR DE CONCURSO MILITAR de elite, especialista em criar questões que testam a COMPREENSÃO PRÁTICA da lei, não a memorização de números de artigos.
 
@@ -312,15 +367,19 @@ REGRAS INVIOLÁVEIS DE CONTEÚDO:
 
 REGRAS PEDAGÓGICAS (CRÍTICAS):
 1. PROIBIDO DECOREBA DE NÚMERO: NUNCA crie questões do tipo "O que dispõe o Art. X?", "Qual artigo trata de Y?", "Segundo o Art. X, ...". O número do artigo aparece SOMENTE no comentário como fundamentação.
-2. FOCO EM CASOS PRÁTICOS (FATOS TÍPICOS): O enunciado DEVE descrever uma SITUAÇÃO CONCRETA do cotidiano militar (ex: "O Soldado Silva, durante uma abordagem...", "O Cabo Pereira, em período de férias, decidiu...", "Um Tenente recebeu ordem de seu Comandante para..."). O candidato deve APLICAR a regra da lei ao caso concreto.
-3. PEGADINHAS INTELIGENTES (TROCADILHOS): As alternativas incorretas DEVEM usar trocadilhos jurídicos comuns em provas: trocar "deverá" por "poderá", "exclusivamente" por "preferencialmente", inverter prazos, trocar "vedado" por "facultado", alterar quórum, trocar "suspensão" por "cassação". O objetivo é testar ATENÇÃO AOS DETALHES do texto legal.
-4. DISTRATORES FORTES: As alternativas incorretas devem ser PLAUSÍVEIS — baseadas em interpretações erradas comuns da própria lei, não em absurdos óbvios.
-5. TOM PROFISSIONAL E DESAFIADOR: Estilo de banca examinadora séria (CESPE/CEBRASPE, FGV).
+2. O comentário é a PROVA REAL: deve citar artigo, parágrafo e inciso EXATAMENTE como estão na lei seca, com transcrição literal. NUNCA interprete criativamente.
+3. DISTRATORES FORTES: As alternativas incorretas devem ser PLAUSÍVEIS — baseadas em interpretações erradas comuns da própria lei, não em absurdos óbvios.
+4. TOM PROFISSIONAL E DESAFIADOR: Estilo de banca examinadora séria (CESPE/CEBRASPE, FGV).
+5. PRIORIZE QUESTÕES COMPLEXAS: Questões que envolvem problemáticas práticas, conflitos entre dispositivos legais, exceções às regras gerais, e situações-limite são MAIS VALIOSAS que questões simples.
+
+REGRA DE UNICIDADE SEMÂNTICA (CRÍTICA):
+- Cada questão DEVE abordar um DISPOSITIVO LEGAL DIFERENTE (artigo, parágrafo, inciso distinto).
+- Se duas questões abordam o mesmo artigo, elas DEVEM tratar de parágrafos/incisos/regras DIFERENTES daquele artigo.
+- É PROIBIDO gerar questões que tenham a mesma resposta correta ou testem o mesmo conceito jurídico, mesmo com enunciados diferentes.
 
 ARTIGOS DISPONÍVEIS NESTA LEI: ${availableArticles}
 ATENÇÃO: Cite SOMENTE artigos desta lista. Qualquer artigo fora desta lista é PROIBIDO.`;
 
-    // Truncate legal text to avoid timeout — 18K chars is enough context
     const truncatedLei = leiSeca.substring(0, 18000);
 
     const prompt = `Gere exatamente ${batchSize} questões de múltipla escolha para "${disc.disciplina}" (${disc.leiNome}).
@@ -328,15 +387,18 @@ ATENÇÃO: Cite SOMENTE artigos desta lista. Qualquer artigo fora desta lista é
 TEXTO LEGAL (trecho principal):
 ${truncatedLei}
 
+ABORDAGEM OBRIGATÓRIA POR QUESTÃO (alterne rigorosamente):
+${approachInstructions}
+${recentTopicsBlock}
+
 MÉTODO DE CRIAÇÃO (siga rigorosamente):
-1) Escolha um artigo/parágrafo/inciso do texto legal acima.
+1) Escolha um artigo/parágrafo/inciso do texto legal acima QUE AINDA NÃO FOI ABORDADO nas questões existentes.
 2) Identifique a REGRA DE CONDUTA que ele estabelece (o que é obrigatório, proibido, facultado, os prazos, as condições).
-3) Crie uma HISTÓRIA CURTA (2-3 linhas) descrevendo um policial militar em uma situação que envolve essa regra. Use nomes fictícios (Soldado Silva, Cabo Pereira, Sargento Lima, Tenente Rocha, Capitão Almeida).
-4) Formule a pergunta: "Nessa situação, de acordo com a legislação vigente, ..." ou "Diante desse cenário, é correto afirmar que...".
-5) Crie 5 alternativas (A-E) sem prefixo de letra:
+3) Siga a ABORDAGEM OBRIGATÓRIA designada para cada questão (TEORIA PURA, CASO PRÁTICO ou PEGADINHA DE DETALHE).
+4) Crie 5 alternativas (A-E) sem prefixo de letra:
    - A CORRETA deve refletir LITERALMENTE o que a lei diz.
    - As INCORRETAS devem usar TROCADILHOS SUTIS: trocar verbos (deverá/poderá), inverter prazos, alterar condições, mudar sujeitos.
-6) O COMENTÁRIO deve: "Conforme o Art. X da ${disc.leiNome}: '[transcrição literal do trecho]'." — explicando por que o caso se enquadra naquele artigo.
+5) O COMENTÁRIO deve: "Conforme o Art. X da ${disc.leiNome}: '[transcrição literal do trecho]'." — citando artigo, parágrafo e inciso exatamente como na lei seca.
 
 PROIBIÇÕES ABSOLUTAS NO ENUNCIADO:
 - "O que diz o Art. X?"
@@ -355,7 +417,7 @@ JSON array:
 [{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o Art. X da ${disc.leiNome}: '...'"}]`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 50000); // 50s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 50000);
 
     let aiResponse: Response;
     try {
@@ -424,6 +486,7 @@ JSON array:
     const validQuestions = [];
     let discarded = 0;
     const batchFingerprints = new Set<string>();
+    const batchSemanticFPs = new Set<string>();
 
     for (let idx = 0; idx < rawQuestions.length; idx++) {
       const raw = rawQuestions[idx];
@@ -450,23 +513,29 @@ JSON array:
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: alternativas duplicadas`); continue;
       }
 
-      // ── Anti-decoreba check: reject questions that ask about article numbers ──
-      const enunciadoLower = q.enunciado.toLowerCase();
+      // ── Anti-decoreba check ──
       const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
-      if (decoreba.test(enunciadoLower)) {
+      if (decoreba.test(q.enunciado.toLowerCase())) {
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: decoreba (cita artigo no enunciado)`); continue;
       }
 
-      // ── Duplicate detection ──
+      // ── Text fingerprint duplicate detection ──
       const fp = buildFingerprint(q.enunciado);
       if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata`); continue;
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata textual`); continue;
       }
       batchFingerprints.add(fp);
 
-      // ── Validate ALL cited articles exist in law ──
+      // ── Semantic fingerprint duplicate detection ──
       const correctAltKey = ALT_KEYS[q.gabarito];
       const correctAltText = q[correctAltKey] as string;
+      const semFP = buildSemanticFingerprint(q.comentario, correctAltText);
+      if (existingSemanticFPs.has(semFP) || batchSemanticFPs.has(semFP)) {
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata semântica (mesmo artigo + conceito)`); continue;
+      }
+      batchSemanticFPs.add(semFP);
+
+      // ── Validate ALL cited articles exist in law ──
       const literalArticle = findArticleForText(correctAltText, blocks);
       const evidenceArticle = detectCommentEvidenceArticle(q.comentario, blocks);
       const resolvedArticle = evidenceArticle || literalArticle;
@@ -516,7 +585,7 @@ JSON array:
         continue;
       }
 
-      // ── Verify correct answer text is in the law (article block matching) ──
+      // ── Verify correct answer text is in the law ──
       if (resolvedArticle) {
         const resolvedNum = resolvedArticle.match(/\d+/)?.[0];
         const commentCitedArts = extractAllCitedArticles(q.comentario);
@@ -527,7 +596,6 @@ JSON array:
       }
 
       const approvedArts = extractAllCitedArticles(q.comentario);
-
       validQuestions.push(q);
       console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} ${resolvedArticle ? `(conferido: ${resolvedArticle})` : ""}`);
     }

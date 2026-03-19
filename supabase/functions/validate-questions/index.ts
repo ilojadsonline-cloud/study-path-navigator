@@ -20,7 +20,6 @@ function normalizeWhitespace(text: unknown): string {
   return String(text ?? "").replace(/\s+/g, " ").trim();
 }
 
-/** Parse law text into article blocks: { artNum: "5", text: "full text of article 5..." } */
 function parseArticleBlocks(lawText: string): ArticleBlock[] {
   const blocks: ArticleBlock[] = [];
   const regex = /Art\.?\s*(\d+)/gi;
@@ -43,7 +42,6 @@ function findUniqueArticleMatch(probe: string, blocks: ArticleBlock[]): string |
   return matches.length === 1 ? `Art. ${matches[0].artNum}` : null;
 }
 
-/** Find which article block contains a text snippet */
 function findArticleForText(snippet: string, blocks: ArticleBlock[]): string | null {
   const cleanedSnippet = normalizeWhitespace(snippet);
   if (!cleanedSnippet || cleanedSnippet.length < 15) return null;
@@ -74,7 +72,6 @@ function findArticleForText(snippet: string, blocks: ArticleBlock[]): string | n
   return null;
 }
 
-/** Extract ALL article numbers cited in text */
 function extractAllCitedArticles(text: string): string[] {
   const matches = text.match(/Art\.?\s*(\d+)/gi) || [];
   return [...new Set(matches.map(m => m.match(/\d+/)?.[0] || "").filter(Boolean))];
@@ -82,18 +79,12 @@ function extractAllCitedArticles(text: string): string[] {
 
 function extractCommentEvidenceSnippets(comment: string): string[] {
   const snippets = Array.from(
-    comment.matchAll(/["“”'‘’]([^"“”'‘’]{20,500})["“”'‘’]/g),
+    comment.matchAll(/["""''']([^"""''']{20,500})["""''']/g),
     (match) => normalizeWhitespace(match[1]),
   ).filter(Boolean);
-
   const colonTail = normalizeWhitespace(
-    comment
-      .split(":")
-      .slice(1)
-      .join(":")
-      .replace(/^["“”'‘’]+|["“”'‘’]+$/g, ""),
+    comment.split(":").slice(1).join(":").replace(/^["""''']+|["""''']+$/g, ""),
   );
-
   if (colonTail.length >= 20) snippets.push(colonTail);
   return [...new Set(snippets)];
 }
@@ -106,12 +97,10 @@ function detectCommentEvidenceArticle(comment: string, blocks: ArticleBlock[]): 
   return null;
 }
 
-/** Check if a specific article number exists in the law text */
 function articleExistsInLaw(artNum: string, blocks: ArticleBlock[]): boolean {
   return blocks.some(b => b.artNum === artNum);
 }
 
-/** Validate ALL cited articles exist in law */
 function validateAllCitations(comment: string, blocks: ArticleBlock[]): { valid: boolean; missing: string[] } {
   const cited = extractAllCitedArticles(comment);
   const missing: string[] = [];
@@ -144,7 +133,6 @@ function reconcileCommentArticle(comment: string, targetArticle: string): string
   return normalizeWhitespace(nextComment);
 }
 
-/** Cross-validate enunciado vs comment references */
 function crossValidateReferences(enunciado: string, comment: string): { valid: boolean; reason: string } {
   const enunciadoArts = extractAllCitedArticles(enunciado);
   const commentArts = extractAllCitedArticles(comment);
@@ -157,16 +145,28 @@ function crossValidateReferences(enunciado: string, comment: string): { valid: b
   return { valid: true, reason: "" };
 }
 
-/** Clamp gabarito to 0-4 integer */
 function clampGabarito(val: unknown): number {
   const n = parseInt(String(val));
   if (isNaN(n)) return 0;
   return Math.max(0, Math.min(4, n));
 }
 
-/** Build fingerprint for duplicate detection */
 function buildFingerprint(enunciado: string): string {
   return normalize(enunciado).replace(/\s+/g, "").substring(0, 80);
+}
+
+/** Build a semantic fingerprint: article number + key legal terms from the correct answer.
+ *  Two questions about the same article and same legal concept will collide. */
+function buildSemanticFingerprint(comentario: string, correctAltText: string): string {
+  const arts = extractAllCitedArticles(comentario);
+  const artPart = arts.sort().join(",");
+  const keyTerms = normalize(correctAltText)
+    .split(" ")
+    .filter(w => w.length > 4)
+    .sort()
+    .slice(0, 8)
+    .join(" ");
+  return `${artPart}|${keyTerms}`.substring(0, 100);
 }
 
 // ── Main handler ─────────────────────────────────────────────────────────
@@ -204,7 +204,7 @@ serve(async (req) => {
     // 2. Fetch legal texts and parse into article blocks
     const { data: legalRows } = await supabase.from("discipline_legal_texts").select("disciplina, content");
     const legalTexts: Record<string, string> = {};
-    const articleBlocksCache: Record<string, Array<{ artNum: string; text: string }>> = {};
+    const articleBlocksCache: Record<string, Array<ArticleBlock>> = {};
     if (legalRows) {
       for (const row of legalRows) {
         legalTexts[row.disciplina] = row.content;
@@ -215,12 +215,19 @@ serve(async (req) => {
     // 3. Fetch existing fingerprints for duplicate detection (last 500 questions not in current batch)
     const batchIds = new Set(questions.map(q => q.id));
     const { data: existingQuestions } = await supabase
-      .from("questoes").select("id, enunciado").order("id", { ascending: false }).limit(500);
+      .from("questoes").select("id, enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito")
+      .order("id", { ascending: false }).limit(500);
+    
     const existingFingerprints = new Map<string, number>();
+    const existingSemanticFPs = new Map<string, number>();
     if (existingQuestions) {
       for (const eq of existingQuestions) {
         if (!batchIds.has(eq.id)) {
           existingFingerprints.set(buildFingerprint(eq.enunciado), eq.id);
+          // Semantic fingerprint
+          const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
+          const correctText = eq[correctKey] || "";
+          existingSemanticFPs.set(buildSemanticFingerprint(eq.comentario || "", correctText), eq.id);
         }
       }
     }
@@ -229,31 +236,54 @@ serve(async (req) => {
     let fixedCount = 0;
     let deletedCount = 0;
     const details: Array<{ id: number; status: string; motivo: string }> = [];
-    const batchFingerprints = new Map<string, number>(); // Track within-batch duplicates
+    const batchFingerprints = new Map<string, number>();
+    const batchSemanticFPs = new Map<string, number>();
 
     for (const q of questions!) {
       const lawText = legalTexts[q.disciplina];
       const blocks = articleBlocksCache[q.disciplina] || [];
 
-      // ── Duplicate check ──────────────────────────────
+      // ── Text fingerprint duplicate check ──────────────────────────────
       const fp = buildFingerprint(q.enunciado);
       const existingDupId = existingFingerprints.get(fp);
       const batchDupId = batchFingerprints.get(fp);
       if (existingDupId) {
         await supabase.from("questoes").delete().eq("id", q.id);
         deletedCount++;
-        details.push({ id: q.id, status: "excluida", motivo: `Duplicata da questão #${existingDupId}` });
-        console.log(`[VALIDAR] #${q.id} EXCLUÍDA: duplicata de #${existingDupId}`);
+        details.push({ id: q.id, status: "excluida", motivo: `Duplicata textual da questão #${existingDupId}` });
+        console.log(`[VALIDAR] #${q.id} EXCLUÍDA: duplicata textual de #${existingDupId}`);
         continue;
       }
       if (batchDupId) {
         await supabase.from("questoes").delete().eq("id", q.id);
         deletedCount++;
-        details.push({ id: q.id, status: "excluida", motivo: `Duplicata da questão #${batchDupId} (no lote)` });
-        console.log(`[VALIDAR] #${q.id} EXCLUÍDA: duplicata de #${batchDupId} (lote)`);
+        details.push({ id: q.id, status: "excluida", motivo: `Duplicata textual da questão #${batchDupId} (no lote)` });
+        console.log(`[VALIDAR] #${q.id} EXCLUÍDA: duplicata textual de #${batchDupId} (lote)`);
         continue;
       }
       batchFingerprints.set(fp, q.id);
+
+      // ── Semantic duplicate check ──────────────────────────────
+      const correctAltKey = ALT_KEYS[Math.min(Math.max(q.gabarito || 0, 0), 4)];
+      const correctAltText: string = q[correctAltKey] || "";
+      const semFP = buildSemanticFingerprint(q.comentario || "", correctAltText);
+      const existingSemDupId = existingSemanticFPs.get(semFP);
+      const batchSemDupId = batchSemanticFPs.get(semFP);
+      if (existingSemDupId) {
+        await supabase.from("questoes").delete().eq("id", q.id);
+        deletedCount++;
+        details.push({ id: q.id, status: "excluida", motivo: `Duplicata semântica da questão #${existingSemDupId} (mesmo artigo + conceito)` });
+        console.log(`[VALIDAR] #${q.id} EXCLUÍDA: duplicata semântica de #${existingSemDupId}`);
+        continue;
+      }
+      if (batchSemDupId) {
+        await supabase.from("questoes").delete().eq("id", q.id);
+        deletedCount++;
+        details.push({ id: q.id, status: "excluida", motivo: `Duplicata semântica da questão #${batchSemDupId} (no lote)` });
+        console.log(`[VALIDAR] #${q.id} EXCLUÍDA: duplicata semântica de #${batchSemDupId} (lote)`);
+        continue;
+      }
+      batchSemanticFPs.set(semFP, q.id);
 
       if (!lawText || blocks.length === 0) {
         okCount++;
@@ -262,17 +292,10 @@ serve(async (req) => {
         continue;
       }
 
-      const correctAltKey = ALT_KEYS[q.gabarito] || "alt_a";
-      const correctAltText: string = q[correctAltKey] || "";
-
-      // Ultra-precise: search correct answer text literally in the law
       const literalArticle = findArticleForText(correctAltText, blocks);
-      // Also check evidence snippets quoted in comment
       const evidenceArticle = detectCommentEvidenceArticle(q.comentario || "", blocks);
-      // Also try to match each alternative text to find the strongest match
       let bestLiteralMatch: string | null = literalArticle;
       if (!bestLiteralMatch) {
-        // Try longer substrings of the correct alternative
         const altWords = correctAltText.split(/\s+/).filter(w => w.length > 3);
         for (let winSize = Math.min(altWords.length, 15); winSize >= 5 && !bestLiteralMatch; winSize--) {
           for (let s = 0; s <= altWords.length - winSize && !bestLiteralMatch; s++) {
@@ -304,7 +327,7 @@ serve(async (req) => {
         }
       }
 
-      // Check 3: Article mismatch — comment cites different article than where correct answer actually is
+      // Check 3: Article mismatch
       if (!needsFix && realArticle && commentCitedArts.length > 0) {
         const realNum = realArticle.match(/\d+/)?.[0];
         const anyMatch = commentCitedArts.some(a => a === realNum);
@@ -345,18 +368,17 @@ serve(async (req) => {
         }
       }
 
-      // Check 7: Anti-decoreba — enunciado must NOT reference article numbers directly
+      // Check 7: Anti-decoreba
       if (!needsFix) {
-        const enunciadoLower = q.enunciado.toLowerCase();
         const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
-        if (decoreba.test(enunciadoLower)) {
+        if (decoreba.test(q.enunciado.toLowerCase())) {
           needsFix = true;
           fixReason = "Questão decoreba: enunciado cita número de artigo (deve ser caso prático)";
           console.log(`[VALIDAR] #${q.id} PROBLEMA: decoreba`);
         }
       }
 
-      // ── STEP B: No fix needed ─────────────────────────────────
+      // ── No fix needed ─────────────────────────────────
       if (!needsFix) {
         okCount++;
         details.push({ id: q.id, status: "ok", motivo: realArticle ? `Validada (${realArticle})` : "Validada OK" });
@@ -391,7 +413,7 @@ serve(async (req) => {
         continue;
       }
 
-      // ── STEP D: AI mode — use DeepSeek to rewrite ─────────────
+      // ── AI mode — use DeepSeek to rewrite ─────────────
       if (!DEEPSEEK_API_KEY) {
         questoesRevisaoManual.push({ id: q.id, motivo: "DEEPSEEK_API_KEY não configurada" });
         errosEncontrados.push({ codigo: "NO_API_KEY", descricao: "DEEPSEEK_API_KEY ausente" });
@@ -399,7 +421,6 @@ serve(async (req) => {
         continue;
       }
 
-      // Build article context: include the real article block + nearby blocks
       let articleContext = "";
       if (realArticle) {
         const realNum = realArticle.match(/\d+/)?.[0];
@@ -417,7 +438,7 @@ ${realArticle ? `A busca literal confirmou que o conteúdo correto está no ${re
 
 REGRAS INVIOLÁVEIS:
 1. Use EXCLUSIVAMENTE o texto legal fornecido. NUNCA invente artigos ou trechos.
-2. O comentário DEVE citar o artigo CORRETO com transcrição LITERAL do texto legal.
+2. O comentário é a PROVA REAL: DEVE citar artigo, parágrafo e inciso EXATAMENTE como estão na lei seca, com transcrição literal. NUNCA interprete criativamente.
 3. ${realArticle ? `O comentário DEVE obrigatoriamente citar o ${realArticle} (confirmado por busca literal no texto da lei).` : "Se não encontrar base legal para esta questão, responda valida=false."}
 4. VERIFIQUE que cada "Art. X" que você citar EXISTE no texto fornecido.
 5. Gabarito: 0=A, 1=B, 2=C, 3=D, 4=E.
@@ -427,6 +448,7 @@ REGRAS PEDAGÓGICAS (OBRIGATÓRIAS na reescrita):
 - CASO PRÁTICO: O enunciado deve descrever uma SITUAÇÃO CONCRETA do cotidiano militar com personagens fictícios (Soldado Silva, Cabo Pereira, Sargento Lima, etc.). O candidato aplica a lei ao caso.
 - PEGADINHAS INTELIGENTES: Alternativas incorretas devem usar trocadilhos jurídicos (trocar "deverá"/"poderá", inverter prazos, trocar "vedado"/"facultado"). Distratores plausíveis.
 - O número do artigo aparece SOMENTE no comentário como fundamentação.
+- PRIORIZE COMPLEXIDADE: Questões com casos práticos bem estruturados e problemáticas complexas são mais valiosas. Mantenha esse nível.
 ${articleContext}
 
 TEXTO LEGAL COMPLETO (${q.disciplina}):
@@ -447,7 +469,7 @@ Corrija a questão (reescrevendo como caso prático se necessário). Responda AP
           body: JSON.stringify({
             model: "deepseek-chat",
             messages: [
-              { role: "system", content: "Você é um professor de concurso militar de elite E auditor jurídico. Você corrige questões transformando-as em casos práticos com pegadinhas inteligentes. Responda APENAS JSON válido, sem markdown." },
+              { role: "system", content: "Você é um professor de concurso militar de elite E auditor jurídico. Você corrige questões transformando-as em casos práticos com pegadinhas inteligentes. O comentário é sempre a prova real com transcrição literal da lei. Responda APENAS JSON válido, sem markdown." },
               { role: "user", content: prompt },
             ],
             temperature: 0.1,
