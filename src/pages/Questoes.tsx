@@ -253,6 +253,22 @@ const Questoes = () => {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
+        ) : allAnsweredInDisciplina ? (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-16 glass-card rounded-xl space-y-4">
+            <CheckCircle className="w-12 h-12 text-success mx-auto" />
+            <p className="text-lg font-bold text-foreground">Parabéns! 🎉</p>
+            <p className="text-sm text-muted-foreground">
+              Você concluiu todas as questões{filterDisciplina !== "Todos" ? ` de ${filterDisciplina}` : ""}!
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" onClick={() => { lastFilterKeyRef.current = ""; setFilterStatus("Resolvidas"); }}>
+                Revisar Respondidas
+              </Button>
+              <Button variant="outline" onClick={() => { lastFilterKeyRef.current = ""; setFilterStatus("Apenas Erradas"); }}>
+                Revisar Erradas
+              </Button>
+            </div>
+          </motion.div>
         ) : questoes.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
             <p className="text-lg font-medium">Nenhuma questão encontrada</p>
