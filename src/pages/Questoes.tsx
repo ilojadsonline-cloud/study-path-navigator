@@ -46,8 +46,10 @@ const Questoes = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterDisciplina, setFilterDisciplina] = useState(initialDisciplina);
   const [filterDificuldade, setFilterDificuldade] = useState("Todos");
-  const [filterStatus, setFilterStatus] = useState("Todos");
+  const [filterStatus, setFilterStatus] = useState("Não resolvidas");
   const [answeredIds, setAnsweredIds] = useState<Set<number>>(new Set());
+  const [wrongIds, setWrongIds] = useState<Set<number>>(new Set());
+  const [allAnsweredInDisciplina, setAllAnsweredInDisciplina] = useState(false);
   const [availableDisciplinas, setAvailableDisciplinas] = useState<string[]>([]);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportQuestaoId, setReportQuestaoId] = useState<number | null>(null);
