@@ -123,11 +123,18 @@ const Questoes = () => {
     const { data, error } = await query.order("id");
     if (!error && data) {
       let filtered = data as Questao[];
+      const totalBeforeStatusFilter = filtered.length;
       if (filterStatus === "Resolvidas") {
         filtered = filtered.filter(q => answeredIds.has(q.id));
       } else if (filterStatus === "Não resolvidas") {
         filtered = filtered.filter(q => !answeredIds.has(q.id));
+      } else if (filterStatus === "Apenas Erradas") {
+        filtered = filtered.filter(q => wrongIds.has(q.id));
       }
+      // Check if all questions in this discipline have been answered
+      setAllAnsweredInDisciplina(
+        filterStatus === "Não resolvidas" && filtered.length === 0 && totalBeforeStatusFilter > 0
+      );
       // Shuffle once per filter change (Fisher-Yates)
       for (let i = filtered.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
