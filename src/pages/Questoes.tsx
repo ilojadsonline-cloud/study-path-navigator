@@ -95,9 +95,10 @@ const Questoes = () => {
     };
     const fetchAnswered = async () => {
       if (!user) return;
-      const { data } = await supabase.from("respostas_usuario").select("questao_id").eq("user_id", user.id);
+      const { data } = await supabase.from("respostas_usuario").select("questao_id, correta").eq("user_id", user.id);
       if (data) {
         setAnsweredIds(new Set(data.map(d => d.questao_id)));
+        setWrongIds(new Set(data.filter(d => !d.correta).map(d => d.questao_id)));
       }
     };
     fetchDisciplinas();
