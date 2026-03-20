@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { isCPF, cleanCPF } from "@/lib/cpf";
+import { getAuthRedirectUrl } from "@/lib/auth-redirect";
 
 const EsqueciSenha = () => {
   const [identifier, setIdentifier] = useState("");
@@ -36,7 +37,7 @@ const EsqueciSenha = () => {
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: getAuthRedirectUrl("/reset-password"),
       });
 
       if (error) {
