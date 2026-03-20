@@ -146,6 +146,27 @@ export function AdminUsersTab() {
     setSavingUser(false);
   };
 
+  const handleResetPassword = async () => {
+    if (!resetPasswordUser || !newPassword) return;
+    if (newPassword.length < 6) {
+      toast({ title: "Senha deve ter no mínimo 6 caracteres", variant: "destructive" }); return;
+    }
+    setResettingPassword(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: { action: "reset_password", user_id: resetPasswordUser.user_id, new_password: newPassword },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Senha alterada com sucesso!" });
+      setResetPasswordUser(null);
+      setNewPassword("");
+    } catch (err: any) {
+      toast({ title: "Erro ao alterar senha", description: err.message, variant: "destructive" });
+    }
+    setResettingPassword(false);
+  };
+
   const getDaysRemaining = (endDate: string | null) => {
     if (!endDate) return null;
     const diff = new Date(endDate).getTime() - Date.now();
