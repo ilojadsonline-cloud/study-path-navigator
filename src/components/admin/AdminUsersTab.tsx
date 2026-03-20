@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
 import {
-  Users, Trash2, Search, Loader2, ShieldAlert, UserPlus, UserMinus, Ban, Pencil, Save, Clock, Crown, RefreshCw,
+  Users, Trash2, Search, Loader2, ShieldAlert, UserPlus, UserMinus, Ban, Pencil, Save, Clock, Crown, RefreshCw, KeyRound,
 } from "lucide-react";
 
 interface EnrichedUser {
@@ -35,6 +35,9 @@ export function AdminUsersTab() {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [editUser, setEditUser] = useState<EditUserData | null>(null);
   const [savingUser, setSavingUser] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<{ user_id: string; nome: string } | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => { loadUsers(); }, []);
 
@@ -143,6 +146,27 @@ export function AdminUsersTab() {
     setSavingUser(false);
   };
 
+  const handleResetPassword = async () => {
+    if (!resetPasswordUser || !newPassword) return;
+    if (newPassword.length < 6) {
+      toast({ title: "Senha deve ter no mínimo 6 caracteres", variant: "destructive" }); return;
+    }
+    setResettingPassword(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: { action: "reset_password", user_id: resetPasswordUser.user_id, new_password: newPassword },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Senha alterada com sucesso!" });
+      setResetPasswordUser(null);
+      setNewPassword("");
+    } catch (err: any) {
+      toast({ title: "Erro ao alterar senha", description: err.message, variant: "destructive" });
+    }
+    setResettingPassword(false);
+  };
+
   const getDaysRemaining = (endDate: string | null) => {
     if (!endDate) return null;
     const diff = new Date(endDate).getTime() - Date.now();
@@ -227,6 +251,10 @@ export function AdminUsersTab() {
                           {actionLoading === u.user_id + "_block" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
                             <Ban className={`w-3.5 h-3.5 ${u.is_blocked ? "text-destructive" : "text-muted-foreground"}`} />}
                         </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" title="Alterar senha"
+                          onClick={() => setResetPasswordUser({ user_id: u.user_id, nome: u.nome })}>
+                          <KeyRound className="w-3.5 h-3.5 text-muted-foreground" />
+                        </Button>
                         <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar cadastro"
                           onClick={() => setEditUser({ user_id: u.user_id, nome: u.nome, email: u.email || "", cpf: u.cpf })}>
                           <Pencil className="w-3.5 h-3.5" />
@@ -307,6 +335,33 @@ export function AdminUsersTab() {
                 <Button onClick={handleEditUser} disabled={savingUser} className="gradient-primary text-primary-foreground font-bold">
                   {savingUser ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
                   {savingUser ? "Salvando..." : "Salvar"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resetPasswordUser} onOpenChange={() => { setResetPasswordUser(null); setNewPassword(""); }}>
+        <DialogContent className="max-w-sm">
+          {resetPasswordUser && (
+            <>
+              <DialogHeader><DialogTitle>Alterar Senha</DialogTitle></DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                Definir nova senha para <strong>{resetPasswordUser.nome}</strong>
+              </p>
+              <Input
+                type="password"
+                placeholder="Nova senha (mín. 6 caracteres)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setResetPasswordUser(null); setNewPassword(""); }}>Cancelar</Button>
+                <Button onClick={handleResetPassword} disabled={resettingPassword} className="gradient-primary text-primary-foreground font-bold">
+                  {resettingPassword ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <KeyRound className="w-4 h-4 mr-1" />}
+                  {resettingPassword ? "Alterando..." : "Alterar Senha"}
                 </Button>
               </DialogFooter>
             </>

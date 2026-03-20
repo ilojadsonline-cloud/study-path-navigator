@@ -1,32 +1,51 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Shield, Mail, Lock, ArrowRight, Loader2, CheckCircle } from "lucide-react";
+import { Shield, Mail, ArrowRight, Loader2, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { isCPF, cleanCPF } from "@/lib/cpf";
 
 const EsqueciSenha = () => {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
-      toast({ title: "Informe seu email", variant: "destructive" });
+    if (!identifier) {
+      toast({ title: "Informe seu email ou CPF", variant: "destructive" });
       return;
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    try {
+      let email = identifier.trim();
 
-    if (error) {
-      toast({ title: "Erro ao enviar email", description: error.message, variant: "destructive" });
-    } else {
-      setSent(true);
+      // If input looks like CPF, resolve to email
+      if (isCPF(identifier)) {
+        const cpf = cleanCPF(identifier);
+        const { data: resolvedEmail, error: rpcError } = await supabase.rpc("get_email_by_cpf", { p_cpf: cpf });
+        if (rpcError || !resolvedEmail) {
+          toast({ title: "CPF não encontrado", description: "Verifique o CPF informado.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+        email = resolvedEmail;
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        toast({ title: "Erro ao enviar email", description: error.message, variant: "destructive" });
+      } else {
+        setSent(true);
+      }
+    } catch (err: any) {
+      toast({ title: "Erro inesperado", description: err.message, variant: "destructive" });
     }
     setLoading(false);
   };
@@ -70,16 +89,16 @@ const EsqueciSenha = () => {
         <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-6 space-y-5">
           <div className="text-center">
             <h2 className="text-lg font-bold">Esqueceu sua senha?</h2>
-            <p className="text-xs text-muted-foreground mt-1">Informe seu email e enviaremos um link de recuperação</p>
+            <p className="text-xs text-muted-foreground mt-1">Informe seu email ou CPF e enviaremos um link de recuperação</p>
           </div>
 
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="Seu email"
+              type="text"
+              value={identifier}
+              onChange={e => setIdentifier(e.target.value)}
+              placeholder="Email ou CPF"
               className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all"
             />
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Shield, Lock, Eye, EyeOff, ArrowRight, Loader2, CheckCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -13,11 +13,11 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [error, setError] = useState(false);
+  const sessionReadyRef = useRef(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Handle PKCE flow: exchange code from URL query params
     const url = new URL(window.location.href);
     const code = url.searchParams.get("code");
     const errorParam = url.searchParams.get("error");
@@ -29,6 +29,13 @@ const ResetPassword = () => {
       return;
     }
 
+    const markReady = () => {
+      if (!sessionReadyRef.current) {
+        sessionReadyRef.current = true;
+        setSessionReady(true);
+      }
+    };
+
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
         if (exchangeError) {
@@ -36,32 +43,55 @@ const ResetPassword = () => {
           setError(true);
           toast({ title: "Link expirado ou inválido", description: "Solicite um novo link de recuperação.", variant: "destructive" });
         } else {
-          setSessionReady(true);
+          // Clean URL after exchange
+          window.history.replaceState({}, "", "/reset-password");
+          markReady();
         }
       });
       return;
     }
 
-    // Handle implicit/hash flow
+    // Handle hash fragment flow (implicit)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get("access_token");
+    const type = hashParams.get("type");
+
+    if (accessToken && type === "recovery") {
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: hashParams.get("refresh_token") || "",
+      }).then(({ error: sessionError }) => {
+        if (sessionError) {
+          console.error("Session set error:", sessionError);
+          setError(true);
+        } else {
+          window.history.replaceState({}, "", "/reset-password");
+          markReady();
+        }
+      });
+      return;
+    }
+
+    // Listen for PASSWORD_RECOVERY event
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        setSessionReady(true);
+        markReady();
       }
     });
 
-    // Check if session already exists (hash was auto-processed)
+    // Check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        setSessionReady(true);
+        markReady();
       }
     });
 
-    // Timeout after 5s if nothing works
+    // Longer timeout - 15s
     const timeout = setTimeout(() => {
-      if (!sessionReady) {
+      if (!sessionReadyRef.current) {
         setError(true);
       }
-    }, 5000);
+    }, 15000);
 
     return () => {
       subscription.unsubscribe();
