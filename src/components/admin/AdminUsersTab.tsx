@@ -35,6 +35,9 @@ export function AdminUsersTab() {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [editUser, setEditUser] = useState<EditUserData | null>(null);
   const [savingUser, setSavingUser] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<{ user_id: string; nome: string } | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => { loadUsers(); }, []);
 
