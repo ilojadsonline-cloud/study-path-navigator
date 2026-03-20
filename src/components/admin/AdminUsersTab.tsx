@@ -341,6 +341,33 @@ export function AdminUsersTab() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resetPasswordUser} onOpenChange={() => { setResetPasswordUser(null); setNewPassword(""); }}>
+        <DialogContent className="max-w-sm">
+          {resetPasswordUser && (
+            <>
+              <DialogHeader><DialogTitle>Alterar Senha</DialogTitle></DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                Definir nova senha para <strong>{resetPasswordUser.nome}</strong>
+              </p>
+              <Input
+                type="password"
+                placeholder="Nova senha (mín. 6 caracteres)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setResetPasswordUser(null); setNewPassword(""); }}>Cancelar</Button>
+                <Button onClick={handleResetPassword} disabled={resettingPassword} className="gradient-primary text-primary-foreground font-bold">
+                  {resettingPassword ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <KeyRound className="w-4 h-4 mr-1" />}
+                  {resettingPassword ? "Alterando..." : "Alterar Senha"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
