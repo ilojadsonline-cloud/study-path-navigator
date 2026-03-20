@@ -251,6 +251,10 @@ export function AdminUsersTab() {
                           {actionLoading === u.user_id + "_block" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
                             <Ban className={`w-3.5 h-3.5 ${u.is_blocked ? "text-destructive" : "text-muted-foreground"}`} />}
                         </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" title="Alterar senha"
+                          onClick={() => setResetPasswordUser({ user_id: u.user_id, nome: u.nome })}>
+                          <KeyRound className="w-3.5 h-3.5 text-muted-foreground" />
+                        </Button>
                         <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar cadastro"
                           onClick={() => setEditUser({ user_id: u.user_id, nome: u.nome, email: u.email || "", cpf: u.cpf })}>
                           <Pencil className="w-3.5 h-3.5" />
