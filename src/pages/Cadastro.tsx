@@ -5,6 +5,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
 import { useToast } from "@/hooks/use-toast";
+import { getAuthRedirectUrl } from "@/lib/auth-redirect";
 
 const Cadastro = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -105,7 +106,7 @@ const Cadastro = () => {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: getAuthRedirectUrl("/") },
     });
 
     if (authError) {
