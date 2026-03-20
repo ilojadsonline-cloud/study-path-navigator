@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
 import {
-  Users, Trash2, Search, Loader2, ShieldAlert, UserPlus, UserMinus, Ban, Pencil, Save, Clock, Crown, RefreshCw,
+  Users, Trash2, Search, Loader2, ShieldAlert, UserPlus, UserMinus, Ban, Pencil, Save, Clock, Crown, RefreshCw, KeyRound,
 } from "lucide-react";
 
 interface EnrichedUser {

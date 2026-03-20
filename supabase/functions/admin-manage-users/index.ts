@@ -248,6 +248,21 @@ serve(async (req) => {
       });
     }
 
+    // ── RESET PASSWORD (admin) ──
+    if (action === "reset_password") {
+      const { user_id, new_password } = params;
+      if (!user_id || !new_password) throw new Error("user_id e new_password são obrigatórios");
+      if (new_password.length < 6) throw new Error("Senha deve ter no mínimo 6 caracteres");
+
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, { password: new_password });
+      if (error) throw new Error(`Erro ao alterar senha: ${error.message}`);
+
+      logStep("Password reset by admin", { user_id });
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ── UPDATE QUESTION ──
     if (action === "update_question") {
       const { question_id, updates } = params;
