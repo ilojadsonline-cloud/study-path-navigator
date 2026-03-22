@@ -17,7 +17,7 @@ serve(async (req) => {
       apiVersion: "2025-08-27.basil",
     });
 
-    const origin = req.headers.get("origin") || "https://exam-roadmap-buddy.lovable.app";
+    const origin = req.headers.get("origin") || "https://www.metodochoa.com.br";
 
     // Try to get user email from auth
     let customerEmail: string | undefined;
