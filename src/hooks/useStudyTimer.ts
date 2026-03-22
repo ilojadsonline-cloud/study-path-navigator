@@ -103,14 +103,29 @@ export function useStudyTimer() {
       if (!state.sessionId) return;
       const now = Date.now();
       if (now - state.lastActive <= INACTIVITY_LIMIT_MS) {
-        // Only add time if user was recently active
         state.elapsed += Math.min(INTERVAL_SECONDS, Math.floor((now - state.lastActive) / 1000));
       }
       saveState(state);
-      navigator.sendBeacon(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/study_sessions?id=eq.${state.sessionId}`,
-        JSON.stringify({ duration_seconds: state.elapsed })
-      );
+      // Use sendBeacon with proper auth headers via Blob
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/study_sessions?id=eq.${state.sessionId}`;
+      const body = JSON.stringify({ duration_seconds: state.elapsed });
+      const headers = {
+        "Content-Type": "application/json",
+        "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "",
+        "Authorization": `Bearer ${(JSON.parse(localStorage.getItem("sb-axsnwyyraybgczmsntur-auth-token") || "{}"))?.access_token || ""}`,
+        "Prefer": "return=minimal",
+      };
+      // sendBeacon only supports Blob/FormData for custom headers via fetch keepalive
+      try {
+        fetch(url, {
+          method: "PATCH",
+          headers,
+          body,
+          keepalive: true,
+        });
+      } catch {
+        // Fallback: best-effort save already persisted to localStorage
+      }
     };
 
     window.addEventListener("beforeunload", handleUnload);
