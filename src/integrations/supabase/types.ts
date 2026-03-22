@@ -101,6 +101,7 @@ export type Database = {
           email: string | null
           id: string
           nome: string
+          show_in_ranking: boolean
           updated_at: string
           user_id: string
         }
@@ -110,6 +111,7 @@ export type Database = {
           email?: string | null
           id?: string
           nome: string
+          show_in_ranking?: boolean
           updated_at?: string
           user_id: string
         }
@@ -119,6 +121,7 @@ export type Database = {
           email?: string | null
           id?: string
           nome?: string
+          show_in_ranking?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -404,6 +407,16 @@ export type Database = {
     Functions: {
       check_cpf_exists: { Args: { p_cpf: string }; Returns: boolean }
       get_email_by_cpf: { Args: { p_cpf: string }; Returns: string }
+      get_top10_ranking: {
+        Args: never
+        Returns: {
+          nome: string
+          taxa_acertos: number
+          total_corretas: number
+          total_respondidas: number
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
