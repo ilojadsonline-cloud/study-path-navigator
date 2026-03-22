@@ -12,28 +12,28 @@ import mockupEdital from "@/assets/mockup-edital.jpg";
 
 const features = [
   { icon: <BookOpen className="w-6 h-6" />, title: "Edital Verticalizado", desc: "Trilha de estudos completa baseada no edital CHOA/CHOM 2024 com 7 disciplinas e links diretos para legislação." },
-  { icon: <HelpCircle className="w-6 h-6" />, title: "Banco de Questões", desc: "Centenas de questões no estilo PMTO com correção automática, comentários fundamentados e filtros por disciplina." },
+  { icon: <HelpCircle className="w-6 h-6" />, title: "+1.000 Questões", desc: "Mais de mil questões no estilo PMTO com correção automática, comentários fundamentados na lei seca e filtros por disciplina." },
   { icon: <Shuffle className="w-6 h-6" />, title: "Simulados Inteligentes", desc: "Gerador de simulados com randomização de questões e alternativas. Simule a prova real quantas vezes quiser." },
-  { icon: <Trophy className="w-6 h-6" />, title: "Dashboard de Desempenho", desc: "Acompanhe aproveitamento geral, acertos por disciplina, horas de estudo e evolução ao longo do tempo." },
+  { icon: <Trophy className="w-6 h-6" />, title: "Ranking Top 10", desc: "Acompanhe sua posição entre os melhores guerreiros. Medalhas para os 3 primeiros e atualização em tempo real." },
   { icon: <Zap className="w-6 h-6" />, title: "Legislação do Tocantins", desc: "Acesso rápido às leis 2.578, 2.575, LC 128, CPPM e RDMETO com links para lei seca e videoaulas." },
   { icon: <Lock className="w-6 h-6" />, title: "Anti-compartilhamento", desc: "Sistema seguro com controle de sessão, proteção de conteúdo e login por CPF exclusivo." },
 ];
 
 const benefits = [
   "Acesso ilimitado a todas as disciplinas",
-  "Questões com gabarito comentado",
+  "+1.000 questões com gabarito comentado",
   "Simulados ilimitados com randomização",
+  "Ranking Top 10 Guerreiros 🏆",
   "Dashboard completo de desempenho",
   "Cronômetro de estudo integrado",
   "Suporte via e-mail",
-  "Atualizações constantes de conteúdo",
   "Acesso por 90 dias corridos",
 ];
 
 const stats = [
-  { icon: <HelpCircle className="w-5 h-5" />, value: "600+", label: "Questões" },
+  { icon: <HelpCircle className="w-5 h-5" />, value: "1.000+", label: "Questões" },
   { icon: <BookOpen className="w-5 h-5" />, value: "7", label: "Disciplinas" },
-  { icon: <Users className="w-5 h-5" />, value: "100%", label: "Legislação TO" },
+  { icon: <Trophy className="w-5 h-5" />, value: "Top 10", label: "Ranking" },
   { icon: <Target className="w-5 h-5" />, value: "90", label: "Dias de acesso" },
 ];
 
