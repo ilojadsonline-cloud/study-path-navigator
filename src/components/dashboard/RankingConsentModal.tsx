@@ -55,7 +55,7 @@ export function RankingConsentModal() {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1">
-            <Trophy className="w-6 h-6 text-yellow-500" />
+            <Trophy className="w-6 h-6 text-gold" />
             <DialogTitle className="text-lg">🏆 Chegou o Ranking Top 10!</DialogTitle>
           </div>
           <DialogDescription className="text-sm">

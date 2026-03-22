@@ -47,7 +47,7 @@ export function RankingCard() {
       className="glass-card rounded-xl p-5 space-y-4"
     >
       <div className="flex items-center gap-2">
-        <Trophy className="w-5 h-5 text-yellow-500" />
+        <Trophy className="w-5 h-5 text-gold" />
         <h2 className="font-semibold">Top 10 Guerreiros</h2>
         <span className="ml-1 px-1.5 py-0.5 text-[9px] font-bold uppercase rounded-full bg-primary/15 text-primary flex items-center gap-0.5">
           <Sparkles className="w-2.5 h-2.5" /> Novo
