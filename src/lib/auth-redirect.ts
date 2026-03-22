@@ -1,6 +1,6 @@
 const LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
 
-const FALLBACK_PUBLIC_URL = "https://exam-roadmap-buddy.lovable.app";
+const FALLBACK_PUBLIC_URL = "https://www.metodochoa.com.br";
 
 export function getAuthRedirectUrl(path: string) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
