@@ -8,6 +8,8 @@ import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp,
   Trophy, Calendar, Zap, Loader2, FileText, PlayCircle
 } from "lucide-react";
+import { RankingCard } from "@/components/dashboard/RankingCard";
+import { RankingConsentModal } from "@/components/dashboard/RankingConsentModal";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
