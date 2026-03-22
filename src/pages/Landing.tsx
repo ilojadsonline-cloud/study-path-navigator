@@ -12,69 +12,82 @@ import mockupEdital from "@/assets/mockup-edital.jpg";
 
 const features = [
   { icon: <BookOpen className="w-6 h-6" />, title: "Edital Verticalizado", desc: "Trilha de estudos completa baseada no edital CHOA/CHOM 2024 com 7 disciplinas e links diretos para legislação." },
-  { icon: <HelpCircle className="w-6 h-6" />, title: "Banco de Questões", desc: "Centenas de questões no estilo PMTO com correção automática, comentários fundamentados e filtros por disciplina." },
+  { icon: <HelpCircle className="w-6 h-6" />, title: "+1.000 Questões", desc: "Mais de mil questões no estilo PMTO com correção automática, comentários fundamentados na lei seca e filtros por disciplina." },
   { icon: <Shuffle className="w-6 h-6" />, title: "Simulados Inteligentes", desc: "Gerador de simulados com randomização de questões e alternativas. Simule a prova real quantas vezes quiser." },
-  { icon: <Trophy className="w-6 h-6" />, title: "Dashboard de Desempenho", desc: "Acompanhe aproveitamento geral, acertos por disciplina, horas de estudo e evolução ao longo do tempo." },
+  { icon: <Trophy className="w-6 h-6" />, title: "Ranking Top 10", desc: "Acompanhe sua posição entre os melhores guerreiros. Medalhas para os 3 primeiros e atualização em tempo real." },
   { icon: <Zap className="w-6 h-6" />, title: "Legislação do Tocantins", desc: "Acesso rápido às leis 2.578, 2.575, LC 128, CPPM e RDMETO com links para lei seca e videoaulas." },
   { icon: <Lock className="w-6 h-6" />, title: "Anti-compartilhamento", desc: "Sistema seguro com controle de sessão, proteção de conteúdo e login por CPF exclusivo." },
 ];
 
 const benefits = [
   "Acesso ilimitado a todas as disciplinas",
-  "Questões com gabarito comentado",
+  "+1.000 questões com gabarito comentado",
   "Simulados ilimitados com randomização",
+  "Ranking Top 10 Guerreiros 🏆",
   "Dashboard completo de desempenho",
   "Cronômetro de estudo integrado",
   "Suporte via e-mail",
-  "Atualizações constantes de conteúdo",
   "Acesso por 90 dias corridos",
 ];
 
 const stats = [
-  { icon: <HelpCircle className="w-5 h-5" />, value: "600+", label: "Questões" },
+  { icon: <HelpCircle className="w-5 h-5" />, value: "1.000+", label: "Questões" },
   { icon: <BookOpen className="w-5 h-5" />, value: "7", label: "Disciplinas" },
-  { icon: <Users className="w-5 h-5" />, value: "100%", label: "Legislação TO" },
+  { icon: <Trophy className="w-5 h-5" />, value: "Top 10", label: "Ranking" },
   { icon: <Target className="w-5 h-5" />, value: "90", label: "Dias de acesso" },
 ];
 
 const exampleQuestions = [
   {
     disciplina: "Estatuto dos Militares (Lei 2.578/12)",
-    enunciado: "De acordo com a Lei nº 2.578/2012, que dispõe sobre o Estatuto dos Militares do Estado do Tocantins, assinale a alternativa CORRETA sobre os deveres do militar estadual:",
+    enunciado: "Conforme a Lei nº 2.578/2012 (Estatuto dos Militares do Estado do Tocantins), o militar estadual que, em situação de serviço, praticar ato de bravura com risco de vida, poderá ser agraciado com qual recompensa?",
     alternativas: [
-      "O militar pode manifestar-se publicamente sobre assuntos políticos quando estiver de folga.",
-      "O dever de sigilo é restrito apenas aos documentos classificados como ultrassecretos.",
-      "Cumprir e fazer cumprir as leis, regulamentos e ordens das autoridades competentes é dever fundamental do militar estadual.",
-      "A obrigação de manter boa apresentação pessoal é facultativa durante o serviço interno.",
-      "O militar estadual pode recusar ordem superior quando considerá-la inconveniente.",
+      "Promoção por tempo de serviço, independentemente de vaga.",
+      "Dispensa do serviço por 30 dias como prêmio.",
+      "Medalha de mérito militar, na forma da legislação específica.",
+      "Elogio verbal do comandante, sem registro em ficha.",
+      "Licença-prêmio de 90 dias com remuneração integral.",
     ],
     gabarito: 2,
-    comentario: "Conforme o Art. 31 da Lei 2.578/2012, são deveres do militar estadual: I – cumprir e fazer cumprir as leis, regulamentos, instruções e ordens das autoridades competentes.",
+    comentario: "Conforme o Art. 34, inciso IV, da Lei 2.578/2012, são recompensas do militar estadual, entre outras: as condecorações e medalhas previstas em legislação específica, concedidas por atos de bravura, mérito ou serviços relevantes.",
   },
   {
     disciplina: "RDMETO (Decreto 4.994/14)",
-    enunciado: "Segundo o Regulamento Disciplinar dos Militares Estaduais do Tocantins (RDMETO), Decreto nº 4.994/2014, qual das alternativas abaixo define corretamente uma transgressão disciplinar?",
+    enunciado: "De acordo com o RDMETO (Decreto nº 4.994/2014), qual é a classificação correta das transgressões disciplinares quanto à natureza?",
     alternativas: [
-      "Qualquer ato praticado pelo militar fora do horário de serviço.",
-      "Toda ação ou omissão contrária às obrigações ou ao decoro da classe, prevista no regulamento.",
-      "Apenas atos que resultem em danos materiais ao Estado.",
-      "Somente condutas que configurem crime militar previsto no CPPM.",
-      "Atos praticados por militares com mais de 10 anos de serviço.",
+      "Simples, compostas e qualificadas.",
+      "Leves, médias e graves.",
+      "Administrativas, penais e civis.",
+      "De primeira, segunda e terceira classe.",
+      "Ordinárias, especiais e extraordinárias.",
     ],
     gabarito: 1,
-    comentario: "Conforme o Art. 12 do RDMETO, transgressão disciplinar é toda ação ou omissão contrária ao dever militar, às obrigações ou ao decoro da classe, especificada neste Regulamento.",
+    comentario: "Conforme o Art. 18 do RDMETO (Decreto 4.994/2014), as transgressões disciplinares são classificadas em leves, médias e graves, de acordo com a sua natureza e a repercussão do ato praticado.",
+  },
+  {
+    disciplina: "CPPM (Decreto-Lei 1.002/69)",
+    enunciado: "Segundo o Código de Processo Penal Militar (CPPM), a quem compete instaurar o Inquérito Policial Militar (IPM) quando o crime militar for praticado por oficial da ativa?",
+    alternativas: [
+      "A qualquer oficial superior da mesma unidade.",
+      "Ao oficial de dia da guarnição.",
+      "Ao Comandante da unidade, Corpo, Formação ou Destacamento a que pertencer o autor do crime.",
+      "Ao delegado de polícia civil da circunscrição.",
+      "Ao Ministério Público Militar, exclusivamente.",
+    ],
+    gabarito: 2,
+    comentario: "Conforme o Art. 10, alínea 'a', do CPPM (Decreto-Lei 1.002/69), o Inquérito Policial Militar é instaurado pelo Comandante da unidade, Corpo, Formação ou Destacamento a que pertencer o indiciado, sendo esta a autoridade competente para tal ato.",
   },
 ];
 
 const platformPreviews = [
   {
-    title: "Dashboard de Desempenho",
-    desc: "Visualize seu progresso com gráficos detalhados de acertos, tempo de estudo e evolução por disciplina.",
+    title: "Dashboard & Ranking",
+    desc: "Visualize seu progresso com gráficos detalhados, acompanhe o Ranking Top 10 Guerreiros e monitore horas de estudo.",
     image: mockupDashboard,
   },
   {
     title: "Banco de Questões",
-    desc: "Interface intuitiva com navegação por questões, alternativas claras e correção automática.",
+    desc: "Mais de 1.000 questões com interface intuitiva, alternativas claras, correção automática e comentários na lei seca.",
     image: mockupQuestoes,
   },
   {
@@ -149,11 +162,11 @@ const Landing = () => {
               <br />
               <span className="text-gradient-primary">CHOA começa aqui</span>
             </h1>
-            <p className="text-muted-foreground max-w-2xl mx-auto mb-10 text-base md:text-lg leading-relaxed">
-              Plataforma de questões e simulados exclusiva para preparação do Processo Seletivo Interno 
-              da <strong className="text-foreground">Polícia Militar do Estado do Tocantins</strong>. 
-              Edital verticalizado, banco de questões e simulados 100% baseados na legislação tocantinense.
-            </p>
+             <p className="text-muted-foreground max-w-2xl mx-auto mb-10 text-base md:text-lg leading-relaxed">
+               Plataforma com <strong className="text-foreground">+1.000 questões</strong> e simulados exclusiva para preparação do Processo Seletivo Interno 
+               da <strong className="text-foreground">Polícia Militar do Estado do Tocantins</strong>. 
+               Edital verticalizado, ranking competitivo e conteúdo 100% baseado na legislação tocantinense.
+             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 to="/assinatura"
