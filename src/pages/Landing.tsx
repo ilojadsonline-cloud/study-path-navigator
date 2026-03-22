@@ -81,13 +81,13 @@ const exampleQuestions = [
 
 const platformPreviews = [
   {
-    title: "Dashboard de Desempenho",
-    desc: "Visualize seu progresso com gráficos detalhados de acertos, tempo de estudo e evolução por disciplina.",
+    title: "Dashboard & Ranking",
+    desc: "Visualize seu progresso com gráficos detalhados, acompanhe o Ranking Top 10 Guerreiros e monitore horas de estudo.",
     image: mockupDashboard,
   },
   {
     title: "Banco de Questões",
-    desc: "Interface intuitiva com navegação por questões, alternativas claras e correção automática.",
+    desc: "Mais de 1.000 questões com interface intuitiva, alternativas claras, correção automática e comentários na lei seca.",
     image: mockupQuestoes,
   },
   {
