@@ -440,6 +440,9 @@ const Dashboard = () => {
                 )}
               </motion.div>
             </div>
+
+            <RankingCard />
+            <RankingConsentModal />
           </>
         )}
       </div>
