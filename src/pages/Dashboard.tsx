@@ -74,6 +74,10 @@ const Dashboard = () => {
     const fetchStats = async () => {
       setLoading(true);
 
+      // Fetch total question count
+      const { count: qCount } = await supabase.from("questoes").select("*", { count: "exact", head: true });
+      setTotalQuestoes(qCount || 0);
+
       // Fetch ALL user answers (bypassing 1000-row limit)
       const allRespostas = await fetchAllRespostas(user.id);
 
