@@ -9,8 +9,9 @@ import { useAuth } from "@/contexts/AuthContext";
 const Assinatura = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { user, subscribed, subscriptionEnd, checkSubscription } = useAuth();
+  const { user, subscribed, subscriptionEnd, checkSubscription, signOut } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const paymentStatus = searchParams.get("payment");
 
   useEffect(() => {
