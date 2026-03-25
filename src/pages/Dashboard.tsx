@@ -58,6 +58,7 @@ const Dashboard = () => {
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
 
   const [loading, setLoading] = useState(true);
+  const [totalQuestoes, setTotalQuestoes] = useState(0);
   const [totalRespondidas, setTotalRespondidas] = useState(0);
   const [totalCorretas, setTotalCorretas] = useState(0);
   const [totalSimulados, setTotalSimulados] = useState(0);
@@ -72,6 +73,10 @@ const Dashboard = () => {
 
     const fetchStats = async () => {
       setLoading(true);
+
+      // Fetch total question count
+      const { count: qCount } = await supabase.from("questoes").select("*", { count: "exact", head: true });
+      setTotalQuestoes(qCount || 0);
 
       // Fetch ALL user answers (bypassing 1000-row limit)
       const allRespostas = await fetchAllRespostas(user.id);
@@ -296,6 +301,36 @@ const Dashboard = () => {
                 </button>
               </motion.div>
             )}
+            {/* Dynamic question counter */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card rounded-xl p-4 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-primary/15">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm flex items-center gap-2">
+                    Banco de Questões
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/15 text-success text-[10px] font-bold animate-pulse">
+                      ✨ + NOVAS QUESTÕES
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="text-primary font-semibold">{totalQuestoes.toLocaleString("pt-BR")}</span> questões disponíveis — banco em constante expansão
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/questoes")}
+                className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold"
+              >
+                Estudar
+              </button>
+            </motion.div>
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 title="Questões Respondidas"

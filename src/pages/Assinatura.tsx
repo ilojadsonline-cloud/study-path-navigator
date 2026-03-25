@@ -1,16 +1,17 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, Check, Shield, Zap, Star, Clock, Loader2, Mail, AlertTriangle } from "lucide-react";
+import { CreditCard, Check, Shield, Zap, Star, Clock, Loader2, Mail, AlertTriangle, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Assinatura = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { user, subscribed, subscriptionEnd, checkSubscription } = useAuth();
+  const { user, subscribed, subscriptionEnd, checkSubscription, signOut } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const paymentStatus = searchParams.get("payment");
 
   useEffect(() => {
@@ -113,16 +114,27 @@ const Assinatura = () => {
           </div>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-4">
-          {user ? (
-            <Link to="/login" className="text-primary font-medium hover:underline">Voltar ao login</Link>
-          ) : (
-            <>
-              Já tem conta?{" "}
-              <Link to="/login" className="text-primary font-medium hover:underline">Entrar</Link>
-            </>
+        <div className="text-center mt-4 space-y-2">
+          {user && (
+            <button
+              onClick={async () => { await signOut(); navigate("/login", { replace: true }); }}
+              className="flex items-center justify-center gap-2 mx-auto text-sm text-destructive hover:underline font-medium"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair da conta
+            </button>
           )}
-        </p>
+          <p className="text-xs text-muted-foreground">
+            {user ? (
+              <Link to="/login" className="text-primary font-medium hover:underline">Entrar com outro usuário</Link>
+            ) : (
+              <>
+                Já tem conta?{" "}
+                <Link to="/login" className="text-primary font-medium hover:underline">Entrar</Link>
+              </>
+            )}
+          </p>
+        </div>
       </motion.div>
     </div>
   );

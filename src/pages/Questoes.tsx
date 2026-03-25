@@ -55,6 +55,7 @@ const Questoes = () => {
   const [reportQuestaoId, setReportQuestaoId] = useState<number | null>(null);
   const [reportMotivo, setReportMotivo] = useState("");
   const [reportSending, setReportSending] = useState(false);
+  const [shownNewToast, setShownNewToast] = useState(false);
 
   // Track the last filter key that triggered a fetch to avoid re-shuffling on re-renders
   const lastFilterKeyRef = useRef<string>("");
@@ -103,6 +104,14 @@ const Questoes = () => {
     };
     fetchDisciplinas();
     fetchAnswered();
+
+    // Show "new questions" toast once per session
+    if (!shownNewToast) {
+      setShownNewToast(true);
+      setTimeout(() => {
+        toast.info("Novas questões adicionadas recentemente! Explore novos temas e desafios. 🚀");
+      }, 1500);
+    }
   }, [user]);
 
   useEffect(() => {
