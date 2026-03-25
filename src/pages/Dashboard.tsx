@@ -58,6 +58,7 @@ const Dashboard = () => {
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
 
   const [loading, setLoading] = useState(true);
+  const [totalQuestoes, setTotalQuestoes] = useState(0);
   const [totalRespondidas, setTotalRespondidas] = useState(0);
   const [totalCorretas, setTotalCorretas] = useState(0);
   const [totalSimulados, setTotalSimulados] = useState(0);
