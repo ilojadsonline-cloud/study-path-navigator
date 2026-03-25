@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, Check, Shield, Zap, Star, Clock, Loader2, Mail, AlertTriangle } from "lucide-react";
+import { CreditCard, Check, Shield, Zap, Star, Clock, Loader2, Mail, AlertTriangle, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Assinatura = () => {
