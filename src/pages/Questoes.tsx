@@ -104,6 +104,14 @@ const Questoes = () => {
     };
     fetchDisciplinas();
     fetchAnswered();
+
+    // Show "new questions" toast once per session
+    if (!shownNewToast) {
+      setShownNewToast(true);
+      setTimeout(() => {
+        toast.info("Novas questões adicionadas recentemente! Explore novos temas e desafios. 🚀");
+      }, 1500);
+    }
   }, [user]);
 
   useEffect(() => {
