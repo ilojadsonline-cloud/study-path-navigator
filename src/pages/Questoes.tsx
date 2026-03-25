@@ -55,6 +55,7 @@ const Questoes = () => {
   const [reportQuestaoId, setReportQuestaoId] = useState<number | null>(null);
   const [reportMotivo, setReportMotivo] = useState("");
   const [reportSending, setReportSending] = useState(false);
+  const [shownNewToast, setShownNewToast] = useState(false);
 
   // Track the last filter key that triggered a fetch to avoid re-shuffling on re-renders
   const lastFilterKeyRef = useRef<string>("");
