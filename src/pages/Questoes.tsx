@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
@@ -34,12 +34,15 @@ function getAlternativas(q: Questao) {
   };
 }
 
+const PAGE_SIZE = 20;
+
 const Questoes = () => {
   const [searchParams] = useSearchParams();
   const initialDisciplina = searchParams.get("disciplina") || "Todos";
   const { user } = useAuth();
 
-  const [questoes, setQuestoes] = useState<(Questao & { alternativas: string[]; gabaritoShuffled: number })[]>([]);
+  const [allQuestoes, setAllQuestoes] = useState<(Questao & { alternativas: string[]; gabaritoShuffled: number })[]>([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<Record<number, number>>({});
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
@@ -57,11 +60,29 @@ const Questoes = () => {
   const [reportSending, setReportSending] = useState(false);
   const [shownNewToast, setShownNewToast] = useState(false);
 
-  // Track the last filter key that triggered a fetch to avoid re-shuffling on re-renders
   const lastFilterKeyRef = useRef<string>("");
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const dificuldades = ["Todos", "Fácil", "Médio", "Difícil"];
   const statusOptions = ["Não resolvidas", "Todas", "Resolvidas", "Apenas Erradas"];
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCount < allQuestoes.length) {
+          setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, allQuestoes.length));
+        }
+      },
+      { rootMargin: "400px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [visibleCount, allQuestoes.length]);
+
+  const questoes = allQuestoes.slice(0, visibleCount);
 
   const handleReport = (questaoId: number) => {
     setReportQuestaoId(questaoId);
@@ -96,16 +117,27 @@ const Questoes = () => {
     };
     const fetchAnswered = async () => {
       if (!user) return;
-      const { data } = await supabase.from("respostas_usuario").select("questao_id, correta").eq("user_id", user.id);
-      if (data) {
-        setAnsweredIds(new Set(data.map(d => d.questao_id)));
-        setWrongIds(new Set(data.filter(d => !d.correta).map(d => d.questao_id)));
+      // Paginate to bypass 1000-row limit
+      const allAnswers: Array<{ questao_id: number; correta: boolean }> = [];
+      let from = 0;
+      const batchSize = 1000;
+      while (true) {
+        const { data } = await supabase
+          .from("respostas_usuario")
+          .select("questao_id, correta")
+          .eq("user_id", user.id)
+          .range(from, from + batchSize - 1);
+        if (!data || data.length === 0) break;
+        allAnswers.push(...data);
+        if (data.length < batchSize) break;
+        from += batchSize;
       }
+      setAnsweredIds(new Set(allAnswers.map(d => d.questao_id)));
+      setWrongIds(new Set(allAnswers.filter(d => !d.correta).map(d => d.questao_id)));
     };
     fetchDisciplinas();
     fetchAnswered();
 
-    // Show "new questions" toast once per session
     if (!shownNewToast) {
       setShownNewToast(true);
       setTimeout(() => {
@@ -119,42 +151,50 @@ const Questoes = () => {
   }, [filterDisciplina, filterDificuldade, filterStatus]);
 
   const fetchQuestoes = async () => {
-    // Build a filter key — only re-shuffle when filters actually change
     const filterKey = `${filterDisciplina}|${filterDificuldade}|${filterStatus}`;
-    if (filterKey === lastFilterKeyRef.current && questoes.length > 0) return;
+    if (filterKey === lastFilterKeyRef.current && allQuestoes.length > 0) return;
     lastFilterKeyRef.current = filterKey;
 
     setLoading(true);
-    let query = supabase.from("questoes").select("*");
-    if (filterDisciplina !== "Todos") query = query.eq("disciplina", filterDisciplina);
-    if (filterDificuldade !== "Todos") query = query.eq("dificuldade", filterDificuldade);
-
-    const { data, error } = await query.order("id");
-    if (!error && data) {
-      let filtered = data as Questao[];
-      const totalBeforeStatusFilter = filtered.length;
-      if (filterStatus === "Resolvidas") {
-        filtered = filtered.filter(q => answeredIds.has(q.id));
-      } else if (filterStatus === "Não resolvidas") {
-        filtered = filtered.filter(q => !answeredIds.has(q.id));
-      } else if (filterStatus === "Apenas Erradas") {
-        filtered = filtered.filter(q => wrongIds.has(q.id));
-      }
-      // Check if all questions in this discipline have been answered
-      setAllAnsweredInDisciplina(
-        filterStatus === "Não resolvidas" && filtered.length === 0 && totalBeforeStatusFilter > 0
-      );
-      // Shuffle once per filter change (Fisher-Yates)
-      for (let i = filtered.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
-      }
-      const mapped = filtered.map(q => {
-        const { alternativas, gabarito } = getAlternativas(q);
-        return { ...q, alternativas, gabaritoShuffled: gabarito };
-      });
-      setQuestoes(mapped);
+    
+    // Paginate to bypass the 1000-row Supabase limit
+    let allData: Questao[] = [];
+    let from = 0;
+    const batchSize = 1000;
+    while (true) {
+      let query = supabase.from("questoes").select("*");
+      if (filterDisciplina !== "Todos") query = query.eq("disciplina", filterDisciplina);
+      if (filterDificuldade !== "Todos") query = query.eq("dificuldade", filterDificuldade);
+      const { data, error } = await query.order("id").range(from, from + batchSize - 1);
+      if (error || !data || data.length === 0) break;
+      allData.push(...(data as Questao[]));
+      if (data.length < batchSize) break;
+      from += batchSize;
     }
+
+    let filtered = allData;
+    const totalBeforeStatusFilter = filtered.length;
+    if (filterStatus === "Resolvidas") {
+      filtered = filtered.filter(q => answeredIds.has(q.id));
+    } else if (filterStatus === "Não resolvidas") {
+      filtered = filtered.filter(q => !answeredIds.has(q.id));
+    } else if (filterStatus === "Apenas Erradas") {
+      filtered = filtered.filter(q => wrongIds.has(q.id));
+    }
+    setAllAnsweredInDisciplina(
+      filterStatus === "Não resolvidas" && filtered.length === 0 && totalBeforeStatusFilter > 0
+    );
+    // Shuffle once per filter change (Fisher-Yates)
+    for (let i = filtered.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+    }
+    const mapped = filtered.map(q => {
+      const { alternativas, gabarito } = getAlternativas(q);
+      return { ...q, alternativas, gabaritoShuffled: gabarito };
+    });
+    setAllQuestoes(mapped);
+    setVisibleCount(PAGE_SIZE);
     setLoading(false);
     setSelectedAnswer({});
     setRevealed({});
@@ -166,7 +206,7 @@ const Questoes = () => {
   };
 
   const handleReveal = async (questaoId: number) => {
-    const q = questoes.find(q => q.id === questaoId);
+    const q = allQuestoes.find(q => q.id === questaoId);
     if (!q) return;
 
     const selected = selectedAnswer[questaoId];
@@ -203,7 +243,10 @@ const Questoes = () => {
             <h1 className="text-2xl md:text-3xl font-bold">
               <span className="text-gradient-primary">Banco de Questões</span>
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">{questoes.length} questões disponíveis</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {allQuestoes.length} questões disponíveis
+              {visibleCount < allQuestoes.length && ` · Mostrando ${visibleCount}`}
+            </p>
           </div>
           <button
             onClick={() => setFilterOpen(!filterOpen)}
@@ -278,7 +321,7 @@ const Questoes = () => {
               </Button>
             </div>
           </motion.div>
-        ) : questoes.length === 0 ? (
+        ) : allQuestoes.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
             <p className="text-lg font-medium">Nenhuma questão encontrada</p>
             <p className="text-sm">Tente alterar os filtros</p>
@@ -290,7 +333,7 @@ const Questoes = () => {
                 key={q.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(qi * 0.05, 0.5) }}
+                transition={{ delay: Math.min(qi * 0.03, 0.3) }}
                 className="glass-card rounded-xl p-5 space-y-4"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -372,6 +415,14 @@ const Questoes = () => {
                 </AnimatePresence>
               </motion.div>
             ))}
+
+            {/* Infinite scroll sentinel */}
+            {visibleCount < allQuestoes.length && (
+              <div ref={sentinelRef} className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">Carregando mais questões...</span>
+              </div>
+            )}
           </div>
         )}
 
