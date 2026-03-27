@@ -108,7 +108,11 @@ export function AdminValidarTab() {
         batch.status = "error";
         batch.error = err.message;
         setResults([...batches]);
-        break;
+        // Don't break on error — skip to next batch with advanced cursor
+        cursor = cursor + batchSize;
+        setAfterId(cursor);
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
       }
 
       setResults([...batches]);

@@ -242,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearCachedSubscription();
       }
 
-      if ((event === "TOKEN_REFRESHED" || event === "SIGNED_OUT") && !session) {
+      if (event === "SIGNED_OUT" && !session) {
         resetAuthState();
       }
     });
