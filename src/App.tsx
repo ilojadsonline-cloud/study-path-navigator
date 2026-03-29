@@ -23,6 +23,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Contato from "./pages/Contato";
 import Landing from "./pages/Landing";
 import Configuracoes from "./pages/Configuracoes";
+import MeusReportes from "./pages/MeusReportes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
             <Route path="/contato" element={<ProtectedRoute><Contato /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
+            <Route path="/meus-reportes" element={<ProtectedRoute><MeusReportes /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

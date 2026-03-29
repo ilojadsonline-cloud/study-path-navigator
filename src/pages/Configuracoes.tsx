@@ -4,7 +4,9 @@ import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trophy, User, Shield } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Trophy, User, Shield, Pencil, Lock, Phone, Loader2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -15,15 +17,30 @@ const Configuracoes = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Personal data
+  const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // Password
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     const fetch = async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("show_in_ranking")
+        .select("show_in_ranking, nome, telefone" as any)
         .eq("user_id", user.id)
         .single();
-      if (data) setShowInRanking(data.show_in_ranking);
+      if (data) {
+        setShowInRanking((data as any).show_in_ranking);
+        setNome((data as any).nome || "");
+        setTelefone((data as any).telefone || "");
+      }
       setLoading(false);
     };
     fetch();
@@ -46,6 +63,52 @@ const Configuracoes = () => {
     }
   };
 
+  const handleSaveProfile = async () => {
+    if (!user || !nome.trim()) {
+      toast.error("Nome não pode ficar vazio");
+      return;
+    }
+    setSavingProfile(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ nome: nome.trim(), telefone: telefone.trim() || null } as any)
+      .eq("user_id", user.id);
+    setSavingProfile(false);
+    if (error) {
+      toast.error("Erro ao salvar dados");
+    } else {
+      toast.success("Dados atualizados com sucesso!");
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+    setSavingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setSavingPassword(false);
+    if (error) {
+      toast.error("Erro ao alterar senha: " + error.message);
+    } else {
+      toast.success("Senha alterada com sucesso!");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+  };
+
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  };
+
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto space-y-6">
@@ -62,18 +125,100 @@ const Configuracoes = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass-card rounded-xl p-5 space-y-3"
+          className="glass-card rounded-xl p-5 space-y-4"
         >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center">
-              <User className="w-5 h-5 text-primary-foreground" />
+          <div className="flex items-center gap-2 mb-1">
+            <Pencil className="w-5 h-5 text-primary" />
+            <h2 className="font-bold text-foreground">Dados Pessoais</h2>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="nome" className="text-xs text-muted-foreground">Nome completo</Label>
+              <Input
+                id="nome"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Seu nome"
+                disabled={loading}
+              />
             </div>
             <div>
-              <p className="font-semibold text-foreground">{profile?.nome || "Usuário"}</p>
-              <p className="text-xs text-muted-foreground">
-                CPF: {profile?.cpf?.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4") || "---"}
-              </p>
+              <Label htmlFor="telefone" className="text-xs text-muted-foreground">Telefone para contato</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="telefone"
+                  value={telefone}
+                  onChange={(e) => setTelefone(formatPhone(e.target.value))}
+                  placeholder="(00) 00000-0000"
+                  className="pl-9"
+                  disabled={loading}
+                />
+              </div>
             </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">CPF</Label>
+              <Input
+                value={profile?.cpf?.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") || "---"}
+                disabled
+                className="opacity-60"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">O CPF não pode ser alterado</p>
+            </div>
+
+            <Button onClick={handleSaveProfile} disabled={savingProfile || loading} size="sm">
+              {savingProfile ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+              Salvar dados
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* Password change */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="glass-card rounded-xl p-5 space-y-4"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Lock className="w-5 h-5 text-primary" />
+            <h2 className="font-bold text-foreground">Alterar Senha</h2>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="new-password" className="text-xs text-muted-foreground">Nova senha</Label>
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type={showPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="confirm-password" className="text-xs text-muted-foreground">Confirmar nova senha</Label>
+              <Input
+                id="confirm-password"
+                type={showPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repita a nova senha"
+              />
+            </div>
+            <Button onClick={handleChangePassword} disabled={savingPassword || !newPassword} size="sm">
+              {savingPassword ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+              Alterar senha
+            </Button>
           </div>
         </motion.div>
 
@@ -90,7 +235,7 @@ const Configuracoes = () => {
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Ao ativar, seu nome aparecerá no ranking <strong>Top 10 Guerreiros</strong> do Dashboard,
-            visível para todos os usuários da plataforma. Você pode alterar essa opção a qualquer momento.
+            visível para todos os usuários da plataforma.
           </p>
           <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border/50">
             <div className="flex items-center gap-3">
