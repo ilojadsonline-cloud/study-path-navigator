@@ -313,6 +313,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
   }, [user, checkSubscription]);
 
+  // Update last_seen_at for online presence tracking
+  useEffect(() => {
+    if (!user) return;
+
+    const updatePresence = () => {
+      supabase
+        .from("profiles")
+        .update({ last_seen_at: new Date().toISOString() } as any)
+        .eq("user_id", user.id)
+        .then(() => {});
+    };
+
+    updatePresence();
+    const interval = setInterval(updatePresence, 2 * 60_000); // every 2 min
+    return () => clearInterval(interval);
+  }, [user]);
+
   // Re-check subscription every 10 minutes (not 60s) to avoid mid-session disruptions
   useEffect(() => {
     if (!user || isAdmin) return;
