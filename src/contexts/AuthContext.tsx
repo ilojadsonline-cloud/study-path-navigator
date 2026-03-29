@@ -225,9 +225,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSubscribed(cached.subscribed);
           setSubscriptionEnd(cached.subscriptionEnd);
           setSubscriptionLoading(false);
-        } else {
-          setSubscriptionLoading(true);
         }
+        // Never set subscriptionLoading to true on token refresh —
+        // this would unmount ProtectedRoute children and lose in-progress work.
 
         setTimeout(() => {
           void fetchProfile(session.user.id);
