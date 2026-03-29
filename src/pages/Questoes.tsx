@@ -349,9 +349,10 @@ const Questoes = () => {
                   <button
                     onClick={() => handleReport(q.id)}
                     title="Reportar erro nesta questão"
-                    className="shrink-0 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-destructive/10 border border-destructive/25 text-destructive text-xs font-medium hover:bg-destructive/20 hover:border-destructive/40 transition-all"
                   >
                     <Flag className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Reportar</span>
                   </button>
                 </div>
 
