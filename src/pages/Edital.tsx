@@ -36,7 +36,7 @@ const disciplinas: Disciplina[] = [
     subtitle: "Lei nº 2.578/2012",
     color: "from-blue-500/20 to-blue-600/20",
     disciplinaFilter: "Lei nº 2.578/2012",
-    leiSecaUrl: "https://www.al.to.leg.br/arquivos/lei_2578-2012_66938.PDF",
+    leiSecaUrl: "/docs/lei_2578-2012.pdf",
     leiSecaLabel: "Lei nº 2.578/2012 — AL-TO",
     videoAulaUrl: "https://www.youtube.com/watch?v=M6BBI1WBjlY",
     videoAulaLabel: "Estatuto PMTO — Aula Completa",
