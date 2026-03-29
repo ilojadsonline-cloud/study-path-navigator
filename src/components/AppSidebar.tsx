@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, BookOpen, HelpCircle, Shuffle,
-  CreditCard, LogOut, Shield, MessageSquare,
+  CreditCard, LogOut, Shield, MessageSquare, Settings,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,7 @@ const menuItems = [
   { title: "Banco de Questões", url: "/questoes", icon: HelpCircle },
   { title: "Simulados", url: "/simulados", icon: Shuffle },
   { title: "Assinatura", url: "/assinatura", icon: CreditCard },
+  { title: "Configurações", url: "/configuracoes", icon: Settings },
   { title: "Contato", url: "/contato", icon: MessageSquare },
 ];
 
