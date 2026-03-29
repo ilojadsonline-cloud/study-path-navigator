@@ -43,7 +43,7 @@ function getCachedSubscription(userId: string) {
     if (!raw) return null;
     const cached = JSON.parse(raw);
 
-    if (cached.userId === userId && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+    if (cached.userId === userId && Date.now() - cached.timestamp < 30 * 60 * 1000) {
       return cached;
     }
   } catch {}
