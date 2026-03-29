@@ -4,7 +4,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, Trash2, Pencil } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, CheckCircle, Trash2, Pencil, Send, User } from "lucide-react";
 import { QuestionEditDialog } from "./QuestionEditDialog";
 import type { Questao } from "./AdminQuestoesTab";
 
@@ -14,13 +15,34 @@ export function AdminReportsTab() {
   const [loading, setLoading] = useState(false);
   const [editQuestion, setEditQuestion] = useState<Questao | null>(null);
   const [savingQuestion, setSavingQuestion] = useState(false);
+  const [responseTexts, setResponseTexts] = useState<Record<number, string>>({});
+  const [sendingResponse, setSendingResponse] = useState<number | null>(null);
+  const [reporterNames, setReporterNames] = useState<Record<string, string>>({});
 
   useEffect(() => { loadReports(); }, []);
 
   const loadReports = async () => {
     setLoading(true);
     const { data } = await supabase.from("question_reports" as any).select("*").order("created_at", { ascending: false }).limit(100);
-    setReports((data as any[]) || []);
+    const reports = (data as any[]) || [];
+    setReports(reports);
+
+    // Fetch reporter names
+    const userIds = [...new Set(reports.map((r: any) => r.user_id))];
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase.from("profiles").select("user_id, nome, email").in("user_id", userIds);
+      if (profiles) {
+        const names: Record<string, string> = {};
+        profiles.forEach((p) => { names[p.user_id] = p.nome || p.email || "Usuário"; });
+        setReporterNames(names);
+      }
+    }
+
+    // Pre-fill existing admin_notes
+    const texts: Record<number, string> = {};
+    reports.forEach((r: any) => { if (r.admin_notes) texts[r.id] = r.admin_notes; });
+    setResponseTexts(texts);
+
     setLoading(false);
   };
 
@@ -28,6 +50,16 @@ export function AdminReportsTab() {
     await supabase.from("question_reports" as any).update({ status: "resolvido", resolved_at: new Date().toISOString() } as any).eq("id", reportId);
     loadReports();
     toast({ title: "Relatório marcado como resolvido" });
+  };
+
+  const sendResponse = async (reportId: number) => {
+    const text = responseTexts[reportId]?.trim();
+    if (!text) return;
+    setSendingResponse(reportId);
+    await supabase.from("question_reports" as any).update({ admin_notes: text, status: "resolvido", resolved_at: new Date().toISOString() } as any).eq("id", reportId);
+    setSendingResponse(null);
+    loadReports();
+    toast({ title: "Resposta enviada ao usuário" });
   };
 
   const deleteReport = async (reportId: number) => {
@@ -80,9 +112,9 @@ export function AdminReportsTab() {
       <p className="text-sm text-muted-foreground">{reports.length} relatórios encontrados</p>
       {reports.map((r: any) => (
         <Card key={r.id} className="glass-card border-none">
-          <CardContent className="p-4 space-y-2">
+          <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline" className={r.status === "resolvido" ? "bg-success/10 text-success border-success/30" : "bg-warning/10 text-warning border-warning/30"}>
                   {r.status}
                 </Badge>
@@ -108,7 +140,34 @@ export function AdminReportsTab() {
                 </Button>
               </div>
             </div>
+
+            {/* Reporter info */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 rounded-lg px-3 py-2">
+              <User className="w-3.5 h-3.5" />
+              <span>Reportado por: <strong className="text-foreground">{reporterNames[r.user_id] || "Carregando..."}</strong></span>
+            </div>
+
             <p className="text-sm">{r.motivo}</p>
+
+            {/* Admin response field */}
+            <div className="space-y-2 border-t border-border/30 pt-3">
+              <label className="text-xs font-medium text-muted-foreground">Resposta ao usuário:</label>
+              <Textarea
+                placeholder="Escreva sua resposta sobre a correção..."
+                value={responseTexts[r.id] || ""}
+                onChange={(e) => setResponseTexts(prev => ({ ...prev, [r.id]: e.target.value }))}
+                className="text-sm min-h-[60px]"
+              />
+              <Button
+                size="sm"
+                onClick={() => sendResponse(r.id)}
+                disabled={!responseTexts[r.id]?.trim() || sendingResponse === r.id}
+                className="text-xs"
+              >
+                {sendingResponse === r.id ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
+                Enviar resposta
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ))}
