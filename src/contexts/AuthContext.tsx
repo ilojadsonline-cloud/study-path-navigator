@@ -43,7 +43,7 @@ function getCachedSubscription(userId: string) {
     if (!raw) return null;
     const cached = JSON.parse(raw);
 
-    if (cached.userId === userId && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+    if (cached.userId === userId && Date.now() - cached.timestamp < 30 * 60 * 1000) {
       return cached;
     }
   } catch {}
@@ -225,9 +225,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSubscribed(cached.subscribed);
           setSubscriptionEnd(cached.subscriptionEnd);
           setSubscriptionLoading(false);
-        } else {
-          setSubscriptionLoading(true);
         }
+        // Never set subscriptionLoading to true on token refresh —
+        // this would unmount ProtectedRoute children and lose in-progress work.
 
         setTimeout(() => {
           void fetchProfile(session.user.id);
@@ -306,7 +306,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const cached = getCachedSubscription(user.id);
         if (!cached) {
-          setSubscriptionLoading(true);
+          // Only show loading on first-ever check, not on re-checks
+          if (!lastCheckedUserRef.current) {
+            setSubscriptionLoading(true);
+          }
         }
 
         void checkSubscription();
