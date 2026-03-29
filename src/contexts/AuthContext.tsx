@@ -306,7 +306,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const cached = getCachedSubscription(user.id);
         if (!cached) {
-          setSubscriptionLoading(true);
+          // Only show loading on first-ever check, not on re-checks
+          if (!lastCheckedUserRef.current) {
+            setSubscriptionLoading(true);
+          }
         }
 
         void checkSubscription();
