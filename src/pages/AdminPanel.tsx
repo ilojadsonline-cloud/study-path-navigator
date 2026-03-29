@@ -35,6 +35,7 @@ const AdminPanel = () => {
             <TabsTrigger value="notificacoes" className="flex items-center gap-1.5 text-xs"><Bell className="w-3.5 h-3.5" />Notificações</TabsTrigger>
             <TabsTrigger value="gerar" className="flex items-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" />Gerar</TabsTrigger>
             <TabsTrigger value="validar" className="flex items-center gap-1.5 text-xs"><ShieldCheck className="w-3.5 h-3.5" />Validar</TabsTrigger>
+            <TabsTrigger value="online" className="flex items-center gap-1.5 text-xs"><Wifi className="w-3.5 h-3.5" />Online</TabsTrigger>
           </TabsList>
 
           <TabsContent value="stats" className="mt-6"><AdminStatsTab /></TabsContent>
