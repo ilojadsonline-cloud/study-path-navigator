@@ -45,6 +45,7 @@ const AdminPanel = () => {
           <TabsContent value="notificacoes" className="mt-6"><AdminNotificacoesTab /></TabsContent>
           <TabsContent value="gerar" className="mt-6"><AdminGerarTab /></TabsContent>
           <TabsContent value="validar" className="mt-6"><AdminValidarTab /></TabsContent>
+          <TabsContent value="online" className="mt-6"><AdminOnlineTab /></TabsContent>
         </Tabs>
       </div>
     </AppLayout>
