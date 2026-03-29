@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell } from "lucide-react";
+import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi } from "lucide-react";
 import { AdminStatsTab } from "@/components/admin/AdminStatsTab";
 import { AdminUsersTab } from "@/components/admin/AdminUsersTab";
 import { AdminQuestoesTab } from "@/components/admin/AdminQuestoesTab";
@@ -10,6 +10,7 @@ import { AdminGerarTab } from "@/components/admin/AdminGerarTab";
 import { AdminValidarTab } from "@/components/admin/AdminValidarTab";
 import { AdminReportsTab } from "@/components/admin/AdminReportsTab";
 import { AdminNotificacoesTab } from "@/components/admin/AdminNotificacoesTab";
+import { AdminOnlineTab } from "@/components/admin/AdminOnlineTab";
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAuth();
