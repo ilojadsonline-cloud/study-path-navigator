@@ -35,9 +35,9 @@ interface PendingJob {
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 3000;
+const CIRCUIT_BREAKER_THRESHOLD = 5; // consecutive failures to trigger circuit breaker
 
 function getRetryDelay(attempt: number): number {
-  // Exponential backoff: 3s, 6s, 12s
   return BASE_DELAY_MS * Math.pow(2, attempt);
 }
 
@@ -53,8 +53,11 @@ export function AdminGerarTab() {
   const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
   const [pendingJob, setPendingJob] = useState<PendingJob | null>(null);
   const [checkingPending, setCheckingPending] = useState(true);
+  const [etaText, setEtaText] = useState<string>("");
   const stopRef = useRef(false);
   const jobIdRef = useRef<string | null>(null);
+  const consecutiveFailsRef = useRef(0);
+  const batchTimesRef = useRef<number[]>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -126,23 +129,49 @@ export function AdminGerarTab() {
     return { data: null, error: new Error("Max retries exceeded") };
   };
 
+  const updateEta = useCallback((batchTimes: number[], remaining: number) => {
+    if (batchTimes.length === 0 || remaining <= 0) { setEtaText(""); return; }
+    const avg = batchTimes.reduce((a, b) => a + b, 0) / batchTimes.length;
+    const totalSec = Math.round((avg * remaining) / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    setEtaText(min > 0 ? `~${min}m ${sec}s restantes` : `~${sec}s restantes`);
+  }, []);
+
   const runBatches = async (batches: BatchResult[], startFrom: number, jobId: string, initialTotal: number) => {
     let total = initialTotal;
+    consecutiveFailsRef.current = 0;
+    batchTimesRef.current = [];
     
     for (let i = startFrom; i < batches.length; i++) {
       if (stopRef.current) break;
+
+      // Circuit breaker check
+      if (consecutiveFailsRef.current >= CIRCUIT_BREAKER_THRESHOLD) {
+        toast({ 
+          title: "Circuit Breaker ativado", 
+          description: `${CIRCUIT_BREAKER_THRESHOLD} falhas consecutivas. Processo pausado automaticamente para evitar sobrecarga.`, 
+          variant: "destructive" 
+        });
+        await saveProgress(jobId, batches, i, total, "running");
+        break;
+      }
+
       batches[i].status = "loading";
       setResults([...batches]);
 
+      const batchStart = Date.now();
       const { data, error } = await invokeBatchWithRetry(batches[i].disciplina, batchSize);
+      const batchDuration = Date.now() - batchStart;
       
       if (error) {
         batches[i].status = "error";
         batches[i].error = error.message;
+        consecutiveFailsRef.current++;
       } else if (data?.paused) {
-        // Still paused after retries
         batches[i].status = "error";
         batches[i].error = data.error || "Rate limit persistente";
+        consecutiveFailsRef.current++;
         toast({ title: "Pausado", description: "Rate limit persistente após retentativas.", variant: "destructive" });
         setResults([...batches]);
         await saveProgress(jobId, batches, i, total, "running");
@@ -150,16 +179,21 @@ export function AdminGerarTab() {
       } else if (data?.error) {
         batches[i].status = "error";
         batches[i].error = data.error;
+        consecutiveFailsRef.current++;
       } else {
         const inserted = data?.inserted || data?.generated || 0;
         batches[i].status = "success";
         batches[i].geradas = inserted;
         total += inserted;
         setTotalGeradas(total);
+        consecutiveFailsRef.current = 0; // Reset on success
       }
 
+      batchTimesRef.current.push(batchDuration);
+      const remaining = batches.length - (i + 1);
+      updateEta(batchTimesRef.current, remaining);
+
       setResults([...batches]);
-      // Save progress every batch
       await saveProgress(jobId, batches, i + 1, total, stopRef.current ? "paused" : "running");
       
       if (i < batches.length - 1 && !stopRef.current) {
@@ -167,6 +201,7 @@ export function AdminGerarTab() {
       }
     }
 
+    setEtaText("");
     return total;
   };
 
@@ -358,9 +393,15 @@ export function AdminGerarTab() {
       {running && results.length > 0 && (
         <div className="space-y-1">
           <Progress value={progressPercent} className="h-2" />
-          <p className="text-xs text-muted-foreground text-right">
-            {results.filter(r => r.status === "success" || r.status === "error").length}/{results.length} lotes ({progressPercent}%)
-          </p>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>
+              {results.filter(r => r.status === "success" || r.status === "error").length}/{results.length} lotes ({progressPercent}%)
+              {consecutiveFailsRef.current > 0 && (
+                <span className="text-destructive ml-2">⚠ {consecutiveFailsRef.current} falha(s) consecutiva(s)</span>
+              )}
+            </span>
+            {etaText && <span>{etaText}</span>}
+          </div>
         </div>
       )}
 
