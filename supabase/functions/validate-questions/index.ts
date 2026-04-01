@@ -136,6 +136,24 @@ function validateAllCitations(comment: string, blocks: ArticleBlock[]): { valid:
   return { valid: missing.length === 0, missing };
 }
 
+/** TRAVA DETERMINÍSTICA: substitui qualquer citação de artigo inexistente no texto legal */
+function scrubInvalidCitations(text: string, blocks: ArticleBlock[]): { scrubbed: string; removed: string[] } {
+  const validArts = new Set(blocks.map(b => b.artNum));
+  const removed: string[] = [];
+  const scrubbed = text.replace(/\bArt\.?\s*(\d+[A-Z]?)(?:º|°|o)?\b/gi, (match, num) => {
+    const cleanNum = num.replace(/[A-Z]/gi, "").trim();
+    if (validArts.has(cleanNum)) return match;
+    removed.push(match);
+    return "[artigo não confirmado]";
+  });
+  return { scrubbed, removed };
+}
+
+/** Verifica se o texto ainda contém marcadores de artigo não confirmado */
+function hasUnconfirmedCitations(text: string): boolean {
+  return /\[artigo não confirmado\]/.test(text);
+}
+
 function reconcileCommentArticle(comment: string, targetArticle: string): string {
   let nextComment = normalizeWhitespace(comment);
   const targetNum = targetArticle.match(/\d+/)?.[0];
