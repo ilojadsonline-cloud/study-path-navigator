@@ -123,6 +123,50 @@ function detectCommentEvidenceArticle(comment: string, blocks: ArticleBlock[]): 
   return null;
 }
 
+/** Verifica se o trecho citado entre aspas no comentário realmente pertence ao artigo indicado */
+function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]): { valid: boolean; mismatches: string[] } {
+  const mismatches: string[] = [];
+  // Pattern: "Art. X ... : 'snippet'" or "Art. X ... "snippet""
+  const citationPattern = /Art\.?\s*(\d+)[^"""''']*?["""''']([^"""''']{15,500})["""''']/gi;
+  let match: RegExpExecArray | null;
+  while ((match = citationPattern.exec(comment)) !== null) {
+    const citedNum = match[1];
+    const snippet = normalizeWhitespace(match[2]);
+    const normSnippet = normalize(snippet);
+    if (normSnippet.length < 15) continue;
+
+    // Find which article the snippet actually belongs to
+    const actualArticle = findArticleForText(snippet, blocks);
+    if (actualArticle) {
+      const actualNum = actualArticle.match(/\d+/)?.[0];
+      if (actualNum && actualNum !== citedNum) {
+        mismatches.push(`Cita Art. ${citedNum} mas trecho pertence ao Art. ${actualNum}`);
+      }
+    } else {
+      // Snippet not found in any article — check if at least article exists
+      const block = blocks.find(b => b.artNum === citedNum);
+      if (block) {
+        // Article exists, check fuzzy overlap
+        const snippetWords = new Set(normSnippet.split(" ").filter(w => w.length > 3));
+        const blockWords = new Set(block.normText.split(" ").filter(w => w.length > 3));
+        let overlap = 0;
+        for (const w of snippetWords) if (blockWords.has(w)) overlap++;
+        const score = snippetWords.size > 0 ? overlap / snippetWords.size : 0;
+        if (score < 0.3) {
+          mismatches.push(`Trecho entre aspas não encontrado no Art. ${citedNum} (overlap=${(score*100).toFixed(0)}%)`);
+        }
+      }
+    }
+  }
+  return { valid: mismatches.length === 0, mismatches };
+}
+
+/** Gera lista de artigos válidos para incluir no prompt da IA */
+function buildValidArticlesList(blocks: ArticleBlock[]): string {
+  const arts = [...new Set(blocks.map(b => b.artNum))].sort((a, b) => parseInt(a) - parseInt(b));
+  return arts.map(a => `Art. ${a}`).join(", ");
+}
+
 function articleExistsInLaw(artNum: string, blocks: ArticleBlock[]): boolean {
   return blocks.some(b => b.artNum === artNum);
 }
