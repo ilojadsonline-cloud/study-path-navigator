@@ -53,8 +53,11 @@ export function AdminGerarTab() {
   const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
   const [pendingJob, setPendingJob] = useState<PendingJob | null>(null);
   const [checkingPending, setCheckingPending] = useState(true);
+  const [etaText, setEtaText] = useState<string>("");
   const stopRef = useRef(false);
   const jobIdRef = useRef<string | null>(null);
+  const consecutiveFailsRef = useRef(0);
+  const batchTimesRef = useRef<number[]>([]);
 
   useEffect(() => {
     const init = async () => {
