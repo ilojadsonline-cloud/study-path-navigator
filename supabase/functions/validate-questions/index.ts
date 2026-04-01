@@ -656,6 +656,9 @@ REGRAS INVIOLÁVEIS:
 5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
 6. NÃO use conhecimento externo. APENAS o texto fornecido.
 7. O trecho entre aspas no comentário DEVE existir LITERALMENTE no artigo citado. Copie e cole do texto.
+8. VERIFICAÇÃO OBRIGATÓRIA: Antes de citar "Art. X", faça a busca exata da string "Art. X" no texto legal. Se NÃO encontrar essa string exata, NÃO cite esse artigo. NUNCA INVENTE OU INFIRA NÚMEROS DE ARTIGOS.
+9. CONSISTÊNCIA SNIPPET-ARTIGO: O trecho entre aspas DEVE pertencer ao artigo citado. Se você cita Art. 3 e transcreve texto, esse texto DEVE estar dentro do bloco do Art. 3 no texto legal — NÃO em outro artigo.
+10. EM CASO DE DÚVIDA: omita a citação do artigo ou indique "referência não confirmada" em vez de citar um artigo incorreto.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
