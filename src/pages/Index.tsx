@@ -97,8 +97,12 @@ const Index = () => {
             transition={{ delay: 0.5 }}
             className="glass-card rounded-2xl p-8 glow-primary border-primary/20"
           >
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-bold mb-3 animate-pulse">
+              🔥 OFERTA POR TEMPO LIMITADO
+            </div>
             <h2 className="text-2xl font-black mb-2">
-              <span className="text-gradient-gold">R$ 69,90</span>
+              <span className="text-base font-normal text-muted-foreground line-through mr-2">R$ 99,90</span>
+              <span className="text-gradient-gold">R$ 79,90</span>
               <span className="text-base font-normal text-muted-foreground ml-2">/ 90 dias</span>
             </h2>
             <p className="text-sm text-muted-foreground mb-6">Acesso completo a toda a plataforma</p>
