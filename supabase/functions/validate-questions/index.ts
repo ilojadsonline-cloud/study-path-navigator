@@ -468,7 +468,16 @@ serve(async (req) => {
         }
       }
 
-      // Check 3: Cross-validation — enunciado vs comment
+      // Check 2.5 (NEW): VERIFICAÇÃO SNIPPET-VS-ARTIGO — trecho entre aspas deve pertencer ao artigo citado
+      if (!needsFix) {
+        const snippetCheck = verifySnippetBelongsToArticle(q.comentario || "", blocks);
+        if (!snippetCheck.valid) {
+          needsFix = true;
+          fixReason = `SNIPPET INCORRETO: ${snippetCheck.mismatches[0]}`;
+          console.log(`[VALIDAR] #${q.id} SNIPPET: ${fixReason}`);
+        }
+      }
+
       if (!needsFix) {
         const crossCheck = crossValidateReferences(q.enunciado, q.comentario || "");
         if (!crossCheck.valid) {
