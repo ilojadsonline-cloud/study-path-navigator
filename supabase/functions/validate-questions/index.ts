@@ -532,12 +532,21 @@ serve(async (req) => {
       // RULES MODE: try to fix deterministically, or delete
       // ══════════════════════════════════════════════════════════════════
       if (mode === "rules") {
-        // Auto-fix: confronto de artigos — just correct the comment article reference
+        // First: scrub all invalid citations deterministically
+        const { scrubbed: scrubbedRulesComment, removed: removedRulesArts } = scrubInvalidCitations(q.comentario || "", blocks);
+        if (removedRulesArts.length > 0) {
+          console.log(`[VALIDAR] #${q.id} SCRUB REGRAS: removidos ${removedRulesArts.join(", ")}`);
+        }
+
+        // Auto-fix: confronto de artigos — correct the comment article reference
         const fixableArticle = realArticle || evidenceArticle;
-        if (fixableArticle && (fixReason.includes("CONFRONTO") || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita"))) {
-          const newComment = reconcileCommentArticle(q.comentario, fixableArticle);
+        if (fixableArticle && (fixReason.includes("CONFRONTO") || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita") || fixReason.includes("SNIPPET"))) {
+          const baseComment = removedRulesArts.length > 0
+            ? scrubbedRulesComment.replace(/\[artigo não confirmado\]/g, fixableArticle)
+            : q.comentario;
+          const newComment = reconcileCommentArticle(baseComment, fixableArticle);
           const recheck = validateAllCitations(newComment, blocks);
-          if (recheck.valid) {
+          if (recheck.valid && !hasUnconfirmedCitations(newComment)) {
             await supabase.from("questoes").update({ comentario: newComment }).eq("id", q.id);
             fixedCount++;
             details.push({ id: q.id, status: "corrigida", motivo: `Artigo corrigido para ${fixableArticle}` });
