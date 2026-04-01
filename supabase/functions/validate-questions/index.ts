@@ -123,6 +123,50 @@ function detectCommentEvidenceArticle(comment: string, blocks: ArticleBlock[]): 
   return null;
 }
 
+/** Verifica se o trecho citado entre aspas no comentário realmente pertence ao artigo indicado */
+function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]): { valid: boolean; mismatches: string[] } {
+  const mismatches: string[] = [];
+  // Pattern: "Art. X ... : 'snippet'" or "Art. X ... "snippet""
+  const citationPattern = /Art\.?\s*(\d+)[^"""''']*?["""''']([^"""''']{15,500})["""''']/gi;
+  let match: RegExpExecArray | null;
+  while ((match = citationPattern.exec(comment)) !== null) {
+    const citedNum = match[1];
+    const snippet = normalizeWhitespace(match[2]);
+    const normSnippet = normalize(snippet);
+    if (normSnippet.length < 15) continue;
+
+    // Find which article the snippet actually belongs to
+    const actualArticle = findArticleForText(snippet, blocks);
+    if (actualArticle) {
+      const actualNum = actualArticle.match(/\d+/)?.[0];
+      if (actualNum && actualNum !== citedNum) {
+        mismatches.push(`Cita Art. ${citedNum} mas trecho pertence ao Art. ${actualNum}`);
+      }
+    } else {
+      // Snippet not found in any article — check if at least article exists
+      const block = blocks.find(b => b.artNum === citedNum);
+      if (block) {
+        // Article exists, check fuzzy overlap
+        const snippetWords = new Set(normSnippet.split(" ").filter(w => w.length > 3));
+        const blockWords = new Set(block.normText.split(" ").filter(w => w.length > 3));
+        let overlap = 0;
+        for (const w of snippetWords) if (blockWords.has(w)) overlap++;
+        const score = snippetWords.size > 0 ? overlap / snippetWords.size : 0;
+        if (score < 0.3) {
+          mismatches.push(`Trecho entre aspas não encontrado no Art. ${citedNum} (overlap=${(score*100).toFixed(0)}%)`);
+        }
+      }
+    }
+  }
+  return { valid: mismatches.length === 0, mismatches };
+}
+
+/** Gera lista de artigos válidos para incluir no prompt da IA */
+function buildValidArticlesList(blocks: ArticleBlock[]): string {
+  const arts = [...new Set(blocks.map(b => b.artNum))].sort((a, b) => parseInt(a) - parseInt(b));
+  return arts.map(a => `Art. ${a}`).join(", ");
+}
+
 function articleExistsInLaw(artNum: string, blocks: ArticleBlock[]): boolean {
   return blocks.some(b => b.artNum === artNum);
 }
@@ -424,7 +468,16 @@ serve(async (req) => {
         }
       }
 
-      // Check 3: Cross-validation — enunciado vs comment
+      // Check 2.5 (NEW): VERIFICAÇÃO SNIPPET-VS-ARTIGO — trecho entre aspas deve pertencer ao artigo citado
+      if (!needsFix) {
+        const snippetCheck = verifySnippetBelongsToArticle(q.comentario || "", blocks);
+        if (!snippetCheck.valid) {
+          needsFix = true;
+          fixReason = `SNIPPET INCORRETO: ${snippetCheck.mismatches[0]}`;
+          console.log(`[VALIDAR] #${q.id} SNIPPET: ${fixReason}`);
+        }
+      }
+
       if (!needsFix) {
         const crossCheck = crossValidateReferences(q.enunciado, q.comentario || "");
         if (!crossCheck.valid) {
@@ -479,12 +532,21 @@ serve(async (req) => {
       // RULES MODE: try to fix deterministically, or delete
       // ══════════════════════════════════════════════════════════════════
       if (mode === "rules") {
-        // Auto-fix: confronto de artigos — just correct the comment article reference
+        // First: scrub all invalid citations deterministically
+        const { scrubbed: scrubbedRulesComment, removed: removedRulesArts } = scrubInvalidCitations(q.comentario || "", blocks);
+        if (removedRulesArts.length > 0) {
+          console.log(`[VALIDAR] #${q.id} SCRUB REGRAS: removidos ${removedRulesArts.join(", ")}`);
+        }
+
+        // Auto-fix: confronto de artigos — correct the comment article reference
         const fixableArticle = realArticle || evidenceArticle;
-        if (fixableArticle && (fixReason.includes("CONFRONTO") || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita"))) {
-          const newComment = reconcileCommentArticle(q.comentario, fixableArticle);
+        if (fixableArticle && (fixReason.includes("CONFRONTO") || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita") || fixReason.includes("SNIPPET"))) {
+          const baseComment = removedRulesArts.length > 0
+            ? scrubbedRulesComment.replace(/\[artigo não confirmado\]/g, fixableArticle)
+            : q.comentario;
+          const newComment = reconcileCommentArticle(baseComment, fixableArticle);
           const recheck = validateAllCitations(newComment, blocks);
-          if (recheck.valid) {
+          if (recheck.valid && !hasUnconfirmedCitations(newComment)) {
             await supabase.from("questoes").update({ comentario: newComment }).eq("id", q.id);
             fixedCount++;
             details.push({ id: q.id, status: "corrigida", motivo: `Artigo corrigido para ${fixableArticle}` });
@@ -531,6 +593,8 @@ serve(async (req) => {
         }
       }
 
+      const validArticlesList = buildValidArticlesList(blocks);
+
       const isLiteralFailure = fixReason.includes("PROVA LITERAL");
 
       const prompt = `${isLiteralFailure
@@ -539,13 +603,17 @@ serve(async (req) => {
       }
 ${focusArticle ? `A busca literal confirmou conteúdo no ${focusArticle} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
 
+⚠️ LISTA COMPLETA DE ARTIGOS VÁLIDOS NESTE TEXTO LEGAL (SOMENTE estes existem — NÃO cite nenhum outro):
+${validArticlesList}
+
 REGRAS INVIOLÁVEIS:
 1. A alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Copie trechos reais.
 2. O comentário DEVE citar o artigo EXATO onde o texto foi encontrado, com transcrição LITERAL entre aspas.
-3. ${focusArticle ? `O comentário DEVE obrigatoriamente citar o ${focusArticle} (confirmado por busca literal).` : "Escolha qualquer artigo do texto legal e baseie a questão nele."}
-4. VERIFIQUE que cada "Art. X" que citar EXISTE no texto fornecido.
+3. ${focusArticle ? `O comentário DEVE obrigatoriamente citar o ${focusArticle} (confirmado por busca literal).` : "Escolha qualquer artigo da LISTA ACIMA e baseie a questão nele."}
+4. SOMENTE cite artigos da lista acima. Se um artigo NÃO está na lista, ele NÃO EXISTE no texto legal.
 5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
 6. NÃO use conhecimento externo. APENAS o texto fornecido.
+7. O trecho entre aspas no comentário DEVE existir LITERALMENTE no artigo citado. Copie e cole do texto.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
@@ -555,7 +623,7 @@ REGRAS PEDAGÓGICAS:
 ${articleContext}
 
 TEXTO LEGAL COMPLETO (${q.disciplina}):
-${lawText.substring(0, 28000)}
+${lawText.substring(0, 25000)}
 
 QUESTÃO COM ERRO:
 Enunciado: ${q.enunciado}
@@ -677,7 +745,33 @@ Responda APENAS JSON (sem markdown):
             continue;
           }
 
-          // Scrub enunciado and alternatives too
+          // Post-AI: verify snippets match their cited articles
+          const snippetVerify = verifySnippetBelongsToArticle(finalComment, blocks);
+          if (!snippetVerify.valid) {
+            // Try to fix by reconciling to the enforced article
+            if (enforcedArticle) {
+              finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
+              const reVerify = verifySnippetBelongsToArticle(finalComment, blocks);
+              if (!reVerify.valid) {
+                questoesRevisaoManual.push({ id: q.id, motivo: `Snippet-artigo mismatch: ${reVerify.mismatches[0]}` });
+                await supabase.from("questoes").delete().eq("id", q.id);
+                deletedCount++;
+                details.push({ id: q.id, status: "excluida", motivo: `Snippet incorreto: ${reVerify.mismatches[0]}` });
+                console.log(`[VALIDAR] #${q.id} EXCLUÍDA: snippet não pertence ao artigo citado`);
+                await new Promise(r => setTimeout(r, 300));
+                continue;
+              }
+            } else {
+              questoesRevisaoManual.push({ id: q.id, motivo: `Snippet-artigo mismatch: ${snippetVerify.mismatches[0]}` });
+              await supabase.from("questoes").delete().eq("id", q.id);
+              deletedCount++;
+              details.push({ id: q.id, status: "excluida", motivo: `Snippet incorreto: ${snippetVerify.mismatches[0]}` });
+              console.log(`[VALIDAR] #${q.id} EXCLUÍDA: snippet não pertence ao artigo citado`);
+              await new Promise(r => setTimeout(r, 300));
+              continue;
+            }
+          }
+
           const finalEnunciado = normalizeWhitespace(result.enunciado || q.enunciado);
           const { scrubbed: scrubbedEnunciado } = scrubInvalidCitations(finalEnunciado, blocks);
           const crossCheck = crossValidateReferences(scrubbedEnunciado, finalComment);
