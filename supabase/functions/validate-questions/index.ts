@@ -721,7 +721,7 @@ Responda APENAS JSON (sem markdown):
 
           // All checks passed — save
           const updateData: Record<string, unknown> = {
-            enunciado: finalEnunciado,
+            enunciado: scrubbedEnunciado,
             alt_a: normalizeWhitespace(result.alt_a || q.alt_a),
             alt_b: normalizeWhitespace(result.alt_b || q.alt_b),
             alt_c: normalizeWhitespace(result.alt_c || q.alt_c),
