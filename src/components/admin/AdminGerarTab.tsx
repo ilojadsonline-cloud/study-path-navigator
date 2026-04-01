@@ -35,9 +35,9 @@ interface PendingJob {
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 3000;
+const CIRCUIT_BREAKER_THRESHOLD = 5; // consecutive failures to trigger circuit breaker
 
 function getRetryDelay(attempt: number): number {
-  // Exponential backoff: 3s, 6s, 12s
   return BASE_DELAY_MS * Math.pow(2, attempt);
 }
 
