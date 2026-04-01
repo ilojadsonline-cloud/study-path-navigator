@@ -828,11 +828,35 @@ Responda APENAS JSON (sem markdown):
             continue;
           }
 
-          // Post-AI: verify snippets match their cited articles
+          // Post-AI: apply all snippet corrections and verify
           const snippetVerify = verifySnippetBelongsToArticle(finalComment, blocks);
           if (!snippetVerify.valid) {
-            // Try to fix by reconciling to the enforced article
-            if (enforcedArticle) {
+            console.log(`[VALIDAR] #${q.id} PÓS-IA SNIPPET MISMATCH: ${snippetVerify.mismatches.join("; ")}`);
+            // Try applying all snippet corrections
+            const { corrected: snippetFixed, appliedCorrections: aiCorrs } = applyAllSnippetCorrections(finalComment, blocks);
+            if (aiCorrs.length > 0) {
+              for (const corr of aiCorrs) {
+                console.log(`[VALIDAR] #${q.id} PÓS-IA SNIPPET-CORREÇÃO: ${corr.from} → ${corr.to}`);
+              }
+              finalComment = snippetFixed;
+              const reVerify = verifySnippetBelongsToArticle(finalComment, blocks);
+              if (!reVerify.valid) {
+                // Last resort: reconcile to enforced article
+                if (enforcedArticle) {
+                  finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
+                }
+                const finalVerify = verifySnippetBelongsToArticle(finalComment, blocks);
+                if (!finalVerify.valid) {
+                  questoesRevisaoManual.push({ id: q.id, motivo: `Snippet-artigo mismatch irrecuperável: ${finalVerify.mismatches[0]}` });
+                  await supabase.from("questoes").delete().eq("id", q.id);
+                  deletedCount++;
+                  details.push({ id: q.id, status: "excluida", motivo: `Snippet incorreto: ${finalVerify.mismatches[0]}` });
+                  console.log(`[VALIDAR] #${q.id} EXCLUÍDA: snippet irrecuperável`);
+                  await new Promise(r => setTimeout(r, 300));
+                  continue;
+                }
+              }
+            } else if (enforcedArticle) {
               finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
               const reVerify = verifySnippetBelongsToArticle(finalComment, blocks);
               if (!reVerify.valid) {
