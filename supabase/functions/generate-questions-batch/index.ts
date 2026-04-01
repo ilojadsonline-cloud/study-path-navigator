@@ -436,36 +436,72 @@ REGRAS TÉCNICAS:
 JSON array:
 [{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o Art. X da ${disc.leiNome}: '...'"}]`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 50000);
+    // Retry logic for DeepSeek API calls (up to 3 attempts with exponential backoff)
+    const MAX_API_RETRIES = 3;
+    let aiResponse: Response | null = null;
+    let lastFetchError: any = null;
 
-    let aiResponse: Response;
-    try {
-      aiResponse = await fetch("https://api.deepseek.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
-        body: JSON.stringify({
-          model: "deepseek-chat",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: prompt },
-          ],
-          temperature: 0.1,
-          max_tokens: 4096,
-        }),
-        signal: controller.signal,
-      });
-    } catch (fetchErr: any) {
-      clearTimeout(timeoutId);
-      const isTimeout = fetchErr.name === "AbortError";
-      console.error(`[GERAR] Fetch ${isTimeout ? "timeout" : "error"}:`, String(fetchErr));
+    for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 50000);
+
+      try {
+        aiResponse = await fetch("https://api.deepseek.com/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
+          body: JSON.stringify({
+            model: "deepseek-chat",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: prompt },
+            ],
+            temperature: 0.0,
+            max_tokens: 4096,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        // Rate limit → retry with backoff
+        if (aiResponse.status === 429 && attempt < MAX_API_RETRIES - 1) {
+          const retryDelay = 5000 * Math.pow(2, attempt); // 5s, 10s, 20s
+          console.log(`[GERAR] Rate limit 429, retry ${attempt + 1}/${MAX_API_RETRIES} em ${retryDelay}ms`);
+          await new Promise(r => setTimeout(r, retryDelay));
+          continue;
+        }
+
+        // Server errors (500+) → retry with backoff
+        if (aiResponse.status >= 500 && attempt < MAX_API_RETRIES - 1) {
+          const retryDelay = 3000 * Math.pow(2, attempt);
+          console.log(`[GERAR] Server error ${aiResponse.status}, retry ${attempt + 1}/${MAX_API_RETRIES} em ${retryDelay}ms`);
+          await new Promise(r => setTimeout(r, retryDelay));
+          continue;
+        }
+
+        break; // Success or non-retryable error
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        lastFetchError = fetchErr;
+        const isTimeout = fetchErr.name === "AbortError";
+        
+        if (attempt < MAX_API_RETRIES - 1) {
+          const retryDelay = 4000 * Math.pow(2, attempt);
+          console.log(`[GERAR] ${isTimeout ? "Timeout" : "Fetch error"}, retry ${attempt + 1}/${MAX_API_RETRIES} em ${retryDelay}ms: ${String(fetchErr)}`);
+          await new Promise(r => setTimeout(r, retryDelay));
+          continue;
+        }
+      }
+    }
+
+    if (!aiResponse) {
+      const isTimeout = lastFetchError?.name === "AbortError";
+      console.error(`[GERAR] Todas as ${MAX_API_RETRIES} tentativas falharam:`, String(lastFetchError));
       return new Response(JSON.stringify({
-        status: "erro", mensagem: isTimeout ? "DeepSeek demorou demais (timeout 50s). Tente com menos questões." : `Erro de conexão: ${fetchErr.message}`,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isTimeout ? "TIMEOUT" : "FETCH_ERROR", descricao: String(fetchErr) }] },
-        error: String(fetchErr), timestamp,
+        status: "erro", mensagem: isTimeout ? "DeepSeek timeout após múltiplas tentativas." : `Erro de conexão persistente: ${lastFetchError?.message}`,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isTimeout ? "TIMEOUT" : "FETCH_ERROR", descricao: String(lastFetchError) }] },
+        error: String(lastFetchError), timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    clearTimeout(timeoutId);
 
     console.log(`[GERAR] DeepSeek status: ${aiResponse.status}`);
 

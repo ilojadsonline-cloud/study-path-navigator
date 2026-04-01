@@ -393,9 +393,15 @@ export function AdminGerarTab() {
       {running && results.length > 0 && (
         <div className="space-y-1">
           <Progress value={progressPercent} className="h-2" />
-          <p className="text-xs text-muted-foreground text-right">
-            {results.filter(r => r.status === "success" || r.status === "error").length}/{results.length} lotes ({progressPercent}%)
-          </p>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>
+              {results.filter(r => r.status === "success" || r.status === "error").length}/{results.length} lotes ({progressPercent}%)
+              {consecutiveFailsRef.current > 0 && (
+                <span className="text-destructive ml-2">⚠ {consecutiveFailsRef.current} falha(s) consecutiva(s)</span>
+              )}
+            </span>
+            {etaText && <span>{etaText}</span>}
+          </div>
         </div>
       )}
 
