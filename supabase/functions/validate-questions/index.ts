@@ -222,6 +222,37 @@ function buildValidArticlesList(blocks: ArticleBlock[]): string {
   return getAvailableArticleNumbers(blocks).map((art) => `Art. ${art}`).join(", ");
 }
 
+function getArticleBlock(article: string | null | undefined, blocks: ArticleBlock[]): ArticleBlock | null {
+  const artNum = normalizeWhitespace(article).match(/\d+/)?.[0];
+  if (!artNum) return null;
+  return blocks.find((block) => block.artNum === artNum) ?? null;
+}
+
+function findBestArticleBlockForText(snippet: string, blocks: ArticleBlock[]): ArticleBlock | null {
+  const bestMatch = findBestArticleForText(snippet, blocks);
+  return bestMatch ? getArticleBlock(bestMatch.article, blocks) : null;
+}
+
+function resolveTargetArticleBlock(
+  correctAltText: string,
+  comment: string,
+  realArticle: string | null,
+  evidenceArticle: string | null,
+  blocks: ArticleBlock[],
+): ArticleBlock | null {
+  const quotedEvidenceBlock = extractCommentEvidenceSnippets(comment)
+    .map((snippet) => getArticleBlock(findArticleForText(snippet, blocks), blocks) ?? findBestArticleBlockForText(snippet, blocks))
+    .find((block): block is ArticleBlock => Boolean(block));
+
+  return (
+    getArticleBlock(realArticle, blocks) ??
+    getArticleBlock(evidenceArticle, blocks) ??
+    quotedEvidenceBlock ??
+    findBestArticleBlockForText(correctAltText, blocks) ??
+    findBestArticleBlockForText(comment, blocks)
+  );
+}
+
 function articleExistsInLaw(artNum: string, blocks: ArticleBlock[]): boolean {
   return blocks.some(b => b.artNum === artNum);
 }
@@ -281,6 +312,15 @@ function reconcileCommentArticle(comment: string, targetArticle: string): string
   }
 
   return normalizeWhitespace(nextComment);
+}
+
+function forceDeterministicArticleInComment(comment: string, correctArtNum: string | null): string {
+  const normalizedComment = normalizeWhitespace(comment);
+  if (!correctArtNum) return normalizedComment;
+  return reconcileCommentArticle(
+    normalizedComment.replace(/Art\.?\s*\d+/gi, `Art. ${correctArtNum}`),
+    `Art. ${correctArtNum}`,
+  );
 }
 
 /** Apply ALL snippet-vs-article corrections found, not just the first */
@@ -370,8 +410,13 @@ function literalProofCheck(correctAltText: string, blocks: ArticleBlock[]): {
 
 // ── SYSTEM PROMPT MÁXIMA SEGURANÇA ───────────────────────────────────────
 
-function buildSystemPromptMaxSecurity(availableArticles: string): string {
+function buildSystemPromptMaxSecurity(availableArticles: string, correctArtNum: string | null): string {
   return `VOCÊ É UM ROBÔ DE VALIDAÇÃO JURÍDICA SEM CRIATIVIDADE.
+
+${correctArtNum ? `NÚMERO DO ARTIGO A SER CITADO NESTA TAREFA: Art. ${correctArtNum}
+
+REGRA ABSOLUTA EXTRA: O número do artigo já foi determinado pelo código TypeScript. Você está TERMINANTEMENTE proibido de trocar, deduzir, inferir, ajustar ou “corrigir” esse número. Quando mencionar o artigo desta questão, use OBRIGATORIAMENTE "Art. ${correctArtNum}".
+` : ""}
 
 ARTIGOS PERMITIDOS NESTA LEI: [${availableArticles}]
 
@@ -530,6 +575,15 @@ serve(async (req) => {
       const realArticle = literalCheck.article;
 
       const evidenceArticle = detectCommentEvidenceArticle(q.comentario || "", blocks);
+      const targetArticleBlock = resolveTargetArticleBlock(
+        correctAltText,
+        q.comentario || "",
+        realArticle,
+        evidenceArticle,
+        blocks,
+      );
+      const deterministicArticle = targetArticleBlock ? `Art. ${targetArticleBlock.artNum}` : (realArticle || evidenceArticle);
+      const correctArtNum = targetArticleBlock?.artNum ?? deterministicArticle?.match(/\d+/)?.[0] ?? null;
       const commentCitedArts = extractAllCitedArticles(q.comentario || "");
 
       let needsFix = false;
@@ -634,7 +688,7 @@ serve(async (req) => {
         }
 
         // Determine the correct article — apply ALL snippet corrections first
-        let fixableArticle = realArticle || evidenceArticle;
+        let fixableArticle = deterministicArticle;
         
         const { corrected: snippetCorrectedComment, appliedCorrections } = applyAllSnippetCorrections(q.comentario || "", blocks);
         if (appliedCorrections.length > 0) {
@@ -719,10 +773,11 @@ serve(async (req) => {
 
       // Build focused article context for the AI
       let articleContext = "";
-      const focusArticle = realArticle || evidenceArticle;
-      if (focusArticle) {
-        const focusNum = focusArticle.match(/\d+/)?.[0];
-        const idx = blocks.findIndex(b => b.artNum === focusNum);
+      const focusArticleBlock = targetArticleBlock ?? getArticleBlock(realArticle || evidenceArticle, blocks);
+      const focusArticle = focusArticleBlock ? `Art. ${focusArticleBlock.artNum}` : null;
+      const targetArticleText = targetArticleBlock ? normalizeWhitespace(targetArticleBlock.text) : "";
+      if (focusArticleBlock) {
+        const idx = blocks.findIndex(b => b.artNum === focusArticleBlock.artNum);
         if (idx >= 0) {
           const start = Math.max(0, idx - 2);
           const end = Math.min(blocks.length, idx + 3);
@@ -741,6 +796,12 @@ serve(async (req) => {
       }
 ${focusArticle ? `A busca literal confirmou conteúdo no ${focusArticle} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
 
+${correctArtNum && targetArticleText ? `NÚMERO DO ARTIGO A SER CITADO: Art. ${correctArtNum}
+
+TEXTO DO ARTIGO PARA REFERÊNCIA: ${targetArticleText}
+
+INSTRUÇÃO PARA O COMENTÁRIO: Você deve gerar um comentário que valide a alternativa correta. Você é PROIBIDO de escrever qualquer outro número de artigo no comentário. Use OBRIGATORIAMENTE o número "Art. ${correctArtNum}" fornecido acima. Não tente “corrigir” ou mudar esse número.` : ""}
+
 ARTIGOS PERMITIDOS NESTA LEI: [${availableArticles}]
 
 ⚠️ LISTA COMPLETA DE ARTIGOS VÁLIDOS NESTE TEXTO LEGAL (SOMENTE estes existem — NÃO cite nenhum outro):
@@ -749,7 +810,7 @@ ${validArticlesList}
 REGRAS INVIOLÁVEIS:
 1. A alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Copie trechos reais.
 2. O comentário DEVE citar o artigo EXATO onde o texto foi encontrado, com transcrição LITERAL entre aspas.
-3. ${focusArticle ? `O comentário DEVE obrigatoriamente citar o ${focusArticle} (confirmado por busca literal).` : "Escolha qualquer artigo da LISTA ACIMA e baseie a questão nele."}
+3. ${correctArtNum ? `O comentário DEVE obrigatoriamente citar Art. ${correctArtNum} (definido pelo código TypeScript e confirmado por busca literal).` : (focusArticle ? `O comentário DEVE obrigatoriamente citar o ${focusArticle} (confirmado por busca literal).` : "Escolha qualquer artigo da LISTA ACIMA e baseie a questão nele." )}
 4. SOMENTE cite artigos da lista acima. Se um artigo NÃO está na lista, ele NÃO EXISTE no texto legal.
 5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
 6. NÃO use conhecimento externo. APENAS o texto fornecido.
@@ -777,7 +838,7 @@ Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${q.comen
 
 ${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : "Corrija a questão mantendo o estilo."}
 Responda APENAS JSON (sem markdown):
-{"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o Art. X da ...: '...'"}`;
+{"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${correctArtNum ? `Art. ${correctArtNum}` : "Art. X"} da ...: '...'"}`;
 
       try {
         const controller = new AbortController();
@@ -789,7 +850,7 @@ Responda APENAS JSON (sem markdown):
           body: JSON.stringify({
             model: "deepseek-chat",
             messages: [
-              { role: "system", content: buildSystemPromptMaxSecurity(availableArticles) },
+              { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, correctArtNum) },
               { role: "user", content: prompt },
             ],
             temperature: 0.0,
@@ -847,15 +908,30 @@ Responda APENAS JSON (sem markdown):
             continue;
           }
 
-          const enforcedArticle = aiLiteralCheck.article;
-          let finalComment = normalizeWhitespace(result.comentario || q.comentario);
+          if (deterministicArticle && aiLiteralCheck.article && aiLiteralCheck.article !== deterministicArticle) {
+            const mismatchReason = `IA desviou do artigo obrigatório: esperado ${deterministicArticle}, encontrado ${aiLiteralCheck.article}`;
+            questoesRevisaoManual.push({ id: q.id, motivo: mismatchReason });
+            await supabase.from("questoes").delete().eq("id", q.id);
+            deletedCount++;
+            details.push({ id: q.id, status: "excluida", motivo: mismatchReason });
+            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: ${mismatchReason}`);
+            await new Promise(r => setTimeout(r, 300));
+            continue;
+          }
+
+          const enforcedArticle = deterministicArticle || aiLiteralCheck.article;
+          const enforcedArtNum = correctArtNum ?? enforcedArticle?.match(/\d+/)?.[0] ?? null;
+          let finalComment = forceDeterministicArticleInComment(
+            normalizeWhitespace(result.comentario || q.comentario),
+            enforcedArtNum,
+          );
 
           const { corrected: whitelistComment, invalidArticles: whitelistInvalidArticles } = enforceAvailableArticlesWhitelist(
             finalComment,
             availableArticles,
             enforcedArticle,
           );
-          finalComment = whitelistComment;
+          finalComment = forceDeterministicArticleInComment(whitelistComment, enforcedArtNum);
           if (whitelistInvalidArticles.length > 0) {
             console.error(
               `[VALIDAR] #${q.id} WHITELIST: artigos inválidos corrigidos para ${enforcedArticle || "[artigo não confirmado]"}`,
@@ -879,6 +955,8 @@ Responda APENAS JSON (sem markdown):
             finalComment = scrubbedComment;
           }
 
+          finalComment = forceDeterministicArticleInComment(finalComment, enforcedArtNum);
+
           // If still has unconfirmed markers after reconciliation, delete
           if (hasUnconfirmedCitations(finalComment)) {
             questoesRevisaoManual.push({ id: q.id, motivo: `IA citou artigos inexistentes: ${removedArts.join(", ")}` });
@@ -891,7 +969,7 @@ Responda APENAS JSON (sem markdown):
           }
 
           const whitelistRecheck = enforceAvailableArticlesWhitelist(finalComment, availableArticles, enforcedArticle);
-          finalComment = whitelistRecheck.corrected;
+          finalComment = forceDeterministicArticleInComment(whitelistRecheck.corrected, enforcedArtNum);
           if (whitelistRecheck.invalidArticles.length > 0) {
             console.error(
               `[VALIDAR] #${q.id} WHITELIST FINAL: persistiram artigos fora da lista ${whitelistRecheck.invalidArticles.join(", ")}`,
@@ -913,52 +991,16 @@ Responda APENAS JSON (sem markdown):
           // Post-AI: apply all snippet corrections and verify
           const snippetVerify = verifySnippetBelongsToArticle(finalComment, blocks);
           if (!snippetVerify.valid) {
-            console.log(`[VALIDAR] #${q.id} PÓS-IA SNIPPET MISMATCH: ${snippetVerify.mismatches.join("; ")}`);
-            // Try applying all snippet corrections
-            const { corrected: snippetFixed, appliedCorrections: aiCorrs } = applyAllSnippetCorrections(finalComment, blocks);
-            if (aiCorrs.length > 0) {
-              for (const corr of aiCorrs) {
-                console.log(`[VALIDAR] #${q.id} PÓS-IA SNIPPET-CORREÇÃO: ${corr.from} → ${corr.to}`);
-              }
-              finalComment = snippetFixed;
-              const reVerify = verifySnippetBelongsToArticle(finalComment, blocks);
-              if (!reVerify.valid) {
-                // Last resort: reconcile to enforced article
-                if (enforcedArticle) {
-                  finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
-                }
-                const finalVerify = verifySnippetBelongsToArticle(finalComment, blocks);
-                if (!finalVerify.valid) {
-                  questoesRevisaoManual.push({ id: q.id, motivo: `Snippet-artigo mismatch irrecuperável: ${finalVerify.mismatches[0]}` });
-                  await supabase.from("questoes").delete().eq("id", q.id);
-                  deletedCount++;
-                  details.push({ id: q.id, status: "excluida", motivo: `Snippet incorreto: ${finalVerify.mismatches[0]}` });
-                  console.log(`[VALIDAR] #${q.id} EXCLUÍDA: snippet irrecuperável`);
-                  await new Promise(r => setTimeout(r, 300));
-                  continue;
-                }
-              }
-            } else if (enforcedArticle) {
-              finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
-              const reVerify = verifySnippetBelongsToArticle(finalComment, blocks);
-              if (!reVerify.valid) {
-                questoesRevisaoManual.push({ id: q.id, motivo: `Snippet-artigo mismatch: ${reVerify.mismatches[0]}` });
-                await supabase.from("questoes").delete().eq("id", q.id);
-                deletedCount++;
-                details.push({ id: q.id, status: "excluida", motivo: `Snippet incorreto: ${reVerify.mismatches[0]}` });
-                console.log(`[VALIDAR] #${q.id} EXCLUÍDA: snippet não pertence ao artigo citado`);
-                await new Promise(r => setTimeout(r, 300));
-                continue;
-              }
-            } else {
-              questoesRevisaoManual.push({ id: q.id, motivo: `Snippet-artigo mismatch: ${snippetVerify.mismatches[0]}` });
-              await supabase.from("questoes").delete().eq("id", q.id);
-              deletedCount++;
-              details.push({ id: q.id, status: "excluida", motivo: `Snippet incorreto: ${snippetVerify.mismatches[0]}` });
-              console.log(`[VALIDAR] #${q.id} EXCLUÍDA: snippet não pertence ao artigo citado`);
-              await new Promise(r => setTimeout(r, 300));
-              continue;
-            }
+            const snippetMismatchReason = enforcedArticle
+              ? `Snippet não pertence ao artigo obrigatório ${enforcedArticle}: ${snippetVerify.mismatches[0]}`
+              : `Snippet-artigo mismatch: ${snippetVerify.mismatches[0]}`;
+            questoesRevisaoManual.push({ id: q.id, motivo: snippetMismatchReason });
+            await supabase.from("questoes").delete().eq("id", q.id);
+            deletedCount++;
+            details.push({ id: q.id, status: "excluida", motivo: snippetMismatchReason });
+            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: ${snippetMismatchReason}`);
+            await new Promise(r => setTimeout(r, 300));
+            continue;
           }
 
           const finalEnunciado = normalizeWhitespace(result.enunciado || q.enunciado);
