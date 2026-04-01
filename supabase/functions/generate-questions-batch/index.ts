@@ -349,33 +349,53 @@ serve(async (req) => {
       const num = i + 1;
       switch (a) {
         case "TEORIA_PURA":
-          return `Questão ${num}: TEORIA PURA — Teste a literalidade da lei. O enunciado apresenta uma afirmativa e o candidato deve identificar se está de acordo com a lei. Use "Sobre [tema], é correto afirmar que..." ou "Assinale a alternativa correta sobre [tema]".`;
+          return `Questão ${num}: LITERALIDADE DA LEI — Teste o conhecimento literal do texto legal. O enunciado apresenta uma afirmativa sobre um tema e o candidato identifica a alternativa que reproduz fielmente o que a lei dispõe. Use "Sobre [tema], é correto afirmar que..." ou "No que se refere a [tema], a legislação estabelece que...". A alternativa correta DEVE ser uma transcrição ou paráfrase fiel do texto legal.`;
         case "CASO_PRATICO":
-          return `Questão ${num}: CASO PRÁTICO — Crie um cenário hipotético detalhado (2-3 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, etc.) em situação concreta do cotidiano militar. O candidato deve APLICAR a regra da lei ao caso.`;
+          return `Questão ${num}: CASO PRÁTICO — Crie um cenário REALISTA e DETALHADO (3-4 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.) em situação concreta do cotidiano militar que tenha PREVISÃO EXPRESSA no texto legal. Exemplo: "O Soldado Silva, lotado no 1º BPM, ao retornar de licença médica de 45 dias, foi informado pelo seu comandante que...". O candidato deve APLICAR a regra da lei ao caso.`;
         case "PEGADINHA_DETALHE":
-          return `Questão ${num}: PEGADINHA DE DETALHE — Foque em termos que geram confusão: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos, troca de competências. A alternativa correta é literal; as incorretas trocam UM detalhe sutil.`;
+          return `Questão ${num}: PEGADINHA INTELIGENTE — Foque em termos que geram confusão na lei: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos (30 vs 60 dias), troca de competências (Comandante-Geral vs Governador), alteração de sujeitos. A alternativa correta é LITERAL da lei; as incorretas trocam UM detalhe sutil mas crucial.`;
       }
     }).join("\n");
 
-    const systemPrompt = `Você é um PROFESSOR DE CONCURSO MILITAR de elite, especialista em criar questões que testam a COMPREENSÃO PRÁTICA da lei, não a memorização de números de artigos.
+    const systemPrompt = `Você é um ROBÔ DE BUSCA LITERAL e PROFESSOR DE CONCURSO MILITAR de elite. É TERMINANTEMENTE PROIBIDO usar qualquer conhecimento ou entendimento jurídico que não esteja no texto legal fornecido. Se a lei diz X e você acha que é Y, escreva X.
+
+MISSÃO: Criar questões que testam a COMPREENSÃO PRÁTICA e LITERAL da lei, jamais a memorização de números de artigos.
 
 REGRAS INVIOLÁVEIS DE CONTEÚDO:
 - NUNCA invente, alucine ou fabrique artigos, parágrafos, incisos ou trechos de lei.
-- Use EXCLUSIVAMENTE o texto legal fornecido. É TERMINANTEMENTE PROIBIDO usar conhecimento externo.
+- Use EXCLUSIVAMENTE o texto legal fornecido. PROIBIDO usar conhecimento externo à lei.
 - ANTES de citar qualquer "Art. X", CONFIRME que esse artigo existe na lista de artigos disponíveis.
+- A alternativa CORRETA deve ser uma TRANSCRIÇÃO ou PARÁFRASE FIEL do texto legal. Se não encontrar o trecho literal na lei, NÃO crie a questão.
 - Responda APENAS com JSON válido, sem markdown, sem \`\`\`.
 
+ESTILO OBRIGATÓRIO DAS QUESTÕES (VARIE entre estes 3 estilos):
+
+ESTILO 1 — CASO PRÁTICO COM PERSONAGEM FICTÍCIO:
+- Crie cenários REALISTAS do cotidiano militar usando personagens fictícios (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.)
+- Exemplos: "O Soldado Silva, ao retornar de férias, foi informado que...", "O Cabo Pereira, durante serviço de ronda, presenciou..."
+- O candidato deve APLICAR a regra da lei ao caso concreto.
+- A situação descrita DEVE ter previsão expressa no texto legal. NUNCA invente situações sem amparo legal.
+
+ESTILO 2 — LITERALIDADE DA LEI SECA:
+- Teste o conhecimento LITERAL do texto da lei sem citar número de artigo.
+- Use formulações como: "Sobre [tema], é correto afirmar que...", "Assinale a alternativa correta sobre [tema]", "No que se refere a [tema], a legislação estabelece que..."
+- A alternativa correta deve reproduzir FIELMENTE o que a lei dispõe.
+
+ESTILO 3 — PEGADINHA INTELIGENTE:
+- Foque em termos que geram confusão: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos, troca de competências, alteração de sujeitos.
+- A alternativa correta é LITERAL; as incorretas trocam UM detalhe sutil mas crucial.
+
 REGRAS PEDAGÓGICAS (CRÍTICAS):
-1. PROIBIDO DECOREBA DE NÚMERO: NUNCA crie questões do tipo "O que dispõe o Art. X?", "Qual artigo trata de Y?", "Segundo o Art. X, ...". O número do artigo aparece SOMENTE no comentário como fundamentação.
-2. O comentário é a PROVA REAL: deve citar artigo, parágrafo e inciso EXATAMENTE como estão na lei seca, com transcrição literal. NUNCA interprete criativamente.
-3. DISTRATORES FORTES: As alternativas incorretas devem ser PLAUSÍVEIS — baseadas em interpretações erradas comuns da própria lei, não em absurdos óbvios.
+1. PROIBIDO DECOREBA DE NÚMERO: NUNCA crie questões do tipo "O que dispõe o Art. X?", "Qual artigo trata de Y?", "Segundo o Art. X, ...". O número do artigo aparece SOMENTE no comentário.
+2. O comentário é a PROVA LITERAL: deve citar artigo, parágrafo e inciso EXATAMENTE como estão na lei seca, com TRANSCRIÇÃO LITERAL entre aspas. NUNCA interprete criativamente.
+3. DISTRATORES FORTES: As alternativas incorretas devem ser PLAUSÍVEIS — baseadas em trocas sutis de termos da própria lei (trocar "deverá" por "poderá", inverter prazo, mudar competência).
 4. TOM PROFISSIONAL E DESAFIADOR: Estilo de banca examinadora séria (CESPE/CEBRASPE, FGV).
-5. PRIORIZE QUESTÕES COMPLEXAS: Questões que envolvem problemáticas práticas, conflitos entre dispositivos legais, exceções às regras gerais, e situações-limite são MAIS VALIOSAS que questões simples.
+5. PRIORIZE QUESTÕES COMPLEXAS: Exceções às regras gerais, condições específicas, prazos, situações-limite.
 
 REGRA DE UNICIDADE SEMÂNTICA (CRÍTICA):
 - Cada questão DEVE abordar um DISPOSITIVO LEGAL DIFERENTE (artigo, parágrafo, inciso distinto).
-- Se duas questões abordam o mesmo artigo, elas DEVEM tratar de parágrafos/incisos/regras DIFERENTES daquele artigo.
-- É PROIBIDO gerar questões que tenham a mesma resposta correta ou testem o mesmo conceito jurídico, mesmo com enunciados diferentes.
+- Se duas questões abordam o mesmo artigo, elas DEVEM tratar de parágrafos/incisos/regras DIFERENTES.
+- É PROIBIDO gerar questões que tenham a mesma resposta correta ou testem o mesmo conceito jurídico.
 
 ARTIGOS DISPONÍVEIS NESTA LEI: ${availableArticles}
 ATENÇÃO: Cite SOMENTE artigos desta lista. Qualquer artigo fora desta lista é PROIBIDO.`;
@@ -430,7 +450,7 @@ JSON array:
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt },
           ],
-          temperature: 0.3,
+          temperature: 0.1,
           max_tokens: 4096,
         }),
         signal: controller.signal,
@@ -585,6 +605,25 @@ JSON array:
         continue;
       }
 
+      // ── Literal proof check: correct answer must be grounded in the law ──
+      const normCorrectAlt = normalize(correctAltText);
+      const correctAltWords = normCorrectAlt.split(" ").filter(w => w.length > 3);
+      let literalProofScore = 0;
+      if (correctAltWords.length > 0) {
+        const lawNorm = normalize(leiSeca);
+        let matchedWords = 0;
+        for (const word of correctAltWords) {
+          if (lawNorm.includes(word)) matchedWords++;
+        }
+        literalProofScore = matchedWords / correctAltWords.length;
+      }
+      if (literalProofScore < 0.5) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (score=${literalProofScore.toFixed(2)}) - alternativa correta não encontrada no texto legal` });
+        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.5`);
+        continue;
+      }
+
       // ── Verify correct answer text is in the law ──
       if (resolvedArticle) {
         const resolvedNum = resolvedArticle.match(/\d+/)?.[0];
@@ -597,7 +636,7 @@ JSON array:
 
       const approvedArts = extractAllCitedArticles(q.comentario);
       validQuestions.push(q);
-      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} ${resolvedArticle ? `(conferido: ${resolvedArticle})` : ""}`);
+      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} (prova literal: ${literalProofScore.toFixed(2)}) ${resolvedArticle ? `(conferido: ${resolvedArticle})` : ""}`);
     }
 
     // Insert valid questions
