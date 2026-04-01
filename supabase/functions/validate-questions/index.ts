@@ -72,6 +72,32 @@ function findArticleForText(snippet: string, blocks: ArticleBlock[]): string | n
   return null;
 }
 
+/** Find which article block contains the most overlap with a given text */
+function findBestArticleForText(snippet: string, blocks: ArticleBlock[]): { article: string; score: number } | null {
+  const normSnippet = normalize(snippet);
+  if (normSnippet.length < 10) return null;
+  const snippetWords = new Set(normSnippet.split(" ").filter(w => w.length > 3));
+  if (snippetWords.size < 3) return null;
+
+  let bestBlock: ArticleBlock | null = null;
+  let bestScore = 0;
+
+  for (const block of blocks) {
+    const blockWords = new Set(block.normText.split(" ").filter(w => w.length > 3));
+    let overlap = 0;
+    for (const w of snippetWords) {
+      if (blockWords.has(w)) overlap++;
+    }
+    const score = overlap / snippetWords.size;
+    if (score > bestScore && score >= 0.4) {
+      bestScore = score;
+      bestBlock = block;
+    }
+  }
+
+  return bestBlock ? { article: `Art. ${bestBlock.artNum}`, score: bestScore } : null;
+}
+
 function extractAllCitedArticles(text: string): string[] {
   const matches = text.match(/Art\.?\s*(\d+)/gi) || [];
   return [...new Set(matches.map(m => m.match(/\d+/)?.[0] || "").filter(Boolean))];
@@ -155,8 +181,6 @@ function buildFingerprint(enunciado: string): string {
   return normalize(enunciado).replace(/\s+/g, "").substring(0, 80);
 }
 
-/** Build a semantic fingerprint: article number + key legal terms from the correct answer.
- *  Two questions about the same article and same legal concept will collide. */
 function buildSemanticFingerprint(comentario: string, correctAltText: string): string {
   const arts = extractAllCitedArticles(comentario);
   const artPart = arts.sort().join(",");
@@ -168,6 +192,56 @@ function buildSemanticFingerprint(comentario: string, correctAltText: string): s
     .join(" ");
   return `${artPart}|${keyTerms}`.substring(0, 100);
 }
+
+/** TRAVA DE PROVA LITERAL: verifica se a alternativa correta tem base literal na lei */
+function literalProofCheck(correctAltText: string, blocks: ArticleBlock[]): {
+  found: boolean;
+  article: string | null;
+  score: number;
+} {
+  // 1. Try exact match via sliding window
+  const exactArticle = findArticleForText(correctAltText, blocks);
+  if (exactArticle) {
+    return { found: true, article: exactArticle, score: 1.0 };
+  }
+
+  // 2. Try fuzzy best-match with word overlap
+  const bestMatch = findBestArticleForText(correctAltText, blocks);
+  if (bestMatch && bestMatch.score >= 0.5) {
+    return { found: true, article: bestMatch.article, score: bestMatch.score };
+  }
+
+  // 3. Try individual sentences from the alternative
+  const sentences = correctAltText.split(/[.;]/).map(s => s.trim()).filter(s => s.length > 15);
+  for (const sentence of sentences) {
+    const sentArticle = findArticleForText(sentence, blocks);
+    if (sentArticle) {
+      return { found: true, article: sentArticle, score: 0.7 };
+    }
+  }
+
+  return { found: false, article: null, score: 0 };
+}
+
+// ── SYSTEM PROMPT MÁXIMA SEGURANÇA ───────────────────────────────────────
+
+const SYSTEM_PROMPT_MAX_SECURITY = `Você é um ROBÔ DE BUSCA LITERAL. É PROIBIDO usar qualquer conhecimento ou entendimento jurídico que não esteja no texto fornecido. Se a lei diz X e você acha que é Y, escreva X.
+
+REGRAS ABSOLUTAS:
+1. TRAVA DE PROVA LITERAL: Cada alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Se não encontrar o trecho exato, marque valida=false.
+2. CONFRONTO DE ARTIGOS: O número do artigo citado no comentário DEVE ser EXATAMENTE o artigo onde o texto foi encontrado na lei. Se o texto está no Art. 1º, o comentário DEVE citar Art. 1º.
+3. PROIBIÇÃO DE CONHECIMENTO EXTERNO: Você NÃO pode usar nenhum conhecimento jurídico, doutrinário ou interpretativo. APENAS o texto literal fornecido.
+4. GABARITO BLINDADO: O gabarito é SEMPRE um inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA use letras ou números fora desse intervalo.
+5. FILTRO DE UNICIDADE: Não repita o mesmo artigo-base ou enunciado de questões existentes.
+
+REGRAS PEDAGÓGICAS (OBRIGATÓRIAS):
+- PROIBIDO DECOREBA: O enunciado NÃO PODE mencionar número de artigo. NUNCA "O que diz o Art. X?", "Segundo o Art. X...". REESCREVA como CASO PRÁTICO.
+- CASO PRÁTICO: Descreva uma SITUAÇÃO CONCRETA do cotidiano militar com personagens fictícios (Soldado Silva, Cabo Pereira, Sargento Lima). O candidato aplica a lei ao caso.
+- PEGADINHAS INTELIGENTES: Alternativas incorretas usam trocadilhos jurídicos (trocar "deverá"/"poderá", inverter prazos, trocar "vedado"/"facultado"). Distratores plausíveis.
+- O número do artigo aparece SOMENTE no comentário como fundamentação.
+- O comentário DEVE transcrever LITERALMENTE o trecho da lei entre aspas.
+
+Responda APENAS JSON válido, sem markdown, sem explicações adicionais.`;
 
 // ── Main handler ─────────────────────────────────────────────────────────
 
@@ -224,7 +298,6 @@ serve(async (req) => {
       for (const eq of existingQuestions) {
         if (!batchIds.has(eq.id)) {
           existingFingerprints.set(buildFingerprint(eq.enunciado), eq.id);
-          // Semantic fingerprint
           const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
           const correctText = eq[correctKey] || "";
           existingSemanticFPs.set(buildSemanticFingerprint(eq.comentario || "", correctText), eq.id);
@@ -272,7 +345,7 @@ serve(async (req) => {
       if (existingSemDupId) {
         await supabase.from("questoes").delete().eq("id", q.id);
         deletedCount++;
-        details.push({ id: q.id, status: "excluida", motivo: `Duplicata semântica da questão #${existingSemDupId} (mesmo artigo + conceito)` });
+        details.push({ id: q.id, status: "excluida", motivo: `Duplicata semântica da questão #${existingSemDupId}` });
         console.log(`[VALIDAR] #${q.id} EXCLUÍDA: duplicata semântica de #${existingSemDupId}`);
         continue;
       }
@@ -292,48 +365,53 @@ serve(async (req) => {
         continue;
       }
 
-      const literalArticle = findArticleForText(correctAltText, blocks);
+      // ══════════════════════════════════════════════════════════════════
+      // TRAVA DE PROVA LITERAL (NOVA): a alternativa correta DEVE ter
+      // base literal no texto da lei
+      // ══════════════════════════════════════════════════════════════════
+      const literalCheck = literalProofCheck(correctAltText, blocks);
+      const realArticle = literalCheck.article;
+
       const evidenceArticle = detectCommentEvidenceArticle(q.comentario || "", blocks);
-      let bestLiteralMatch: string | null = literalArticle;
-      if (!bestLiteralMatch) {
-        const altWords = correctAltText.split(/\s+/).filter(w => w.length > 3);
-        for (let winSize = Math.min(altWords.length, 15); winSize >= 5 && !bestLiteralMatch; winSize--) {
-          for (let s = 0; s <= altWords.length - winSize && !bestLiteralMatch; s++) {
-            bestLiteralMatch = findArticleForText(altWords.slice(s, s + winSize).join(" "), blocks);
-          }
-        }
-      }
-      const realArticle = bestLiteralMatch || evidenceArticle;
       const commentCitedArts = extractAllCitedArticles(q.comentario || "");
 
       let needsFix = false;
       let fixReason = "";
 
-      // Check 1: ALL cited articles must exist in law
-      const citationCheck = validateAllCitations(q.comentario || "", blocks);
-      if (!citationCheck.valid) {
+      // Check 0 (NEW): LITERAL PROOF — correct answer MUST be found in law
+      if (!literalCheck.found) {
         needsFix = true;
-        fixReason = `Artigos inexistentes: ${citationCheck.missing.join(", ")}`;
-        console.log(`[VALIDAR] #${q.id} PROBLEMA: ${fixReason}`);
+        fixReason = "PROVA LITERAL FALHOU: texto da alternativa correta NÃO encontrado na lei — questão INVÁLIDA";
+        console.log(`[VALIDAR] #${q.id} TRAVA LITERAL: resposta correta sem base na lei`);
       }
 
-      // Check 2: Cross-validation — enunciado vs comment
+      // Check 1: ALL cited articles must exist in law
       if (!needsFix) {
-        const crossCheck = crossValidateReferences(q.enunciado, q.comentario || "");
-        if (!crossCheck.valid) {
+        const citationCheck = validateAllCitations(q.comentario || "", blocks);
+        if (!citationCheck.valid) {
           needsFix = true;
-          fixReason = crossCheck.reason;
+          fixReason = `Artigos inexistentes: ${citationCheck.missing.join(", ")}`;
           console.log(`[VALIDAR] #${q.id} PROBLEMA: ${fixReason}`);
         }
       }
 
-      // Check 3: Article mismatch
+      // Check 2 (ENHANCED): CONFRONTO DE ARTIGOS — article in comment must match where text was found
       if (!needsFix && realArticle && commentCitedArts.length > 0) {
         const realNum = realArticle.match(/\d+/)?.[0];
         const anyMatch = commentCitedArts.some(a => a === realNum);
         if (!anyMatch) {
           needsFix = true;
-          fixReason = `Comentário cita Art. ${commentCitedArts.join(",")} mas resposta correta está no ${realArticle}`;
+          fixReason = `CONFRONTO DE ARTIGOS: comentário cita Art. ${commentCitedArts.join(",")} mas busca literal encontrou no ${realArticle}`;
+          console.log(`[VALIDAR] #${q.id} CONFRONTO: ${fixReason}`);
+        }
+      }
+
+      // Check 3: Cross-validation — enunciado vs comment
+      if (!needsFix) {
+        const crossCheck = crossValidateReferences(q.enunciado, q.comentario || "");
+        if (!crossCheck.valid) {
+          needsFix = true;
+          fixReason = crossCheck.reason;
           console.log(`[VALIDAR] #${q.id} PROBLEMA: ${fixReason}`);
         }
       }
@@ -345,14 +423,7 @@ serve(async (req) => {
         console.log(`[VALIDAR] #${q.id} PROBLEMA: ${fixReason}`);
       }
 
-      // Check 5: Correct answer text not found in law at all
-      if (!needsFix && correctAltText.length > 20 && !realArticle) {
-        needsFix = true;
-        fixReason = "Texto da alternativa correta não encontrado na lei";
-        console.log(`[VALIDAR] #${q.id} PROBLEMA: ${fixReason}`);
-      }
-
-      // Check 6: Structural issues
+      // Check 5: Structural issues
       if (!needsFix) {
         const alts = ALT_KEYS.map(k => (q[k] || "").trim());
         const uniqueAlts = new Set(alts.map(a => normalize(a)));
@@ -368,7 +439,7 @@ serve(async (req) => {
         }
       }
 
-      // Check 7: Anti-decoreba
+      // Check 6: Anti-decoreba
       if (!needsFix) {
         const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
         if (decoreba.test(q.enunciado.toLowerCase())) {
@@ -381,20 +452,25 @@ serve(async (req) => {
       // ── No fix needed ─────────────────────────────────
       if (!needsFix) {
         okCount++;
-        details.push({ id: q.id, status: "ok", motivo: realArticle ? `Validada (${realArticle})` : "Validada OK" });
-        console.log(`[VALIDAR] #${q.id} OK ${realArticle || ""}`);
+        details.push({ id: q.id, status: "ok", motivo: realArticle ? `Validada (${realArticle}, prova literal score=${literalCheck.score.toFixed(2)})` : "Validada OK" });
+        console.log(`[VALIDAR] #${q.id} OK ${realArticle || ""} (literal score=${literalCheck.score.toFixed(2)})`);
         continue;
       }
 
+      // ══════════════════════════════════════════════════════════════════
+      // RULES MODE: try to fix deterministically, or delete
+      // ══════════════════════════════════════════════════════════════════
       if (mode === "rules") {
-        if (realArticle && (commentCitedArts.length === 0 || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita"))) {
-          const newComment = reconcileCommentArticle(q.comentario, realArticle);
+        // Auto-fix: confronto de artigos — just correct the comment article reference
+        const fixableArticle = realArticle || evidenceArticle;
+        if (fixableArticle && (fixReason.includes("CONFRONTO") || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita"))) {
+          const newComment = reconcileCommentArticle(q.comentario, fixableArticle);
           const recheck = validateAllCitations(newComment, blocks);
           if (recheck.valid) {
             await supabase.from("questoes").update({ comentario: newComment }).eq("id", q.id);
             fixedCount++;
-            details.push({ id: q.id, status: "corrigida", motivo: `Artigo corrigido para ${realArticle}` });
-            console.log(`[VALIDAR] #${q.id} CORRIGIDA: → ${realArticle}`);
+            details.push({ id: q.id, status: "corrigida", motivo: `Artigo corrigido para ${fixableArticle}` });
+            console.log(`[VALIDAR] #${q.id} CORRIGIDA: → ${fixableArticle}`);
             continue;
           }
         }
@@ -405,6 +481,7 @@ serve(async (req) => {
           console.log(`[VALIDAR] #${q.id} CORRIGIDA: gabarito clamped`);
           continue;
         }
+        // Can't fix in rules mode → delete
         questoesRevisaoManual.push({ id: q.id, motivo: fixReason });
         await supabase.from("questoes").delete().eq("id", q.id);
         deletedCount++;
@@ -413,7 +490,9 @@ serve(async (req) => {
         continue;
       }
 
-      // ── AI mode — use DeepSeek to rewrite ─────────────
+      // ══════════════════════════════════════════════════════════════════
+      // AI MODE — SEGURANÇA MÁXIMA: rewrite from scratch using law text
+      // ══════════════════════════════════════════════════════════════════
       if (!DEEPSEEK_API_KEY) {
         questoesRevisaoManual.push({ id: q.id, motivo: "DEEPSEEK_API_KEY não configurada" });
         errosEncontrados.push({ codigo: "NO_API_KEY", descricao: "DEEPSEEK_API_KEY ausente" });
@@ -421,10 +500,12 @@ serve(async (req) => {
         continue;
       }
 
+      // Build focused article context for the AI
       let articleContext = "";
-      if (realArticle) {
-        const realNum = realArticle.match(/\d+/)?.[0];
-        const idx = blocks.findIndex(b => b.artNum === realNum);
+      const focusArticle = realArticle || evidenceArticle;
+      if (focusArticle) {
+        const focusNum = focusArticle.match(/\d+/)?.[0];
+        const idx = blocks.findIndex(b => b.artNum === focusNum);
         if (idx >= 0) {
           const start = Math.max(0, idx - 2);
           const end = Math.min(blocks.length, idx + 3);
@@ -432,23 +513,27 @@ serve(async (req) => {
         }
       }
 
-      const prompt = `Você é um PROFESSOR DE CONCURSO MILITAR de elite E auditor jurídico EXTREMAMENTE RIGOROSO.
-A questão abaixo tem um ERRO CONFIRMADO: "${fixReason}".
-${realArticle ? `A busca literal confirmou que o conteúdo correto está no ${realArticle} do texto legal.` : "O conteúdo correto NÃO foi localizado no texto legal."}
+      const isLiteralFailure = fixReason.includes("PROVA LITERAL");
+
+      const prompt = `${isLiteralFailure
+        ? `ATENÇÃO: A questão abaixo FALHOU na TRAVA DE PROVA LITERAL. A alternativa correta NÃO tem base no texto legal. Você DEVE REESCREVER A QUESTÃO DO ZERO usando APENAS trechos que EXISTEM LITERALMENTE no texto legal fornecido.`
+        : `A questão abaixo tem um ERRO CONFIRMADO: "${fixReason}".`
+      }
+${focusArticle ? `A busca literal confirmou conteúdo no ${focusArticle} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
 
 REGRAS INVIOLÁVEIS:
-1. Use EXCLUSIVAMENTE o texto legal fornecido. NUNCA invente artigos ou trechos.
-2. O comentário é a PROVA REAL: DEVE citar artigo, parágrafo e inciso EXATAMENTE como estão na lei seca, com transcrição literal. NUNCA interprete criativamente.
-3. ${realArticle ? `O comentário DEVE obrigatoriamente citar o ${realArticle} (confirmado por busca literal no texto da lei).` : "Se não encontrar base legal para esta questão, responda valida=false."}
-4. VERIFIQUE que cada "Art. X" que você citar EXISTE no texto fornecido.
-5. Gabarito: 0=A, 1=B, 2=C, 3=D, 4=E.
+1. A alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Copie trechos reais.
+2. O comentário DEVE citar o artigo EXATO onde o texto foi encontrado, com transcrição LITERAL entre aspas.
+3. ${focusArticle ? `O comentário DEVE obrigatoriamente citar o ${focusArticle} (confirmado por busca literal).` : "Escolha qualquer artigo do texto legal e baseie a questão nele."}
+4. VERIFIQUE que cada "Art. X" que citar EXISTE no texto fornecido.
+5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
+6. NÃO use conhecimento externo. APENAS o texto fornecido.
 
-REGRAS PEDAGÓGICAS (OBRIGATÓRIAS na reescrita):
-- PROIBIDO DECOREBA: O enunciado NÃO PODE mencionar número de artigo. NUNCA "O que diz o Art. X?", "Segundo o Art. X...", "De acordo com o Art. X...". Se o enunciado atual faz isso, REESCREVA como um CASO PRÁTICO.
-- CASO PRÁTICO: O enunciado deve descrever uma SITUAÇÃO CONCRETA do cotidiano militar com personagens fictícios (Soldado Silva, Cabo Pereira, Sargento Lima, etc.). O candidato aplica a lei ao caso.
-- PEGADINHAS INTELIGENTES: Alternativas incorretas devem usar trocadilhos jurídicos (trocar "deverá"/"poderá", inverter prazos, trocar "vedado"/"facultado"). Distratores plausíveis.
-- O número do artigo aparece SOMENTE no comentário como fundamentação.
-- PRIORIZE COMPLEXIDADE: Questões com casos práticos bem estruturados e problemáticas complexas são mais valiosas. Mantenha esse nível.
+REGRAS PEDAGÓGICAS:
+- PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
+- PEGADINHAS INTELIGENTES: distratores com troca de "deverá"/"poderá", inversão de prazos, "vedado"/"facultado".
+- Mescle: algumas questões com exemplos práticos; outras pegadinhas típicas de concurso; outras com literalidade da lei.
+- PRIORIZE questões complexas e bem estruturadas.
 ${articleContext}
 
 TEXTO LEGAL COMPLETO (${q.disciplina}):
@@ -457,25 +542,32 @@ ${lawText.substring(0, 28000)}
 QUESTÃO COM ERRO:
 Enunciado: ${q.enunciado}
 A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
-Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário Atual: ${q.comentario}
+Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${q.comentario}
 
-Corrija a questão (reescrevendo como caso prático se necessário). Responda APENAS JSON (sem markdown):
+${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : "Corrija a questão mantendo o estilo."}
+Responda APENAS JSON (sem markdown):
 {"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o Art. X da ...: '...'"}`;
 
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 50000);
+
         const aiResponse = await fetch("https://api.deepseek.com/v1/chat/completions", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
           body: JSON.stringify({
             model: "deepseek-chat",
             messages: [
-              { role: "system", content: "Você é um professor de concurso militar de elite E auditor jurídico. Você corrige questões transformando-as em casos práticos com pegadinhas inteligentes. O comentário é sempre a prova real com transcrição literal da lei. Responda APENAS JSON válido, sem markdown." },
+              { role: "system", content: SYSTEM_PROMPT_MAX_SECURITY },
               { role: "user", content: prompt },
             ],
-            temperature: 0.1,
+            temperature: 0.0,
             max_tokens: 4000,
           }),
+          signal: controller.signal,
         });
+
+        clearTimeout(timeout);
 
         if (!aiResponse.ok) {
           const errText = await aiResponse.text();
@@ -507,11 +599,38 @@ Corrija a questão (reescrevendo como caso prático se necessário). Responda AP
           details.push({ id: q.id, status: "excluida", motivo: result.motivo_erro || fixReason });
           console.log(`[VALIDAR] #${q.id} EXCLUÍDA (IA): ${result.motivo_erro || fixReason}`);
         } else {
+          // ── POST-AI VALIDATION: re-run literal proof on AI output ──
+          const aiGabarito = clampGabarito(result.gabarito);
+          const aiCorrectKey = ALT_KEYS[aiGabarito];
+          const aiCorrectText = normalizeWhitespace(result[aiCorrectKey] || "");
+
+          // TRAVA DE PROVA LITERAL on AI output
+          const aiLiteralCheck = literalProofCheck(aiCorrectText, blocks);
+          if (!aiLiteralCheck.found) {
+            console.log(`[VALIDAR] #${q.id} IA FALHOU PROVA LITERAL: resposta corrigida sem base na lei`);
+            questoesRevisaoManual.push({ id: q.id, motivo: "IA reescreveu mas resposta correta ainda sem base literal na lei" });
+            await supabase.from("questoes").delete().eq("id", q.id);
+            deletedCount++;
+            details.push({ id: q.id, status: "excluida", motivo: "Pós-IA: prova literal falhou novamente" });
+            await new Promise(r => setTimeout(r, 300));
+            continue;
+          }
+
           let finalComment = normalizeWhitespace(result.comentario || q.comentario);
 
-          const detectedFinalArticle = detectCommentEvidenceArticle(finalComment, blocks);
-          const enforcedArticle = detectedFinalArticle || realArticle;
+          // CONFRONTO DE ARTIGOS on AI output: force the article to match literal proof
+          const enforcedArticle = aiLiteralCheck.article;
+          if (enforcedArticle) {
+            const commentArts = extractAllCitedArticles(finalComment);
+            const enforcedNum = enforcedArticle.match(/\d+/)?.[0];
+            const artMatches = commentArts.some(a => a === enforcedNum);
+            if (!artMatches) {
+              console.log(`[VALIDAR] #${q.id} CONFRONTO PÓS-IA: forçando ${enforcedArticle}`);
+              finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
+            }
+          }
 
+          // Validate all citations exist
           const postCheck = validateAllCitations(finalComment, blocks);
           if (!postCheck.valid) {
             console.log(`[VALIDAR] #${q.id} IA ALUCINANDO: ${postCheck.missing.join(", ")}`);
@@ -538,11 +657,6 @@ Corrija a questão (reescrevendo como caso prático se necessário). Responda AP
             }
           }
 
-          if (enforcedArticle) {
-            finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
-            console.log(`[VALIDAR] #${q.id} FORÇADO: artigo → ${enforcedArticle}`);
-          }
-
           // Cross-validate final result
           const finalEnunciado = normalizeWhitespace(result.enunciado || q.enunciado);
           const crossCheck = crossValidateReferences(finalEnunciado, finalComment);
@@ -556,6 +670,35 @@ Corrija a questão (reescrevendo como caso prático se necessário). Responda AP
             continue;
           }
 
+          // Anti-decoreba on AI output
+          const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
+          if (decoreba.test((result.enunciado || "").toLowerCase())) {
+            questoesRevisaoManual.push({ id: q.id, motivo: "IA reescreveu mas manteve decoreba no enunciado" });
+            await supabase.from("questoes").delete().eq("id", q.id);
+            deletedCount++;
+            details.push({ id: q.id, status: "excluida", motivo: "Pós-IA: decoreba persistente" });
+            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: decoreba pós-IA`);
+            await new Promise(r => setTimeout(r, 300));
+            continue;
+          }
+
+          // Duplicate check on AI-rewritten question
+          const newFp = buildFingerprint(result.enunciado || q.enunciado);
+          const newSemFp = buildSemanticFingerprint(finalComment, aiCorrectText);
+          if (existingFingerprints.has(newFp) || batchFingerprints.has(newFp)) {
+            await supabase.from("questoes").delete().eq("id", q.id);
+            deletedCount++;
+            details.push({ id: q.id, status: "excluida", motivo: "Pós-IA: enunciado reescrito é duplicata" });
+            continue;
+          }
+          if (existingSemanticFPs.has(newSemFp) || batchSemanticFPs.has(newSemFp)) {
+            await supabase.from("questoes").delete().eq("id", q.id);
+            deletedCount++;
+            details.push({ id: q.id, status: "excluida", motivo: "Pós-IA: duplicata semântica após reescrita" });
+            continue;
+          }
+
+          // All checks passed — save
           const updateData: Record<string, unknown> = {
             enunciado: finalEnunciado,
             alt_a: normalizeWhitespace(result.alt_a || q.alt_a),
@@ -563,14 +706,18 @@ Corrija a questão (reescrevendo como caso prático se necessário). Responda AP
             alt_c: normalizeWhitespace(result.alt_c || q.alt_c),
             alt_d: normalizeWhitespace(result.alt_d || q.alt_d),
             alt_e: normalizeWhitespace(result.alt_e || q.alt_e),
-            gabarito: clampGabarito(result.gabarito),
+            gabarito: aiGabarito,
             comentario: finalComment,
           };
 
           await supabase.from("questoes").update(updateData).eq("id", q.id);
           fixedCount++;
-          details.push({ id: q.id, status: "corrigida", motivo: `IA corrigiu: ${fixReason}` });
-          console.log(`[VALIDAR] #${q.id} CORRIGIDA (IA): ${fixReason}`);
+          details.push({ id: q.id, status: "corrigida", motivo: `IA corrigiu (prova literal: ${aiLiteralCheck.article}, score=${aiLiteralCheck.score.toFixed(2)})` });
+          console.log(`[VALIDAR] #${q.id} CORRIGIDA (IA): ${fixReason} → ${aiLiteralCheck.article}`);
+
+          // Update fingerprints
+          batchFingerprints.set(newFp, q.id);
+          batchSemanticFPs.set(newSemFp, q.id);
         }
       } catch (aiErr) {
         questoesRevisaoManual.push({ id: q.id, motivo: `Erro IA: ${String(aiErr).substring(0, 100)}` });
