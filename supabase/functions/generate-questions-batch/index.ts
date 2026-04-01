@@ -605,6 +605,25 @@ JSON array:
         continue;
       }
 
+      // ── Literal proof check: correct answer must be grounded in the law ──
+      const normCorrectAlt = normalize(correctAltText);
+      const correctAltWords = normCorrectAlt.split(" ").filter(w => w.length > 3);
+      let literalProofScore = 0;
+      if (correctAltWords.length > 0) {
+        const lawNorm = normalize(leiSeca);
+        let matchedWords = 0;
+        for (const word of correctAltWords) {
+          if (lawNorm.includes(word)) matchedWords++;
+        }
+        literalProofScore = matchedWords / correctAltWords.length;
+      }
+      if (literalProofScore < 0.5) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (score=${literalProofScore.toFixed(2)}) - alternativa correta não encontrada no texto legal` });
+        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.5`);
+        continue;
+      }
+
       // ── Verify correct answer text is in the law ──
       if (resolvedArticle) {
         const resolvedNum = resolvedArticle.match(/\d+/)?.[0];
@@ -617,7 +636,7 @@ JSON array:
 
       const approvedArts = extractAllCitedArticles(q.comentario);
       validQuestions.push(q);
-      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} ${resolvedArticle ? `(conferido: ${resolvedArticle})` : ""}`);
+      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} (prova literal: ${literalProofScore.toFixed(2)}) ${resolvedArticle ? `(conferido: ${resolvedArticle})` : ""}`);
     }
 
     // Insert valid questions
