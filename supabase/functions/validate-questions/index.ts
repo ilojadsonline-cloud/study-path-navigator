@@ -169,10 +169,57 @@ function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]):
   return { valid: mismatches.length === 0, mismatches, corrections };
 }
 
+function getAvailableArticleNumbers(blocks: ArticleBlock[]): string[] {
+  return [...new Set(blocks.map((b) => normalizeWhitespace(b.artNum)).filter(Boolean))]
+    .sort((a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10));
+}
+
+function buildAvailableArticles(blocks: ArticleBlock[]): string {
+  return getAvailableArticleNumbers(blocks).join(", ");
+}
+
+function getAvailableArticlesSet(availableArticles: string): Set<string> {
+  return new Set(
+    availableArticles
+      .split(",")
+      .map((article) => normalizeWhitespace(article))
+      .filter(Boolean),
+  );
+}
+
+function enforceAvailableArticlesWhitelist(
+  comment: string,
+  availableArticles: string,
+  targetArticle: string | null,
+): { corrected: string; invalidArticles: string[] } {
+  let corrected = normalizeWhitespace(comment);
+  const allowedArticles = getAvailableArticlesSet(availableArticles);
+  const targetArticleNum = targetArticle?.match(/\d+/)?.[0] || "";
+  const invalidArticles = [...new Set(
+    extractAllCitedArticles(corrected).filter((num) => !allowedArticles.has(num)),
+  )];
+
+  if (invalidArticles.length === 0) {
+    return { corrected, invalidArticles: [] };
+  }
+
+  console.error(
+    `[VALIDAR] IA alucinou artigos fora da whitelist [${availableArticles}]: ${invalidArticles.join(", ")}`,
+  );
+
+  for (const invalidArticle of invalidArticles) {
+    corrected = corrected.replace(
+      new RegExp(`\\bArt\\.?\\s*${invalidArticle}(?:º|°|o)?\\b(?!\\d)`, "gi"),
+      targetArticleNum ? `Art. ${targetArticleNum}` : "[artigo não confirmado]",
+    );
+  }
+
+  return { corrected: normalizeWhitespace(corrected), invalidArticles };
+}
+
 /** Gera lista de artigos válidos para incluir no prompt da IA */
 function buildValidArticlesList(blocks: ArticleBlock[]): string {
-  const arts = [...new Set(blocks.map(b => b.artNum))].sort((a, b) => parseInt(a) - parseInt(b));
-  return arts.map(a => `Art. ${a}`).join(", ");
+  return getAvailableArticleNumbers(blocks).map((art) => `Art. ${art}`).join(", ");
 }
 
 function articleExistsInLaw(artNum: string, blocks: ArticleBlock[]): boolean {
@@ -323,7 +370,18 @@ function literalProofCheck(correctAltText: string, blocks: ArticleBlock[]): {
 
 // ── SYSTEM PROMPT MÁXIMA SEGURANÇA ───────────────────────────────────────
 
-const SYSTEM_PROMPT_MAX_SECURITY = `Você é um ROBÔ DE BUSCA LITERAL. É PROIBIDO usar qualquer conhecimento ou entendimento jurídico que não esteja no texto fornecido. Se a lei diz X e você acha que é Y, escreva X.
+function buildSystemPromptMaxSecurity(availableArticles: string): string {
+  return `VOCÊ É UM ROBÔ DE VALIDAÇÃO JURÍDICA SEM CRIATIVIDADE.
+
+ARTIGOS PERMITIDOS NESTA LEI: [${availableArticles}]
+
+REGRA ABSOLUTA: É terminantemente proibido citar qualquer número de artigo que não esteja na lista acima. Se o texto legal fornecido diz "Art. 33", você JAMAIS deve escrever "Art. 142" ou qualquer outro número.
+
+Se você citar um artigo fora da lista, sua resposta será descartada e você falhará na tarefa.
+
+Use o número do artigo exatamente como ele aparece no campo "artNum" do bloco de texto correspondente.
+
+Você é um ROBÔ DE BUSCA LITERAL. É PROIBIDO usar qualquer conhecimento ou entendimento jurídico que não esteja no texto fornecido. Se a lei diz X e você acha que é Y, escreva X.
 
 REGRAS ABSOLUTAS:
 1. TRAVA DE PROVA LITERAL: Cada alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Se não encontrar o trecho exato, marque valida=false.
@@ -340,6 +398,7 @@ REGRAS PEDAGÓGICAS (OBRIGATÓRIAS):
 - O comentário DEVE transcrever LITERALMENTE o trecho da lei entre aspas.
 
 Responda APENAS JSON válido, sem markdown, sem explicações adicionais.`;
+}
 
 // ── Main handler ─────────────────────────────────────────────────────────
 
@@ -671,6 +730,7 @@ serve(async (req) => {
         }
       }
 
+      const availableArticles = buildAvailableArticles(blocks);
       const validArticlesList = buildValidArticlesList(blocks);
 
       const isLiteralFailure = fixReason.includes("PROVA LITERAL");
@@ -680,6 +740,8 @@ serve(async (req) => {
         : `A questão abaixo tem um ERRO CONFIRMADO: "${fixReason}".`
       }
 ${focusArticle ? `A busca literal confirmou conteúdo no ${focusArticle} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
+
+ARTIGOS PERMITIDOS NESTA LEI: [${availableArticles}]
 
 ⚠️ LISTA COMPLETA DE ARTIGOS VÁLIDOS NESTE TEXTO LEGAL (SOMENTE estes existem — NÃO cite nenhum outro):
 ${validArticlesList}
@@ -727,7 +789,7 @@ Responda APENAS JSON (sem markdown):
           body: JSON.stringify({
             model: "deepseek-chat",
             messages: [
-              { role: "system", content: SYSTEM_PROMPT_MAX_SECURITY },
+              { role: "system", content: buildSystemPromptMaxSecurity(availableArticles) },
               { role: "user", content: prompt },
             ],
             temperature: 0.0,
@@ -785,7 +847,20 @@ Responda APENAS JSON (sem markdown):
             continue;
           }
 
+          const enforcedArticle = aiLiteralCheck.article;
           let finalComment = normalizeWhitespace(result.comentario || q.comentario);
+
+          const { corrected: whitelistComment, invalidArticles: whitelistInvalidArticles } = enforceAvailableArticlesWhitelist(
+            finalComment,
+            availableArticles,
+            enforcedArticle,
+          );
+          finalComment = whitelistComment;
+          if (whitelistInvalidArticles.length > 0) {
+            console.error(
+              `[VALIDAR] #${q.id} WHITELIST: artigos inválidos corrigidos para ${enforcedArticle || "[artigo não confirmado]"}`,
+            );
+          }
 
           // ── TRAVA DETERMINÍSTICA PÓS-IA: scrub ALL invalid citations ──
           const { scrubbed: scrubbedComment, removed: removedArts } = scrubInvalidCitations(finalComment, blocks);
@@ -794,7 +869,6 @@ Responda APENAS JSON (sem markdown):
           }
 
           // CONFRONTO DE ARTIGOS on AI output: force the article to match literal proof
-          const enforcedArticle = aiLiteralCheck.article;
           if (enforcedArticle) {
             // Replace any "[artigo não confirmado]" markers AND wrong articles with the enforced one
             finalComment = reconcileCommentArticle(
@@ -814,6 +888,14 @@ Responda APENAS JSON (sem markdown):
             console.log(`[VALIDAR] #${q.id} EXCLUÍDA: alucinação sem artigo real para substituir`);
             await new Promise(r => setTimeout(r, 300));
             continue;
+          }
+
+          const whitelistRecheck = enforceAvailableArticlesWhitelist(finalComment, availableArticles, enforcedArticle);
+          finalComment = whitelistRecheck.corrected;
+          if (whitelistRecheck.invalidArticles.length > 0) {
+            console.error(
+              `[VALIDAR] #${q.id} WHITELIST FINAL: persistiram artigos fora da lista ${whitelistRecheck.invalidArticles.join(", ")}`,
+            );
           }
 
           // Final validation: ensure ALL remaining citations exist
