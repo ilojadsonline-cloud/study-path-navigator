@@ -505,7 +505,7 @@ const Landing = () => {
               </div>
               <div className="mb-6">
                 <span className="text-2xl text-muted-foreground line-through mr-3">R$ 99,90</span>
-                <span className="text-5xl md:text-6xl font-black text-gradient-gold">R$ 79,90</span>
+                <span className="text-5xl md:text-6xl font-black text-gradient-gold">R$ 89,90</span>
                 <span className="text-muted-foreground ml-2 text-base">/ 90 dias</span>
               </div>
               <p className="text-sm text-muted-foreground mb-8 max-w-md">
