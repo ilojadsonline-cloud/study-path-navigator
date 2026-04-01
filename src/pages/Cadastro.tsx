@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Shield, Lock, Eye, EyeOff, User, CreditCard, ArrowRight, Loader2, AlertTriangle, Mail } from "lucide-react";
+import { Shield, Lock, Eye, EyeOff, User, CreditCard, ArrowRight, Loader2, AlertTriangle, Mail, Search } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
@@ -18,6 +18,8 @@ const Cadastro = () => {
   const [loading, setLoading] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(true);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoveringPayment, setRecoveringPayment] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -40,7 +42,6 @@ const Cadastro = () => {
         if (error) throw error;
         if (data?.paid) {
           setPaymentVerified(true);
-          // Pre-fill email from Stripe so check-subscription will match
           if (data.customer_email) {
             setStripeEmail(data.customer_email);
             setEmail(data.customer_email);
@@ -54,6 +55,31 @@ const Cadastro = () => {
 
     verifyPayment();
   }, [sessionId]);
+
+  const handleRecoverPayment = async () => {
+    if (!recoveryEmail.trim()) {
+      toast({ title: "Informe o email", description: "Digite o email usado no pagamento.", variant: "destructive" });
+      return;
+    }
+    setRecoveringPayment(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-payment", {
+        body: { recovery_email: recoveryEmail.trim() },
+      });
+      if (error) throw error;
+      if (data?.paid) {
+        setPaymentVerified(true);
+        setStripeEmail(data.customer_email || recoveryEmail.trim());
+        setEmail(data.customer_email || recoveryEmail.trim());
+        toast({ title: "Pagamento encontrado!", description: "Seu pagamento foi localizado. Complete seu cadastro." });
+      } else {
+        toast({ title: "Pagamento não encontrado", description: "Nenhuma assinatura ativa foi encontrada para este email. Verifique o email ou efetue o pagamento.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao buscar pagamento", description: err.message, variant: "destructive" });
+    }
+    setRecoveringPayment(false);
+  };
 
   const handleCpfChange = (value: string) => {
     setCpf(formatCPF(value));
