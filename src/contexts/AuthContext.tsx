@@ -221,13 +221,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         const cached = getCachedSubscription(session.user.id);
 
-        if (cached) {
+        if (event === "SIGNED_IN") {
+          // On fresh login, only use cache if subscribed=true.
+          // If cache says subscribed=false (stale/expired), keep subscriptionLoading=true
+          // so we wait for the fresh Stripe check before redirecting.
+          if (cached?.subscribed) {
+            setSubscribed(true);
+            setSubscriptionEnd(cached.subscriptionEnd);
+            setSubscriptionLoading(false);
+          } else {
+            // Force fresh check — don't trust stale "not subscribed" cache
+            setSubscriptionLoading(true);
+          }
+        } else if (cached) {
+          // TOKEN_REFRESHED or other events: use cache as-is to avoid unmounting
           setSubscribed(cached.subscribed);
           setSubscriptionEnd(cached.subscriptionEnd);
           setSubscriptionLoading(false);
         }
-        // Never set subscriptionLoading to true on token refresh —
-        // this would unmount ProtectedRoute children and lose in-progress work.
 
         setTimeout(() => {
           void fetchProfile(session.user.id);
