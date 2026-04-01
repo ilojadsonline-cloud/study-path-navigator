@@ -189,6 +189,34 @@ const Cadastro = () => {
               Para criar sua conta, é necessário efetuar o pagamento da assinatura primeiro.
             </p>
           </div>
+
+          {/* Recovery section for users who paid but lost session_id */}
+          <div className="glass-card rounded-xl p-4 text-left space-y-3">
+            <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5 text-primary" />
+              Já pagou e fechou a página? Recupere aqui:
+            </p>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="email"
+                  value={recoveryEmail}
+                  onChange={e => setRecoveryEmail(e.target.value)}
+                  placeholder="Email usado no pagamento"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+                />
+              </div>
+              <button
+                onClick={handleRecoverPayment}
+                disabled={recoveringPayment}
+                className="px-4 py-2.5 rounded-lg gradient-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 shrink-0"
+              >
+                {recoveringPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : "Buscar"}
+              </button>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-3">
             <Link
               to="/assinatura"
