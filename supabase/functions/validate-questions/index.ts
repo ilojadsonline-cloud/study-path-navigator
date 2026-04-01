@@ -593,6 +593,8 @@ serve(async (req) => {
         }
       }
 
+      const validArticlesList = buildValidArticlesList(blocks);
+
       const isLiteralFailure = fixReason.includes("PROVA LITERAL");
 
       const prompt = `${isLiteralFailure
@@ -601,13 +603,17 @@ serve(async (req) => {
       }
 ${focusArticle ? `A busca literal confirmou conteúdo no ${focusArticle} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
 
+⚠️ LISTA COMPLETA DE ARTIGOS VÁLIDOS NESTE TEXTO LEGAL (SOMENTE estes existem — NÃO cite nenhum outro):
+${validArticlesList}
+
 REGRAS INVIOLÁVEIS:
 1. A alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Copie trechos reais.
 2. O comentário DEVE citar o artigo EXATO onde o texto foi encontrado, com transcrição LITERAL entre aspas.
-3. ${focusArticle ? `O comentário DEVE obrigatoriamente citar o ${focusArticle} (confirmado por busca literal).` : "Escolha qualquer artigo do texto legal e baseie a questão nele."}
-4. VERIFIQUE que cada "Art. X" que citar EXISTE no texto fornecido.
+3. ${focusArticle ? `O comentário DEVE obrigatoriamente citar o ${focusArticle} (confirmado por busca literal).` : "Escolha qualquer artigo da LISTA ACIMA e baseie a questão nele."}
+4. SOMENTE cite artigos da lista acima. Se um artigo NÃO está na lista, ele NÃO EXISTE no texto legal.
 5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
 6. NÃO use conhecimento externo. APENAS o texto fornecido.
+7. O trecho entre aspas no comentário DEVE existir LITERALMENTE no artigo citado. Copie e cole do texto.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
@@ -617,7 +623,7 @@ REGRAS PEDAGÓGICAS:
 ${articleContext}
 
 TEXTO LEGAL COMPLETO (${q.disciplina}):
-${lawText.substring(0, 28000)}
+${lawText.substring(0, 25000)}
 
 QUESTÃO COM ERRO:
 Enunciado: ${q.enunciado}
