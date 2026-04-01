@@ -695,6 +695,8 @@ REGRAS INVIOLÁVEIS:
 8. VERIFICAÇÃO OBRIGATÓRIA: Antes de citar "Art. X", faça a busca exata da string "Art. X" no texto legal. Se NÃO encontrar essa string exata, NÃO cite esse artigo. NUNCA INVENTE OU INFIRA NÚMEROS DE ARTIGOS.
 9. CONSISTÊNCIA SNIPPET-ARTIGO: O trecho entre aspas DEVE pertencer ao artigo citado. Se você cita Art. 3 e transcreve texto, esse texto DEVE estar dentro do bloco do Art. 3 no texto legal — NÃO em outro artigo.
 10. EM CASO DE DÚVIDA: omita a citação do artigo ou indique "referência não confirmada" em vez de citar um artigo incorreto.
+11. FIDELIDADE AO artNum CANÔNICO: O número do artigo é determinado pela posição "Art. X" no texto legal. Se o trecho que valida a questão aparece DEPOIS de "Art. 3" e ANTES de "Art. 4", então o artigo correto é OBRIGATORIAMENTE Art. 3 — mesmo que o conteúdo pareça relacionado a outro artigo. NÃO use raciocínio semântico para determinar o número do artigo.
+12. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO: Se a questão #2615 menciona Art. 2 mas o trecho validador está no bloco do Art. 3, o comentário DEVE citar Art. 3. Qualquer citação que não corresponda ao bloco real será REJEITADA e a questão EXCLUÍDA.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
