@@ -136,6 +136,24 @@ function validateAllCitations(comment: string, blocks: ArticleBlock[]): { valid:
   return { valid: missing.length === 0, missing };
 }
 
+/** TRAVA DETERMINÍSTICA: substitui qualquer citação de artigo inexistente no texto legal */
+function scrubInvalidCitations(text: string, blocks: ArticleBlock[]): { scrubbed: string; removed: string[] } {
+  const validArts = new Set(blocks.map(b => b.artNum));
+  const removed: string[] = [];
+  const scrubbed = text.replace(/\bArt\.?\s*(\d+[A-Z]?)(?:º|°|o)?\b/gi, (match, num) => {
+    const cleanNum = num.replace(/[A-Z]/gi, "").trim();
+    if (validArts.has(cleanNum)) return match;
+    removed.push(match);
+    return "[artigo não confirmado]";
+  });
+  return { scrubbed, removed };
+}
+
+/** Verifica se o texto ainda contém marcadores de artigo não confirmado */
+function hasUnconfirmedCitations(text: string): boolean {
+  return /\[artigo não confirmado\]/.test(text);
+}
+
 function reconcileCommentArticle(comment: string, targetArticle: string): string {
   let nextComment = normalizeWhitespace(comment);
   const targetNum = targetArticle.match(/\d+/)?.[0];
@@ -618,48 +636,51 @@ Responda APENAS JSON (sem markdown):
 
           let finalComment = normalizeWhitespace(result.comentario || q.comentario);
 
+          // ── TRAVA DETERMINÍSTICA PÓS-IA: scrub ALL invalid citations ──
+          const { scrubbed: scrubbedComment, removed: removedArts } = scrubInvalidCitations(finalComment, blocks);
+          if (removedArts.length > 0) {
+            console.log(`[VALIDAR] #${q.id} SCRUB PÓS-IA: removidos ${removedArts.join(", ")}`);
+          }
+
           // CONFRONTO DE ARTIGOS on AI output: force the article to match literal proof
           const enforcedArticle = aiLiteralCheck.article;
           if (enforcedArticle) {
-            const commentArts = extractAllCitedArticles(finalComment);
-            const enforcedNum = enforcedArticle.match(/\d+/)?.[0];
-            const artMatches = commentArts.some(a => a === enforcedNum);
-            if (!artMatches) {
-              console.log(`[VALIDAR] #${q.id} CONFRONTO PÓS-IA: forçando ${enforcedArticle}`);
-              finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
-            }
+            // Replace any "[artigo não confirmado]" markers AND wrong articles with the enforced one
+            finalComment = reconcileCommentArticle(
+              scrubbedComment.replace(/\[artigo não confirmado\]/g, enforcedArticle),
+              enforcedArticle
+            );
+          } else {
+            finalComment = scrubbedComment;
           }
 
-          // Validate all citations exist
+          // If still has unconfirmed markers after reconciliation, delete
+          if (hasUnconfirmedCitations(finalComment)) {
+            questoesRevisaoManual.push({ id: q.id, motivo: `IA citou artigos inexistentes: ${removedArts.join(", ")}` });
+            await supabase.from("questoes").delete().eq("id", q.id);
+            deletedCount++;
+            details.push({ id: q.id, status: "excluida", motivo: `Alucinação irrecuperável: ${removedArts.join(", ")}` });
+            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: alucinação sem artigo real para substituir`);
+            await new Promise(r => setTimeout(r, 300));
+            continue;
+          }
+
+          // Final validation: ensure ALL remaining citations exist
           const postCheck = validateAllCitations(finalComment, blocks);
           if (!postCheck.valid) {
-            console.log(`[VALIDAR] #${q.id} IA ALUCINANDO: ${postCheck.missing.join(", ")}`);
-            if (enforcedArticle) {
-              finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
-              const recheck = validateAllCitations(finalComment, blocks);
-              if (!recheck.valid) {
-                questoesRevisaoManual.push({ id: q.id, motivo: `IA alucinação persistente: ${recheck.missing.join(", ")}` });
-                await supabase.from("questoes").delete().eq("id", q.id);
-                deletedCount++;
-                details.push({ id: q.id, status: "excluida", motivo: `Alucinação: ${recheck.missing.join(", ")}` });
-                console.log(`[VALIDAR] #${q.id} EXCLUÍDA: alucinação persistente`);
-                await new Promise(r => setTimeout(r, 300));
-                continue;
-              }
-            } else {
-              questoesRevisaoManual.push({ id: q.id, motivo: `IA citou artigos inexistentes: ${postCheck.missing.join(", ")}` });
-              await supabase.from("questoes").delete().eq("id", q.id);
-              deletedCount++;
-              details.push({ id: q.id, status: "excluida", motivo: `Alucinação: ${postCheck.missing.join(", ")}` });
-              console.log(`[VALIDAR] #${q.id} EXCLUÍDA: alucinação sem artigo real`);
-              await new Promise(r => setTimeout(r, 300));
-              continue;
-            }
+            questoesRevisaoManual.push({ id: q.id, motivo: `Alucinação persistente: ${postCheck.missing.join(", ")}` });
+            await supabase.from("questoes").delete().eq("id", q.id);
+            deletedCount++;
+            details.push({ id: q.id, status: "excluida", motivo: `Alucinação: ${postCheck.missing.join(", ")}` });
+            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: alucinação persistente`);
+            await new Promise(r => setTimeout(r, 300));
+            continue;
           }
 
-          // Cross-validate final result
+          // Scrub enunciado and alternatives too
           const finalEnunciado = normalizeWhitespace(result.enunciado || q.enunciado);
-          const crossCheck = crossValidateReferences(finalEnunciado, finalComment);
+          const { scrubbed: scrubbedEnunciado } = scrubInvalidCitations(finalEnunciado, blocks);
+          const crossCheck = crossValidateReferences(scrubbedEnunciado, finalComment);
           if (!crossCheck.valid) {
             questoesRevisaoManual.push({ id: q.id, motivo: `Divergência pós-correção: ${crossCheck.reason}` });
             await supabase.from("questoes").delete().eq("id", q.id);
@@ -700,7 +721,7 @@ Responda APENAS JSON (sem markdown):
 
           // All checks passed — save
           const updateData: Record<string, unknown> = {
-            enunciado: finalEnunciado,
+            enunciado: scrubbedEnunciado,
             alt_a: normalizeWhitespace(result.alt_a || q.alt_a),
             alt_b: normalizeWhitespace(result.alt_b || q.alt_b),
             alt_c: normalizeWhitespace(result.alt_c || q.alt_c),
