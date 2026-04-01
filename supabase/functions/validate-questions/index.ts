@@ -20,14 +20,43 @@ function normalizeWhitespace(text: unknown): string {
   return String(text ?? "").replace(/\s+/g, " ").trim();
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function collectArticlePositions(lawText: string): Array<{ num: string; pos: number }> {
+  const lineStartPositions: Array<{ num: string; pos: number }> = [];
+  const lineStartRegex = /(^|[\n\r])\s*Art\.?\s*(\d+)(?:º|°|o)?/gim;
+  let match: RegExpExecArray | null;
+
+  while ((match = lineStartRegex.exec(lawText)) !== null) {
+    const artOffset = Math.max(match[0].search(/art\.?/i), 0);
+    lineStartPositions.push({ num: match[2], pos: match.index + artOffset });
+  }
+
+  if (lineStartPositions.length > 0) return lineStartPositions;
+
+  const heuristicPositions: Array<{ num: string; pos: number }> = [];
+  const broadRegex = /Art\.?\s*(\d+)(?:º|°|o)?/gi;
+
+  while ((match = broadRegex.exec(lawText)) !== null) {
+    const before = lawText.slice(Math.max(0, match.index - 20), match.index);
+    const after = lawText.slice(broadRegex.lastIndex, broadRegex.lastIndex + 48);
+    const startsAtBoundary = match.index === 0 || /[\n\r]\s*$/.test(before) || /[.;:!?]\s*$/.test(before);
+    const looksLikeInlineReference = /^\s+(?:desta|deste|dessa|desse|do|da|no|na|nos|nas|anterior|seguinte|referid[oa]s?|previst[oa]s?|mencionad[oa]s?)\b/i.test(after);
+    const looksLikeHeading = /^[\s.:\-–—º°]*[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ]/.test(after);
+
+    if (startsAtBoundary || (looksLikeHeading && !looksLikeInlineReference)) {
+      heuristicPositions.push({ num: match[1], pos: match.index });
+    }
+  }
+
+  return heuristicPositions;
+}
+
 function parseArticleBlocks(lawText: string): ArticleBlock[] {
   const blocks: ArticleBlock[] = [];
-  const regex = /Art\.?\s*(\d+)/gi;
-  const positions: Array<{ num: string; pos: number }> = [];
-  let m: RegExpExecArray | null;
-  while ((m = regex.exec(lawText)) !== null) {
-    positions.push({ num: m[1], pos: m.index });
-  }
+  const positions = collectArticlePositions(lawText);
   for (let i = 0; i < positions.length; i++) {
     const start = positions[i].pos;
     const end = i + 1 < positions.length ? positions[i + 1].pos : lawText.length;
@@ -194,7 +223,8 @@ function enforceAvailableArticlesWhitelist(
 ): { corrected: string; invalidArticles: string[] } {
   let corrected = normalizeWhitespace(comment);
   const allowedArticles = getAvailableArticlesSet(availableArticles);
-  const targetArticleNum = targetArticle?.match(/\d+/)?.[0] || "";
+  const targetCitation = normalizeWhitespace(targetArticle || "");
+  const targetArticleNum = targetCitation.match(/\d+/)?.[0] || "";
   const invalidArticles = [...new Set(
     extractAllCitedArticles(corrected).filter((num) => !allowedArticles.has(num)),
   )];
@@ -209,8 +239,8 @@ function enforceAvailableArticlesWhitelist(
 
   for (const invalidArticle of invalidArticles) {
     corrected = corrected.replace(
-      new RegExp(`\\bArt\\.?\\s*${invalidArticle}(?:º|°|o)?\\b(?!\\d)`, "gi"),
-      targetArticleNum ? `Art. ${targetArticleNum}` : "[artigo não confirmado]",
+      new RegExp(`\\bArt\\.?\\s*${invalidArticle}(?:º|°|o)?\\b(?:\\s*,\\s*par[aá]grafo\\s+[úu]nico)?`, "gi"),
+      targetCitation || (targetArticleNum ? `Art. ${targetArticleNum}` : "[artigo não confirmado]"),
     );
   }
 
@@ -226,6 +256,75 @@ function getArticleBlock(article: string | null | undefined, blocks: ArticleBloc
   const artNum = normalizeWhitespace(article).match(/\d+/)?.[0];
   if (!artNum) return null;
   return blocks.find((block) => block.artNum === artNum) ?? null;
+}
+
+function getParagrafoUnicoText(block: ArticleBlock): string | null {
+  const match = /par[aá]grafo\s+único[\s.:\-–—]*/i.exec(block.text);
+  if (!match || typeof match.index !== "number") return null;
+  return block.text.slice(match.index);
+}
+
+function textSectionContainsSnippet(section: string, snippet: string): boolean {
+  const normSection = normalize(section);
+  const cleanedSnippet = normalizeWhitespace(snippet);
+  if (!cleanedSnippet || cleanedSnippet.length < 15) return false;
+
+  const normSnippet = normalize(cleanedSnippet);
+  if (normSnippet.length < 15) return false;
+  if (normSection.includes(normSnippet)) return true;
+
+  const words = normSnippet.split(" ").filter((word) => word.length > 2);
+  for (const windowSize of [12, 10, 8, 6, 5]) {
+    if (words.length < windowSize) continue;
+    for (let start = 0; start <= words.length - windowSize; start++) {
+      const probe = words.slice(start, start + windowSize).join(" ");
+      if (normSection.includes(probe)) return true;
+    }
+  }
+
+  return false;
+}
+
+function getTextOverlapScore(snippet: string, source: string): number {
+  const snippetWords = new Set(normalize(snippet).split(" ").filter((word) => word.length > 3));
+  if (snippetWords.size < 3) return 0;
+
+  const sourceWords = new Set(normalize(source).split(" ").filter((word) => word.length > 3));
+  let overlap = 0;
+  for (const word of snippetWords) {
+    if (sourceWords.has(word)) overlap++;
+  }
+
+  return overlap / snippetWords.size;
+}
+
+function snippetBelongsToParagrafoUnico(snippet: string, block: ArticleBlock): boolean {
+  const paragrafoUnicoText = getParagrafoUnicoText(block);
+  if (!paragrafoUnicoText) return false;
+  if (textSectionContainsSnippet(paragrafoUnicoText, snippet)) return true;
+  return getTextOverlapScore(snippet, paragrafoUnicoText) >= 0.45;
+}
+
+function buildDeterministicCitation(block: ArticleBlock | null, snippets: string[]): string | null {
+  if (!block) return null;
+
+  const shouldMentionParagrafoUnico = Boolean(getParagrafoUnicoText(block))
+    && snippets.some((snippet) => snippetBelongsToParagrafoUnico(snippet, block));
+
+  return shouldMentionParagrafoUnico ? `Art. ${block.artNum}, parágrafo único` : `Art. ${block.artNum}`;
+}
+
+function getCitationReferenceText(block: ArticleBlock | null, citation: string | null): string {
+  if (!block) return "";
+  if (/par[aá]grafo\s+[úu]nico/i.test(citation || "")) {
+    return normalizeWhitespace(getParagrafoUnicoText(block) || block.text);
+  }
+  return normalizeWhitespace(block.text);
+}
+
+function commentContainsCitation(comment: string, citation: string | null): boolean {
+  if (!citation) return true;
+  return new RegExp(escapeRegExp(citation), "i").test(normalizeWhitespace(comment));
 }
 
 function findBestArticleBlockForText(snippet: string, blocks: ArticleBlock[]): ArticleBlock | null {
@@ -270,7 +369,7 @@ function validateAllCitations(comment: string, blocks: ArticleBlock[]): { valid:
 function scrubInvalidCitations(text: string, blocks: ArticleBlock[]): { scrubbed: string; removed: string[] } {
   const validArts = new Set(blocks.map(b => b.artNum));
   const removed: string[] = [];
-  const scrubbed = text.replace(/\bArt\.?\s*(\d+[A-Z]?)(?:º|°|o)?\b/gi, (match, num) => {
+  const scrubbed = text.replace(/\bArt\.?\s*(\d+[A-Z]?)(?:º|°|o)?\b(?:\s*,\s*par[aá]grafo\s+[úu]nico)?/gi, (match, num) => {
     const cleanNum = num.replace(/[A-Z]/gi, "").trim();
     if (validArts.has(cleanNum)) return match;
     removed.push(match);
@@ -289,23 +388,21 @@ function reconcileCommentArticle(comment: string, targetArticle: string): string
   const targetNum = targetArticle.match(/\d+/)?.[0];
   if (!targetNum) return nextComment;
 
-  // Aggressively replace ALL article citations that don't match the target
-  const citedArts = extractAllCitedArticles(nextComment);
-  if (citedArts.length > 0) {
-    for (const artNum of citedArts) {
-      if (artNum !== targetNum) {
-        // Replace all variations: Art. X, Art X, Art. Xº, etc.
-        nextComment = nextComment.replace(
-          new RegExp(`\\bArt\\.?\\s*${artNum}(?:º|°|o)?\\b(?!\\d)`, "gi"),
-          targetArticle
-        );
-        console.log(`[RECONCILE] Substituído Art. ${artNum} → ${targetArticle}`);
-      }
-    }
-  }
+  nextComment = nextComment.replace(
+    /\bArt\.?\s*\d+(?:º|°|o)?\b(?:\s*,\s*par[aá]grafo\s+[úu]nico)?/gi,
+    targetArticle,
+  );
+  nextComment = nextComment.replace(
+    /\b(?:nos?\s+termos\s+do\s+)?par[aá]grafo\s+[úu]nico\b/gi,
+    targetArticle,
+  );
+  nextComment = nextComment.replace(
+    new RegExp(`(${escapeRegExp(targetArticle)})(?:\\s*,\\s*par[aá]grafo\\s+[úu]nico)+`, "gi"),
+    "$1",
+  );
 
   // If no article cited at all, prepend the target
-  if (extractAllCitedArticles(nextComment).length === 0) {
+  if (!commentContainsCitation(nextComment, targetArticle)) {
     nextComment = /^conforme\b/i.test(nextComment)
       ? nextComment.replace(/^conforme\b\s*/i, `Conforme o ${targetArticle}: `)
       : `Conforme o ${targetArticle}: ${nextComment}`;
@@ -314,12 +411,14 @@ function reconcileCommentArticle(comment: string, targetArticle: string): string
   return normalizeWhitespace(nextComment);
 }
 
-function forceDeterministicArticleInComment(comment: string, correctArtNum: string | null): string {
+function forceDeterministicArticleInComment(comment: string, targetCitation: string | null): string {
   const normalizedComment = normalizeWhitespace(comment);
-  if (!correctArtNum) return normalizedComment;
+  if (!targetCitation) return normalizedComment;
   return reconcileCommentArticle(
-    normalizedComment.replace(/Art\.?\s*\d+/gi, `Art. ${correctArtNum}`),
-    `Art. ${correctArtNum}`,
+    normalizedComment
+      .replace(/\bArt\.?\s*\d+(?:º|°|o)?\b(?:\s*,\s*par[aá]grafo\s+[úu]nico)?/gi, targetCitation)
+      .replace(/\b(?:nos?\s+termos\s+do\s+)?par[aá]grafo\s+[úu]nico\b/gi, targetCitation),
+    targetCitation,
   );
 }
 
@@ -410,12 +509,16 @@ function literalProofCheck(correctAltText: string, blocks: ArticleBlock[]): {
 
 // ── SYSTEM PROMPT MÁXIMA SEGURANÇA ───────────────────────────────────────
 
-function buildSystemPromptMaxSecurity(availableArticles: string, correctArtNum: string | null): string {
+function buildSystemPromptMaxSecurity(availableArticles: string, correctCitation: string | null): string {
+  const requiresParagrafoUnico = /par[aá]grafo\s+[úu]nico/i.test(correctCitation || "");
+
   return `VOCÊ É UM ROBÔ DE VALIDAÇÃO JURÍDICA SEM CRIATIVIDADE.
 
-${correctArtNum ? `NÚMERO DO ARTIGO A SER CITADO NESTA TAREFA: Art. ${correctArtNum}
+${correctCitation ? `CITAÇÃO JURÍDICA OBRIGATÓRIA NESTA TAREFA: ${correctCitation}
 
-REGRA ABSOLUTA EXTRA: O número do artigo já foi determinado pelo código TypeScript. Você está TERMINANTEMENTE proibido de trocar, deduzir, inferir, ajustar ou “corrigir” esse número. Quando mencionar o artigo desta questão, use OBRIGATORIAMENTE "Art. ${correctArtNum}".
+REGRA ABSOLUTA EXTRA: A citação jurídica já foi determinada pelo código TypeScript. Você está TERMINANTEMENTE proibido de trocar, deduzir, inferir, ajustar ou “corrigir” essa citação. Quando mencionar o fundamento legal desta questão, use OBRIGATORIAMENTE "${correctCitation}".
+
+${requiresParagrafoUnico ? "Se a citação obrigatória inclui 'parágrafo único', esse complemento é obrigatório e não pode ser omitido." : ""}
 ` : ""}
 
 ARTIGOS PERMITIDOS NESTA LEI: [${availableArticles}]
@@ -430,7 +533,7 @@ Você é um ROBÔ DE BUSCA LITERAL. É PROIBIDO usar qualquer conhecimento ou en
 
 REGRAS ABSOLUTAS:
 1. TRAVA DE PROVA LITERAL: Cada alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Se não encontrar o trecho exato, marque valida=false.
-2. CONFRONTO DE ARTIGOS: O número do artigo citado no comentário DEVE ser EXATAMENTE o artigo onde o texto foi encontrado na lei. Se o texto está no Art. 1º, o comentário DEVE citar Art. 1º.
+2. CONFRONTO DE ARTIGOS: A citação no comentário DEVE ser EXATAMENTE a determinada pelo código. Se o texto está no Art. 1º, parágrafo único, o comentário DEVE citar exatamente Art. 1º, parágrafo único.
 3. PROIBIÇÃO DE CONHECIMENTO EXTERNO: Você NÃO pode usar nenhum conhecimento jurídico, doutrinário ou interpretativo. APENAS o texto literal fornecido.
 4. GABARITO BLINDADO: O gabarito é SEMPRE um inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA use letras ou números fora desse intervalo.
 5. FILTRO DE UNICIDADE: Não repita o mesmo artigo-base ou enunciado de questões existentes.
@@ -582,8 +685,11 @@ serve(async (req) => {
         evidenceArticle,
         blocks,
       );
+      const citationSnippets = [correctAltText, ...extractCommentEvidenceSnippets(q.comentario || "")];
       const deterministicArticle = targetArticleBlock ? `Art. ${targetArticleBlock.artNum}` : (realArticle || evidenceArticle);
+      const deterministicCitation = buildDeterministicCitation(targetArticleBlock, citationSnippets) ?? deterministicArticle;
       const correctArtNum = targetArticleBlock?.artNum ?? deterministicArticle?.match(/\d+/)?.[0] ?? null;
+      const targetCitationText = getCitationReferenceText(targetArticleBlock, deterministicCitation);
       const commentCitedArts = extractAllCitedArticles(q.comentario || "");
 
       let needsFix = false;
@@ -634,6 +740,12 @@ serve(async (req) => {
           fixReason = crossCheck.reason;
           console.log(`[VALIDAR] #${q.id} PROBLEMA: ${fixReason}`);
         }
+      }
+
+      if (!needsFix && deterministicCitation && /par[aá]grafo\s+[úu]nico/i.test(deterministicCitation) && !commentContainsCitation(q.comentario || "", deterministicCitation)) {
+        needsFix = true;
+        fixReason = `Comentário omite a citação obrigatória ${deterministicCitation}`;
+        console.log(`[VALIDAR] #${q.id} PROBLEMA: ${fixReason}`);
       }
 
       // Check 4: No article cited at all in comment
@@ -689,6 +801,7 @@ serve(async (req) => {
 
         // Determine the correct article — apply ALL snippet corrections first
         let fixableArticle = deterministicArticle;
+        let fixableCitation = deterministicCitation;
         
         const { corrected: snippetCorrectedComment, appliedCorrections } = applyAllSnippetCorrections(q.comentario || "", blocks);
         if (appliedCorrections.length > 0) {
@@ -699,28 +812,32 @@ serve(async (req) => {
           const corrNum = lastCorr.to.match(/\d+/)?.[0];
           if (corrNum && articleExistsInLaw(corrNum, blocks)) {
             fixableArticle = lastCorr.to;
+            fixableCitation = buildDeterministicCitation(
+              getArticleBlock(fixableArticle, blocks),
+              [correctAltText, ...extractCommentEvidenceSnippets(snippetCorrectedComment)],
+            ) ?? fixableArticle;
           }
         }
 
-        if (fixableArticle && (fixReason.includes("CONFRONTO") || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita") || fixReason.includes("SNIPPET"))) {
+        if (fixableCitation && (fixReason.includes("CONFRONTO") || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita") || fixReason.includes("SNIPPET") || fixReason.includes("omite"))) {
           const baseComment = appliedCorrections.length > 0
             ? snippetCorrectedComment
             : (removedRulesArts.length > 0
-                ? scrubbedRulesComment.replace(/\[artigo não confirmado\]/g, fixableArticle)
+                ? scrubbedRulesComment.replace(/\[artigo não confirmado\]/g, fixableCitation)
                 : q.comentario);
-          const newComment = reconcileCommentArticle(baseComment, fixableArticle);
+          const newComment = reconcileCommentArticle(baseComment, fixableCitation);
           const recheck = validateAllCitations(newComment, blocks);
           const postFixSnippetCheck = verifySnippetBelongsToArticle(newComment, blocks);
           
-          if (recheck.valid && !hasUnconfirmedCitations(newComment) && postFixSnippetCheck.valid) {
+          if (recheck.valid && !hasUnconfirmedCitations(newComment) && postFixSnippetCheck.valid && commentContainsCitation(newComment, fixableCitation)) {
             // Nuclear final pass: every cited article must exist in law
             const finalCited = extractAllCitedArticles(newComment);
             const allExist = finalCited.every(a => articleExistsInLaw(a, blocks));
             if (allExist) {
               await supabase.from("questoes").update({ comentario: newComment }).eq("id", q.id);
               fixedCount++;
-              details.push({ id: q.id, status: "corrigida", motivo: `Artigo corrigido para ${fixableArticle}` });
-              console.log(`[VALIDAR] #${q.id} CORRIGIDA: → ${fixableArticle}`);
+              details.push({ id: q.id, status: "corrigida", motivo: `Citação corrigida para ${fixableCitation}` });
+              console.log(`[VALIDAR] #${q.id} CORRIGIDA: → ${fixableCitation}`);
               continue;
             } else {
               console.log(`[VALIDAR] #${q.id} NUCLEAR FALHOU: artigos inexistentes: ${finalCited.filter(a => !articleExistsInLaw(a, blocks)).map(a => `Art. ${a}`).join(", ")}`);
@@ -775,7 +892,7 @@ serve(async (req) => {
       let articleContext = "";
       const focusArticleBlock = targetArticleBlock ?? getArticleBlock(realArticle || evidenceArticle, blocks);
       const focusArticle = focusArticleBlock ? `Art. ${focusArticleBlock.artNum}` : null;
-      const targetArticleText = targetArticleBlock ? normalizeWhitespace(targetArticleBlock.text) : "";
+      const focusCitation = buildDeterministicCitation(focusArticleBlock, citationSnippets) ?? focusArticle;
       if (focusArticleBlock) {
         const idx = blocks.findIndex(b => b.artNum === focusArticleBlock.artNum);
         if (idx >= 0) {
@@ -794,13 +911,13 @@ serve(async (req) => {
         ? `ATENÇÃO: A questão abaixo FALHOU na TRAVA DE PROVA LITERAL. A alternativa correta NÃO tem base no texto legal. Você DEVE REESCREVER A QUESTÃO DO ZERO usando APENAS trechos que EXISTEM LITERALMENTE no texto legal fornecido.`
         : `A questão abaixo tem um ERRO CONFIRMADO: "${fixReason}".`
       }
-${focusArticle ? `A busca literal confirmou conteúdo no ${focusArticle} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
+${focusCitation ? `A busca literal confirmou conteúdo em ${focusCitation} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
 
-${correctArtNum && targetArticleText ? `NÚMERO DO ARTIGO A SER CITADO: Art. ${correctArtNum}
+${deterministicCitation && targetCitationText ? `CITAÇÃO JURÍDICA OBRIGATÓRIA: ${deterministicCitation}
 
-TEXTO DO ARTIGO PARA REFERÊNCIA: ${targetArticleText}
+TEXTO DO DISPOSITIVO PARA REFERÊNCIA: ${targetCitationText}
 
-INSTRUÇÃO PARA O COMENTÁRIO: Você deve gerar um comentário que valide a alternativa correta. Você é PROIBIDO de escrever qualquer outro número de artigo no comentário. Use OBRIGATORIAMENTE o número "Art. ${correctArtNum}" fornecido acima. Não tente “corrigir” ou mudar esse número.` : ""}
+INSTRUÇÃO PARA O COMENTÁRIO: Você deve gerar um comentário que valide a alternativa correta. Você é PROIBIDO de escrever qualquer outra citação legal no comentário. Use OBRIGATORIAMENTE "${deterministicCitation}" fornecida acima. Não tente “corrigir” ou mudar essa citação.` : ""}
 
 ARTIGOS PERMITIDOS NESTA LEI: [${availableArticles}]
 
@@ -810,7 +927,7 @@ ${validArticlesList}
 REGRAS INVIOLÁVEIS:
 1. A alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Copie trechos reais.
 2. O comentário DEVE citar o artigo EXATO onde o texto foi encontrado, com transcrição LITERAL entre aspas.
-3. ${correctArtNum ? `O comentário DEVE obrigatoriamente citar Art. ${correctArtNum} (definido pelo código TypeScript e confirmado por busca literal).` : (focusArticle ? `O comentário DEVE obrigatoriamente citar o ${focusArticle} (confirmado por busca literal).` : "Escolha qualquer artigo da LISTA ACIMA e baseie a questão nele." )}
+3. ${deterministicCitation ? `O comentário DEVE obrigatoriamente citar ${deterministicCitation} (definida pelo código TypeScript e confirmada por busca literal).` : (focusCitation ? `O comentário DEVE obrigatoriamente citar ${focusCitation} (confirmada por busca literal).` : "Escolha qualquer artigo da LISTA ACIMA e baseie a questão nele." )}
 4. SOMENTE cite artigos da lista acima. Se um artigo NÃO está na lista, ele NÃO EXISTE no texto legal.
 5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
 6. NÃO use conhecimento externo. APENAS o texto fornecido.
@@ -838,7 +955,7 @@ Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${q.comen
 
 ${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : "Corrija a questão mantendo o estilo."}
 Responda APENAS JSON (sem markdown):
-{"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${correctArtNum ? `Art. ${correctArtNum}` : "Art. X"} da ...: '...'"}`;
+{"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
 
       try {
         const controller = new AbortController();
@@ -850,7 +967,7 @@ Responda APENAS JSON (sem markdown):
           body: JSON.stringify({
             model: "deepseek-chat",
             messages: [
-              { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, correctArtNum) },
+              { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, deterministicCitation) },
               { role: "user", content: prompt },
             ],
             temperature: 0.0,
@@ -920,21 +1037,26 @@ Responda APENAS JSON (sem markdown):
           }
 
           const enforcedArticle = deterministicArticle || aiLiteralCheck.article;
-          const enforcedArtNum = correctArtNum ?? enforcedArticle?.match(/\d+/)?.[0] ?? null;
+          const enforcedCitation = deterministicCitation
+            ?? buildDeterministicCitation(
+              getArticleBlock(enforcedArticle, blocks),
+              [aiCorrectText, ...citationSnippets, ...extractCommentEvidenceSnippets(result.comentario || "")],
+            )
+            ?? enforcedArticle;
           let finalComment = forceDeterministicArticleInComment(
             normalizeWhitespace(result.comentario || q.comentario),
-            enforcedArtNum,
+            enforcedCitation,
           );
 
           const { corrected: whitelistComment, invalidArticles: whitelistInvalidArticles } = enforceAvailableArticlesWhitelist(
             finalComment,
             availableArticles,
-            enforcedArticle,
+            enforcedCitation,
           );
-          finalComment = forceDeterministicArticleInComment(whitelistComment, enforcedArtNum);
+          finalComment = forceDeterministicArticleInComment(whitelistComment, enforcedCitation);
           if (whitelistInvalidArticles.length > 0) {
             console.error(
-              `[VALIDAR] #${q.id} WHITELIST: artigos inválidos corrigidos para ${enforcedArticle || "[artigo não confirmado]"}`,
+              `[VALIDAR] #${q.id} WHITELIST: artigos inválidos corrigidos para ${enforcedCitation || "[artigo não confirmado]"}`,
             );
           }
 
@@ -945,17 +1067,17 @@ Responda APENAS JSON (sem markdown):
           }
 
           // CONFRONTO DE ARTIGOS on AI output: force the article to match literal proof
-          if (enforcedArticle) {
+          if (enforcedCitation) {
             // Replace any "[artigo não confirmado]" markers AND wrong articles with the enforced one
             finalComment = reconcileCommentArticle(
-              scrubbedComment.replace(/\[artigo não confirmado\]/g, enforcedArticle),
-              enforcedArticle
+              scrubbedComment.replace(/\[artigo não confirmado\]/g, enforcedCitation),
+              enforcedCitation
             );
           } else {
             finalComment = scrubbedComment;
           }
 
-          finalComment = forceDeterministicArticleInComment(finalComment, enforcedArtNum);
+          finalComment = forceDeterministicArticleInComment(finalComment, enforcedCitation);
 
           // If still has unconfirmed markers after reconciliation, delete
           if (hasUnconfirmedCitations(finalComment)) {
@@ -968,12 +1090,25 @@ Responda APENAS JSON (sem markdown):
             continue;
           }
 
-          const whitelistRecheck = enforceAvailableArticlesWhitelist(finalComment, availableArticles, enforcedArticle);
-          finalComment = forceDeterministicArticleInComment(whitelistRecheck.corrected, enforcedArtNum);
+          const whitelistRecheck = enforceAvailableArticlesWhitelist(finalComment, availableArticles, enforcedCitation);
+          finalComment = forceDeterministicArticleInComment(whitelistRecheck.corrected, enforcedCitation);
           if (whitelistRecheck.invalidArticles.length > 0) {
             console.error(
               `[VALIDAR] #${q.id} WHITELIST FINAL: persistiram artigos fora da lista ${whitelistRecheck.invalidArticles.join(", ")}`,
             );
+          }
+
+          if (!commentContainsCitation(finalComment, enforcedCitation)) {
+            const citationReason = enforcedCitation
+              ? `Comentário final não preservou a citação obrigatória ${enforcedCitation}`
+              : "Comentário final sem citação jurídica confirmada";
+            questoesRevisaoManual.push({ id: q.id, motivo: citationReason });
+            await supabase.from("questoes").delete().eq("id", q.id);
+            deletedCount++;
+            details.push({ id: q.id, status: "excluida", motivo: citationReason });
+            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: ${citationReason}`);
+            await new Promise(r => setTimeout(r, 300));
+            continue;
           }
 
           // Final validation: ensure ALL remaining citations exist
@@ -991,8 +1126,8 @@ Responda APENAS JSON (sem markdown):
           // Post-AI: apply all snippet corrections and verify
           const snippetVerify = verifySnippetBelongsToArticle(finalComment, blocks);
           if (!snippetVerify.valid) {
-            const snippetMismatchReason = enforcedArticle
-              ? `Snippet não pertence ao artigo obrigatório ${enforcedArticle}: ${snippetVerify.mismatches[0]}`
+            const snippetMismatchReason = enforcedCitation
+              ? `Snippet não pertence à citação obrigatória ${enforcedCitation}: ${snippetVerify.mismatches[0]}`
               : `Snippet-artigo mismatch: ${snippetVerify.mismatches[0]}`;
             questoesRevisaoManual.push({ id: q.id, motivo: snippetMismatchReason });
             await supabase.from("questoes").delete().eq("id", q.id);
