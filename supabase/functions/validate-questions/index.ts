@@ -211,15 +211,22 @@ function reconcileCommentArticle(comment: string, targetArticle: string): string
   const targetNum = targetArticle.match(/\d+/)?.[0];
   if (!targetNum) return nextComment;
 
+  // Aggressively replace ALL article citations that don't match the target
   const citedArts = extractAllCitedArticles(nextComment);
   if (citedArts.length > 0) {
     for (const artNum of citedArts) {
       if (artNum !== targetNum) {
-        nextComment = nextComment.replace(new RegExp(`Art\\.?\\s*${artNum}(?!\\d)`, "gi"), targetArticle);
+        // Replace all variations: Art. X, Art X, Art. Xº, etc.
+        nextComment = nextComment.replace(
+          new RegExp(`\\bArt\\.?\\s*${artNum}(?:º|°|o)?\\b(?!\\d)`, "gi"),
+          targetArticle
+        );
+        console.log(`[RECONCILE] Substituído Art. ${artNum} → ${targetArticle}`);
       }
     }
   }
 
+  // If no article cited at all, prepend the target
   if (extractAllCitedArticles(nextComment).length === 0) {
     nextComment = /^conforme\b/i.test(nextComment)
       ? nextComment.replace(/^conforme\b\s*/i, `Conforme o ${targetArticle}: `)
@@ -227,6 +234,27 @@ function reconcileCommentArticle(comment: string, targetArticle: string): string
   }
 
   return normalizeWhitespace(nextComment);
+}
+
+/** Apply ALL snippet-vs-article corrections found, not just the first */
+function applyAllSnippetCorrections(comment: string, blocks: ArticleBlock[]): { corrected: string; appliedCorrections: Array<{from: string; to: string}> } {
+  let result = comment;
+  const applied: Array<{from: string; to: string}> = [];
+  const check = verifySnippetBelongsToArticle(result, blocks);
+  
+  if (check.corrections.length > 0) {
+    for (const corr of check.corrections) {
+      if (articleExistsInLaw(corr.actualNum, blocks)) {
+        result = result.replace(
+          new RegExp(`\\bArt\\.?\\s*${corr.citedNum}(?:º|°|o)?\\b(?!\\d)`, "gi"),
+          `Art. ${corr.actualNum}`
+        );
+        applied.push({ from: `Art. ${corr.citedNum}`, to: `Art. ${corr.actualNum}` });
+      }
+    }
+  }
+  
+  return { corrected: result, appliedCorrections: applied };
 }
 
 function crossValidateReferences(enunciado: string, comment: string): { valid: boolean; reason: string } {
