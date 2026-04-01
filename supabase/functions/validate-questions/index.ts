@@ -124,9 +124,9 @@ function detectCommentEvidenceArticle(comment: string, blocks: ArticleBlock[]): 
 }
 
 /** Verifica se o trecho citado entre aspas no comentário realmente pertence ao artigo indicado */
-function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]): { valid: boolean; mismatches: string[] } {
+function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]): { valid: boolean; mismatches: string[]; corrections: Array<{citedNum: string; actualNum: string}> } {
   const mismatches: string[] = [];
-  // Pattern: "Art. X ... : 'snippet'" or "Art. X ... "snippet""
+  const corrections: Array<{citedNum: string; actualNum: string}> = [];
   const citationPattern = /Art\.?\s*(\d+)[^"""''']*?["""''']([^"""''']{15,500})["""''']/gi;
   let match: RegExpExecArray | null;
   while ((match = citationPattern.exec(comment)) !== null) {
@@ -141,12 +141,12 @@ function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]):
       const actualNum = actualArticle.match(/\d+/)?.[0];
       if (actualNum && actualNum !== citedNum) {
         mismatches.push(`Cita Art. ${citedNum} mas trecho pertence ao Art. ${actualNum}`);
+        corrections.push({ citedNum, actualNum });
       }
     } else {
       // Snippet not found in any article — check if at least article exists
       const block = blocks.find(b => b.artNum === citedNum);
       if (block) {
-        // Article exists, check fuzzy overlap
         const snippetWords = new Set(normSnippet.split(" ").filter(w => w.length > 3));
         const blockWords = new Set(block.normText.split(" ").filter(w => w.length > 3));
         let overlap = 0;
@@ -154,11 +154,19 @@ function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]):
         const score = snippetWords.size > 0 ? overlap / snippetWords.size : 0;
         if (score < 0.3) {
           mismatches.push(`Trecho entre aspas não encontrado no Art. ${citedNum} (overlap=${(score*100).toFixed(0)}%)`);
+          // Try to find where it actually belongs
+          const best = findBestArticleForText(snippet, blocks);
+          if (best && best.score >= 0.4) {
+            const bestNum = best.article.match(/\d+/)?.[0];
+            if (bestNum && bestNum !== citedNum) {
+              corrections.push({ citedNum, actualNum: bestNum });
+            }
+          }
         }
       }
     }
   }
-  return { valid: mismatches.length === 0, mismatches };
+  return { valid: mismatches.length === 0, mismatches, corrections };
 }
 
 /** Gera lista de artigos válidos para incluir no prompt da IA */
