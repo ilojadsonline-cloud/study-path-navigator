@@ -745,7 +745,33 @@ Responda APENAS JSON (sem markdown):
             continue;
           }
 
-          // Scrub enunciado and alternatives too
+          // Post-AI: verify snippets match their cited articles
+          const snippetVerify = verifySnippetBelongsToArticle(finalComment, blocks);
+          if (!snippetVerify.valid) {
+            // Try to fix by reconciling to the enforced article
+            if (enforcedArticle) {
+              finalComment = reconcileCommentArticle(finalComment, enforcedArticle);
+              const reVerify = verifySnippetBelongsToArticle(finalComment, blocks);
+              if (!reVerify.valid) {
+                questoesRevisaoManual.push({ id: q.id, motivo: `Snippet-artigo mismatch: ${reVerify.mismatches[0]}` });
+                await supabase.from("questoes").delete().eq("id", q.id);
+                deletedCount++;
+                details.push({ id: q.id, status: "excluida", motivo: `Snippet incorreto: ${reVerify.mismatches[0]}` });
+                console.log(`[VALIDAR] #${q.id} EXCLUÍDA: snippet não pertence ao artigo citado`);
+                await new Promise(r => setTimeout(r, 300));
+                continue;
+              }
+            } else {
+              questoesRevisaoManual.push({ id: q.id, motivo: `Snippet-artigo mismatch: ${snippetVerify.mismatches[0]}` });
+              await supabase.from("questoes").delete().eq("id", q.id);
+              deletedCount++;
+              details.push({ id: q.id, status: "excluida", motivo: `Snippet incorreto: ${snippetVerify.mismatches[0]}` });
+              console.log(`[VALIDAR] #${q.id} EXCLUÍDA: snippet não pertence ao artigo citado`);
+              await new Promise(r => setTimeout(r, 300));
+              continue;
+            }
+          }
+
           const finalEnunciado = normalizeWhitespace(result.enunciado || q.enunciado);
           const { scrubbed: scrubbedEnunciado } = scrubInvalidCitations(finalEnunciado, blocks);
           const crossCheck = crossValidateReferences(scrubbedEnunciado, finalComment);
