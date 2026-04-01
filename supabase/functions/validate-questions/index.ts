@@ -677,9 +677,10 @@ Responda APENAS JSON (sem markdown):
             continue;
           }
 
-          // Cross-validate final result
+          // Scrub enunciado and alternatives too
           const finalEnunciado = normalizeWhitespace(result.enunciado || q.enunciado);
-          const crossCheck = crossValidateReferences(finalEnunciado, finalComment);
+          const { scrubbed: scrubbedEnunciado } = scrubInvalidCitations(finalEnunciado, blocks);
+          const crossCheck = crossValidateReferences(scrubbedEnunciado, finalComment);
           if (!crossCheck.valid) {
             questoesRevisaoManual.push({ id: q.id, motivo: `Divergência pós-correção: ${crossCheck.reason}` });
             await supabase.from("questoes").delete().eq("id", q.id);
