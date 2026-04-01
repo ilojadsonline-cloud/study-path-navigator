@@ -64,12 +64,18 @@ const Assinatura = () => {
           <div className="absolute top-0 right-0 w-40 h-40 bg-gold/5 rounded-full -translate-y-16 translate-x-16" />
 
           <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gold/10 text-gold text-xs font-semibold mb-4">
-              <Star className="w-3 h-3" /> PLANO ÚNICO
+            <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+              <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gold/10 text-gold text-xs font-semibold">
+                <Star className="w-3 h-3" /> PLANO ÚNICO
+              </div>
+              <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-bold animate-pulse">
+                🔥 OFERTA POR TEMPO LIMITADO
+              </div>
             </div>
+            <div className="text-base text-muted-foreground line-through mb-1">R$ 99,90</div>
             <div className="flex items-baseline justify-center gap-1">
               <span className="text-xs text-muted-foreground">R$</span>
-              <span className="text-5xl font-black text-gradient-gold">69</span>
+              <span className="text-5xl font-black text-gradient-gold">79</span>
               <span className="text-xl font-bold text-gradient-gold">,90</span>
             </div>
             <p className="text-sm text-muted-foreground mt-1 flex items-center justify-center gap-1">
