@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, CheckCircle, AlertCircle, Zap, AlertTriangle, StopCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, CheckCircle, AlertCircle, Zap, AlertTriangle, StopCircle, RotateCcw } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const DISCIPLINES = [
   "Lei nº 2.578/2012", "LC nº 128/2021", "Lei nº 2.575/2012",
@@ -16,10 +18,32 @@ interface BatchResult {
   status: "pending" | "loading" | "success" | "error";
   geradas?: number;
   error?: string;
+  retries?: number;
+}
+
+interface PendingJob {
+  id: string;
+  disciplines: string[];
+  batches_total: number;
+  batches_done: number;
+  total_generated: number;
+  batch_size: number;
+  batches_per_discipline: number;
+  batches_results: BatchResult[];
+  created_at: string;
+}
+
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 3000;
+
+function getRetryDelay(attempt: number): number {
+  // Exponential backoff: 3s, 6s, 12s
+  return BASE_DELAY_MS * Math.pow(2, attempt);
 }
 
 export function AdminGerarTab() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [results, setResults] = useState<BatchResult[]>([]);
   const [running, setRunning] = useState(false);
   const [totalGeradas, setTotalGeradas] = useState(0);
@@ -27,18 +51,123 @@ export function AdminGerarTab() {
   const [batchSize, setBatchSize] = useState(3);
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([...DISCIPLINES]);
   const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
+  const [pendingJob, setPendingJob] = useState<PendingJob | null>(null);
+  const [checkingPending, setCheckingPending] = useState(true);
   const stopRef = useRef(false);
+  const jobIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const checkTexts = async () => {
-      const { data } = await supabase.from("discipline_legal_texts").select("disciplina");
-      if (data) setLoadedTexts(data.map((r: any) => r.disciplina));
+    const init = async () => {
+      // Check loaded texts + pending jobs in parallel
+      const [textsRes, jobsRes] = await Promise.all([
+        supabase.from("discipline_legal_texts").select("disciplina"),
+        supabase.from("generation_jobs").select("*").eq("status", "running").order("created_at", { ascending: false }).limit(1),
+      ]);
+      if (textsRes.data) setLoadedTexts(textsRes.data.map((r: any) => r.disciplina));
+      if (jobsRes.data && jobsRes.data.length > 0) {
+        const job = jobsRes.data[0] as any;
+        setPendingJob({
+          id: job.id,
+          disciplines: job.disciplines || [],
+          batches_total: job.batches_total,
+          batches_done: job.batches_done,
+          total_generated: job.total_generated,
+          batch_size: job.batch_size,
+          batches_per_discipline: job.batches_per_discipline,
+          batches_results: job.batches_results || [],
+          created_at: job.created_at,
+        });
+      }
+      setCheckingPending(false);
     };
-    checkTexts();
+    init();
   }, []);
 
   const toggleDiscipline = (d: string) => {
     setSelectedDisciplines(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
+  };
+
+  const saveProgress = useCallback(async (jobId: string, batches: BatchResult[], batchesDone: number, total: number, status: string) => {
+    await supabase.from("generation_jobs").update({
+      batches_done: batchesDone,
+      batches_results: batches as any,
+      total_generated: total,
+      status,
+    }).eq("id", jobId);
+  }, []);
+
+  const invokeBatchWithRetry = async (disciplina: string, batchSize: number): Promise<{ data: any; error: any }> => {
+    const discIndex = DISCIPLINES.indexOf(disciplina);
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-questions-batch", {
+          body: { disciplina_index: discIndex, batch_size: batchSize },
+        });
+        
+        // Rate limit → retry with backoff
+        if (data?.paused && attempt < MAX_RETRIES) {
+          const delay = getRetryDelay(attempt);
+          console.log(`[GERAR] Rate limit, retry ${attempt + 1}/${MAX_RETRIES} em ${delay}ms`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+        
+        return { data, error };
+      } catch (err: any) {
+        if (attempt < MAX_RETRIES) {
+          const delay = getRetryDelay(attempt);
+          console.log(`[GERAR] Erro, retry ${attempt + 1}/${MAX_RETRIES} em ${delay}ms: ${err.message}`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+        return { data: null, error: err };
+      }
+    }
+    return { data: null, error: new Error("Max retries exceeded") };
+  };
+
+  const runBatches = async (batches: BatchResult[], startFrom: number, jobId: string, initialTotal: number) => {
+    let total = initialTotal;
+    
+    for (let i = startFrom; i < batches.length; i++) {
+      if (stopRef.current) break;
+      batches[i].status = "loading";
+      setResults([...batches]);
+
+      const { data, error } = await invokeBatchWithRetry(batches[i].disciplina, batchSize);
+      
+      if (error) {
+        batches[i].status = "error";
+        batches[i].error = error.message;
+      } else if (data?.paused) {
+        // Still paused after retries
+        batches[i].status = "error";
+        batches[i].error = data.error || "Rate limit persistente";
+        toast({ title: "Pausado", description: "Rate limit persistente após retentativas.", variant: "destructive" });
+        setResults([...batches]);
+        await saveProgress(jobId, batches, i, total, "running");
+        break;
+      } else if (data?.error) {
+        batches[i].status = "error";
+        batches[i].error = data.error;
+      } else {
+        const inserted = data?.inserted || data?.generated || 0;
+        batches[i].status = "success";
+        batches[i].geradas = inserted;
+        total += inserted;
+        setTotalGeradas(total);
+      }
+
+      setResults([...batches]);
+      // Save progress every batch
+      await saveProgress(jobId, batches, i + 1, total, stopRef.current ? "paused" : "running");
+      
+      if (i < batches.length - 1 && !stopRef.current) {
+        await new Promise(r => setTimeout(r, BASE_DELAY_MS));
+      }
+    }
+
+    return total;
   };
 
   const generateAll = async () => {
@@ -60,54 +189,114 @@ export function AdminGerarTab() {
     }
     setResults([...batches]);
 
-    let total = 0;
-    for (let i = 0; i < batches.length; i++) {
-      if (stopRef.current) break;
-      batches[i].status = "loading";
-      setResults([...batches]);
+    // Create job in DB
+    const { data: jobData } = await supabase.from("generation_jobs").insert({
+      user_id: user?.id,
+      status: "running",
+      disciplines: activeDisciplines,
+      batches_total: batches.length,
+      batches_done: 0,
+      batches_results: batches as any,
+      total_generated: 0,
+      batch_size: batchSize,
+      batches_per_discipline: batchesPerDiscipline,
+    } as any).select("id").single();
 
-      try {
-        const discIndex = DISCIPLINES.indexOf(batches[i].disciplina);
-        const { data, error } = await supabase.functions.invoke("generate-questions-batch", {
-          body: { disciplina_index: discIndex, batch_size: batchSize },
-        });
-        if (error) throw error;
-        if (data?.paused) {
-          batches[i].status = "error";
-          batches[i].error = data.error || "Rate limit";
-          toast({ title: "Pausado", description: data.error, variant: "destructive" });
-          setResults([...batches]);
-          break;
-        }
-        if (data?.error) throw new Error(data.error);
-        const inserted = data?.inserted || data?.generated || 0;
-        batches[i].status = "success";
-        batches[i].geradas = inserted;
-        total += inserted;
-        setTotalGeradas(total);
-      } catch (err: any) {
-        batches[i].status = "error";
-        batches[i].error = err.message;
-      }
+    const jobId = jobData?.id || crypto.randomUUID();
+    jobIdRef.current = jobId;
 
-      setResults([...batches]);
-      await new Promise(r => setTimeout(r, 3000));
-    }
+    const total = await runBatches(batches, 0, jobId, 0);
+
+    // Mark job complete
+    const finalStatus = stopRef.current ? "paused" : "completed";
+    await saveProgress(jobId, batches, batches.length, total, finalStatus);
 
     setRunning(false);
+    setPendingJob(null);
     toast({ title: stopRef.current ? "Geração interrompida" : "Geração concluída!", description: `${total} questões geradas.` });
   };
 
+  const resumeJob = async () => {
+    if (!pendingJob) return;
+
+    setRunning(true);
+    stopRef.current = false;
+    
+    const batches = pendingJob.batches_results.length > 0
+      ? [...pendingJob.batches_results]
+      : (() => {
+          const b: BatchResult[] = [];
+          for (const d of pendingJob.disciplines) {
+            for (let i = 0; i < pendingJob.batches_per_discipline; i++) {
+              b.push({ disciplina: d, batch: i + 1, status: "pending" });
+            }
+          }
+          return b;
+        })();
+
+    setResults([...batches]);
+    setBatchSize(pendingJob.batch_size);
+    setTotalGeradas(pendingJob.total_generated);
+    jobIdRef.current = pendingJob.id;
+
+    const startFrom = pendingJob.batches_done;
+    const total = await runBatches(batches, startFrom, pendingJob.id, pendingJob.total_generated);
+
+    const finalStatus = stopRef.current ? "paused" : "completed";
+    await saveProgress(pendingJob.id, batches, batches.length, total, finalStatus);
+
+    setRunning(false);
+    setPendingJob(null);
+    toast({ title: stopRef.current ? "Geração interrompida" : "Geração concluída!", description: `${total} questões geradas.` });
+  };
+
+  const dismissJob = async () => {
+    if (!pendingJob) return;
+    await supabase.from("generation_jobs").update({ status: "dismissed" } as any).eq("id", pendingJob.id);
+    setPendingJob(null);
+  };
+
   const missingTexts = selectedDisciplines.filter(d => !loadedTexts.includes(d));
+  const progressPercent = results.length > 0 
+    ? Math.round(results.filter(r => r.status === "success" || r.status === "error").length / results.length * 100) 
+    : 0;
+
+  if (checkingPending) {
+    return <div className="flex items-center gap-2 p-6"><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</div>;
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-bold mb-1">Gerar Questões via IA</h2>
         <p className="text-sm text-muted-foreground">
-          Gera questões via DeepSeek (modelo deepseek-chat) usando exclusivamente o texto legal. 
+          Gera questões via DeepSeek com persistência de progresso e retentativa automática.
         </p>
       </div>
+
+      {/* Resume pending job banner */}
+      {pendingJob && !running && (
+        <div className="p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-3">
+          <div className="flex items-start gap-2">
+            <RotateCcw className="w-5 h-5 text-primary mt-0.5" />
+            <div>
+              <p className="font-medium text-sm">Lote interrompido encontrado</p>
+              <p className="text-xs text-muted-foreground">
+                {pendingJob.batches_done}/{pendingJob.batches_total} lotes processados • {pendingJob.total_generated} questões geradas • 
+                Iniciado em {new Date(pendingJob.created_at).toLocaleString("pt-BR")}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={resumeJob}>
+              <RotateCcw className="w-4 h-4 mr-1" /> Retomar
+            </Button>
+            <Button size="sm" variant="outline" onClick={dismissJob}>
+              Descartar
+            </Button>
+          </div>
+        </div>
+      )}
 
       {missingTexts.length > 0 && (
         <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-xs">
@@ -164,6 +353,16 @@ export function AdminGerarTab() {
           </Button>
         )}
       </div>
+
+      {/* Progress bar */}
+      {running && results.length > 0 && (
+        <div className="space-y-1">
+          <Progress value={progressPercent} className="h-2" />
+          <p className="text-xs text-muted-foreground text-right">
+            {results.filter(r => r.status === "success" || r.status === "error").length}/{results.length} lotes ({progressPercent}%)
+          </p>
+        </div>
+      )}
 
       {results.length > 0 && (
         <div className="space-y-2 max-h-96 overflow-y-auto">

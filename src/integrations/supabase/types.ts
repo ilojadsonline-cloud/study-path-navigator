@@ -41,6 +41,51 @@ export type Database = {
         }
         Relationships: []
       }
+      generation_jobs: {
+        Row: {
+          batch_size: number
+          batches_done: number
+          batches_per_discipline: number
+          batches_results: Json
+          batches_total: number
+          created_at: string
+          disciplines: Json
+          id: string
+          status: string
+          total_generated: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batch_size?: number
+          batches_done?: number
+          batches_per_discipline?: number
+          batches_results?: Json
+          batches_total?: number
+          created_at?: string
+          disciplines?: Json
+          id?: string
+          status?: string
+          total_generated?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batch_size?: number
+          batches_done?: number
+          batches_per_discipline?: number
+          batches_results?: Json
+          batches_total?: number
+          created_at?: string
+          disciplines?: Json
+          id?: string
+          status?: string
+          total_generated?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_reads: {
         Row: {
           id: number
