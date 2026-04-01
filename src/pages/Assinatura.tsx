@@ -75,7 +75,7 @@ const Assinatura = () => {
             <div className="text-base text-muted-foreground line-through mb-1">R$ 99,90</div>
             <div className="flex items-baseline justify-center gap-1">
               <span className="text-xs text-muted-foreground">R$</span>
-              <span className="text-5xl font-black text-gradient-gold">79</span>
+              <span className="text-5xl font-black text-gradient-gold">89</span>
               <span className="text-xl font-bold text-gradient-gold">,90</span>
             </div>
             <p className="text-sm text-muted-foreground mt-1 flex items-center justify-center gap-1">
