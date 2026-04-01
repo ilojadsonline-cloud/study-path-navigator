@@ -129,23 +129,49 @@ export function AdminGerarTab() {
     return { data: null, error: new Error("Max retries exceeded") };
   };
 
+  const updateEta = useCallback((batchTimes: number[], remaining: number) => {
+    if (batchTimes.length === 0 || remaining <= 0) { setEtaText(""); return; }
+    const avg = batchTimes.reduce((a, b) => a + b, 0) / batchTimes.length;
+    const totalSec = Math.round((avg * remaining) / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    setEtaText(min > 0 ? `~${min}m ${sec}s restantes` : `~${sec}s restantes`);
+  }, []);
+
   const runBatches = async (batches: BatchResult[], startFrom: number, jobId: string, initialTotal: number) => {
     let total = initialTotal;
+    consecutiveFailsRef.current = 0;
+    batchTimesRef.current = [];
     
     for (let i = startFrom; i < batches.length; i++) {
       if (stopRef.current) break;
+
+      // Circuit breaker check
+      if (consecutiveFailsRef.current >= CIRCUIT_BREAKER_THRESHOLD) {
+        toast({ 
+          title: "Circuit Breaker ativado", 
+          description: `${CIRCUIT_BREAKER_THRESHOLD} falhas consecutivas. Processo pausado automaticamente para evitar sobrecarga.`, 
+          variant: "destructive" 
+        });
+        await saveProgress(jobId, batches, i, total, "running");
+        break;
+      }
+
       batches[i].status = "loading";
       setResults([...batches]);
 
+      const batchStart = Date.now();
       const { data, error } = await invokeBatchWithRetry(batches[i].disciplina, batchSize);
+      const batchDuration = Date.now() - batchStart;
       
       if (error) {
         batches[i].status = "error";
         batches[i].error = error.message;
+        consecutiveFailsRef.current++;
       } else if (data?.paused) {
-        // Still paused after retries
         batches[i].status = "error";
         batches[i].error = data.error || "Rate limit persistente";
+        consecutiveFailsRef.current++;
         toast({ title: "Pausado", description: "Rate limit persistente após retentativas.", variant: "destructive" });
         setResults([...batches]);
         await saveProgress(jobId, batches, i, total, "running");
@@ -153,16 +179,21 @@ export function AdminGerarTab() {
       } else if (data?.error) {
         batches[i].status = "error";
         batches[i].error = data.error;
+        consecutiveFailsRef.current++;
       } else {
         const inserted = data?.inserted || data?.generated || 0;
         batches[i].status = "success";
         batches[i].geradas = inserted;
         total += inserted;
         setTotalGeradas(total);
+        consecutiveFailsRef.current = 0; // Reset on success
       }
 
+      batchTimesRef.current.push(batchDuration);
+      const remaining = batches.length - (i + 1);
+      updateEta(batchTimesRef.current, remaining);
+
       setResults([...batches]);
-      // Save progress every batch
       await saveProgress(jobId, batches, i + 1, total, stopRef.current ? "paused" : "running");
       
       if (i < batches.length - 1 && !stopRef.current) {
@@ -170,6 +201,7 @@ export function AdminGerarTab() {
       }
     }
 
+    setEtaText("");
     return total;
   };
 
