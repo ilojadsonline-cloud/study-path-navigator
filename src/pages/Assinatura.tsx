@@ -16,10 +16,12 @@ const Assinatura = () => {
 
   useEffect(() => {
     if (paymentStatus === "success" && user) {
-      // Re-check subscription after successful payment
       checkSubscription();
     }
-  }, [paymentStatus, user, checkSubscription]);
+    if (paymentStatus === "canceled") {
+      toast({ title: "Pagamento cancelado", description: "O pagamento não foi concluído. Você pode tentar novamente quando quiser.", variant: "destructive" });
+    }
+  }, [paymentStatus, user, checkSubscription, toast]);
 
   const isExpired = user && !subscribed;
 
