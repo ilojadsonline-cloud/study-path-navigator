@@ -349,11 +349,11 @@ serve(async (req) => {
       const num = i + 1;
       switch (a) {
         case "TEORIA_PURA":
-          return `Questão ${num}: TEORIA PURA — Teste a literalidade da lei. O enunciado apresenta uma afirmativa e o candidato deve identificar se está de acordo com a lei. Use "Sobre [tema], é correto afirmar que..." ou "Assinale a alternativa correta sobre [tema]".`;
+          return `Questão ${num}: LITERALIDADE DA LEI — Teste o conhecimento literal do texto legal. O enunciado apresenta uma afirmativa sobre um tema e o candidato identifica a alternativa que reproduz fielmente o que a lei dispõe. Use "Sobre [tema], é correto afirmar que..." ou "No que se refere a [tema], a legislação estabelece que...". A alternativa correta DEVE ser uma transcrição ou paráfrase fiel do texto legal.`;
         case "CASO_PRATICO":
-          return `Questão ${num}: CASO PRÁTICO — Crie um cenário hipotético detalhado (2-3 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, etc.) em situação concreta do cotidiano militar. O candidato deve APLICAR a regra da lei ao caso.`;
+          return `Questão ${num}: CASO PRÁTICO — Crie um cenário REALISTA e DETALHADO (3-4 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.) em situação concreta do cotidiano militar que tenha PREVISÃO EXPRESSA no texto legal. Exemplo: "O Soldado Silva, lotado no 1º BPM, ao retornar de licença médica de 45 dias, foi informado pelo seu comandante que...". O candidato deve APLICAR a regra da lei ao caso.`;
         case "PEGADINHA_DETALHE":
-          return `Questão ${num}: PEGADINHA DE DETALHE — Foque em termos que geram confusão: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos, troca de competências. A alternativa correta é literal; as incorretas trocam UM detalhe sutil.`;
+          return `Questão ${num}: PEGADINHA INTELIGENTE — Foque em termos que geram confusão na lei: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos (30 vs 60 dias), troca de competências (Comandante-Geral vs Governador), alteração de sujeitos. A alternativa correta é LITERAL da lei; as incorretas trocam UM detalhe sutil mas crucial.`;
       }
     }).join("\n");
 
