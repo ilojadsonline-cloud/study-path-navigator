@@ -574,52 +574,60 @@ serve(async (req) => {
           console.log(`[VALIDAR] #${q.id} SCRUB REGRAS: removidos ${removedRulesArts.join(", ")}`);
         }
 
-        // Determine the correct article to use:
-        // Priority 1: snippet verification corrections (most reliable — based on actual quoted text)
-        // Priority 2: realArticle from literalProofCheck (based on correct alternative)
-        // Priority 3: evidenceArticle from comment evidence
+        // Determine the correct article — apply ALL snippet corrections first
         let fixableArticle = realArticle || evidenceArticle;
         
-        // If snippet verification detected a mismatch with a correction, use the snippet's actual article
-        const snippetRecheck = verifySnippetBelongsToArticle(q.comentario || "", blocks);
-        if (snippetRecheck.corrections.length > 0) {
-          const correctedArtNum = snippetRecheck.corrections[0].actualNum;
-          if (articleExistsInLaw(correctedArtNum, blocks)) {
-            fixableArticle = `Art. ${correctedArtNum}`;
-            console.log(`[VALIDAR] #${q.id} SNIPPET→CORREÇÃO: usando Art. ${correctedArtNum} (trecho citado pertence a este artigo)`);
+        const { corrected: snippetCorrectedComment, appliedCorrections } = applyAllSnippetCorrections(q.comentario || "", blocks);
+        if (appliedCorrections.length > 0) {
+          for (const corr of appliedCorrections) {
+            console.log(`[VALIDAR] #${q.id} SNIPPET-CORREÇÃO: ${corr.from} → ${corr.to} (trecho pertence ao artigo correto)`);
+          }
+          const lastCorr = appliedCorrections[appliedCorrections.length - 1];
+          const corrNum = lastCorr.to.match(/\d+/)?.[0];
+          if (corrNum && articleExistsInLaw(corrNum, blocks)) {
+            fixableArticle = lastCorr.to;
           }
         }
 
         if (fixableArticle && (fixReason.includes("CONFRONTO") || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita") || fixReason.includes("SNIPPET"))) {
-          const baseComment = removedRulesArts.length > 0
-            ? scrubbedRulesComment.replace(/\[artigo não confirmado\]/g, fixableArticle)
-            : q.comentario;
+          const baseComment = appliedCorrections.length > 0
+            ? snippetCorrectedComment
+            : (removedRulesArts.length > 0
+                ? scrubbedRulesComment.replace(/\[artigo não confirmado\]/g, fixableArticle)
+                : q.comentario);
           const newComment = reconcileCommentArticle(baseComment, fixableArticle);
           const recheck = validateAllCitations(newComment, blocks);
-          
-          // Post-fix: also verify snippets match their cited articles
           const postFixSnippetCheck = verifySnippetBelongsToArticle(newComment, blocks);
           
           if (recheck.valid && !hasUnconfirmedCitations(newComment) && postFixSnippetCheck.valid) {
-            await supabase.from("questoes").update({ comentario: newComment }).eq("id", q.id);
-            fixedCount++;
-            details.push({ id: q.id, status: "corrigida", motivo: `Artigo corrigido para ${fixableArticle}` });
-            console.log(`[VALIDAR] #${q.id} CORRIGIDA: → ${fixableArticle}`);
-            continue;
+            // Nuclear final pass: every cited article must exist in law
+            const finalCited = extractAllCitedArticles(newComment);
+            const allExist = finalCited.every(a => articleExistsInLaw(a, blocks));
+            if (allExist) {
+              await supabase.from("questoes").update({ comentario: newComment }).eq("id", q.id);
+              fixedCount++;
+              details.push({ id: q.id, status: "corrigida", motivo: `Artigo corrigido para ${fixableArticle}` });
+              console.log(`[VALIDAR] #${q.id} CORRIGIDA: → ${fixableArticle}`);
+              continue;
+            } else {
+              console.log(`[VALIDAR] #${q.id} NUCLEAR FALHOU: artigos inexistentes: ${finalCited.filter(a => !articleExistsInLaw(a, blocks)).map(a => `Art. ${a}`).join(", ")}`);
+            }
           } else if (!postFixSnippetCheck.valid) {
             console.log(`[VALIDAR] #${q.id} PÓS-FIX SNIPPET FALHOU: ${postFixSnippetCheck.mismatches[0]}`);
-            // Try once more with the snippet's actual article
-            if (postFixSnippetCheck.corrections.length > 0) {
-              const altArticle = `Art. ${postFixSnippetCheck.corrections[0].actualNum}`;
-              const retryComment = reconcileCommentArticle(newComment, altArticle);
-              const retryCheck = validateAllCitations(retryComment, blocks);
-              const retrySnippet = verifySnippetBelongsToArticle(retryComment, blocks);
-              if (retryCheck.valid && retrySnippet.valid && !hasUnconfirmedCitations(retryComment)) {
-                await supabase.from("questoes").update({ comentario: retryComment }).eq("id", q.id);
-                fixedCount++;
-                details.push({ id: q.id, status: "corrigida", motivo: `Artigo corrigido para ${altArticle} (via snippet)` });
-                console.log(`[VALIDAR] #${q.id} CORRIGIDA: → ${altArticle} (snippet retry)`);
-                continue;
+            // Retry applying all snippet corrections on the fixed comment
+            const { corrected: retryCorrected, appliedCorrections: retryCorrs } = applyAllSnippetCorrections(newComment, blocks);
+            if (retryCorrs.length > 0) {
+              const retryCheck = validateAllCitations(retryCorrected, blocks);
+              const retrySnippet = verifySnippetBelongsToArticle(retryCorrected, blocks);
+              if (retryCheck.valid && retrySnippet.valid && !hasUnconfirmedCitations(retryCorrected)) {
+                const retryFinalCited = extractAllCitedArticles(retryCorrected);
+                if (retryFinalCited.every(a => articleExistsInLaw(a, blocks))) {
+                  await supabase.from("questoes").update({ comentario: retryCorrected }).eq("id", q.id);
+                  fixedCount++;
+                  details.push({ id: q.id, status: "corrigida", motivo: `Artigo corrigido via snippet: ${retryCorrs.map(c => c.to).join(", ")}` });
+                  console.log(`[VALIDAR] #${q.id} CORRIGIDA: via snippet corrections`);
+                  continue;
+                }
               }
             }
           }
