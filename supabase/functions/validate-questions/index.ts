@@ -124,9 +124,9 @@ function detectCommentEvidenceArticle(comment: string, blocks: ArticleBlock[]): 
 }
 
 /** Verifica se o trecho citado entre aspas no comentário realmente pertence ao artigo indicado */
-function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]): { valid: boolean; mismatches: string[] } {
+function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]): { valid: boolean; mismatches: string[]; corrections: Array<{citedNum: string; actualNum: string}> } {
   const mismatches: string[] = [];
-  // Pattern: "Art. X ... : 'snippet'" or "Art. X ... "snippet""
+  const corrections: Array<{citedNum: string; actualNum: string}> = [];
   const citationPattern = /Art\.?\s*(\d+)[^"""''']*?["""''']([^"""''']{15,500})["""''']/gi;
   let match: RegExpExecArray | null;
   while ((match = citationPattern.exec(comment)) !== null) {
@@ -141,12 +141,12 @@ function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]):
       const actualNum = actualArticle.match(/\d+/)?.[0];
       if (actualNum && actualNum !== citedNum) {
         mismatches.push(`Cita Art. ${citedNum} mas trecho pertence ao Art. ${actualNum}`);
+        corrections.push({ citedNum, actualNum });
       }
     } else {
       // Snippet not found in any article — check if at least article exists
       const block = blocks.find(b => b.artNum === citedNum);
       if (block) {
-        // Article exists, check fuzzy overlap
         const snippetWords = new Set(normSnippet.split(" ").filter(w => w.length > 3));
         const blockWords = new Set(block.normText.split(" ").filter(w => w.length > 3));
         let overlap = 0;
@@ -154,11 +154,19 @@ function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]):
         const score = snippetWords.size > 0 ? overlap / snippetWords.size : 0;
         if (score < 0.3) {
           mismatches.push(`Trecho entre aspas não encontrado no Art. ${citedNum} (overlap=${(score*100).toFixed(0)}%)`);
+          // Try to find where it actually belongs
+          const best = findBestArticleForText(snippet, blocks);
+          if (best && best.score >= 0.4) {
+            const bestNum = best.article.match(/\d+/)?.[0];
+            if (bestNum && bestNum !== citedNum) {
+              corrections.push({ citedNum, actualNum: bestNum });
+            }
+          }
         }
       }
     }
   }
-  return { valid: mismatches.length === 0, mismatches };
+  return { valid: mismatches.length === 0, mismatches, corrections };
 }
 
 /** Gera lista de artigos válidos para incluir no prompt da IA */
@@ -538,20 +546,54 @@ serve(async (req) => {
           console.log(`[VALIDAR] #${q.id} SCRUB REGRAS: removidos ${removedRulesArts.join(", ")}`);
         }
 
-        // Auto-fix: confronto de artigos — correct the comment article reference
-        const fixableArticle = realArticle || evidenceArticle;
+        // Determine the correct article to use:
+        // Priority 1: snippet verification corrections (most reliable — based on actual quoted text)
+        // Priority 2: realArticle from literalProofCheck (based on correct alternative)
+        // Priority 3: evidenceArticle from comment evidence
+        let fixableArticle = realArticle || evidenceArticle;
+        
+        // If snippet verification detected a mismatch with a correction, use the snippet's actual article
+        const snippetRecheck = verifySnippetBelongsToArticle(q.comentario || "", blocks);
+        if (snippetRecheck.corrections.length > 0) {
+          const correctedArtNum = snippetRecheck.corrections[0].actualNum;
+          if (articleExistsInLaw(correctedArtNum, blocks)) {
+            fixableArticle = `Art. ${correctedArtNum}`;
+            console.log(`[VALIDAR] #${q.id} SNIPPET→CORREÇÃO: usando Art. ${correctedArtNum} (trecho citado pertence a este artigo)`);
+          }
+        }
+
         if (fixableArticle && (fixReason.includes("CONFRONTO") || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita") || fixReason.includes("SNIPPET"))) {
           const baseComment = removedRulesArts.length > 0
             ? scrubbedRulesComment.replace(/\[artigo não confirmado\]/g, fixableArticle)
             : q.comentario;
           const newComment = reconcileCommentArticle(baseComment, fixableArticle);
           const recheck = validateAllCitations(newComment, blocks);
-          if (recheck.valid && !hasUnconfirmedCitations(newComment)) {
+          
+          // Post-fix: also verify snippets match their cited articles
+          const postFixSnippetCheck = verifySnippetBelongsToArticle(newComment, blocks);
+          
+          if (recheck.valid && !hasUnconfirmedCitations(newComment) && postFixSnippetCheck.valid) {
             await supabase.from("questoes").update({ comentario: newComment }).eq("id", q.id);
             fixedCount++;
             details.push({ id: q.id, status: "corrigida", motivo: `Artigo corrigido para ${fixableArticle}` });
             console.log(`[VALIDAR] #${q.id} CORRIGIDA: → ${fixableArticle}`);
             continue;
+          } else if (!postFixSnippetCheck.valid) {
+            console.log(`[VALIDAR] #${q.id} PÓS-FIX SNIPPET FALHOU: ${postFixSnippetCheck.mismatches[0]}`);
+            // Try once more with the snippet's actual article
+            if (postFixSnippetCheck.corrections.length > 0) {
+              const altArticle = `Art. ${postFixSnippetCheck.corrections[0].actualNum}`;
+              const retryComment = reconcileCommentArticle(newComment, altArticle);
+              const retryCheck = validateAllCitations(retryComment, blocks);
+              const retrySnippet = verifySnippetBelongsToArticle(retryComment, blocks);
+              if (retryCheck.valid && retrySnippet.valid && !hasUnconfirmedCitations(retryComment)) {
+                await supabase.from("questoes").update({ comentario: retryComment }).eq("id", q.id);
+                fixedCount++;
+                details.push({ id: q.id, status: "corrigida", motivo: `Artigo corrigido para ${altArticle} (via snippet)` });
+                console.log(`[VALIDAR] #${q.id} CORRIGIDA: → ${altArticle} (snippet retry)`);
+                continue;
+              }
+            }
           }
         }
         if (fixReason === "Gabarito fora do range 0-4") {
@@ -614,6 +656,9 @@ REGRAS INVIOLÁVEIS:
 5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
 6. NÃO use conhecimento externo. APENAS o texto fornecido.
 7. O trecho entre aspas no comentário DEVE existir LITERALMENTE no artigo citado. Copie e cole do texto.
+8. VERIFICAÇÃO OBRIGATÓRIA: Antes de citar "Art. X", faça a busca exata da string "Art. X" no texto legal. Se NÃO encontrar essa string exata, NÃO cite esse artigo. NUNCA INVENTE OU INFIRA NÚMEROS DE ARTIGOS.
+9. CONSISTÊNCIA SNIPPET-ARTIGO: O trecho entre aspas DEVE pertencer ao artigo citado. Se você cita Art. 3 e transcreve texto, esse texto DEVE estar dentro do bloco do Art. 3 no texto legal — NÃO em outro artigo.
+10. EM CASO DE DÚVIDA: omita a citação do artigo ou indique "referência não confirmada" em vez de citar um artigo incorreto.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
