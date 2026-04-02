@@ -267,7 +267,7 @@ serve(async (req) => {
 
   try {
     const { disciplina_index, batch_size } = await req.json();
-    const batchSize = batch_size || 10;
+    const batchSize = batch_size || 2;
     const discIndex = disciplina_index ?? 0;
 
     if (discIndex < 0 || discIndex >= DISCIPLINES.length) {
