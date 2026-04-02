@@ -959,13 +959,18 @@ Responda APENAS JSON (sem markdown):
 
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 50000);
+        const timeout = setTimeout(() => controller.abort(), 60000);
 
-        const aiResponse = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "https://exam-roadmap-buddy.lovable.app",
+            "X-Title": "Exam Roadmap Buddy",
+          },
           body: JSON.stringify({
-            model: "deepseek-chat",
+            model: "anthropic/claude-3.5-haiku",
             messages: [
               { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, deterministicCitation) },
               { role: "user", content: prompt },
