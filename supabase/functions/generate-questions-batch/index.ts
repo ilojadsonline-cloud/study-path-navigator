@@ -439,27 +439,32 @@ REGRAS TÉCNICAS:
 JSON array:
 [{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o Art. X da ${disc.leiNome}: '...'"}]`;
 
-    // Retry logic for DeepSeek API calls (up to 3 attempts with exponential backoff)
+    // Retry logic for OpenRouter/DeepSeek-R1 API calls (up to 3 attempts with exponential backoff)
     const MAX_API_RETRIES = 3;
     let aiResponse: Response | null = null;
     let lastFetchError: any = null;
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 50000);
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 180s timeout for R1 reasoning
 
       try {
-        aiResponse = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "https://exam-roadmap-buddy.lovable.app",
+            "X-Title": "Exam Roadmap Buddy",
+          },
           body: JSON.stringify({
-            model: "deepseek-chat",
+            model: "deepseek/deepseek-r1",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: prompt },
             ],
-            temperature: 0.0,
-            max_tokens: 4096,
+            temperature: 0.6,
+            max_tokens: 8192,
           }),
           signal: controller.signal,
         });
