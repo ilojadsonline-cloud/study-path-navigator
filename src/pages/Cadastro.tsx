@@ -142,11 +142,16 @@ const Cadastro = () => {
     }
 
     if (authData.user) {
+      // Store Stripe email in profile if different from registration email,
+      // so check-subscription can find the Stripe customer
+      const profileEmail = stripeEmail && stripeEmail.toLowerCase() !== email.toLowerCase()
+        ? stripeEmail
+        : email;
       const { error: profileError } = await supabase.from("profiles").insert({
         user_id: authData.user.id,
         nome,
         cpf: cleanedCpf,
-        email,
+        email: profileEmail,
       });
 
       if (profileError) {
