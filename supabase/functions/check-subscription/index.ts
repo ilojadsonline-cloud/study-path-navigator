@@ -40,18 +40,43 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
 
-    if (customers.data.length === 0) {
-      logStep("No Stripe customer found");
+    // Collect all unique emails to search: auth email + profile email
+    const emailsToSearch = new Set<string>();
+    emailsToSearch.add(user.email.toLowerCase());
+
+    // Also check the profile email (may differ from auth email)
+    const { data: profileData } = await supabaseClient
+      .from("profiles")
+      .select("email")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profileData?.email && profileData.email.toLowerCase() !== user.email.toLowerCase()) {
+      emailsToSearch.add(profileData.email.toLowerCase());
+      logStep("Profile has different email", { profileEmail: profileData.email });
+    }
+
+    // Search Stripe for customer by each email
+    let stripeCustomer = null;
+    for (const searchEmail of emailsToSearch) {
+      const customers = await stripe.customers.list({ email: searchEmail, limit: 1 });
+      if (customers.data.length > 0) {
+        stripeCustomer = customers.data[0];
+        logStep("Found Stripe customer", { customerId: stripeCustomer.id, matchedEmail: searchEmail });
+        break;
+      }
+    }
+
+    if (!stripeCustomer) {
+      logStep("No Stripe customer found for any email", { emails: Array.from(emailsToSearch) });
       return new Response(JSON.stringify({ subscribed: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
 
-    const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
+    const customerId = stripeCustomer.id;
 
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
@@ -65,7 +90,6 @@ serve(async (req) => {
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
       try {
-        // In basil API, current_period_end may be on the item level
         let endTimestamp = subscription.current_period_end;
         if (endTimestamp === undefined && subscription.items?.data?.[0]) {
           endTimestamp = (subscription.items.data[0] as any).current_period_end;
