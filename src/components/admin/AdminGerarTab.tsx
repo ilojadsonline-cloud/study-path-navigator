@@ -48,7 +48,7 @@ export function AdminGerarTab() {
   const [running, setRunning] = useState(false);
   const [totalGeradas, setTotalGeradas] = useState(0);
   const [batchesPerDiscipline, setBatchesPerDiscipline] = useState(3);
-  const [batchSize, setBatchSize] = useState(3);
+  const [batchSize, setBatchSize] = useState(2);
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([...DISCIPLINES]);
   const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
   const [pendingJob, setPendingJob] = useState<PendingJob | null>(null);

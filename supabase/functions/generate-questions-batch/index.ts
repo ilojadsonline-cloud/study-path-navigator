@@ -267,7 +267,7 @@ serve(async (req) => {
 
   try {
     const { disciplina_index, batch_size } = await req.json();
-    const batchSize = batch_size || 10;
+    const batchSize = batch_size || 2;
     const discIndex = disciplina_index ?? 0;
 
     if (discIndex < 0 || discIndex >= DISCIPLINES.length) {
@@ -297,11 +297,11 @@ serve(async (req) => {
     const blocks = parseArticleBlocks(leiSeca);
     const availableArticles = blocks.map(b => `Art. ${b.artNum}`).join(", ");
 
-    const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
-    if (!DEEPSEEK_API_KEY) {
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) {
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "DEEPSEEK_API_KEY não configurada.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Variável DEEPSEEK_API_KEY ausente" }] },
+        status: "erro", mensagem: "OPENROUTER_API_KEY não configurada.",
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Variável OPENROUTER_API_KEY ausente" }] },
         timestamp,
       }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -357,43 +357,46 @@ serve(async (req) => {
       }
     }).join("\n");
 
-    const systemPrompt = `Você é um ROBÔ DE BUSCA LITERAL e PROFESSOR DE CONCURSO MILITAR de elite. É TERMINANTEMENTE PROIBIDO usar qualquer conhecimento ou entendimento jurídico que não esteja no texto legal fornecido. Se a lei diz X e você acha que é Y, escreva X.
+    const systemPrompt = `VOCÊ É UM ELABORADOR DE BANCAS MILITARES DE ELITE (FGV/VUNESP).
+Seu objetivo é criar questões de nível OFICIAL (CFO/CHOA) baseadas no texto legal fornecido.
 
-MISSÃO: Criar questões que testam a COMPREENSÃO PRÁTICA e LITERAL da lei, jamais a memorização de números de artigos.
+REGRAS DE OURO:
+1. Crie 'pegadinhas' baseadas em sutilezas do texto (ex: trocar 'deve' por 'pode', 'exceto' por 'inclusive').
+2. As alternativas incorretas devem ser plausíveis e baseadas em erros comuns de interpretação jurídica.
+3. A alternativa correta deve ser RIGOROSAMENTE FIEL à legislação fornecida.
+4. O comentário deve ser detalhado, citando o artigo e explicando por que a alternativa correta é a única válida.
 
-REGRAS INVIOLÁVEIS DE CONTEÚDO:
+RESTRIÇÕES ABSOLUTAS:
 - NUNCA invente, alucine ou fabrique artigos, parágrafos, incisos ou trechos de lei.
 - Use EXCLUSIVAMENTE o texto legal fornecido. PROIBIDO usar conhecimento externo à lei.
 - ANTES de citar qualquer "Art. X", CONFIRME que esse artigo existe na lista de artigos disponíveis.
-- A alternativa CORRETA deve ser uma TRANSCRIÇÃO ou PARÁFRASE FIEL do texto legal. Se não encontrar o trecho literal na lei, NÃO crie a questão.
+- A alternativa CORRETA deve ser uma TRANSCRIÇÃO ou PARÁFRASE FIEL do texto legal.
 - Responda APENAS com JSON válido, sem markdown, sem \`\`\`.
 
 ESTILO OBRIGATÓRIO DAS QUESTÕES (VARIE entre estes 3 estilos):
 
 ESTILO 1 — CASO PRÁTICO COM PERSONAGEM FICTÍCIO:
 - Crie cenários REALISTAS do cotidiano militar usando personagens fictícios (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.)
-- Exemplos: "O Soldado Silva, ao retornar de férias, foi informado que...", "O Cabo Pereira, durante serviço de ronda, presenciou..."
 - O candidato deve APLICAR a regra da lei ao caso concreto.
-- A situação descrita DEVE ter previsão expressa no texto legal. NUNCA invente situações sem amparo legal.
+- A situação descrita DEVE ter previsão expressa no texto legal.
 
 ESTILO 2 — LITERALIDADE DA LEI SECA:
-- Teste o conhecimento LITERAL do texto da lei sem citar número de artigo.
-- Use formulações como: "Sobre [tema], é correto afirmar que...", "Assinale a alternativa correta sobre [tema]", "No que se refere a [tema], a legislação estabelece que..."
+- Teste o conhecimento LITERAL do texto da lei sem citar número de artigo no enunciado.
 - A alternativa correta deve reproduzir FIELMENTE o que a lei dispõe.
 
-ESTILO 3 — PEGADINHA INTELIGENTE:
+ESTILO 3 — PEGADINHA INTELIGENTE DE ELITE:
 - Foque em termos que geram confusão: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos, troca de competências, alteração de sujeitos.
 - A alternativa correta é LITERAL; as incorretas trocam UM detalhe sutil mas crucial.
 
 REGRAS PEDAGÓGICAS (CRÍTICAS):
-1. PROIBIDO DECOREBA DE NÚMERO: NUNCA crie questões do tipo "O que dispõe o Art. X?", "Qual artigo trata de Y?", "Segundo o Art. X, ...". O número do artigo aparece SOMENTE no comentário.
-2. O comentário é a PROVA LITERAL: deve citar artigo, parágrafo e inciso EXATAMENTE como estão na lei seca, com TRANSCRIÇÃO LITERAL entre aspas. NUNCA interprete criativamente.
-3. DISTRATORES FORTES: As alternativas incorretas devem ser PLAUSÍVEIS — baseadas em trocas sutis de termos da própria lei (trocar "deverá" por "poderá", inverter prazo, mudar competência).
-4. TOM PROFISSIONAL E DESAFIADOR: Estilo de banca examinadora séria (CESPE/CEBRASPE, FGV).
+1. PROIBIDO DECOREBA DE NÚMERO: NUNCA crie questões do tipo "O que dispõe o Art. X?". O número do artigo aparece SOMENTE no comentário.
+2. O comentário é a PROVA LITERAL: deve citar artigo, parágrafo e inciso com TRANSCRIÇÃO LITERAL entre aspas.
+3. DISTRATORES FORTES: As alternativas incorretas devem ser PLAUSÍVEIS — baseadas em trocas sutis de termos da própria lei.
+4. TOM PROFISSIONAL E DESAFIADOR: Estilo de banca examinadora séria (CESPE/CEBRASPE, FGV, VUNESP).
 5. PRIORIZE QUESTÕES COMPLEXAS: Exceções às regras gerais, condições específicas, prazos, situações-limite.
 
-REGRA DE UNICIDADE SEMÂNTICA (CRÍTICA):
-- Cada questão DEVE abordar um DISPOSITIVO LEGAL DIFERENTE (artigo, parágrafo, inciso distinto).
+REGRA DE UNICIDADE SEMÂNTICA:
+- Cada questão DEVE abordar um DISPOSITIVO LEGAL DIFERENTE.
 - Se duas questões abordam o mesmo artigo, elas DEVEM tratar de parágrafos/incisos/regras DIFERENTES.
 - É PROIBIDO gerar questões que tenham a mesma resposta correta ou testem o mesmo conceito jurídico.
 
@@ -436,27 +439,32 @@ REGRAS TÉCNICAS:
 JSON array:
 [{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o Art. X da ${disc.leiNome}: '...'"}]`;
 
-    // Retry logic for DeepSeek API calls (up to 3 attempts with exponential backoff)
+    // Retry logic for OpenRouter/DeepSeek-R1 API calls (up to 3 attempts with exponential backoff)
     const MAX_API_RETRIES = 3;
     let aiResponse: Response | null = null;
     let lastFetchError: any = null;
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 50000);
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 180s timeout for R1 reasoning
 
       try {
-        aiResponse = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "https://exam-roadmap-buddy.lovable.app",
+            "X-Title": "Exam Roadmap Buddy",
+          },
           body: JSON.stringify({
-            model: "deepseek-chat",
+            model: "deepseek/deepseek-r1",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: prompt },
             ],
-            temperature: 0.0,
-            max_tokens: 4096,
+            temperature: 0.6,
+            max_tokens: 8192,
           }),
           signal: controller.signal,
         });
@@ -503,11 +511,11 @@ JSON array:
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    console.log(`[GERAR] DeepSeek status: ${aiResponse.status}`);
+    console.log(`[GERAR] OpenRouter/DeepSeek-R1 status: ${aiResponse.status}`);
 
     if (aiResponse.status === 429) {
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "Rate limit do DeepSeek.", paused: true,
+        status: "erro", mensagem: "Rate limit do OpenRouter.", paused: true,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "RATE_LIMIT", descricao: "Aguarde 1 minuto" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -515,9 +523,9 @@ JSON array:
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
-      console.error(`[GERAR] DeepSeek error: ${aiResponse.status} ${errText.substring(0, 300)}`);
+      console.error(`[GERAR] OpenRouter error: ${aiResponse.status} ${errText.substring(0, 300)}`);
       return new Response(JSON.stringify({
-        status: "erro", mensagem: `Erro DeepSeek (${aiResponse.status})`,
+        status: "erro", mensagem: `Erro OpenRouter (${aiResponse.status})`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "API_ERROR", descricao: errText.substring(0, 200) }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -525,6 +533,8 @@ JSON array:
 
     const aiData = await aiResponse.json();
     let content = aiData.choices?.[0]?.message?.content || "[]";
+    // Strip DeepSeek-R1 <think>...</think> reasoning blocks before parsing JSON
+    content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
     content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
     let rawQuestions;
