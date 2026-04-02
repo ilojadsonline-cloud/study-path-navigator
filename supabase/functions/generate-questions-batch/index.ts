@@ -511,11 +511,11 @@ JSON array:
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    console.log(`[GERAR] DeepSeek status: ${aiResponse.status}`);
+    console.log(`[GERAR] OpenRouter/DeepSeek-R1 status: ${aiResponse.status}`);
 
     if (aiResponse.status === 429) {
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "Rate limit do DeepSeek.", paused: true,
+        status: "erro", mensagem: "Rate limit do OpenRouter.", paused: true,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "RATE_LIMIT", descricao: "Aguarde 1 minuto" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -523,9 +523,9 @@ JSON array:
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
-      console.error(`[GERAR] DeepSeek error: ${aiResponse.status} ${errText.substring(0, 300)}`);
+      console.error(`[GERAR] OpenRouter error: ${aiResponse.status} ${errText.substring(0, 300)}`);
       return new Response(JSON.stringify({
-        status: "erro", mensagem: `Erro DeepSeek (${aiResponse.status})`,
+        status: "erro", mensagem: `Erro OpenRouter (${aiResponse.status})`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "API_ERROR", descricao: errText.substring(0, 200) }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -533,6 +533,8 @@ JSON array:
 
     const aiData = await aiResponse.json();
     let content = aiData.choices?.[0]?.message?.content || "[]";
+    // Strip DeepSeek-R1 <think>...</think> reasoning blocks before parsing JSON
+    content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
     content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
     let rawQuestions;
