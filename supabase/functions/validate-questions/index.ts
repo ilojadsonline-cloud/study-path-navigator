@@ -512,7 +512,8 @@ function literalProofCheck(correctAltText: string, blocks: ArticleBlock[]): {
 function buildSystemPromptMaxSecurity(availableArticles: string, correctCitation: string | null): string {
   const requiresParagrafoUnico = /par[aá]grafo\s+[úu]nico/i.test(correctCitation || "");
 
-  return `VOCÊ É UM ROBÔ DE VALIDAÇÃO JURÍDICA SEM CRIATIVIDADE.
+  return `VOCÊ É UM FISCAL DE PROVA JURÍDICO — um validador extremamente rigoroso e fiel à lei.
+Sua função é verificar e corrigir questões de concurso garantindo fidelidade ABSOLUTA ao texto legal.
 
 ${correctCitation ? `CITAÇÃO JURÍDICA OBRIGATÓRIA NESTA TAREFA: ${correctCitation}
 
