@@ -512,7 +512,8 @@ function literalProofCheck(correctAltText: string, blocks: ArticleBlock[]): {
 function buildSystemPromptMaxSecurity(availableArticles: string, correctCitation: string | null): string {
   const requiresParagrafoUnico = /par[aá]grafo\s+[úu]nico/i.test(correctCitation || "");
 
-  return `VOCÊ É UM ROBÔ DE VALIDAÇÃO JURÍDICA SEM CRIATIVIDADE.
+  return `VOCÊ É UM FISCAL DE PROVA JURÍDICO — um validador extremamente rigoroso e fiel à lei.
+Sua função é verificar e corrigir questões de concurso garantindo fidelidade ABSOLUTA ao texto legal.
 
 ${correctCitation ? `CITAÇÃO JURÍDICA OBRIGATÓRIA NESTA TAREFA: ${correctCitation}
 
@@ -564,7 +565,7 @@ serve(async (req) => {
     const mode: "rules" | "ai" = body.mode || "rules";
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 
     // 1. Fetch questions batch
     const { data: questions, error } = await supabase
@@ -881,10 +882,10 @@ serve(async (req) => {
       // ══════════════════════════════════════════════════════════════════
       // AI MODE — SEGURANÇA MÁXIMA: rewrite from scratch using law text
       // ══════════════════════════════════════════════════════════════════
-      if (!DEEPSEEK_API_KEY) {
-        questoesRevisaoManual.push({ id: q.id, motivo: "DEEPSEEK_API_KEY não configurada" });
-        errosEncontrados.push({ codigo: "NO_API_KEY", descricao: "DEEPSEEK_API_KEY ausente" });
-        details.push({ id: q.id, status: "erro", motivo: "Sem API key DeepSeek" });
+      if (!OPENROUTER_API_KEY) {
+        questoesRevisaoManual.push({ id: q.id, motivo: "OPENROUTER_API_KEY não configurada" });
+        errosEncontrados.push({ codigo: "NO_API_KEY", descricao: "OPENROUTER_API_KEY ausente" });
+        details.push({ id: q.id, status: "erro", motivo: "Sem API key OpenRouter" });
         continue;
       }
 
@@ -959,13 +960,18 @@ Responda APENAS JSON (sem markdown):
 
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 50000);
+        const timeout = setTimeout(() => controller.abort(), 60000);
 
-        const aiResponse = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "https://exam-roadmap-buddy.lovable.app",
+            "X-Title": "Exam Roadmap Buddy",
+          },
           body: JSON.stringify({
-            model: "deepseek-chat",
+            model: "anthropic/claude-3.5-haiku",
             messages: [
               { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, deterministicCitation) },
               { role: "user", content: prompt },
@@ -982,7 +988,7 @@ Responda APENAS JSON (sem markdown):
           const errText = await aiResponse.text();
           if (aiResponse.status === 429) {
             return new Response(JSON.stringify({
-              status: "parcial", mensagem: "Rate limit DeepSeek. Aguarde.", paused: true,
+              status: "parcial", mensagem: "Rate limit OpenRouter. Aguarde.", paused: true,
               detalhes: {
                 total_processado: okCount + fixedCount + deletedCount,
                 questoes_criadas: 0, questoes_corrigidas: fixedCount,
@@ -993,7 +999,7 @@ Responda APENAS JSON (sem markdown):
               last_id: q.id, details, timestamp,
             }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
-          throw new Error(`DeepSeek ${aiResponse.status}: ${errText.substring(0, 200)}`);
+          throw new Error(`OpenRouter ${aiResponse.status}: ${errText.substring(0, 200)}`);
         }
 
         const aiData = await aiResponse.json();
