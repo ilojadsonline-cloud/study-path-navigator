@@ -41,23 +41,36 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    // Collect all unique emails to search: auth email + profile email
-    const emailsToSearch = new Set<string>();
-    emailsToSearch.add(user.email.toLowerCase());
-
-    // Also check the profile email (may differ from auth email)
+    // Collect all email variants to search in Stripe (case-sensitive API!)
+    // We need both original-case and lowercase variants
+    const emailsToSearch: string[] = [];
+    
+    // Auth email (Supabase normalizes to lowercase)
+    emailsToSearch.push(user.email);
+    
+    // Also check the profile email (may have original casing from registration)
     const { data: profileData } = await supabaseClient
       .from("profiles")
       .select("email")
       .eq("user_id", user.id)
       .single();
 
-    if (profileData?.email && profileData.email.toLowerCase() !== user.email.toLowerCase()) {
-      emailsToSearch.add(profileData.email.toLowerCase());
-      logStep("Profile has different email", { profileEmail: profileData.email });
+    if (profileData?.email) {
+      // Add the exact profile email (preserves original casing)
+      if (!emailsToSearch.includes(profileData.email)) {
+        emailsToSearch.push(profileData.email);
+      }
+      // Also add lowercase variant if different
+      const lowerProfile = profileData.email.toLowerCase();
+      if (!emailsToSearch.includes(lowerProfile)) {
+        emailsToSearch.push(lowerProfile);
+      }
+      logStep("Profile email found", { profileEmail: profileData.email });
     }
 
-    // Search Stripe for customer by each email
+    logStep("Searching Stripe with emails", { emails: emailsToSearch });
+
+    // Search Stripe for customer by each email variant
     let stripeCustomer = null;
     for (const searchEmail of emailsToSearch) {
       const customers = await stripe.customers.list({ email: searchEmail, limit: 1 });
