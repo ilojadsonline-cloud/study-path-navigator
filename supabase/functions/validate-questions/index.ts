@@ -621,14 +621,15 @@ serve(async (req) => {
       }
     }
 
-    // 3. Fetch existing fingerprints for duplicate detection (last 500 questions not in current batch)
+    // 3. Fetch existing fingerprints for duplicate detection (last 1000 questions not in current batch)
     const batchIds = new Set(questions.map(q => q.id));
     const { data: existingQuestions } = await supabase
       .from("questoes").select("id, enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito")
-      .order("id", { ascending: false }).limit(500);
+      .order("id", { ascending: false }).limit(1000);
     
     const existingFingerprints = new Map<string, number>();
     const existingSemanticFPs = new Map<string, number>();
+    const existingForSimilarity: Array<{ id: number; enunciado: string }> = [];
     if (existingQuestions) {
       for (const eq of existingQuestions) {
         if (!batchIds.has(eq.id)) {
@@ -636,6 +637,7 @@ serve(async (req) => {
           const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
           const correctText = eq[correctKey] || "";
           existingSemanticFPs.set(buildSemanticFingerprint(eq.comentario || "", correctText), eq.id);
+          existingForSimilarity.push({ id: eq.id, enunciado: eq.enunciado });
         }
       }
     }
@@ -646,6 +648,7 @@ serve(async (req) => {
     const details: Array<{ id: number; status: string; motivo: string }> = [];
     const batchFingerprints = new Map<string, number>();
     const batchSemanticFPs = new Map<string, number>();
+    const batchForSimilarity: Array<{ id: number; enunciado: string }> = [];
 
     for (const q of questions!) {
       const lawText = legalTexts[q.disciplina];
