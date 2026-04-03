@@ -331,32 +331,44 @@ serve(async (req) => {
       }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch existing questions for dedup (fingerprint + semantic)
+    // Fetch existing questions for dedup (fingerprint + semantic + similarity)
     const { data: existingQ } = await supabase
-      .from("questoes").select("enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito")
-      .eq("disciplina", disc.disciplina).order("id", { ascending: false }).limit(500);
+      .from("questoes").select("id, enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito")
+      .eq("disciplina", disc.disciplina).order("id", { ascending: false }).limit(1000);
     
     const existingFingerprints = new Set<string>();
     const existingSemanticFPs = new Set<string>();
+    const existingForSimilarity: Array<{ id: number; enunciado: string }> = [];
     const recentTopicSummaries: string[] = [];
+    const coveredArticles = new Set<string>();
     
     if (existingQ) {
       existingQ.forEach((eq, idx) => {
         existingFingerprints.add(buildFingerprint(eq.enunciado));
-        // Build semantic fingerprint from comment + correct answer
         const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
         const correctText = eq[correctKey] || "";
         existingSemanticFPs.add(buildSemanticFingerprint(eq.comentario || "", correctText));
-        // Collect last 50 summaries for the prompt
-        if (idx < 50) {
-          const arts = extractAllCitedArticles(eq.comentario || "");
+        existingForSimilarity.push({ id: eq.id, enunciado: eq.enunciado });
+        
+        // Track which articles are already covered
+        const arts = extractAllCitedArticles(eq.comentario || "");
+        arts.forEach(a => coveredArticles.add(a));
+        
+        // Collect last 80 summaries for the prompt (more context = less repetition)
+        if (idx < 80) {
           const artRef = arts.length > 0 ? `Art. ${arts[0]}` : "?";
-          // Truncate enunciado to key phrase
-          const shortEnunciado = eq.enunciado.substring(0, 80).replace(/\s+/g, " ");
+          const shortEnunciado = eq.enunciado.substring(0, 100).replace(/\s+/g, " ");
           recentTopicSummaries.push(`- ${artRef}: ${shortEnunciado}`);
         }
       });
     }
+
+    // Build list of UNDER-EXPLORED articles for the prompt
+    const allArticleNums = blocks.map(b => b.artNum);
+    const underExploredArticles = allArticleNums.filter(a => !coveredArticles.has(a));
+    const underExploredBlock = underExploredArticles.length > 0
+      ? `\n\nARTIGOS AINDA NÃO EXPLORADOS (PRIORIZE ESTES): Art. ${underExploredArticles.slice(0, 30).join(", Art. ")}`
+      : "";
 
     console.log(`[GERAR] Iniciando: "${disc.disciplina}", batch=${batchSize}, artigos=${blocks.length}, existentes=${existingQ?.length || 0}, semânticas=${existingSemanticFPs.size}`);
 
