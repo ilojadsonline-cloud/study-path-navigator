@@ -426,7 +426,11 @@ MÉTODO DE CRIAÇÃO (siga rigorosamente):
 4) Crie 5 alternativas (A-E) sem prefixo de letra:
    - A CORRETA deve refletir LITERALMENTE o que a lei diz.
    - As INCORRETAS devem usar TROCADILHOS SUTIS: trocar verbos (deverá/poderá), inverter prazos, alterar condições, mudar sujeitos.
-5) O COMENTÁRIO deve: "Conforme o Art. X da ${disc.leiNome}: '[transcrição literal do trecho]'." — citando artigo, parágrafo e inciso exatamente como na lei seca.
+5) O COMENTÁRIO deve:
+   a) Explicar POR QUE a alternativa correta é a única válida com raciocínio jurídico.
+   b) Citar: "Conforme o Art. X da ${disc.leiNome}: '[transcrição literal do trecho]'."
+   c) Explicar brevemente por que as demais alternativas estão erradas.
+   d) Formato: "A alternativa [X] está correta porque... Conforme o Art. Y da ${disc.leiNome}: '[transcrição]'. As demais alternativas estão incorretas: [breve explicação]."
 
 PROIBIÇÕES ABSOLUTAS NO ENUNCIADO:
 - "O que diz o Art. X?"
