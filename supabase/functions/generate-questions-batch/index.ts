@@ -647,6 +647,18 @@ JSON array:
       }
       batchSemanticFPs.add(semFP);
 
+      // ── Similarity-based duplicate detection (catches rephrased questions) ──
+      const similarId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55);
+      if (similarId) {
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: muito similar à questão #${similarId} (overlap > 55%)`); continue;
+      }
+      // Also check against batch
+      const batchSimilarId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55);
+      if (batchSimilarId !== null) {
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: muito similar a outra no lote`); continue;
+      }
+      batchForSimilarity.push({ id: idx, enunciado: q.enunciado });
+
       // ── Validate ALL cited articles exist in law ──
       const literalArticle = findArticleForText(correctAltText, blocks);
       const evidenceArticle = detectCommentEvidenceArticle(q.comentario, blocks);
