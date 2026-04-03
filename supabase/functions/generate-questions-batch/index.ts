@@ -351,7 +351,7 @@ serve(async (req) => {
         case "TEORIA_PURA":
           return `Questão ${num}: LITERALIDADE DA LEI — Teste o conhecimento literal do texto legal. O enunciado apresenta uma afirmativa sobre um tema e o candidato identifica a alternativa que reproduz fielmente o que a lei dispõe. Use "Sobre [tema], é correto afirmar que..." ou "No que se refere a [tema], a legislação estabelece que...". A alternativa correta DEVE ser uma transcrição ou paráfrase fiel do texto legal.`;
         case "CASO_PRATICO":
-          return `Questão ${num}: CASO PRÁTICO — Crie um cenário REALISTA e DETALHADO (3-4 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.) em situação concreta do cotidiano militar que tenha PREVISÃO EXPRESSA no texto legal. Exemplo: "O Soldado Silva, lotado no 1º BPM, ao retornar de licença médica de 45 dias, foi informado pelo seu comandante que...". O candidato deve APLICAR a regra da lei ao caso.`;
+          return `Questão ${num}: CASO PRÁTICO — Crie um cenário REALISTA e DETALHADO (3-4 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.) em situação concreta do cotidiano militar que tenha PREVISÃO EXPRESSA no texto legal. IMPORTANTE: O posto/graduação do personagem DEVE ser COERENTE com o dispositivo legal abordado. Se a lei atribui competência ao Comandante-Geral, NÃO use Capitão. Se trata de Praças, NÃO use Oficiais. RESPEITE a hierarquia militar conforme o texto legal. Exemplo: "O Soldado Silva, lotado no 1º BPM, ao retornar de licença médica de 45 dias, foi informado pelo seu comandante que...". O candidato deve APLICAR a regra da lei ao caso.`;
         case "PEGADINHA_DETALHE":
           return `Questão ${num}: PEGADINHA INTELIGENTE — Foque em termos que geram confusão na lei: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos (30 vs 60 dias), troca de competências (Comandante-Geral vs Governador), alteração de sujeitos. A alternativa correta é LITERAL da lei; as incorretas trocam UM detalhe sutil mas crucial.`;
       }
@@ -390,10 +390,15 @@ ESTILO 3 — PEGADINHA INTELIGENTE DE ELITE:
 
 REGRAS PEDAGÓGICAS (CRÍTICAS):
 1. PROIBIDO DECOREBA DE NÚMERO: NUNCA crie questões do tipo "O que dispõe o Art. X?". O número do artigo aparece SOMENTE no comentário.
-2. O comentário é a PROVA LITERAL: deve citar artigo, parágrafo e inciso com TRANSCRIÇÃO LITERAL entre aspas.
+2. CONTEXTO HIERÁRQUICO OBRIGATÓRIO: Em casos práticos, os personagens devem ter postos/graduações COERENTES com o dispositivo legal. Se a lei atribui competência ao Comandante-Geral, NÃO use Capitão. Se trata de Praças, NÃO use Oficiais. RESPEITE a cadeia hierárquica conforme expressa no texto legal.
 3. DISTRATORES FORTES: As alternativas incorretas devem ser PLAUSÍVEIS — baseadas em trocas sutis de termos da própria lei.
 4. TOM PROFISSIONAL E DESAFIADOR: Estilo de banca examinadora séria (CESPE/CEBRASPE, FGV, VUNESP).
 5. PRIORIZE QUESTÕES COMPLEXAS: Exceções às regras gerais, condições específicas, prazos, situações-limite.
+6. COMENTÁRIO EXPLICATIVO COMPLETO: O comentário deve:
+   a) Explicar POR QUE a alternativa correta é a única válida, com raciocínio jurídico claro.
+   b) Citar artigo, parágrafo e inciso com TRANSCRIÇÃO LITERAL entre aspas.
+   c) Explicar brevemente por que as demais alternativas estão incorretas (qual detalhe foi alterado).
+   d) Formato: "A alternativa [X] está correta porque... Conforme o Art. Y da [Lei]: '[transcrição]'. As demais alternativas estão incorretas: [breve explicação]."
 
 REGRA DE UNICIDADE SEMÂNTICA:
 - Cada questão DEVE abordar um DISPOSITIVO LEGAL DIFERENTE.
@@ -421,7 +426,11 @@ MÉTODO DE CRIAÇÃO (siga rigorosamente):
 4) Crie 5 alternativas (A-E) sem prefixo de letra:
    - A CORRETA deve refletir LITERALMENTE o que a lei diz.
    - As INCORRETAS devem usar TROCADILHOS SUTIS: trocar verbos (deverá/poderá), inverter prazos, alterar condições, mudar sujeitos.
-5) O COMENTÁRIO deve: "Conforme o Art. X da ${disc.leiNome}: '[transcrição literal do trecho]'." — citando artigo, parágrafo e inciso exatamente como na lei seca.
+5) O COMENTÁRIO deve:
+   a) Explicar POR QUE a alternativa correta é a única válida com raciocínio jurídico.
+   b) Citar: "Conforme o Art. X da ${disc.leiNome}: '[transcrição literal do trecho]'."
+   c) Explicar brevemente por que as demais alternativas estão erradas.
+   d) Formato: "A alternativa [X] está correta porque... Conforme o Art. Y da ${disc.leiNome}: '[transcrição]'. As demais alternativas estão incorretas: [breve explicação]."
 
 PROIBIÇÕES ABSOLUTAS NO ENUNCIADO:
 - "O que diz o Art. X?"
