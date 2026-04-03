@@ -486,16 +486,20 @@ JSON array:
 [{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o Art. X da ${disc.leiNome}: '...'"}]`;
 
     // Retry logic for OpenRouter/DeepSeek-R1 API calls (up to 3 attempts with exponential backoff)
+    // IMPORTANT: keep the timeout active until the full response body is read, otherwise the edge
+    // function can hit the platform wall-time limit and return 546/non-2xx even after status 200.
     const MAX_API_RETRIES = 3;
-    let aiResponse: Response | null = null;
+    const OPENROUTER_TIMEOUT_MS = 110000;
+    let aiStatus: number | null = null;
+    let aiResponseText = "";
     let lastFetchError: any = null;
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 180000); // 180s timeout for R1 reasoning
+      const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
 
       try {
-        aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -510,14 +514,17 @@ JSON array:
               { role: "user", content: prompt },
             ],
             temperature: 0.6,
-            max_tokens: 8192,
+            max_tokens: 4096,
           }),
           signal: controller.signal,
         });
+        aiStatus = response.status;
+        console.log(`[GERAR] OpenRouter/DeepSeek-R1 status: ${aiStatus}`);
+        aiResponseText = await response.text();
         clearTimeout(timeoutId);
 
         // Rate limit → retry with backoff
-        if (aiResponse.status === 429 && attempt < MAX_API_RETRIES - 1) {
+        if (aiStatus === 429 && attempt < MAX_API_RETRIES - 1) {
           const retryDelay = 5000 * Math.pow(2, attempt); // 5s, 10s, 20s
           console.log(`[GERAR] Rate limit 429, retry ${attempt + 1}/${MAX_API_RETRIES} em ${retryDelay}ms`);
           await new Promise(r => setTimeout(r, retryDelay));
@@ -525,9 +532,9 @@ JSON array:
         }
 
         // Server errors (500+) → retry with backoff
-        if (aiResponse.status >= 500 && attempt < MAX_API_RETRIES - 1) {
+        if (aiStatus >= 500 && attempt < MAX_API_RETRIES - 1) {
           const retryDelay = 3000 * Math.pow(2, attempt);
-          console.log(`[GERAR] Server error ${aiResponse.status}, retry ${attempt + 1}/${MAX_API_RETRIES} em ${retryDelay}ms`);
+          console.log(`[GERAR] Server error ${aiStatus}, retry ${attempt + 1}/${MAX_API_RETRIES} em ${retryDelay}ms`);
           await new Promise(r => setTimeout(r, retryDelay));
           continue;
         }
@@ -547,19 +554,17 @@ JSON array:
       }
     }
 
-    if (!aiResponse) {
+    if (!aiResponseText) {
       const isTimeout = lastFetchError?.name === "AbortError";
       console.error(`[GERAR] Todas as ${MAX_API_RETRIES} tentativas falharam:`, String(lastFetchError));
       return new Response(JSON.stringify({
-        status: "erro", mensagem: isTimeout ? "DeepSeek timeout após múltiplas tentativas." : `Erro de conexão persistente: ${lastFetchError?.message}`,
+        status: "erro", mensagem: isTimeout ? "OpenRouter demorou demais para responder. Tente novamente em instantes." : `Erro de conexão persistente: ${lastFetchError?.message}`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isTimeout ? "TIMEOUT" : "FETCH_ERROR", descricao: String(lastFetchError) }] },
         error: String(lastFetchError), timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    console.log(`[GERAR] OpenRouter/DeepSeek-R1 status: ${aiResponse.status}`);
-
-    if (aiResponse.status === 429) {
+    if (aiStatus === 429) {
       return new Response(JSON.stringify({
         status: "erro", mensagem: "Rate limit do OpenRouter.", paused: true,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "RATE_LIMIT", descricao: "Aguarde 1 minuto" }] },
@@ -567,17 +572,43 @@ JSON array:
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error(`[GERAR] OpenRouter error: ${aiResponse.status} ${errText.substring(0, 300)}`);
+    if (aiStatus === 402) {
+      let creditMessage = "Créditos ou limite insuficientes no OpenRouter.";
+      try {
+        const parsed = JSON.parse(aiResponseText);
+        creditMessage = parsed?.error?.message || creditMessage;
+      } catch {
+        if (aiResponseText.trim()) creditMessage = aiResponseText.substring(0, 200);
+      }
       return new Response(JSON.stringify({
-        status: "erro", mensagem: `Erro OpenRouter (${aiResponse.status})`,
+        status: "erro", mensagem: "OpenRouter sem saldo/limite disponível.", paused: true,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "OPENROUTER_402", descricao: creditMessage }] },
+        timestamp,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (!aiStatus || aiStatus < 200 || aiStatus >= 300) {
+      const errText = aiResponseText;
+      console.error(`[GERAR] OpenRouter error: ${aiStatus} ${errText.substring(0, 300)}`);
+      return new Response(JSON.stringify({
+        status: "erro", mensagem: `Erro OpenRouter (${aiStatus ?? "desconhecido"})`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "API_ERROR", descricao: errText.substring(0, 200) }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const aiData = await aiResponse.json();
+    let aiData: any;
+    try {
+      aiData = JSON.parse(aiResponseText);
+    } catch {
+      console.error("[GERAR] OpenRouter outer JSON inválido:", aiResponseText.substring(0, 200));
+      return new Response(JSON.stringify({
+        status: "erro", mensagem: "Resposta inválida do OpenRouter.",
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "OPENROUTER_INVALID_JSON", descricao: "JSON externo inválido" }] },
+        timestamp,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     let content = aiData.choices?.[0]?.message?.content || "[]";
     // Strip DeepSeek-R1 <think>...</think> reasoning blocks before parsing JSON
     content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
