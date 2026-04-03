@@ -599,6 +599,7 @@ JSON array:
     let discarded = 0;
     const batchFingerprints = new Set<string>();
     const batchSemanticFPs = new Set<string>();
+    const batchForSimilarity: Array<{ id: number; enunciado: string }> = [];
 
     for (let idx = 0; idx < rawQuestions.length; idx++) {
       const raw = rawQuestions[idx];
