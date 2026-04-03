@@ -477,6 +477,30 @@ function buildSemanticFingerprint(comentario: string, correctAltText: string): s
   return `${artPart}|${keyTerms}`.substring(0, 100);
 }
 
+/** Compute word-overlap similarity between two enunciados (Jaccard-like). */
+function computeEnunciadoSimilarity(a: string, b: string): number {
+  const wordsA = new Set(normalize(a).split(" ").filter(w => w.length > 3));
+  const wordsB = new Set(normalize(b).split(" ").filter(w => w.length > 3));
+  if (wordsA.size === 0 || wordsB.size === 0) return 0;
+  let intersection = 0;
+  for (const w of wordsA) { if (wordsB.has(w)) intersection++; }
+  const union = new Set([...wordsA, ...wordsB]).size;
+  return union > 0 ? intersection / union : 0;
+}
+
+/** Find the most similar existing question above threshold. */
+function findSimilarQuestion(
+  newEnunciado: string,
+  existingQuestions: Array<{ id: number; enunciado: string }>,
+  threshold = 0.55,
+): number | null {
+  for (const eq of existingQuestions) {
+    const sim = computeEnunciadoSimilarity(newEnunciado, eq.enunciado);
+    if (sim >= threshold) return eq.id;
+  }
+  return null;
+}
+
 /** TRAVA DE PROVA LITERAL: verifica se a alternativa correta tem base literal na lei */
 function literalProofCheck(correctAltText: string, blocks: ArticleBlock[]): {
   found: boolean;
