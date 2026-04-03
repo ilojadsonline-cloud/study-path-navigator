@@ -696,6 +696,25 @@ serve(async (req) => {
       }
       batchSemanticFPs.set(semFP, q.id);
 
+      // ── Similarity-based duplicate check (catches rephrased questions) ──
+      const similarExistingId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55);
+      if (similarExistingId) {
+        await supabase.from("questoes").delete().eq("id", q.id);
+        deletedCount++;
+        details.push({ id: q.id, status: "excluida", motivo: `Questão muito similar à #${similarExistingId} (overlap > 55%)` });
+        console.log(`[VALIDAR] #${q.id} EXCLUÍDA: similar a #${similarExistingId}`);
+        continue;
+      }
+      const similarBatchId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55);
+      if (similarBatchId !== null) {
+        await supabase.from("questoes").delete().eq("id", q.id);
+        deletedCount++;
+        details.push({ id: q.id, status: "excluida", motivo: `Questão muito similar à #${similarBatchId} (no lote)` });
+        console.log(`[VALIDAR] #${q.id} EXCLUÍDA: similar a #${similarBatchId} (lote)`);
+        continue;
+      }
+      batchForSimilarity.push({ id: q.id, enunciado: q.enunciado });
+
       if (!lawText || blocks.length === 0) {
         okCount++;
         details.push({ id: q.id, status: "pular", motivo: "Sem texto legal cadastrado" });
