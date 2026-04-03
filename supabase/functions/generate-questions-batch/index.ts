@@ -589,7 +589,7 @@ JSON array:
 
     if (!aiStatus || aiStatus < 200 || aiStatus >= 300) {
       const errText = aiResponseText;
-      console.error(`[GERAR] OpenRouter error: ${aiResponse.status} ${errText.substring(0, 300)}`);
+      console.error(`[GERAR] OpenRouter error: ${aiStatus} ${errText.substring(0, 300)}`);
       return new Response(JSON.stringify({
         status: "erro", mensagem: `Erro OpenRouter (${aiStatus ?? "desconhecido"})`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "API_ERROR", descricao: errText.substring(0, 200) }] },
