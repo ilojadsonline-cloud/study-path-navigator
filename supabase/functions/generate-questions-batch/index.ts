@@ -164,7 +164,6 @@ function buildFingerprint(enunciado: string): string {
 function buildSemanticFingerprint(comentario: string, correctAltText: string): string {
   const arts = extractAllCitedArticles(comentario);
   const artPart = arts.sort().join(",");
-  // Extract key legal terms from the correct answer (normalized, sorted, deduped)
   const keyTerms = normalize(correctAltText)
     .split(" ")
     .filter(w => w.length > 4)
@@ -172,6 +171,32 @@ function buildSemanticFingerprint(comentario: string, correctAltText: string): s
     .slice(0, 8)
     .join(" ");
   return `${artPart}|${keyTerms}`.substring(0, 100);
+}
+
+/** Compute word-overlap similarity between two enunciados (Jaccard-like).
+ *  Returns 0..1 — higher means more similar. */
+function computeEnunciadoSimilarity(a: string, b: string): number {
+  const wordsA = new Set(normalize(a).split(" ").filter(w => w.length > 3));
+  const wordsB = new Set(normalize(b).split(" ").filter(w => w.length > 3));
+  if (wordsA.size === 0 || wordsB.size === 0) return 0;
+  let intersection = 0;
+  for (const w of wordsA) { if (wordsB.has(w)) intersection++; }
+  const union = new Set([...wordsA, ...wordsB]).size;
+  return union > 0 ? intersection / union : 0;
+}
+
+/** Check if a new enunciado is too similar to any existing one.
+ *  Returns the ID of the most similar question if above threshold, null otherwise. */
+function findSimilarQuestion(
+  newEnunciado: string,
+  existingQuestions: Array<{ id: number; enunciado: string }>,
+  threshold = 0.55,
+): number | null {
+  for (const eq of existingQuestions) {
+    const sim = computeEnunciadoSimilarity(newEnunciado, eq.enunciado);
+    if (sim >= threshold) return eq.id;
+  }
+  return null;
 }
 
 const DISCIPLINES = [
