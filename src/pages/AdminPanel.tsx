@@ -37,6 +37,7 @@ const AdminPanel = () => {
             <TabsTrigger value="gerar" className="flex items-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" />Gerar</TabsTrigger>
             <TabsTrigger value="validar" className="flex items-center gap-1.5 text-xs"><ShieldCheck className="w-3.5 h-3.5" />Validar</TabsTrigger>
             <TabsTrigger value="online" className="flex items-center gap-1.5 text-xs"><Wifi className="w-3.5 h-3.5" />Online</TabsTrigger>
+            <TabsTrigger value="textos" className="flex items-center gap-1.5 text-xs"><BookOpen className="w-3.5 h-3.5" />Textos Legais</TabsTrigger>
           </TabsList>
 
           <TabsContent value="stats" className="mt-6"><AdminStatsTab /></TabsContent>
@@ -47,6 +48,7 @@ const AdminPanel = () => {
           <TabsContent value="gerar" className="mt-6"><AdminGerarTab /></TabsContent>
           <TabsContent value="validar" className="mt-6"><AdminValidarTab /></TabsContent>
           <TabsContent value="online" className="mt-6"><AdminOnlineTab /></TabsContent>
+          <TabsContent value="textos" className="mt-6"><AdminTextosLegaisContent /></TabsContent>
         </Tabs>
       </div>
     </AppLayout>

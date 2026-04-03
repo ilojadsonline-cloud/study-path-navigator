@@ -542,9 +542,14 @@ REGRAS ABSOLUTAS:
 REGRAS PEDAGÓGICAS (OBRIGATÓRIAS):
 - PROIBIDO DECOREBA: O enunciado NÃO PODE mencionar número de artigo. NUNCA "O que diz o Art. X?", "Segundo o Art. X...". REESCREVA como CASO PRÁTICO.
 - CASO PRÁTICO: Descreva uma SITUAÇÃO CONCRETA do cotidiano militar com personagens fictícios (Soldado Silva, Cabo Pereira, Sargento Lima). O candidato aplica a lei ao caso.
+- CONTEXTO HIERÁRQUICO: Em questões com casos práticos, RESPEITE RIGOROSAMENTE a hierarquia militar conforme o texto legal. Se a lei atribui competência ao Comandante-Geral, NÃO atribua ao Capitão. Se a lei fala de Praças, NÃO use Oficiais no cenário. Os personagens fictícios devem ter postos/graduações COERENTES com o dispositivo legal abordado.
 - PEGADINHAS INTELIGENTES: Alternativas incorretas usam trocadilhos jurídicos (trocar "deverá"/"poderá", inverter prazos, trocar "vedado"/"facultado"). Distratores plausíveis.
 - O número do artigo aparece SOMENTE no comentário como fundamentação.
-- O comentário DEVE transcrever LITERALMENTE o trecho da lei entre aspas.
+- COMENTÁRIO EXPLICATIVO COMPLETO: O comentário DEVE:
+  1) Explicar POR QUE a alternativa correta é a única válida, fundamentando o raciocínio jurídico.
+  2) Transcrever LITERALMENTE o trecho da lei entre aspas com citação do artigo/parágrafo/inciso.
+  3) Explicar brevemente por que as demais alternativas estão erradas (qual detalhe foi alterado).
+  4) Formato: "A alternativa [X] está correta porque... Conforme o Art. Y da [Lei]: '[transcrição]'. As demais alternativas estão incorretas: [breve explicação]."
 
 Responda APENAS JSON válido, sem markdown, sem explicações adicionais.`;
 }

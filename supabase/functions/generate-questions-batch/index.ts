@@ -390,10 +390,15 @@ ESTILO 3 — PEGADINHA INTELIGENTE DE ELITE:
 
 REGRAS PEDAGÓGICAS (CRÍTICAS):
 1. PROIBIDO DECOREBA DE NÚMERO: NUNCA crie questões do tipo "O que dispõe o Art. X?". O número do artigo aparece SOMENTE no comentário.
-2. O comentário é a PROVA LITERAL: deve citar artigo, parágrafo e inciso com TRANSCRIÇÃO LITERAL entre aspas.
+2. CONTEXTO HIERÁRQUICO OBRIGATÓRIO: Em casos práticos, os personagens devem ter postos/graduações COERENTES com o dispositivo legal. Se a lei atribui competência ao Comandante-Geral, NÃO use Capitão. Se trata de Praças, NÃO use Oficiais. RESPEITE a cadeia hierárquica conforme expressa no texto legal.
 3. DISTRATORES FORTES: As alternativas incorretas devem ser PLAUSÍVEIS — baseadas em trocas sutis de termos da própria lei.
 4. TOM PROFISSIONAL E DESAFIADOR: Estilo de banca examinadora séria (CESPE/CEBRASPE, FGV, VUNESP).
 5. PRIORIZE QUESTÕES COMPLEXAS: Exceções às regras gerais, condições específicas, prazos, situações-limite.
+6. COMENTÁRIO EXPLICATIVO COMPLETO: O comentário deve:
+   a) Explicar POR QUE a alternativa correta é a única válida, com raciocínio jurídico claro.
+   b) Citar artigo, parágrafo e inciso com TRANSCRIÇÃO LITERAL entre aspas.
+   c) Explicar brevemente por que as demais alternativas estão incorretas (qual detalhe foi alterado).
+   d) Formato: "A alternativa [X] está correta porque... Conforme o Art. Y da [Lei]: '[transcrição]'. As demais alternativas estão incorretas: [breve explicação]."
 
 REGRA DE UNICIDADE SEMÂNTICA:
 - Cada questão DEVE abordar um DISPOSITIVO LEGAL DIFERENTE.
