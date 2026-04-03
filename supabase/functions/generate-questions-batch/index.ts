@@ -379,8 +379,8 @@ serve(async (req) => {
     }
 
     const recentTopicsBlock = recentTopicSummaries.length > 0
-      ? `\n\nQUESTÕES JÁ EXISTENTES (NÃO REPITA o mesmo núcleo jurídico — artigo + regra + resposta):\n${recentTopicSummaries.join("\n")}\n\nSe já existe questão sobre determinado inciso/parágrafo/regra, ESCOLHA outro dispositivo da mesma lei. A diversidade de artigos abordados é OBRIGATÓRIA.`
-      : "";
+      ? `\n\nQUESTÕES JÁ EXISTENTES (NÃO REPITA o mesmo núcleo jurídico — artigo + regra + resposta):\n${recentTopicSummaries.join("\n")}\n\nSe já existe questão sobre determinado inciso/parágrafo/regra, ESCOLHA outro dispositivo da mesma lei. A diversidade de artigos abordados é OBRIGATÓRIA.\n\nREGRA ANTI-REPETIÇÃO: É PROIBIDO criar questões que abordem o mesmo tema, a mesma regra jurídica ou o mesmo cenário prático de qualquer questão existente, mesmo com palavras diferentes. Cada questão DEVE explorar um ASPECTO JURÍDICO COMPLETAMENTE DIFERENTE da lei.${underExploredBlock}`
+      : `${underExploredBlock}`;
 
     const approachInstructions = approachAssignments.map((a, i) => {
       const num = i + 1;
