@@ -164,7 +164,6 @@ function buildFingerprint(enunciado: string): string {
 function buildSemanticFingerprint(comentario: string, correctAltText: string): string {
   const arts = extractAllCitedArticles(comentario);
   const artPart = arts.sort().join(",");
-  // Extract key legal terms from the correct answer (normalized, sorted, deduped)
   const keyTerms = normalize(correctAltText)
     .split(" ")
     .filter(w => w.length > 4)
@@ -172,6 +171,32 @@ function buildSemanticFingerprint(comentario: string, correctAltText: string): s
     .slice(0, 8)
     .join(" ");
   return `${artPart}|${keyTerms}`.substring(0, 100);
+}
+
+/** Compute word-overlap similarity between two enunciados (Jaccard-like).
+ *  Returns 0..1 — higher means more similar. */
+function computeEnunciadoSimilarity(a: string, b: string): number {
+  const wordsA = new Set(normalize(a).split(" ").filter(w => w.length > 3));
+  const wordsB = new Set(normalize(b).split(" ").filter(w => w.length > 3));
+  if (wordsA.size === 0 || wordsB.size === 0) return 0;
+  let intersection = 0;
+  for (const w of wordsA) { if (wordsB.has(w)) intersection++; }
+  const union = new Set([...wordsA, ...wordsB]).size;
+  return union > 0 ? intersection / union : 0;
+}
+
+/** Check if a new enunciado is too similar to any existing one.
+ *  Returns the ID of the most similar question if above threshold, null otherwise. */
+function findSimilarQuestion(
+  newEnunciado: string,
+  existingQuestions: Array<{ id: number; enunciado: string }>,
+  threshold = 0.55,
+): number | null {
+  for (const eq of existingQuestions) {
+    const sim = computeEnunciadoSimilarity(newEnunciado, eq.enunciado);
+    if (sim >= threshold) return eq.id;
+  }
+  return null;
 }
 
 const DISCIPLINES = [
@@ -306,32 +331,44 @@ serve(async (req) => {
       }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch existing questions for dedup (fingerprint + semantic)
+    // Fetch existing questions for dedup (fingerprint + semantic + similarity)
     const { data: existingQ } = await supabase
-      .from("questoes").select("enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito")
-      .eq("disciplina", disc.disciplina).order("id", { ascending: false }).limit(500);
+      .from("questoes").select("id, enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito")
+      .eq("disciplina", disc.disciplina).order("id", { ascending: false }).limit(1000);
     
     const existingFingerprints = new Set<string>();
     const existingSemanticFPs = new Set<string>();
+    const existingForSimilarity: Array<{ id: number; enunciado: string }> = [];
     const recentTopicSummaries: string[] = [];
+    const coveredArticles = new Set<string>();
     
     if (existingQ) {
       existingQ.forEach((eq, idx) => {
         existingFingerprints.add(buildFingerprint(eq.enunciado));
-        // Build semantic fingerprint from comment + correct answer
         const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
         const correctText = eq[correctKey] || "";
         existingSemanticFPs.add(buildSemanticFingerprint(eq.comentario || "", correctText));
-        // Collect last 50 summaries for the prompt
-        if (idx < 50) {
-          const arts = extractAllCitedArticles(eq.comentario || "");
+        existingForSimilarity.push({ id: eq.id, enunciado: eq.enunciado });
+        
+        // Track which articles are already covered
+        const arts = extractAllCitedArticles(eq.comentario || "");
+        arts.forEach(a => coveredArticles.add(a));
+        
+        // Collect last 80 summaries for the prompt (more context = less repetition)
+        if (idx < 80) {
           const artRef = arts.length > 0 ? `Art. ${arts[0]}` : "?";
-          // Truncate enunciado to key phrase
-          const shortEnunciado = eq.enunciado.substring(0, 80).replace(/\s+/g, " ");
+          const shortEnunciado = eq.enunciado.substring(0, 100).replace(/\s+/g, " ");
           recentTopicSummaries.push(`- ${artRef}: ${shortEnunciado}`);
         }
       });
     }
+
+    // Build list of UNDER-EXPLORED articles for the prompt
+    const allArticleNums = blocks.map(b => b.artNum);
+    const underExploredArticles = allArticleNums.filter(a => !coveredArticles.has(a));
+    const underExploredBlock = underExploredArticles.length > 0
+      ? `\n\nARTIGOS AINDA NÃO EXPLORADOS (PRIORIZE ESTES): Art. ${underExploredArticles.slice(0, 30).join(", Art. ")}`
+      : "";
 
     console.log(`[GERAR] Iniciando: "${disc.disciplina}", batch=${batchSize}, artigos=${blocks.length}, existentes=${existingQ?.length || 0}, semânticas=${existingSemanticFPs.size}`);
 
@@ -342,8 +379,8 @@ serve(async (req) => {
     }
 
     const recentTopicsBlock = recentTopicSummaries.length > 0
-      ? `\n\nQUESTÕES JÁ EXISTENTES (NÃO REPITA o mesmo núcleo jurídico — artigo + regra + resposta):\n${recentTopicSummaries.join("\n")}\n\nSe já existe questão sobre determinado inciso/parágrafo/regra, ESCOLHA outro dispositivo da mesma lei. A diversidade de artigos abordados é OBRIGATÓRIA.`
-      : "";
+      ? `\n\nQUESTÕES JÁ EXISTENTES (NÃO REPITA o mesmo núcleo jurídico — artigo + regra + resposta):\n${recentTopicSummaries.join("\n")}\n\nSe já existe questão sobre determinado inciso/parágrafo/regra, ESCOLHA outro dispositivo da mesma lei. A diversidade de artigos abordados é OBRIGATÓRIA.\n\nREGRA ANTI-REPETIÇÃO: É PROIBIDO criar questões que abordem o mesmo tema, a mesma regra jurídica ou o mesmo cenário prático de qualquer questão existente, mesmo com palavras diferentes. Cada questão DEVE explorar um ASPECTO JURÍDICO COMPLETAMENTE DIFERENTE da lei.${underExploredBlock}`
+      : `${underExploredBlock}`;
 
     const approachInstructions = approachAssignments.map((a, i) => {
       const num = i + 1;
@@ -562,6 +599,7 @@ JSON array:
     let discarded = 0;
     const batchFingerprints = new Set<string>();
     const batchSemanticFPs = new Set<string>();
+    const batchForSimilarity: Array<{ id: number; enunciado: string }> = [];
 
     for (let idx = 0; idx < rawQuestions.length; idx++) {
       const raw = rawQuestions[idx];
@@ -609,6 +647,18 @@ JSON array:
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata semântica (mesmo artigo + conceito)`); continue;
       }
       batchSemanticFPs.add(semFP);
+
+      // ── Similarity-based duplicate detection (catches rephrased questions) ──
+      const similarId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55);
+      if (similarId) {
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: muito similar à questão #${similarId} (overlap > 55%)`); continue;
+      }
+      // Also check against batch
+      const batchSimilarId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55);
+      if (batchSimilarId !== null) {
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: muito similar a outra no lote`); continue;
+      }
+      batchForSimilarity.push({ id: idx, enunciado: q.enunciado });
 
       // ── Validate ALL cited articles exist in law ──
       const literalArticle = findArticleForText(correctAltText, blocks);
