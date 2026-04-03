@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy, Star, Zap } from "lucide-react";
+import { Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy, Star, Zap, UserPlus, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -60,6 +60,46 @@ const Index = () => {
                 Já tenho conta
               </Link>
             </div>
+          </motion.div>
+        </section>
+
+        {/* Finalizar Cadastro + Contato */}
+        <section className="max-w-3xl mx-auto px-4 pb-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="grid sm:grid-cols-2 gap-4"
+          >
+            <Link
+              to="/cadastro"
+              className="glass-card rounded-xl p-5 flex items-start gap-4 hover:border-primary/30 transition-all group"
+            >
+              <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:glow-primary transition-all">
+                <UserPlus className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm mb-1">Finalizar Cadastro</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Já efetuou o pagamento mas não conseguiu finalizar o cadastro? Clique aqui para completar seu registro.
+                </p>
+              </div>
+            </Link>
+
+            <Link
+              to="/contato"
+              className="glass-card rounded-xl p-5 flex items-start gap-4 hover:border-primary/30 transition-all group"
+            >
+              <div className="p-3 rounded-xl bg-gold/10 text-gold group-hover:glow-gold transition-all">
+                <MessageCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm mb-1">Fale com o Suporte</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Problemas com pagamento ou cadastro? Entre em contato com nossa equipe de suporte.
+                </p>
+              </div>
+            </Link>
           </motion.div>
         </section>
 
