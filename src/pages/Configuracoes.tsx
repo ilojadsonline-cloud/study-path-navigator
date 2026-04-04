@@ -6,13 +6,13 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Trophy, User, Shield, Pencil, Lock, Phone, Loader2, Eye, EyeOff } from "lucide-react";
+import { Trophy, User, Shield, Pencil, Lock, Phone, Loader2, Eye, EyeOff, CreditCard, CalendarDays, ExternalLink, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 const Configuracoes = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, subscribed, subscriptionEnd, checkSubscription } = useAuth();
   const [showInRanking, setShowInRanking] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
