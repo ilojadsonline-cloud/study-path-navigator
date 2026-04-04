@@ -1022,7 +1022,7 @@ Responda APENAS JSON (sem markdown):
             "X-Title": "Exam Roadmap Buddy",
           },
           body: JSON.stringify({
-            model: "anthropic/claude-3.5-haiku",
+            model: "deepseek/deepseek-r1-distill-llama-70b",
             messages: [
               { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, deterministicCitation) },
               { role: "user", content: prompt },
