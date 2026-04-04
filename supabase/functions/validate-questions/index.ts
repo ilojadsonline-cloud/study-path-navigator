@@ -1022,7 +1022,7 @@ Responda APENAS JSON (sem markdown):
             "X-Title": "Exam Roadmap Buddy",
           },
           body: JSON.stringify({
-            model: "anthropic/claude-3.5-haiku",
+            model: "deepseek/deepseek-r1-distill-llama-70b",
             messages: [
               { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, deterministicCitation) },
               { role: "user", content: prompt },
@@ -1048,7 +1048,7 @@ Responda APENAS JSON (sem markdown):
               },
               success: true, validated: okCount + fixedCount + deletedCount, ok: okCount, fixed: fixedCount, deleted: deletedCount,
               last_id: q.id, details, timestamp,
-            }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
           throw new Error(`OpenRouter ${aiResponse.status}: ${errText.substring(0, 200)}`);
         }
