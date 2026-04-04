@@ -27,7 +27,7 @@ const GerarQuestoes = () => {
   const [running, setRunning] = useState(false);
   const [totalGeradas, setTotalGeradas] = useState(0);
   const [batchesPerDiscipline, setBatchesPerDiscipline] = useState(3);
-  const [batchSize, setBatchSize] = useState(3);
+  const [batchSize, setBatchSize] = useState(2);
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([...disciplinas]);
   const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
   const { toast } = useToast();
@@ -98,7 +98,7 @@ const GerarQuestoes = () => {
       }
 
       setResults([...batches]);
-      await new Promise((r) => setTimeout(r, 3000)); // Delay maior para evitar rate limit do DeepSeek
+      await new Promise((r) => setTimeout(r, 1200));
     }
 
     setRunning(false);
@@ -112,7 +112,7 @@ const GerarQuestoes = () => {
       <div className="max-w-3xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold text-gradient-primary">Gerador de Questões (DeepSeek)</h1>
         <p className="text-sm text-muted-foreground">
-          Gera questões via DeepSeek (modelo deepseek-chat) usando exclusivamente o texto legal carregado para cada disciplina. Não consome créditos do Lovable.
+          Gera questões priorizando artigos menos explorados da lei, com lotes menores para mais velocidade e menor desperdício de créditos.
         </p>
 
         {missingTexts.length > 0 && (
@@ -167,7 +167,7 @@ const GerarQuestoes = () => {
             <input
               type="number"
               value={batchSize}
-              onChange={(e) => setBatchSize(Math.max(1, Math.min(10, Number(e.target.value) || 5)))}
+              onChange={(e) => setBatchSize(Math.max(1, Math.min(2, Number(e.target.value) || 2)))}
               disabled={running}
               className="w-16 rounded-lg bg-secondary border-none text-sm p-2 text-foreground"
             />

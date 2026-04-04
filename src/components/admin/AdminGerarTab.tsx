@@ -33,8 +33,7 @@ interface PendingJob {
   created_at: string;
 }
 
-const MAX_RETRIES = 3;
-const BASE_DELAY_MS = 3000;
+const BASE_DELAY_MS = 1200;
 const CIRCUIT_BREAKER_THRESHOLD = 5; // consecutive failures to trigger circuit breaker
 
 function getRetryDelay(attempt: number): number {
@@ -99,34 +98,29 @@ export function AdminGerarTab() {
     }).eq("id", jobId);
   }, []);
 
-  const invokeBatchWithRetry = async (disciplina: string, batchSize: number): Promise<{ data: any; error: any }> => {
+  const invokeBatch = async (disciplina: string, batchSize: number): Promise<{ data: any; error: Error | null }> => {
     const discIndex = DISCIPLINES.indexOf(disciplina);
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const { data, error } = await supabase.functions.invoke("generate-questions-batch", {
-          body: { disciplina_index: discIndex, batch_size: batchSize },
-        });
-        
-        // Rate limit → retry with backoff
-        if (data?.paused && attempt < MAX_RETRIES) {
-          const delay = getRetryDelay(attempt);
-          console.log(`[GERAR] Rate limit, retry ${attempt + 1}/${MAX_RETRIES} em ${delay}ms`);
-          await new Promise(r => setTimeout(r, delay));
-          continue;
-        }
-        
-        return { data, error };
-      } catch (err: any) {
-        if (attempt < MAX_RETRIES) {
-          const delay = getRetryDelay(attempt);
-          console.log(`[GERAR] Erro, retry ${attempt + 1}/${MAX_RETRIES} em ${delay}ms: ${err.message}`);
-          await new Promise(r => setTimeout(r, delay));
-          continue;
-        }
-        return { data: null, error: err };
+
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-questions-batch", {
+        body: { disciplina_index: discIndex, batch_size: batchSize },
+      });
+
+      if (error) {
+        const normalizedMessage = /non-2xx|FunctionsHttpError/i.test(error.message)
+          ? "A geração excedeu o tempo limite da plataforma antes de concluir o lote."
+          : error.message;
+        return { data: null, error: new Error(normalizedMessage) };
       }
+
+      return { data, error: null };
+    } catch (err: any) {
+      const rawMessage = err?.message || "Falha inesperada ao chamar a geração.";
+      const normalizedMessage = /non-2xx|FunctionsHttpError|Failed to fetch/i.test(rawMessage)
+        ? "A geração excedeu o tempo limite da plataforma antes de concluir o lote."
+        : rawMessage;
+      return { data: null, error: new Error(normalizedMessage) };
     }
-    return { data: null, error: new Error("Max retries exceeded") };
   };
 
   const updateEta = useCallback((batchTimes: number[], remaining: number) => {
@@ -161,7 +155,7 @@ export function AdminGerarTab() {
       setResults([...batches]);
 
       const batchStart = Date.now();
-      const { data, error } = await invokeBatchWithRetry(batches[i].disciplina, batchSize);
+      const { data, error } = await invokeBatch(batches[i].disciplina, batchSize);
       const batchDuration = Date.now() - batchStart;
       
       if (error) {
@@ -305,7 +299,7 @@ export function AdminGerarTab() {
       <div>
         <h2 className="text-lg font-bold mb-1">Gerar Questões via IA</h2>
         <p className="text-sm text-muted-foreground">
-          Gera questões via DeepSeek com persistência de progresso e retentativa automática.
+          Gera questões com alvo em artigos menos explorados, menor desperdício de créditos e resposta mais rápida.
         </p>
       </div>
 
@@ -374,7 +368,7 @@ export function AdminGerarTab() {
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-muted-foreground">Questões por lote:</label>
-          <Input type="number" value={batchSize} onChange={(e) => setBatchSize(Math.max(1, Math.min(10, Number(e.target.value) || 5)))} disabled={running} className="w-16" />
+          <Input type="number" value={batchSize} onChange={(e) => setBatchSize(Math.max(1, Math.min(2, Number(e.target.value) || 2)))} disabled={running} className="w-16" />
         </div>
       </div>
 
