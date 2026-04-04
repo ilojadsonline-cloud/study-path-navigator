@@ -159,8 +159,6 @@ function buildFingerprint(enunciado: string): string {
   return normalize(enunciado).replace(/\s+/g, "").substring(0, 80);
 }
 
-/** Build a semantic fingerprint: article number + key legal terms from comment/answer.
- *  Two questions about the same article and same legal concept will collide. */
 function buildSemanticFingerprint(comentario: string, correctAltText: string): string {
   const arts = extractAllCitedArticles(comentario);
   const artPart = arts.sort().join(",");
@@ -173,8 +171,6 @@ function buildSemanticFingerprint(comentario: string, correctAltText: string): s
   return `${artPart}|${keyTerms}`.substring(0, 100);
 }
 
-/** Compute word-overlap similarity between two enunciados (Jaccard-like).
- *  Returns 0..1 — higher means more similar. */
 function computeEnunciadoSimilarity(a: string, b: string): number {
   const wordsA = new Set(normalize(a).split(" ").filter(w => w.length > 3));
   const wordsB = new Set(normalize(b).split(" ").filter(w => w.length > 3));
@@ -185,8 +181,6 @@ function computeEnunciadoSimilarity(a: string, b: string): number {
   return union > 0 ? intersection / union : 0;
 }
 
-/** Check if a new enunciado is too similar to any existing one.
- *  Returns the ID of the most similar question if above threshold, null otherwise. */
 function findSimilarQuestion(
   newEnunciado: string,
   existingQuestions: Array<{ id: number; enunciado: string }>,
@@ -277,11 +271,24 @@ const DISCIPLINES = [
   },
 ];
 
+// 7 approach types for maximum diversity — cycled based on existing question count
 const APPROACH_TYPES = [
-  "TEORIA_PURA",       // Literalidade da lei
-  "CASO_PRATICO",      // Cenário hipotético
-  "PEGADINHA_DETALHE",  // Troca de termos sutis
+  "TEORIA_PURA",
+  "CASO_PRATICO",
+  "PEGADINHA_DETALHE",
+  "COMBINACAO_ARTIGOS",
+  "JURISPRUDENCIA_APLICADA",
+  "EXCECAO_REGRA",
+  "INTERPRETACAO_SISTEMATICA",
 ] as const;
+
+/** Truncate legal text intelligently: keep structure, trim at article boundaries */
+function truncateLegalText(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const cutPoint = text.lastIndexOf("Art.", maxChars);
+  if (cutPoint > maxChars * 0.7) return text.substring(0, cutPoint).trim();
+  return text.substring(0, maxChars).trim() + "\n[...]";
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -292,8 +299,9 @@ serve(async (req) => {
 
   try {
     const { disciplina_index, batch_size } = await req.json();
-    const requestedBatchSize = Number(batch_size) || 2;
-    const batchSize = Math.max(1, Math.min(2, requestedBatchSize));
+    const requestedBatchSize = Number(batch_size) || 3;
+    // Allow up to 5 questions per batch for creative diversity
+    const batchSize = Math.max(1, Math.min(5, requestedBatchSize));
     const discIndex = disciplina_index ?? 0;
 
     if (discIndex < 0 || discIndex >= DISCIPLINES.length) {
@@ -332,15 +340,16 @@ serve(async (req) => {
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch existing questions for dedup (fingerprint + semantic + similarity)
+    // Fetch existing questions for dedup
     const { data: existingQ } = await supabase
-      .from("questoes").select("id, enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito")
+      .from("questoes").select("id, enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito, assunto")
       .eq("disciplina", disc.disciplina).order("id", { ascending: false }).limit(1000);
-    
+
     const existingFingerprints = new Set<string>();
     const existingSemanticFPs = new Set<string>();
     const existingForSimilarity: Array<{ id: number; enunciado: string }> = [];
     const articleCoverage = new Map<string, number>();
+    const assuntoCoverage = new Map<string, number>();
 
     if (existingQ) {
       existingQ.forEach((eq) => {
@@ -354,9 +363,13 @@ serve(async (req) => {
         arts.forEach((a) => {
           articleCoverage.set(a, (articleCoverage.get(a) || 0) + 1);
         });
+        
+        const assunto = eq.assunto || "";
+        if (assunto) assuntoCoverage.set(assunto, (assuntoCoverage.get(assunto) || 0) + 1);
       });
     }
 
+    // Score and rank articles by coverage (prioritize under-explored)
     const scoredBlocks = blocks
       .map((block) => ({
         block,
@@ -364,16 +377,41 @@ serve(async (req) => {
       }))
       .sort((a, b) => a.coverage - b.coverage || Number(a.block.artNum) - Number(b.block.artNum));
 
-    const candidatePool = scoredBlocks.slice(0, Math.min(scoredBlocks.length, Math.max(batchSize * 6, 18)));
+    // Broader candidate pool — select from wider range for diversity
+    const poolSize = Math.min(scoredBlocks.length, Math.max(batchSize * 8, 30));
+    const candidatePool = scoredBlocks.slice(0, poolSize);
+    
+    // Shuffle candidates
     const shuffledTargets = [...candidatePool];
     for (let i = shuffledTargets.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffledTargets[i], shuffledTargets[j]] = [shuffledTargets[j], shuffledTargets[i]];
     }
 
-    const selectedTargets = shuffledTargets
-      .slice(0, Math.min(batchSize, shuffledTargets.length))
-      .sort((a, b) => a.coverage - b.coverage || Number(a.block.artNum) - Number(b.block.artNum));
+    // Select targets — spread across different parts of the law
+    const selectedTargets: typeof shuffledTargets = [];
+    const usedArtNums = new Set<string>();
+    for (const target of shuffledTargets) {
+      if (selectedTargets.length >= batchSize) break;
+      // Avoid consecutive articles for variety
+      const artNum = Number(target.block.artNum);
+      const tooClose = [...usedArtNums].some(n => Math.abs(Number(n) - artNum) <= 1);
+      if (tooClose && shuffledTargets.length > batchSize * 2) continue;
+      selectedTargets.push(target);
+      usedArtNums.add(target.block.artNum);
+    }
+    // Fill remaining if spacing was too strict
+    if (selectedTargets.length < batchSize) {
+      for (const target of shuffledTargets) {
+        if (selectedTargets.length >= batchSize) break;
+        if (!usedArtNums.has(target.block.artNum)) {
+          selectedTargets.push(target);
+          usedArtNums.add(target.block.artNum);
+        }
+      }
+    }
+
+    selectedTargets.sort((a, b) => a.coverage - b.coverage || Number(a.block.artNum) - Number(b.block.artNum));
 
     if (selectedTargets.length === 0) {
       return new Response(JSON.stringify({
@@ -384,31 +422,51 @@ serve(async (req) => {
     }
 
     const targetArticleNumbers = selectedTargets.map(({ block }) => block.artNum);
+
+    // Build context: target articles + surrounding context for systemic understanding
     const targetArticlesBlock = selectedTargets
-      .map(
-        ({ block, coverage }, idx) =>
-          `ARTIGO-ALVO DA QUESTÃO ${idx + 1} — Art. ${block.artNum} (cobertura atual: ${coverage} questão(ões))\n${block.text}`,
-      )
-      .join("\n\n");
+      .map(({ block, coverage }, idx) => {
+        // Include neighboring articles for context (1 before, 1 after)
+        const blockIdx = blocks.findIndex(b => b.artNum === block.artNum);
+        const contextParts: string[] = [];
+        if (blockIdx > 0) {
+          contextParts.push(`[Contexto anterior - Art. ${blocks[blockIdx - 1].artNum}]\n${blocks[blockIdx - 1].text.substring(0, 300)}`);
+        }
+        contextParts.push(`[ARTIGO-ALVO ${idx + 1} — Art. ${block.artNum}] (cobertura: ${coverage} questões)\n${block.text}`);
+        if (blockIdx < blocks.length - 1) {
+          contextParts.push(`[Contexto posterior - Art. ${blocks[blockIdx + 1].artNum}]\n${blocks[blockIdx + 1].text.substring(0, 300)}`);
+        }
+        return contextParts.join("\n");
+      })
+      .join("\n\n---\n\n");
 
     const mostCoveredArticles = [...articleCoverage.entries()]
-      .sort((a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0]))
+      .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([article, count]) => `Art. ${article} (${count})`)
       .join(", ");
 
+    // Under-explored subjects
+    const leastCoveredAssuntos = disc.assuntos
+      .map(a => ({ assunto: a, count: assuntoCoverage.get(a) || 0 }))
+      .sort((a, b) => a.count - b.count)
+      .slice(0, 4)
+      .map(a => `"${a.assunto}" (${a.count})`)
+      .join(", ");
+
     console.log(
-      `[GERAR] Iniciando: "${disc.disciplina}", batch=${batchSize}, artigos=${blocks.length}, existentes=${existingQ?.length || 0}, semânticas=${existingSemanticFPs.size}, alvos=${targetArticleNumbers.map((a) => `Art. ${a}`).join(", ")}`,
+      `[GERAR] Iniciando: "${disc.disciplina}", batch=${batchSize}, artigos=${blocks.length}, existentes=${existingQ?.length || 0}, alvos=${targetArticleNumbers.map(a => `Art. ${a}`).join(", ")}`,
     );
 
-    const approachAssignments: string[] = [];
+    // Cycle approaches for maximum diversity
     const approachOffset = (existingQ?.length || 0) % APPROACH_TYPES.length;
+    const approachAssignments: string[] = [];
     for (let i = 0; i < batchSize; i++) {
       approachAssignments.push(APPROACH_TYPES[(approachOffset + i) % APPROACH_TYPES.length]);
     }
 
     const coverageGuidanceBlock = mostCoveredArticles
-      ? `\n\nARTIGOS JÁ MUITO EXPLORADOS (EVITE REPETIR O MESMO NÚCLEO JURÍDICO): ${mostCoveredArticles}`
+      ? `\nARTIGOS JÁ MUITO EXPLORADOS (EVITE): ${mostCoveredArticles}`
       : "";
 
     const approachInstructions = approachAssignments
@@ -416,65 +474,98 @@ serve(async (req) => {
         const num = i + 1;
         switch (a) {
           case "TEORIA_PURA":
-            return `Questão ${num}: LITERALIDADE DA LEI — Teste o conhecimento literal do texto legal. O enunciado apresenta uma afirmativa sobre um tema e o candidato identifica a alternativa que reproduz fielmente o que a lei dispõe. Use "Sobre [tema], é correto afirmar que..." ou "No que se refere a [tema], a legislação estabelece que...". A alternativa correta DEVE ser uma transcrição ou paráfrase fiel do texto legal.`;
+            return `Questão ${num}: LITERALIDADE DA LEI — Teste o conhecimento exato do texto legal. Apresente uma afirmativa sobre um instituto jurídico e o candidato deve identificar a alternativa que reproduz fielmente o que a lei dispõe. A alternativa correta DEVE ser transcrição ou paráfrase direta.`;
           case "CASO_PRATICO":
-            return `Questão ${num}: CASO PRÁTICO — Crie um cenário REALISTA e DETALHADO (3-4 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.) em situação concreta do cotidiano militar que tenha PREVISÃO EXPRESSA no texto legal. IMPORTANTE: O posto/graduação do personagem DEVE ser COERENTE com o dispositivo legal abordado. Se a lei atribui competência ao Comandante-Geral, NÃO use Capitão. Se trata de Praças, NÃO use Oficiais. RESPEITE a hierarquia militar conforme o texto legal. Exemplo: "O Soldado Silva, lotado no 1º BPM, ao retornar de licença médica de 45 dias, foi informado pelo seu comandante que...". O candidato deve APLICAR a regra da lei ao caso.`;
+            return `Questão ${num}: CASO PRÁTICO (estilo CESPE/FGV) — Crie um cenário DETALHADO (3-5 linhas) com personagem fictício cujo posto/graduação seja COERENTE com o dispositivo legal. RESPEITE RIGOROSAMENTE a hierarquia militar: se a lei atribui competência ao Comandante-Geral, NÃO use Capitão; se trata de Praças, NÃO use Oficiais. Exemplo: "O Soldado PM Silva, com 3 anos de serviço, foi designado para...". O candidato APLICA a regra ao caso concreto.`;
           case "PEGADINHA_DETALHE":
-            return `Questão ${num}: PEGADINHA INTELIGENTE — Foque em termos que geram confusão na lei: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos (30 vs 60 dias), troca de competências (Comandante-Geral vs Governador), alteração de sujeitos. A alternativa correta é LITERAL da lei; as incorretas trocam UM detalhe sutil mas crucial.`;
+            return `Questão ${num}: PEGADINHA DE DETALHE (estilo CESPE) — Foque em termos que geram confusão: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos, troca de competências, alteração de sujeitos. A alternativa correta é LITERAL; as incorretas trocam UM detalhe sutil mas juridicamente decisivo.`;
+          case "COMBINACAO_ARTIGOS":
+            return `Questão ${num}: COMBINAÇÃO DE DISPOSITIVOS (estilo FGV) — Elabore uma questão que exija o conhecimento COMBINADO de dois ou mais dispositivos da mesma lei. O enunciado deve apresentar uma situação que demande a interpretação conjunta de artigos relacionados. A resposta correta integra corretamente os dispositivos; as incorretas confundem a relação entre eles.`;
+          case "JURISPRUDENCIA_APLICADA":
+            return `Questão ${num}: APLICAÇÃO PRÁTICA AVANÇADA (estilo VUNESP) — Crie um cenário que explore as CONSEQUÊNCIAS JURÍDICAS de uma ação ou omissão prevista na lei. O candidato deve identificar o desdobramento legal correto. Exemplos: sanções, prazos, procedimentos que decorrem da situação narrada.`;
+          case "EXCECAO_REGRA":
+            return `Questão ${num}: EXCEÇÃO À REGRA (estilo CESPE/FCC) — Explore EXCEÇÕES, RESSALVAS ou CONDIÇÕES ESPECIAIS previstas na lei. Use "Constitui exceção à regra...", "Salvo disposição em contrário...", "Excetua-se da regra geral...". A alternativa correta identifica precisamente a exceção prevista no texto legal.`;
+          case "INTERPRETACAO_SISTEMATICA":
+            return `Questão ${num}: INTERPRETAÇÃO SISTEMÁTICA — Elabore questão que exija compreensão do CONTEXTO e da LÓGICA do instituto jurídico, não apenas a memorização isolada. A questão pode pedir ao candidato que identifique a finalidade de um dispositivo, o princípio que o fundamenta ou a consequência lógica da norma.`;
         }
       })
-      .join("\n");
+      .join("\n\n");
+
+    // System prompt: define the AI persona as an elite exam board
+    const systemPrompt = `Você é uma BANCA EXAMINADORA DE ELITE para concursos militares (CFO/CHOA), com o rigor e a criatividade das bancas CESPE/CEBRASPE, FGV e VUNESP.
+
+PRINCÍPIOS FUNDAMENTAIS:
+1. CRIATIVIDADE COM PRECISÃO: Suas questões devem ser CRIATIVAS e VARIADAS, explorando diferentes ângulos do mesmo dispositivo legal. NUNCA repita o mesmo padrão de questão.
+2. HIERARQUIA MILITAR: RESPEITE ABSOLUTAMENTE a cadeia de comando. Se a lei diz "Comandante-Geral", a questão DEVE usar Comandante-Geral, NUNCA substituir por outra autoridade.
+3. CONTEXTO JURÍDICO: Cada questão deve demonstrar compreensão PROFUNDA do instituto jurídico, não apenas reprodução mecânica do texto.
+4. ALTERNATIVAS INTELIGENTES: As alternativas incorretas devem ser PLAUSÍVEIS e DISTINTAS entre si — nunca óbvias. Use trocas sutis de termos, inversão de condições, confusão de competências.
+5. FIDELIDADE AO TEXTO LEGAL: A alternativa correta DEVE estar fundamentada no texto da lei. Cite LITERALMENTE trechos no comentário.
+6. DIVERSIDADE DE ABORDAGEM: Alterne entre questões teóricas, casos práticos, pegadinhas de detalhe, combinação de artigos, exceções e interpretação sistemática.
+7. PROIBIÇÃO DE DECOREBA: NUNCA cite números de artigos no enunciado. O candidato deve demonstrar COMPREENSÃO, não memorização.
+8. CADA QUESTÃO É ÚNICA: Varie o estilo de redação, a estrutura do enunciado e o tipo de raciocínio exigido em CADA questão.
+
+ESTRUTURA DO COMENTÁRIO (obrigatória):
+a) Raciocínio jurídico: explique POR QUE a alternativa correta é a única válida.
+b) Transcrição literal: "Conforme o Art. X: '[trecho exato da lei]'."
+c) Análise das incorretas: explique brevemente o erro de CADA alternativa incorreta.
+d) Formato: "A alternativa [X] está correta porque... Conforme o Art. Y da [Lei]: '[transcrição]'. As demais alternativas estão incorretas: A) [erro]; B) [erro]; ..."
+
+Responda EXCLUSIVAMENTE com o JSON array solicitado, sem explicações extras.`;
+
+    // Build the full legal context — send up to 18KB of law text for systemic understanding
+    const legalContextTruncated = truncateLegalText(leiSeca, 18000);
 
     const prompt = `Gere exatamente ${batchSize} questões de múltipla escolha para "${disc.disciplina}" (${disc.leiNome}).
 
-ARTIGOS-ALVO OBRIGATÓRIOS DESTE LOTE:
-${selectedTargets.map(({ block }, idx) => `${idx + 1}) Questão ${idx + 1}: use obrigatoriamente o Art. ${block.artNum}.`).join("\n")}
+ARTIGOS-ALVO PRIORITÁRIOS (use como base principal, mas pode referenciar outros artigos da mesma lei quando necessário para contexto):
+${selectedTargets.map(({ block }, idx) => `${idx + 1}) Questão ${idx + 1}: base no Art. ${block.artNum}`).join("\n")}
 
-TEXTO LEGAL RELEVANTE (use somente estes artigos-alvo como base principal):
-${targetArticlesBlock}${coverageGuidanceBlock}
+TEXTO LEGAL DE REFERÊNCIA (artigos-alvo com contexto):
+${targetArticlesBlock}
 
-ABORDAGEM OBRIGATÓRIA POR QUESTÃO (alterne rigorosamente):
+TEXTO LEGAL COMPLETO PARA CONSULTA (use para garantir coerência sistêmica):
+${legalContextTruncated}
+${coverageGuidanceBlock}
+
+ASSUNTOS MENOS EXPLORADOS (priorize): ${leastCoveredAssuntos}
+
+ABORDAGEM OBRIGATÓRIA POR QUESTÃO:
 ${approachInstructions}
 
-MÉTODO DE CRIAÇÃO (siga rigorosamente):
-1) Cada questão DEVE usar o artigo-alvo correspondente deste lote.
-2) Se o artigo-alvo tiver caput, incisos ou parágrafos, explore o trecho mais relevante DESSE MESMO artigo.
-3) NÃO reutilize o mesmo núcleo jurídico já saturado na disciplina. Busque exceções, condições, competências, sujeitos, prazos ou consequências específicas do artigo-alvo.
-4) Siga a ABORDAGEM OBRIGATÓRIA designada para cada questão (TEORIA PURA, CASO PRÁTICO ou PEGADINHA DE DETALHE).
-5) Crie 5 alternativas (A-E) sem prefixo de letra:
-   - A CORRETA deve refletir LITERALMENTE o que a lei diz.
-   - As INCORRETAS devem usar TROCAS SUTIS: verbos (deverá/poderá), prazos, condições, sujeitos, autoridades competentes.
-6) O COMENTÁRIO deve:
-   a) Explicar POR QUE a alternativa correta é a única válida com raciocínio jurídico.
-   b) Citar: "Conforme o Art. X da ${disc.leiNome}: '[transcrição literal do trecho]'."
-   c) Explicar brevemente por que as demais alternativas estão erradas.
-   d) Formato: "A alternativa [X] está correta porque... Conforme o Art. Y da ${disc.leiNome}: '[transcrição]'. As demais alternativas estão incorretas: [breve explicação]."
+MÉTODO DE CRIAÇÃO:
+1) Cada questão DEVE ter como BASE PRINCIPAL o artigo-alvo, mas PODE e DEVE referenciar outros artigos quando a situação exigir interpretação conjunta.
+2) Explore DIFERENTES ASPECTOS do artigo: caput, incisos, parágrafos, exceções, condições, prazos, competências, sujeitos.
+3) VARIE o estilo de redação: perguntas diretas, asserções para julgar, cenários para analisar, situações para classificar.
+4) Crie 5 alternativas (A-E) sem prefixo de letra:
+   - A CORRETA reflete LITERALMENTE o que a lei dispõe.
+   - As INCORRETAS usam TROCAS SUTIS: verbos (deverá/poderá), prazos, condições, sujeitos, autoridades competentes.
+   - CADA alternativa incorreta deve ter um erro DIFERENTE e SUTIL.
+5) DISTRIBUA o gabarito: não concentre todas as respostas na mesma letra.
+6) O COMENTÁRIO segue a estrutura obrigatória definida no sistema.
 
 PROIBIÇÕES ABSOLUTAS NO ENUNCIADO:
-- "O que diz o Art. X?"
-- "Qual artigo trata de...?"
-- "Segundo o Art. X, ..."
-- "De acordo com o Art. X, ..."
+- "O que diz o Art. X?", "Qual artigo trata de...", "Segundo o Art. X, ...", "De acordo com o Art. X, ..."
 - Qualquer menção direta ao número de artigo no enunciado.
 
 REGRAS TÉCNICAS:
-- Artigos-alvo deste lote: ${targetArticleNumbers.map((n) => `Art. ${n}`).join(", ")}
-- Cite SOMENTE artigos existentes na lei. A preferência é citar o artigo-alvo correspondente da questão.
+- Artigos existentes na lei: ${availableArticles}
+- Cite SOMENTE artigos que existam na lei acima.
 - gabarito = inteiro: 0=A, 1=B, 2=C, 3=D, 4=E.
-- Distribua: ~30% Fácil, ~50% Médio, ~20% Difícil.
+- Distribua dificuldade: ~30% Fácil, ~40% Médio, ~30% Difícil.
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
 
 JSON array:
-[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o Art. X da ${disc.leiNome}: '...'"}]`;
+[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}]`;
 
-    // Retry logic for OpenRouter/DeepSeek-R1 API calls (up to 3 attempts with exponential backoff)
-    // IMPORTANT: keep the timeout active until the full response body is read, otherwise the edge
-    // function can hit the platform wall-time limit and return 546/non-2xx even after status 200.
+    // API call with retry logic
     const MAX_API_RETRIES = 2;
-    const OPENROUTER_TIMEOUT_MS = 55000;
+    const OPENROUTER_TIMEOUT_MS = 110000; // 110s — within Supabase 150s limit
     let aiStatus: number | null = null;
     let aiResponseText = "";
     let lastFetchError: any = null;
+
+    // Scale max_tokens based on batch size
+    const maxTokens = Math.min(4096, 800 + batchSize * 700);
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
@@ -495,41 +586,39 @@ JSON array:
               { role: "system", content: systemPrompt },
               { role: "user", content: prompt },
             ],
-            temperature: 0.6,
-            max_tokens: 2200,
+            temperature: 0.7,
+            max_tokens: maxTokens,
           }),
           signal: controller.signal,
         });
         aiStatus = response.status;
-        console.log(`[GERAR] OpenRouter/DeepSeek-R1 status: ${aiStatus}`);
+        console.log(`[GERAR] OpenRouter status: ${aiStatus}, attempt ${attempt + 1}`);
         aiResponseText = await response.text();
         clearTimeout(timeoutId);
 
-        // Rate limit → retry with backoff
         if (aiStatus === 429 && attempt < MAX_API_RETRIES - 1) {
-          const retryDelay = 5000 * Math.pow(2, attempt); // 5s, 10s, 20s
-          console.log(`[GERAR] Rate limit 429, retry ${attempt + 1}/${MAX_API_RETRIES} em ${retryDelay}ms`);
+          const retryDelay = 5000 * Math.pow(2, attempt);
+          console.log(`[GERAR] Rate limit 429, retry em ${retryDelay}ms`);
           await new Promise(r => setTimeout(r, retryDelay));
           continue;
         }
 
-        // Server errors (500+) → retry with backoff
-        if (aiStatus >= 500 && attempt < MAX_API_RETRIES - 1) {
+        if (aiStatus && aiStatus >= 500 && attempt < MAX_API_RETRIES - 1) {
           const retryDelay = 3000 * Math.pow(2, attempt);
-          console.log(`[GERAR] Server error ${aiStatus}, retry ${attempt + 1}/${MAX_API_RETRIES} em ${retryDelay}ms`);
+          console.log(`[GERAR] Server error ${aiStatus}, retry em ${retryDelay}ms`);
           await new Promise(r => setTimeout(r, retryDelay));
           continue;
         }
 
-        break; // Success or non-retryable error
+        break;
       } catch (fetchErr: any) {
         clearTimeout(timeoutId);
         lastFetchError = fetchErr;
         const isTimeout = fetchErr.name === "AbortError";
-        
+
         if (attempt < MAX_API_RETRIES - 1) {
           const retryDelay = 4000 * Math.pow(2, attempt);
-          console.log(`[GERAR] ${isTimeout ? "Timeout" : "Fetch error"}, retry ${attempt + 1}/${MAX_API_RETRIES} em ${retryDelay}ms: ${String(fetchErr)}`);
+          console.log(`[GERAR] ${isTimeout ? "Timeout" : "Fetch error"}, retry em ${retryDelay}ms: ${String(fetchErr)}`);
           await new Promise(r => setTimeout(r, retryDelay));
           continue;
         }
@@ -538,9 +627,9 @@ JSON array:
 
     if (!aiResponseText) {
       const isTimeout = lastFetchError?.name === "AbortError";
-      console.error(`[GERAR] Todas as ${MAX_API_RETRIES} tentativas falharam:`, String(lastFetchError));
+      console.error(`[GERAR] Todas as tentativas falharam:`, String(lastFetchError));
       return new Response(JSON.stringify({
-        status: "erro", mensagem: isTimeout ? "OpenRouter demorou demais para responder. Tente novamente em instantes." : `Erro de conexão persistente: ${lastFetchError?.message}`,
+        status: "erro", mensagem: isTimeout ? "OpenRouter demorou demais para responder." : `Erro de conexão: ${lastFetchError?.message}`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isTimeout ? "TIMEOUT" : "FETCH_ERROR", descricao: String(lastFetchError) }] },
         error: String(lastFetchError), timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -555,13 +644,11 @@ JSON array:
     }
 
     if (aiStatus === 402) {
-      let creditMessage = "Créditos ou limite insuficientes no OpenRouter.";
+      let creditMessage = "Créditos insuficientes no OpenRouter.";
       try {
         const parsed = JSON.parse(aiResponseText);
         creditMessage = parsed?.error?.message || creditMessage;
-      } catch {
-        if (aiResponseText.trim()) creditMessage = aiResponseText.substring(0, 200);
-      }
+      } catch { /* ignore */ }
       return new Response(JSON.stringify({
         status: "erro", mensagem: "OpenRouter sem saldo/limite disponível.", paused: true,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "OPENROUTER_402", descricao: creditMessage }] },
@@ -570,11 +657,10 @@ JSON array:
     }
 
     if (!aiStatus || aiStatus < 200 || aiStatus >= 300) {
-      const errText = aiResponseText;
-      console.error(`[GERAR] OpenRouter error: ${aiStatus} ${errText.substring(0, 300)}`);
+      console.error(`[GERAR] OpenRouter error: ${aiStatus} ${aiResponseText.substring(0, 300)}`);
       return new Response(JSON.stringify({
         status: "erro", mensagem: `Erro OpenRouter (${aiStatus ?? "desconhecido"})`,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "API_ERROR", descricao: errText.substring(0, 200) }] },
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "API_ERROR", descricao: aiResponseText.substring(0, 200) }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -583,7 +669,7 @@ JSON array:
     try {
       aiData = JSON.parse(aiResponseText);
     } catch {
-      console.error("[GERAR] OpenRouter outer JSON inválido:", aiResponseText.substring(0, 200));
+      console.error("[GERAR] JSON externo inválido:", aiResponseText.substring(0, 200));
       return new Response(JSON.stringify({
         status: "erro", mensagem: "Resposta inválida do OpenRouter.",
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "OPENROUTER_INVALID_JSON", descricao: "JSON externo inválido" }] },
@@ -592,7 +678,6 @@ JSON array:
     }
 
     let content = aiData.choices?.[0]?.message?.content || "[]";
-    // Strip DeepSeek-R1 <think>...</think> reasoning blocks before parsing JSON
     content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
     content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
@@ -611,7 +696,7 @@ JSON array:
     if (!Array.isArray(rawQuestions)) {
       return new Response(JSON.stringify({
         status: "erro", mensagem: "IA retornou estrutura inválida.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "INVALID_ARRAY", descricao: "Era esperado um JSON array de questões" }] },
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "INVALID_ARRAY", descricao: "Era esperado um JSON array" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -647,41 +732,40 @@ JSON array:
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: alternativas duplicadas`); continue;
       }
 
-      // ── Anti-decoreba check ──
+      // ── Anti-decoreba ──
       const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
       if (decoreba.test(q.enunciado.toLowerCase())) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: decoreba (cita artigo no enunciado)`); continue;
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: decoreba`); continue;
       }
 
-      // ── Text fingerprint duplicate detection ──
+      // ── Fingerprint dedup ──
       const fp = buildFingerprint(q.enunciado);
       if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) {
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata textual`); continue;
       }
       batchFingerprints.add(fp);
 
-      // ── Semantic fingerprint duplicate detection ──
+      // ── Semantic dedup ──
       const correctAltKey = ALT_KEYS[q.gabarito];
       const correctAltText = q[correctAltKey] as string;
       const semFP = buildSemanticFingerprint(q.comentario, correctAltText);
       if (existingSemanticFPs.has(semFP) || batchSemanticFPs.has(semFP)) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata semântica (mesmo artigo + conceito)`); continue;
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata semântica`); continue;
       }
       batchSemanticFPs.add(semFP);
 
-      // ── Similarity-based duplicate detection (catches rephrased questions) ──
+      // ── Similarity dedup ──
       const similarId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55);
       if (similarId) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: muito similar à questão #${similarId} (overlap > 55%)`); continue;
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: similar à #${similarId}`); continue;
       }
-      // Also check against batch
       const batchSimilarId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55);
       if (batchSimilarId !== null) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: muito similar a outra no lote`); continue;
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: similar a outra no lote`); continue;
       }
       batchForSimilarity.push({ id: idx, enunciado: q.enunciado });
 
-      // ── Validate ALL cited articles exist in law ──
+      // ── Citation validation ──
       const literalArticle = findArticleForText(correctAltText, blocks);
       const evidenceArticle = detectCommentEvidenceArticle(q.comentario, blocks);
       const resolvedArticle = evidenceArticle || literalArticle;
@@ -693,7 +777,7 @@ JSON array:
           const recheck = validateAllCitations(q.comentario, blocks);
           if (!recheck.valid) {
             discarded++;
-            questoesRevisaoManual.push({ motivo: `Artigos inexistentes: ${recheck.missing.join(", ")} (auto-correção falhou)` });
+            questoesRevisaoManual.push({ motivo: `Artigos inexistentes: ${recheck.missing.join(", ")}` });
             console.log(`[GERAR] Q${idx+1} descartada: artigos inexistentes após correção`);
             continue;
           }
@@ -706,12 +790,10 @@ JSON array:
         }
       }
 
-      // ── Validate at least one article is cited ──
+      // ── Ensure at least one citation ──
       const citedArts = extractAllCitedArticles(q.comentario);
-      if (citedArts.length === 0) {
-        if (resolvedArticle) {
-          q.comentario = reconcileCommentArticle(q.comentario, resolvedArticle);
-        }
+      if (citedArts.length === 0 && resolvedArticle) {
+        q.comentario = reconcileCommentArticle(q.comentario, resolvedArticle);
       }
 
       const finalCitedArts = extractAllCitedArticles(q.comentario);
@@ -722,7 +804,7 @@ JSON array:
         continue;
       }
 
-      // ── Cross-validation: enunciado vs comment ──
+      // ── Cross-validation ──
       const crossCheck = crossValidateReferences(q.enunciado, q.comentario);
       if (!crossCheck.valid) {
         discarded++;
@@ -731,7 +813,7 @@ JSON array:
         continue;
       }
 
-      // ── Literal proof check: correct answer must be grounded in the law ──
+      // ── Literal proof check ──
       const normCorrectAlt = normalize(correctAltText);
       const correctAltWords = normCorrectAlt.split(" ").filter(w => w.length > 3);
       let literalProofScore = 0;
@@ -745,24 +827,23 @@ JSON array:
       }
       if (literalProofScore < 0.5) {
         discarded++;
-        questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (score=${literalProofScore.toFixed(2)}) - alternativa correta não encontrada no texto legal` });
+        questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (${literalProofScore.toFixed(2)})` });
         console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.5`);
         continue;
       }
 
-      // ── Verify correct answer text is in the law ──
+      // ── Final reconciliation ──
       if (resolvedArticle) {
         const resolvedNum = resolvedArticle.match(/\d+/)?.[0];
         const commentCitedArts = extractAllCitedArticles(q.comentario);
         if (resolvedNum && commentCitedArts.length > 0 && !commentCitedArts.includes(resolvedNum)) {
-          console.log(`[GERAR] Q${idx+1} AUTO-FIX: comentário cita Art. ${commentCitedArts.join(",")} mas evidência aponta para ${resolvedArticle}`);
           q.comentario = reconcileCommentArticle(q.comentario, resolvedArticle);
         }
       }
 
       const approvedArts = extractAllCitedArticles(q.comentario);
       validQuestions.push(q);
-      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} (prova literal: ${literalProofScore.toFixed(2)}) ${resolvedArticle ? `(conferido: ${resolvedArticle})` : ""}`);
+      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} (literal: ${literalProofScore.toFixed(2)})`);
     }
 
     // Insert valid questions
@@ -783,8 +864,7 @@ JSON array:
     console.log(`[GERAR] RESULTADO: ${mensagem}`);
 
     return new Response(JSON.stringify({
-      status: statusResult,
-      mensagem,
+      status: statusResult, mensagem,
       detalhes: {
         total_processado: rawQuestions.length,
         questoes_criadas: insertedCount,
