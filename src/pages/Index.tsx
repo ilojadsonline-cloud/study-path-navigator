@@ -63,7 +63,7 @@ const Index = () => {
           </motion.div>
         </section>
 
-        {/* Finalizar Cadastro + Contato */}
+        {/* Finalizar Cadastro + Contato — destaque */}
         <section className="max-w-3xl mx-auto px-4 pb-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -73,30 +73,32 @@ const Index = () => {
           >
             <Link
               to="/cadastro"
-              className="glass-card rounded-xl p-5 flex items-start gap-4 hover:border-primary/30 transition-all group"
+              className="glass-card rounded-xl p-6 flex items-start gap-4 border-2 border-primary/40 hover:border-primary/70 transition-all group relative overflow-hidden glow-primary"
             >
-              <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:glow-primary transition-all">
-                <UserPlus className="w-6 h-6" />
+              <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -translate-y-8 translate-x-8" />
+              <div className="p-3 rounded-xl bg-primary/15 text-primary group-hover:scale-110 transition-transform">
+                <UserPlus className="w-7 h-7" />
               </div>
-              <div>
-                <h3 className="font-bold text-sm mb-1">Finalizar Cadastro</h3>
+              <div className="relative">
+                <h3 className="font-bold text-base mb-1 text-foreground">Finalizar Cadastro</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Já efetuou o pagamento mas não conseguiu finalizar o cadastro? Clique aqui para completar seu registro.
+                  Já efetuou o pagamento mas não conseguiu finalizar o cadastro? <span className="text-primary font-semibold">Clique aqui</span> para completar seu registro.
                 </p>
               </div>
             </Link>
 
             <Link
-              to="/contato"
-              className="glass-card rounded-xl p-5 flex items-start gap-4 hover:border-primary/30 transition-all group"
+              to="/contato-publico"
+              className="glass-card rounded-xl p-6 flex items-start gap-4 border-2 border-gold/40 hover:border-gold/70 transition-all group relative overflow-hidden glow-gold"
             >
-              <div className="p-3 rounded-xl bg-gold/10 text-gold group-hover:glow-gold transition-all">
-                <MessageCircle className="w-6 h-6" />
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gold/10 rounded-full -translate-y-8 translate-x-8" />
+              <div className="p-3 rounded-xl bg-gold/15 text-gold group-hover:scale-110 transition-transform">
+                <MessageCircle className="w-7 h-7" />
               </div>
-              <div>
-                <h3 className="font-bold text-sm mb-1">Fale com o Suporte</h3>
+              <div className="relative">
+                <h3 className="font-bold text-base mb-1 text-foreground">Fale com o Suporte</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Problemas com pagamento ou cadastro? Entre em contato com nossa equipe de suporte.
+                  Problemas com pagamento ou cadastro? <span className="text-gold font-semibold">Envie uma mensagem</span> para nossa equipe de suporte.
                 </p>
               </div>
             </Link>

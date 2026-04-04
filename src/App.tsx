@@ -22,6 +22,7 @@ import EsqueciSenha from "./pages/EsqueciSenha";
 import ResetPassword from "./pages/ResetPassword";
 import Contato from "./pages/Contato";
 import Landing from "./pages/Landing";
+import ContatoPublico from "./pages/ContatoPublico";
 import Configuracoes from "./pages/Configuracoes";
 import MeusReportes from "./pages/MeusReportes";
 import NotFound from "./pages/NotFound";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/assinatura" element={<Assinatura />} />
             <Route path="/esqueci-senha" element={<EsqueciSenha />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/contato-publico" element={<ContatoPublico />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/edital" element={<ProtectedRoute><Edital /></ProtectedRoute>} />
             <Route path="/questoes" element={<ProtectedRoute><Questoes /></ProtectedRoute>} />
