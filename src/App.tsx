@@ -45,6 +45,7 @@ const App = () => (
             <Route path="/assinatura" element={<Assinatura />} />
             <Route path="/esqueci-senha" element={<EsqueciSenha />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/contato-publico" element={<ContatoPublico />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/edital" element={<ProtectedRoute><Edital /></ProtectedRoute>} />
             <Route path="/questoes" element={<ProtectedRoute><Questoes /></ProtectedRoute>} />
