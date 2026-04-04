@@ -180,7 +180,7 @@ const GerarQuestoes = () => {
             <input
               type="number"
               value={batchSize}
-              onChange={(e) => setBatchSize(Math.max(1, Math.min(2, Number(e.target.value) || 2)))}
+              onChange={(e) => setBatchSize(Math.max(1, Math.min(5, Number(e.target.value) || 3)))}
               disabled={running}
               className="w-16 rounded-lg bg-secondary border-none text-sm p-2 text-foreground"
             />
