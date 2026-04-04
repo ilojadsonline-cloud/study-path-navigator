@@ -222,6 +222,75 @@ const Configuracoes = () => {
           </div>
         </motion.div>
 
+        {/* Subscription management */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="glass-card rounded-xl p-5 space-y-4"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <CreditCard className="w-5 h-5 text-primary" />
+            <h2 className="font-bold text-foreground">Minha Assinatura</h2>
+          </div>
+
+          <div className="p-4 rounded-lg bg-secondary/50 border border-border/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Status</span>
+              <span className={`text-sm font-semibold ${subscribed ? "text-success" : "text-destructive"}`}>
+                {subscribed ? "✅ Ativa" : "❌ Inativa"}
+              </span>
+            </div>
+            {subscriptionEnd && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                  <CalendarDays className="w-3.5 h-3.5" /> Válida até
+                </span>
+                <span className="text-sm font-medium text-foreground">
+                  {new Date(subscriptionEnd).toLocaleDateString("pt-BR")}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              onClick={async () => {
+                try {
+                  const { data, error } = await supabase.functions.invoke("customer-portal");
+                  if (error) throw error;
+                  if (data?.url) window.open(data.url, "_blank");
+                } catch (err: any) {
+                  toast.error(err?.message || "Erro ao abrir portal de assinatura");
+                }
+              }}
+              className="flex items-center gap-1"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              {subscribed ? "Gerenciar Assinatura" : "Renovar Assinatura"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                await checkSubscription();
+                toast.success("Status atualizado!");
+              }}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Atualizar Status
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            {subscribed
+              ? "Sua assinatura permanecerá ativa até a data de vencimento. Você pode cancelar a qualquer momento — o acesso continuará até o fim do período pago."
+              : "Sua assinatura expirou ou foi cancelada. Clique em 'Renovar Assinatura' para reativar seu acesso."}
+          </p>
+        </motion.div>
+
         {/* Ranking preference */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
