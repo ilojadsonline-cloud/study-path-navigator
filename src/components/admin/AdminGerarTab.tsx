@@ -113,6 +113,14 @@ export function AdminGerarTab() {
         return { data: null, error: new Error(normalizedMessage) };
       }
 
+      if (data?.paused) {
+        return { data, error: null };
+      }
+
+      if (data?.status === "erro" || data?.error) {
+        return { data: null, error: new Error(data?.mensagem || data?.error || "Falha na geração.") };
+      }
+
       return { data, error: null };
     } catch (err: any) {
       const rawMessage = err?.message || "Falha inesperada ao chamar a geração.";
@@ -140,7 +148,6 @@ export function AdminGerarTab() {
     for (let i = startFrom; i < batches.length; i++) {
       if (stopRef.current) break;
 
-      // Circuit breaker check
       if (consecutiveFailsRef.current >= CIRCUIT_BREAKER_THRESHOLD) {
         toast({ 
           title: "Circuit Breaker ativado", 
@@ -157,30 +164,33 @@ export function AdminGerarTab() {
       const batchStart = Date.now();
       const { data, error } = await invokeBatch(batches[i].disciplina, batchSize);
       const batchDuration = Date.now() - batchStart;
+      const isCriticalFailure = (message: string) => /tempo limite|OpenRouter demorou demais|excedeu o tempo limite|saldo|limite disponível|conexão persistente/i.test(message);
       
       if (error) {
         batches[i].status = "error";
         batches[i].error = error.message;
         consecutiveFailsRef.current++;
+        if (isCriticalFailure(error.message)) {
+          toast({ title: "Geração pausada", description: error.message, variant: "destructive" });
+          setResults([...batches]);
+          await saveProgress(jobId, batches, i, total, "running");
+          break;
+        }
       } else if (data?.paused) {
         batches[i].status = "error";
-        batches[i].error = data.error || "Rate limit persistente";
+        batches[i].error = data.error || data.mensagem || "Rate limit persistente";
         consecutiveFailsRef.current++;
-        toast({ title: "Pausado", description: "Rate limit persistente após retentativas.", variant: "destructive" });
+        toast({ title: "Pausado", description: batches[i].error, variant: "destructive" });
         setResults([...batches]);
         await saveProgress(jobId, batches, i, total, "running");
         break;
-      } else if (data?.error) {
-        batches[i].status = "error";
-        batches[i].error = data.error;
-        consecutiveFailsRef.current++;
       } else {
         const inserted = data?.inserted || data?.generated || 0;
         batches[i].status = "success";
         batches[i].geradas = inserted;
         total += inserted;
         setTotalGeradas(total);
-        consecutiveFailsRef.current = 0; // Reset on success
+        consecutiveFailsRef.current = 0;
       }
 
       batchTimesRef.current.push(batchDuration);

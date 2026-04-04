@@ -80,12 +80,14 @@ const GerarQuestoes = () => {
         if (error) throw error;
         if (data?.paused) {
           batches[i].status = "error";
-          batches[i].error = data.error || "Rate limit";
-          toast({ title: "Pausado", description: data.error, variant: "destructive" });
+          batches[i].error = data.error || data.mensagem || "Rate limit";
+          toast({ title: "Pausado", description: batches[i].error, variant: "destructive" });
           setResults([...batches]);
           break;
         }
-        if (data?.error) throw new Error(data.error);
+        if (data?.status === "erro" || data?.error) {
+          throw new Error(data?.mensagem || data?.error || "Falha na geração");
+        }
 
         const inserted = data?.inserted || data?.generated || 0;
         batches[i].status = "success";
@@ -93,8 +95,14 @@ const GerarQuestoes = () => {
         total += inserted;
         setTotalGeradas(total);
       } catch (err: any) {
+        const message = err?.message || "Falha inesperada na geração.";
         batches[i].status = "error";
-        batches[i].error = err.message;
+        batches[i].error = message;
+        if (/tempo limite|OpenRouter demorou demais|excedeu o tempo limite|saldo|limite disponível|conexão persistente|non-2xx/i.test(message)) {
+          toast({ title: "Geração pausada", description: message, variant: "destructive" });
+          setResults([...batches]);
+          break;
+        }
       }
 
       setResults([...batches]);

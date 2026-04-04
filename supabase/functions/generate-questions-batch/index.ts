@@ -385,11 +385,11 @@ serve(async (req) => {
 
     const targetArticleNumbers = selectedTargets.map(({ block }) => block.artNum);
     const targetArticlesBlock = selectedTargets
-      .map(({ block, coverage }, idx) => `ARTIGO-ALVO DA QUESTÃO ${idx + 1} — Art. ${block.artNum} (cobertura atual: ${coverage} questão(ões))
-${block.text}`)
-      .join("
-
-");
+      .map(
+        ({ block, coverage }, idx) =>
+          `ARTIGO-ALVO DA QUESTÃO ${idx + 1} — Art. ${block.artNum} (cobertura atual: ${coverage} questão(ões))\n${block.text}`,
+      )
+      .join("\n\n");
 
     const mostCoveredArticles = [...articleCoverage.entries()]
       .sort((a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0]))
@@ -397,7 +397,9 @@ ${block.text}`)
       .map(([article, count]) => `Art. ${article} (${count})`)
       .join(", ");
 
-    console.log(`[GERAR] Iniciando: "${disc.disciplina}", batch=${batchSize}, artigos=${blocks.length}, existentes=${existingQ?.length || 0}, semânticas=${existingSemanticFPs.size}, alvos=${targetArticleNumbers.map((a) => `Art. ${a}`).join(", ")}`);
+    console.log(
+      `[GERAR] Iniciando: "${disc.disciplina}", batch=${batchSize}, artigos=${blocks.length}, existentes=${existingQ?.length || 0}, semânticas=${existingSemanticFPs.size}, alvos=${targetArticleNumbers.map((a) => `Art. ${a}`).join(", ")}`,
+    );
 
     const approachAssignments: string[] = [];
     const approachOffset = (existingQ?.length || 0) % APPROACH_TYPES.length;
@@ -406,29 +408,27 @@ ${block.text}`)
     }
 
     const coverageGuidanceBlock = mostCoveredArticles
-      ? `
-
-ARTIGOS JÁ MUITO EXPLORADOS (EVITE REPETIR O MESMO NÚCLEO JURÍDICO): ${mostCoveredArticles}`
+      ? `\n\nARTIGOS JÁ MUITO EXPLORADOS (EVITE REPETIR O MESMO NÚCLEO JURÍDICO): ${mostCoveredArticles}`
       : "";
 
-    const approachInstructions = approachAssignments.map((a, i) => {
-      const num = i + 1;
-      switch (a) {
-        case "TEORIA_PURA":
-          return `Questão ${num}: LITERALIDADE DA LEI — Teste o conhecimento literal do texto legal. O enunciado apresenta uma afirmativa sobre um tema e o candidato identifica a alternativa que reproduz fielmente o que a lei dispõe. Use "Sobre [tema], é correto afirmar que..." ou "No que se refere a [tema], a legislação estabelece que...". A alternativa correta DEVE ser uma transcrição ou paráfrase fiel do texto legal.`;
-        case "CASO_PRATICO":
-          return `Questão ${num}: CASO PRÁTICO — Crie um cenário REALISTA e DETALHADO (3-4 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.) em situação concreta do cotidiano militar que tenha PREVISÃO EXPRESSA no texto legal. IMPORTANTE: O posto/graduação do personagem DEVE ser COERENTE com o dispositivo legal abordado. Se a lei atribui competência ao Comandante-Geral, NÃO use Capitão. Se trata de Praças, NÃO use Oficiais. RESPEITE a hierarquia militar conforme o texto legal. Exemplo: "O Soldado Silva, lotado no 1º BPM, ao retornar de licença médica de 45 dias, foi informado pelo seu comandante que...". O candidato deve APLICAR a regra da lei ao caso.`;
-        case "PEGADINHA_DETALHE":
-          return `Questão ${num}: PEGADINHA INTELIGENTE — Foque em termos que geram confusão na lei: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos (30 vs 60 dias), troca de competências (Comandante-Geral vs Governador), alteração de sujeitos. A alternativa correta é LITERAL da lei; as incorretas trocam UM detalhe sutil mas crucial.`;
-      }
-    }).join("
-");
+    const approachInstructions = approachAssignments
+      .map((a, i) => {
+        const num = i + 1;
+        switch (a) {
+          case "TEORIA_PURA":
+            return `Questão ${num}: LITERALIDADE DA LEI — Teste o conhecimento literal do texto legal. O enunciado apresenta uma afirmativa sobre um tema e o candidato identifica a alternativa que reproduz fielmente o que a lei dispõe. Use "Sobre [tema], é correto afirmar que..." ou "No que se refere a [tema], a legislação estabelece que...". A alternativa correta DEVE ser uma transcrição ou paráfrase fiel do texto legal.`;
+          case "CASO_PRATICO":
+            return `Questão ${num}: CASO PRÁTICO — Crie um cenário REALISTA e DETALHADO (3-4 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.) em situação concreta do cotidiano militar que tenha PREVISÃO EXPRESSA no texto legal. IMPORTANTE: O posto/graduação do personagem DEVE ser COERENTE com o dispositivo legal abordado. Se a lei atribui competência ao Comandante-Geral, NÃO use Capitão. Se trata de Praças, NÃO use Oficiais. RESPEITE a hierarquia militar conforme o texto legal. Exemplo: "O Soldado Silva, lotado no 1º BPM, ao retornar de licença médica de 45 dias, foi informado pelo seu comandante que...". O candidato deve APLICAR a regra da lei ao caso.`;
+          case "PEGADINHA_DETALHE":
+            return `Questão ${num}: PEGADINHA INTELIGENTE — Foque em termos que geram confusão na lei: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos (30 vs 60 dias), troca de competências (Comandante-Geral vs Governador), alteração de sujeitos. A alternativa correta é LITERAL da lei; as incorretas trocam UM detalhe sutil mas crucial.`;
+        }
+      })
+      .join("\n");
 
     const prompt = `Gere exatamente ${batchSize} questões de múltipla escolha para "${disc.disciplina}" (${disc.leiNome}).
 
 ARTIGOS-ALVO OBRIGATÓRIOS DESTE LOTE:
-${selectedTargets.map(({ block }, idx) => `${idx + 1}) Questão ${idx + 1}: use obrigatoriamente o Art. ${block.artNum}.`).join("
-")}
+${selectedTargets.map(({ block }, idx) => `${idx + 1}) Questão ${idx + 1}: use obrigatoriamente o Art. ${block.artNum}.`).join("\n")}
 
 TEXTO LEGAL RELEVANTE (use somente estes artigos-alvo como base principal):
 ${targetArticlesBlock}${coverageGuidanceBlock}
