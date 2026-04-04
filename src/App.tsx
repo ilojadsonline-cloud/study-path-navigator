@@ -22,6 +22,7 @@ import EsqueciSenha from "./pages/EsqueciSenha";
 import ResetPassword from "./pages/ResetPassword";
 import Contato from "./pages/Contato";
 import Landing from "./pages/Landing";
+import ContatoPublico from "./pages/ContatoPublico";
 import Configuracoes from "./pages/Configuracoes";
 import MeusReportes from "./pages/MeusReportes";
 import NotFound from "./pages/NotFound";
