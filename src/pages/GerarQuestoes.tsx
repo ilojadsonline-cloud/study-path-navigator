@@ -77,7 +77,12 @@ const GerarQuestoes = () => {
           body: { disciplina_index: discIndex, batch_size: batchSize },
         });
 
-        if (error) throw error;
+        if (error) {
+          const message = /non-2xx|FunctionsHttpError|Failed to fetch/i.test(error.message)
+            ? "A geração excedeu o tempo limite da plataforma antes de concluir o lote."
+            : error.message;
+          throw new Error(message);
+        }
         if (data?.paused) {
           batches[i].status = "error";
           batches[i].error = data.error || data.mensagem || "Rate limit";
