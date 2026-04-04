@@ -581,7 +581,7 @@ JSON array:
             "X-Title": "Exam Roadmap Buddy",
           },
           body: JSON.stringify({
-            model: "deepseek/deepseek-r1",
+            model: "deepseek/deepseek-r1-distill-llama-70b",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: prompt },
