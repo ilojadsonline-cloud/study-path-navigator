@@ -292,7 +292,8 @@ serve(async (req) => {
 
   try {
     const { disciplina_index, batch_size } = await req.json();
-    const batchSize = batch_size || 2;
+    const requestedBatchSize = Number(batch_size) || 2;
+    const batchSize = Math.max(1, Math.min(2, requestedBatchSize));
     const discIndex = disciplina_index ?? 0;
 
     if (discIndex < 0 || discIndex >= DISCIPLINES.length) {
@@ -300,7 +301,7 @@ serve(async (req) => {
         status: "erro", mensagem: "Índice de disciplina inválido.",
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "INVALID_INDEX", descricao: `Índice ${discIndex} fora do range 0-${DISCIPLINES.length - 1}` }] },
         timestamp,
-      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const disc = DISCIPLINES[discIndex];
@@ -315,7 +316,7 @@ serve(async (req) => {
         status: "erro", mensagem: `Texto legal não encontrado para "${disc.disciplina}".`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_LEGAL_TEXT", descricao: `Faça upload para "${disc.disciplina}"` }] },
         timestamp,
-      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const leiSeca = legalTextRow.content;
@@ -328,7 +329,7 @@ serve(async (req) => {
         status: "erro", mensagem: "OPENROUTER_API_KEY não configurada.",
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Variável OPENROUTER_API_KEY ausente" }] },
         timestamp,
-      }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Fetch existing questions for dedup (fingerprint + semantic + similarity)
@@ -339,131 +340,111 @@ serve(async (req) => {
     const existingFingerprints = new Set<string>();
     const existingSemanticFPs = new Set<string>();
     const existingForSimilarity: Array<{ id: number; enunciado: string }> = [];
-    const recentTopicSummaries: string[] = [];
-    const coveredArticles = new Set<string>();
-    
+    const articleCoverage = new Map<string, number>();
+
     if (existingQ) {
-      existingQ.forEach((eq, idx) => {
+      existingQ.forEach((eq) => {
         existingFingerprints.add(buildFingerprint(eq.enunciado));
         const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
         const correctText = eq[correctKey] || "";
         existingSemanticFPs.add(buildSemanticFingerprint(eq.comentario || "", correctText));
         existingForSimilarity.push({ id: eq.id, enunciado: eq.enunciado });
-        
-        // Track which articles are already covered
+
         const arts = extractAllCitedArticles(eq.comentario || "");
-        arts.forEach(a => coveredArticles.add(a));
-        
-        // Collect last 80 summaries for the prompt (more context = less repetition)
-        if (idx < 80) {
-          const artRef = arts.length > 0 ? `Art. ${arts[0]}` : "?";
-          const shortEnunciado = eq.enunciado.substring(0, 100).replace(/\s+/g, " ");
-          recentTopicSummaries.push(`- ${artRef}: ${shortEnunciado}`);
-        }
+        arts.forEach((a) => {
+          articleCoverage.set(a, (articleCoverage.get(a) || 0) + 1);
+        });
       });
     }
 
-    // Build list of UNDER-EXPLORED articles for the prompt
-    const allArticleNums = blocks.map(b => b.artNum);
-    const underExploredArticles = allArticleNums.filter(a => !coveredArticles.has(a));
-    const underExploredBlock = underExploredArticles.length > 0
-      ? `\n\nARTIGOS AINDA NÃO EXPLORADOS (PRIORIZE ESTES): Art. ${underExploredArticles.slice(0, 30).join(", Art. ")}`
-      : "";
+    const scoredBlocks = blocks
+      .map((block) => ({
+        block,
+        coverage: articleCoverage.get(block.artNum) || 0,
+      }))
+      .sort((a, b) => a.coverage - b.coverage || Number(a.block.artNum) - Number(b.block.artNum));
 
-    console.log(`[GERAR] Iniciando: "${disc.disciplina}", batch=${batchSize}, artigos=${blocks.length}, existentes=${existingQ?.length || 0}, semânticas=${existingSemanticFPs.size}`);
-
-    // Assign approach types to each question in the batch
-    const approachAssignments: string[] = [];
-    for (let i = 0; i < batchSize; i++) {
-      approachAssignments.push(APPROACH_TYPES[i % 3]);
+    const candidatePool = scoredBlocks.slice(0, Math.min(scoredBlocks.length, Math.max(batchSize * 6, 18)));
+    const shuffledTargets = [...candidatePool];
+    for (let i = shuffledTargets.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledTargets[i], shuffledTargets[j]] = [shuffledTargets[j], shuffledTargets[i]];
     }
 
-    const recentTopicsBlock = recentTopicSummaries.length > 0
-      ? `\n\nQUESTÕES JÁ EXISTENTES (NÃO REPITA o mesmo núcleo jurídico — artigo + regra + resposta):\n${recentTopicSummaries.join("\n")}\n\nSe já existe questão sobre determinado inciso/parágrafo/regra, ESCOLHA outro dispositivo da mesma lei. A diversidade de artigos abordados é OBRIGATÓRIA.\n\nREGRA ANTI-REPETIÇÃO: É PROIBIDO criar questões que abordem o mesmo tema, a mesma regra jurídica ou o mesmo cenário prático de qualquer questão existente, mesmo com palavras diferentes. Cada questão DEVE explorar um ASPECTO JURÍDICO COMPLETAMENTE DIFERENTE da lei.${underExploredBlock}`
-      : `${underExploredBlock}`;
+    const selectedTargets = shuffledTargets
+      .slice(0, Math.min(batchSize, shuffledTargets.length))
+      .sort((a, b) => a.coverage - b.coverage || Number(a.block.artNum) - Number(b.block.artNum));
 
-    const approachInstructions = approachAssignments.map((a, i) => {
-      const num = i + 1;
-      switch (a) {
-        case "TEORIA_PURA":
-          return `Questão ${num}: LITERALIDADE DA LEI — Teste o conhecimento literal do texto legal. O enunciado apresenta uma afirmativa sobre um tema e o candidato identifica a alternativa que reproduz fielmente o que a lei dispõe. Use "Sobre [tema], é correto afirmar que..." ou "No que se refere a [tema], a legislação estabelece que...". A alternativa correta DEVE ser uma transcrição ou paráfrase fiel do texto legal.`;
-        case "CASO_PRATICO":
-          return `Questão ${num}: CASO PRÁTICO — Crie um cenário REALISTA e DETALHADO (3-4 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.) em situação concreta do cotidiano militar que tenha PREVISÃO EXPRESSA no texto legal. IMPORTANTE: O posto/graduação do personagem DEVE ser COERENTE com o dispositivo legal abordado. Se a lei atribui competência ao Comandante-Geral, NÃO use Capitão. Se trata de Praças, NÃO use Oficiais. RESPEITE a hierarquia militar conforme o texto legal. Exemplo: "O Soldado Silva, lotado no 1º BPM, ao retornar de licença médica de 45 dias, foi informado pelo seu comandante que...". O candidato deve APLICAR a regra da lei ao caso.`;
-        case "PEGADINHA_DETALHE":
-          return `Questão ${num}: PEGADINHA INTELIGENTE — Foque em termos que geram confusão na lei: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos (30 vs 60 dias), troca de competências (Comandante-Geral vs Governador), alteração de sujeitos. A alternativa correta é LITERAL da lei; as incorretas trocam UM detalhe sutil mas crucial.`;
-      }
-    }).join("\n");
+    if (selectedTargets.length === 0) {
+      return new Response(JSON.stringify({
+        status: "erro", mensagem: `Nenhum artigo elegível encontrado para "${disc.disciplina}".`,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_TARGET_ARTICLES", descricao: "Não foi possível selecionar artigos-alvo para o lote" }] },
+        timestamp,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
-    const systemPrompt = `VOCÊ É UM ELABORADOR DE BANCAS MILITARES DE ELITE (FGV/VUNESP).
-Seu objetivo é criar questões de nível OFICIAL (CFO/CHOA) baseadas no texto legal fornecido.
+    const targetArticleNumbers = selectedTargets.map(({ block }) => block.artNum);
+    const targetArticlesBlock = selectedTargets
+      .map(
+        ({ block, coverage }, idx) =>
+          `ARTIGO-ALVO DA QUESTÃO ${idx + 1} — Art. ${block.artNum} (cobertura atual: ${coverage} questão(ões))\n${block.text}`,
+      )
+      .join("\n\n");
 
-REGRAS DE OURO:
-1. Crie 'pegadinhas' baseadas em sutilezas do texto (ex: trocar 'deve' por 'pode', 'exceto' por 'inclusive').
-2. As alternativas incorretas devem ser plausíveis e baseadas em erros comuns de interpretação jurídica.
-3. A alternativa correta deve ser RIGOROSAMENTE FIEL à legislação fornecida.
-4. O comentário deve ser detalhado, citando o artigo e explicando por que a alternativa correta é a única válida.
+    const mostCoveredArticles = [...articleCoverage.entries()]
+      .sort((a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0]))
+      .slice(0, 10)
+      .map(([article, count]) => `Art. ${article} (${count})`)
+      .join(", ");
 
-RESTRIÇÕES ABSOLUTAS:
-- NUNCA invente, alucine ou fabrique artigos, parágrafos, incisos ou trechos de lei.
-- Use EXCLUSIVAMENTE o texto legal fornecido. PROIBIDO usar conhecimento externo à lei.
-- ANTES de citar qualquer "Art. X", CONFIRME que esse artigo existe na lista de artigos disponíveis.
-- A alternativa CORRETA deve ser uma TRANSCRIÇÃO ou PARÁFRASE FIEL do texto legal.
-- Responda APENAS com JSON válido, sem markdown, sem \`\`\`.
+    console.log(
+      `[GERAR] Iniciando: "${disc.disciplina}", batch=${batchSize}, artigos=${blocks.length}, existentes=${existingQ?.length || 0}, semânticas=${existingSemanticFPs.size}, alvos=${targetArticleNumbers.map((a) => `Art. ${a}`).join(", ")}`,
+    );
 
-ESTILO OBRIGATÓRIO DAS QUESTÕES (VARIE entre estes 3 estilos):
+    const approachAssignments: string[] = [];
+    const approachOffset = (existingQ?.length || 0) % APPROACH_TYPES.length;
+    for (let i = 0; i < batchSize; i++) {
+      approachAssignments.push(APPROACH_TYPES[(approachOffset + i) % APPROACH_TYPES.length]);
+    }
 
-ESTILO 1 — CASO PRÁTICO COM PERSONAGEM FICTÍCIO:
-- Crie cenários REALISTAS do cotidiano militar usando personagens fictícios (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.)
-- O candidato deve APLICAR a regra da lei ao caso concreto.
-- A situação descrita DEVE ter previsão expressa no texto legal.
+    const coverageGuidanceBlock = mostCoveredArticles
+      ? `\n\nARTIGOS JÁ MUITO EXPLORADOS (EVITE REPETIR O MESMO NÚCLEO JURÍDICO): ${mostCoveredArticles}`
+      : "";
 
-ESTILO 2 — LITERALIDADE DA LEI SECA:
-- Teste o conhecimento LITERAL do texto da lei sem citar número de artigo no enunciado.
-- A alternativa correta deve reproduzir FIELMENTE o que a lei dispõe.
-
-ESTILO 3 — PEGADINHA INTELIGENTE DE ELITE:
-- Foque em termos que geram confusão: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos, troca de competências, alteração de sujeitos.
-- A alternativa correta é LITERAL; as incorretas trocam UM detalhe sutil mas crucial.
-
-REGRAS PEDAGÓGICAS (CRÍTICAS):
-1. PROIBIDO DECOREBA DE NÚMERO: NUNCA crie questões do tipo "O que dispõe o Art. X?". O número do artigo aparece SOMENTE no comentário.
-2. CONTEXTO HIERÁRQUICO OBRIGATÓRIO: Em casos práticos, os personagens devem ter postos/graduações COERENTES com o dispositivo legal. Se a lei atribui competência ao Comandante-Geral, NÃO use Capitão. Se trata de Praças, NÃO use Oficiais. RESPEITE a cadeia hierárquica conforme expressa no texto legal.
-3. DISTRATORES FORTES: As alternativas incorretas devem ser PLAUSÍVEIS — baseadas em trocas sutis de termos da própria lei.
-4. TOM PROFISSIONAL E DESAFIADOR: Estilo de banca examinadora séria (CESPE/CEBRASPE, FGV, VUNESP).
-5. PRIORIZE QUESTÕES COMPLEXAS: Exceções às regras gerais, condições específicas, prazos, situações-limite.
-6. COMENTÁRIO EXPLICATIVO COMPLETO: O comentário deve:
-   a) Explicar POR QUE a alternativa correta é a única válida, com raciocínio jurídico claro.
-   b) Citar artigo, parágrafo e inciso com TRANSCRIÇÃO LITERAL entre aspas.
-   c) Explicar brevemente por que as demais alternativas estão incorretas (qual detalhe foi alterado).
-   d) Formato: "A alternativa [X] está correta porque... Conforme o Art. Y da [Lei]: '[transcrição]'. As demais alternativas estão incorretas: [breve explicação]."
-
-REGRA DE UNICIDADE SEMÂNTICA:
-- Cada questão DEVE abordar um DISPOSITIVO LEGAL DIFERENTE.
-- Se duas questões abordam o mesmo artigo, elas DEVEM tratar de parágrafos/incisos/regras DIFERENTES.
-- É PROIBIDO gerar questões que tenham a mesma resposta correta ou testem o mesmo conceito jurídico.
-
-ARTIGOS DISPONÍVEIS NESTA LEI: ${availableArticles}
-ATENÇÃO: Cite SOMENTE artigos desta lista. Qualquer artigo fora desta lista é PROIBIDO.`;
-
-    const truncatedLei = leiSeca.substring(0, 18000);
+    const approachInstructions = approachAssignments
+      .map((a, i) => {
+        const num = i + 1;
+        switch (a) {
+          case "TEORIA_PURA":
+            return `Questão ${num}: LITERALIDADE DA LEI — Teste o conhecimento literal do texto legal. O enunciado apresenta uma afirmativa sobre um tema e o candidato identifica a alternativa que reproduz fielmente o que a lei dispõe. Use "Sobre [tema], é correto afirmar que..." ou "No que se refere a [tema], a legislação estabelece que...". A alternativa correta DEVE ser uma transcrição ou paráfrase fiel do texto legal.`;
+          case "CASO_PRATICO":
+            return `Questão ${num}: CASO PRÁTICO — Crie um cenário REALISTA e DETALHADO (3-4 linhas) com personagem fictício (Soldado Silva, Cabo Pereira, Tenente Souza, Sargento Oliveira, etc.) em situação concreta do cotidiano militar que tenha PREVISÃO EXPRESSA no texto legal. IMPORTANTE: O posto/graduação do personagem DEVE ser COERENTE com o dispositivo legal abordado. Se a lei atribui competência ao Comandante-Geral, NÃO use Capitão. Se trata de Praças, NÃO use Oficiais. RESPEITE a hierarquia militar conforme o texto legal. Exemplo: "O Soldado Silva, lotado no 1º BPM, ao retornar de licença médica de 45 dias, foi informado pelo seu comandante que...". O candidato deve APLICAR a regra da lei ao caso.`;
+          case "PEGADINHA_DETALHE":
+            return `Questão ${num}: PEGADINHA INTELIGENTE — Foque em termos que geram confusão na lei: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos (30 vs 60 dias), troca de competências (Comandante-Geral vs Governador), alteração de sujeitos. A alternativa correta é LITERAL da lei; as incorretas trocam UM detalhe sutil mas crucial.`;
+        }
+      })
+      .join("\n");
 
     const prompt = `Gere exatamente ${batchSize} questões de múltipla escolha para "${disc.disciplina}" (${disc.leiNome}).
 
-TEXTO LEGAL (trecho principal):
-${truncatedLei}
+ARTIGOS-ALVO OBRIGATÓRIOS DESTE LOTE:
+${selectedTargets.map(({ block }, idx) => `${idx + 1}) Questão ${idx + 1}: use obrigatoriamente o Art. ${block.artNum}.`).join("\n")}
+
+TEXTO LEGAL RELEVANTE (use somente estes artigos-alvo como base principal):
+${targetArticlesBlock}${coverageGuidanceBlock}
 
 ABORDAGEM OBRIGATÓRIA POR QUESTÃO (alterne rigorosamente):
 ${approachInstructions}
-${recentTopicsBlock}
 
 MÉTODO DE CRIAÇÃO (siga rigorosamente):
-1) Escolha um artigo/parágrafo/inciso do texto legal acima QUE AINDA NÃO FOI ABORDADO nas questões existentes.
-2) Identifique a REGRA DE CONDUTA que ele estabelece (o que é obrigatório, proibido, facultado, os prazos, as condições).
-3) Siga a ABORDAGEM OBRIGATÓRIA designada para cada questão (TEORIA PURA, CASO PRÁTICO ou PEGADINHA DE DETALHE).
-4) Crie 5 alternativas (A-E) sem prefixo de letra:
+1) Cada questão DEVE usar o artigo-alvo correspondente deste lote.
+2) Se o artigo-alvo tiver caput, incisos ou parágrafos, explore o trecho mais relevante DESSE MESMO artigo.
+3) NÃO reutilize o mesmo núcleo jurídico já saturado na disciplina. Busque exceções, condições, competências, sujeitos, prazos ou consequências específicas do artigo-alvo.
+4) Siga a ABORDAGEM OBRIGATÓRIA designada para cada questão (TEORIA PURA, CASO PRÁTICO ou PEGADINHA DE DETALHE).
+5) Crie 5 alternativas (A-E) sem prefixo de letra:
    - A CORRETA deve refletir LITERALMENTE o que a lei diz.
-   - As INCORRETAS devem usar TROCADILHOS SUTIS: trocar verbos (deverá/poderá), inverter prazos, alterar condições, mudar sujeitos.
-5) O COMENTÁRIO deve:
+   - As INCORRETAS devem usar TROCAS SUTIS: verbos (deverá/poderá), prazos, condições, sujeitos, autoridades competentes.
+6) O COMENTÁRIO deve:
    a) Explicar POR QUE a alternativa correta é a única válida com raciocínio jurídico.
    b) Citar: "Conforme o Art. X da ${disc.leiNome}: '[transcrição literal do trecho]'."
    c) Explicar brevemente por que as demais alternativas estão erradas.
@@ -471,13 +452,14 @@ MÉTODO DE CRIAÇÃO (siga rigorosamente):
 
 PROIBIÇÕES ABSOLUTAS NO ENUNCIADO:
 - "O que diz o Art. X?"
-- "Qual artigo trata de...?"  
+- "Qual artigo trata de...?"
 - "Segundo o Art. X, ..."
 - "De acordo com o Art. X, ..."
 - Qualquer menção direta ao número de artigo no enunciado.
 
 REGRAS TÉCNICAS:
-- Cite SOMENTE artigos da lista: ${availableArticles}
+- Artigos-alvo deste lote: ${targetArticleNumbers.map((n) => `Art. ${n}`).join(", ")}
+- Cite SOMENTE artigos existentes na lei. A preferência é citar o artigo-alvo correspondente da questão.
 - gabarito = inteiro: 0=A, 1=B, 2=C, 3=D, 4=E.
 - Distribua: ~30% Fácil, ~50% Médio, ~20% Difícil.
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
@@ -488,8 +470,8 @@ JSON array:
     // Retry logic for OpenRouter/DeepSeek-R1 API calls (up to 3 attempts with exponential backoff)
     // IMPORTANT: keep the timeout active until the full response body is read, otherwise the edge
     // function can hit the platform wall-time limit and return 546/non-2xx even after status 200.
-    const MAX_API_RETRIES = 3;
-    const OPENROUTER_TIMEOUT_MS = 110000;
+    const MAX_API_RETRIES = 2;
+    const OPENROUTER_TIMEOUT_MS = 55000;
     let aiStatus: number | null = null;
     let aiResponseText = "";
     let lastFetchError: any = null;
@@ -514,7 +496,7 @@ JSON array:
               { role: "user", content: prompt },
             ],
             temperature: 0.6,
-            max_tokens: 4096,
+            max_tokens: 2200,
           }),
           signal: controller.signal,
         });
@@ -622,6 +604,14 @@ JSON array:
       return new Response(JSON.stringify({
         status: "erro", mensagem: "IA retornou JSON inválido.",
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "INVALID_JSON", descricao: "JSON inválido" }] },
+        timestamp,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (!Array.isArray(rawQuestions)) {
+      return new Response(JSON.stringify({
+        status: "erro", mensagem: "IA retornou estrutura inválida.",
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "INVALID_ARRAY", descricao: "Era esperado um JSON array de questões" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
