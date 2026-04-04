@@ -378,7 +378,7 @@ export function AdminGerarTab() {
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-muted-foreground">Questões por lote:</label>
-          <Input type="number" value={batchSize} onChange={(e) => setBatchSize(Math.max(1, Math.min(2, Number(e.target.value) || 2)))} disabled={running} className="w-16" />
+          <Input type="number" value={batchSize} onChange={(e) => setBatchSize(Math.max(1, Math.min(5, Number(e.target.value) || 3)))} disabled={running} className="w-16" />
         </div>
       </div>
 
