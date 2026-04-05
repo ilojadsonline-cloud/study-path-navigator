@@ -616,23 +616,23 @@ Use o número do artigo exatamente como ele aparece no campo "artNum" do bloco d
 Você é um ROBÔ DE BUSCA LITERAL. É PROIBIDO usar qualquer conhecimento ou entendimento jurídico que não esteja no texto fornecido. Se a lei diz X e você acha que é Y, escreva X.
 
 REGRAS ABSOLUTAS:
-1. TRAVA DE PROVA LITERAL: Cada alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Se não encontrar o trecho exato, marque valida=false.
-2. CONFRONTO DE ARTIGOS: A citação no comentário DEVE ser EXATAMENTE a determinada pelo código. Se o texto está no Art. 1º, parágrafo único, o comentário DEVE citar exatamente Art. 1º, parágrafo único.
-3. PROIBIÇÃO DE CONHECIMENTO EXTERNO: Você NÃO pode usar nenhum conhecimento jurídico, doutrinário ou interpretativo. APENAS o texto literal fornecido.
-4. GABARITO BLINDADO: O gabarito é SEMPRE um inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA use letras ou números fora desse intervalo.
-5. FILTRO DE UNICIDADE: Não repita o mesmo artigo-base ou enunciado de questões existentes.
+1. TRAVA DE PROVA LITERAL: A alternativa correta DEVE conter texto que existe LITERALMENTE na lei.
+2. VERIFICAÇÃO DE TODAS AS ALTERNATIVAS: Verifique CADA uma das 5 alternativas contra o texto legal.
+   - A correta deve ser fiel ao texto da lei.
+   - As incorretas devem ser distratores plausíveis com erros SUTIS (trocar palavras-chave, inverter conceitos). NÃO podem ser cópias corretas da lei.
+3. CONFRONTO DE ARTIGOS: A citação no comentário DEVE ser EXATAMENTE a determinada pelo código.
+4. PROIBIÇÃO DE CONHECIMENTO EXTERNO: APENAS o texto literal fornecido.
+5. GABARITO BLINDADO: inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E).
+6. FILTRO DE UNICIDADE: Não repita o mesmo artigo-base ou enunciado de questões existentes.
+7. PRIORIZE CORREÇÃO: Reescreva e corrija sempre que possível. Marque valida=false SOMENTE em último caso absoluto.
 
 REGRAS PEDAGÓGICAS (OBRIGATÓRIAS):
-- PROIBIDO DECOREBA: O enunciado NÃO PODE mencionar número de artigo. NUNCA "O que diz o Art. X?", "Segundo o Art. X...". REESCREVA como CASO PRÁTICO.
-- CASO PRÁTICO: Descreva uma SITUAÇÃO CONCRETA do cotidiano militar com personagens fictícios (Soldado Silva, Cabo Pereira, Sargento Lima). O candidato aplica a lei ao caso.
-- CONTEXTO HIERÁRQUICO: Em questões com casos práticos, RESPEITE RIGOROSAMENTE a hierarquia militar conforme o texto legal. Se a lei atribui competência ao Comandante-Geral, NÃO atribua ao Capitão. Se a lei fala de Praças, NÃO use Oficiais no cenário. Os personagens fictícios devem ter postos/graduações COERENTES com o dispositivo legal abordado.
-- PEGADINHAS INTELIGENTES: Alternativas incorretas usam trocadilhos jurídicos (trocar "deverá"/"poderá", inverter prazos, trocar "vedado"/"facultado"). Distratores plausíveis.
+- PROIBIDO DECOREBA: O enunciado NÃO PODE mencionar número de artigo. Sempre CASO PRÁTICO.
+- CASO PRÁTICO: Situação concreta do cotidiano militar com personagens fictícios (Soldado Silva, Cabo Pereira).
+- CONTEXTO HIERÁRQUICO: Respeite RIGOROSAMENTE a hierarquia militar conforme o texto legal.
+- PEGADINHAS INTELIGENTES: Alternativas incorretas usam trocadilhos jurídicos sutis.
 - O número do artigo aparece SOMENTE no comentário como fundamentação.
-- COMENTÁRIO EXPLICATIVO COMPLETO: O comentário DEVE:
-  1) Explicar POR QUE a alternativa correta é a única válida, fundamentando o raciocínio jurídico.
-  2) Transcrever LITERALMENTE o trecho da lei entre aspas com citação do artigo/parágrafo/inciso.
-  3) Explicar brevemente por que as demais alternativas estão erradas (qual detalhe foi alterado).
-  4) Formato: "A alternativa [X] está correta porque... Conforme o Art. Y da [Lei]: '[transcrição]'. As demais alternativas estão incorretas: [breve explicação]."
+- COMENTÁRIO EXPLICATIVO COMPLETO: Explique por que a correta é válida (com transcrição literal), e por que CADA distrator está errado.
 
 Responda APENAS JSON válido, sem markdown, sem explicações adicionais.`;
 }
