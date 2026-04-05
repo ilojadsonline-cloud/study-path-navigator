@@ -559,7 +559,7 @@ REGRAS TÉCNICAS:
 - Artigos existentes na lei: ${availableArticles}
 - Cite SOMENTE artigos que existam na lei acima.
 - gabarito = inteiro: 0=A, 1=B, 2=C, 3=D, 4=E.
-- Distribua dificuldade: ~30% Fácil, ~40% Médio, ~30% Difícil.
+- Distribua dificuldade: ~15% Fácil, ~40% Médio, ~45% Difícil. PRIORIZE questões de nível Médio e Difícil.
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
 
 JSON array:
