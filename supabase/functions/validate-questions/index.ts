@@ -1158,6 +1158,12 @@ Responda APENAS JSON (sem markdown):
             continue;
           }
 
+          // POST-AI: verificação completa de TODAS as alternativas
+          const aiFullCheck = fullAlternativesCheck(result, blocks);
+          if (aiFullCheck.incorrectIssues.length > 0) {
+            console.log(`[VALIDAR] #${q.id} PÓS-IA ALT-CHECK: ${aiFullCheck.incorrectIssues.map(i => i.issue).join("; ")}`);
+          }
+
           if (deterministicArticle && aiLiteralCheck.article && aiLiteralCheck.article !== deterministicArticle) {
             const mismatchReason = `IA desviou do artigo obrigatório: esperado ${deterministicArticle}, encontrado ${aiLiteralCheck.article}`;
             questoesRevisaoManual.push({ id: q.id, motivo: mismatchReason });
