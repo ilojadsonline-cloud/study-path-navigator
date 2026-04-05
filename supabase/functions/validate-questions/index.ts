@@ -803,14 +803,24 @@ serve(async (req) => {
       const targetCitationText = getCitationReferenceText(targetArticleBlock, deterministicCitation);
       const commentCitedArts = extractAllCitedArticles(q.comentario || "");
 
+      // ── VERIFICAÇÃO COMPLETA DE TODAS AS ALTERNATIVAS ──
+      const fullCheck = fullAlternativesCheck(q, blocks);
+
       let needsFix = false;
       let fixReason = "";
 
-      // Check 0 (NEW): LITERAL PROOF — correct answer MUST be found in law
-      if (!literalCheck.found) {
+      // Check 0: LITERAL PROOF on correct answer
+      if (!fullCheck.correctValid) {
         needsFix = true;
-        fixReason = "PROVA LITERAL FALHOU: texto da alternativa correta NÃO encontrado na lei — questão INVÁLIDA";
-        console.log(`[VALIDAR] #${q.id} TRAVA LITERAL: resposta correta sem base na lei`);
+        fixReason = `PROVA LITERAL FALHOU: ${fullCheck.correctIssue || "alternativa correta sem base na lei"}`;
+        console.log(`[VALIDAR] #${q.id} TRAVA LITERAL: ${fixReason}`);
+      }
+
+      // Check 0.5: Incorrect alternatives with issues (e.g. gabarito invertido)
+      if (!needsFix && fullCheck.incorrectIssues.length > 0) {
+        needsFix = true;
+        fixReason = fullCheck.incorrectIssues[0].issue;
+        console.log(`[VALIDAR] #${q.id} ALT-CHECK: ${fixReason}`);
       }
 
       // Check 1: ALL cited articles must exist in law
