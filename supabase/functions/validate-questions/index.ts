@@ -1027,18 +1027,23 @@ serve(async (req) => {
       const validArticlesList = buildValidArticlesList(blocks);
 
       const isLiteralFailure = fixReason.includes("PROVA LITERAL");
+      const hasAltIssues = fullCheck.incorrectIssues.length > 0;
+      const altIssuesText = hasAltIssues
+        ? `\n\nPROBLEMAS DETECTADOS NAS ALTERNATIVAS:\n${fullCheck.incorrectIssues.map(i => `- ${i.label}) ${i.issue}`).join("\n")}`
+        : "";
 
       const prompt = `${isLiteralFailure
         ? `ATENÇÃO: A questão abaixo FALHOU na TRAVA DE PROVA LITERAL. A alternativa correta NÃO tem base no texto legal. Você DEVE REESCREVER A QUESTÃO DO ZERO usando APENAS trechos que EXISTEM LITERALMENTE no texto legal fornecido.`
         : `A questão abaixo tem um ERRO CONFIRMADO: "${fixReason}".`
       }
 ${focusCitation ? `A busca literal confirmou conteúdo em ${focusCitation} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
+${altIssuesText}
 
 ${deterministicCitation && targetCitationText ? `CITAÇÃO JURÍDICA OBRIGATÓRIA: ${deterministicCitation}
 
 TEXTO DO DISPOSITIVO PARA REFERÊNCIA: ${targetCitationText}
 
-INSTRUÇÃO PARA O COMENTÁRIO: Você deve gerar um comentário que valide a alternativa correta. Você é PROIBIDO de escrever qualquer outra citação legal no comentário. Use OBRIGATORIAMENTE "${deterministicCitation}" fornecida acima. Não tente “corrigir” ou mudar essa citação.` : ""}
+INSTRUÇÃO PARA O COMENTÁRIO: Você deve gerar um comentário que valide a alternativa correta. Você é PROIBIDO de escrever qualquer outra citação legal no comentário. Use OBRIGATORIAMENTE "${deterministicCitation}" fornecida acima. Não tente "corrigir" ou mudar essa citação.` : ""}
 
 ARTIGOS PERMITIDOS NESTA LEI: [${availableArticles}]
 
@@ -1047,23 +1052,24 @@ ${validArticlesList}
 
 REGRAS INVIOLÁVEIS:
 1. A alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Copie trechos reais.
-2. O comentário DEVE citar o artigo EXATO onde o texto foi encontrado, com transcrição LITERAL entre aspas.
+2. TODAS as 5 alternativas devem ser verificadas contra o texto legal:
+   - A alternativa CORRETA deve reproduzir fielmente o conteúdo da lei.
+   - As alternativas INCORRETAS devem ser distratores PLAUSÍVEIS mas com erros sutis (trocar palavras-chave, inverter conceitos, alterar prazos/condições). NÃO podem ser cópias literais corretas da lei.
 3. ${deterministicCitation ? `O comentário DEVE obrigatoriamente citar ${deterministicCitation} (definida pelo código TypeScript e confirmada por busca literal).` : (focusCitation ? `O comentário DEVE obrigatoriamente citar ${focusCitation} (confirmada por busca literal).` : "Escolha qualquer artigo da LISTA ACIMA e baseie a questão nele." )}
 4. SOMENTE cite artigos da lista acima. Se um artigo NÃO está na lista, ele NÃO EXISTE no texto legal.
 5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
 6. NÃO use conhecimento externo. APENAS o texto fornecido.
 7. O trecho entre aspas no comentário DEVE existir LITERALMENTE no artigo citado. Copie e cole do texto.
-8. VERIFICAÇÃO OBRIGATÓRIA: Antes de citar "Art. X", faça a busca exata da string "Art. X" no texto legal. Se NÃO encontrar essa string exata, NÃO cite esse artigo. NUNCA INVENTE OU INFIRA NÚMEROS DE ARTIGOS.
-9. CONSISTÊNCIA SNIPPET-ARTIGO: O trecho entre aspas DEVE pertencer ao artigo citado. Se você cita Art. 3 e transcreve texto, esse texto DEVE estar dentro do bloco do Art. 3 no texto legal — NÃO em outro artigo.
-10. EM CASO DE DÚVIDA: omita a citação do artigo ou indique "referência não confirmada" em vez de citar um artigo incorreto.
-11. FIDELIDADE AO artNum CANÔNICO: O número do artigo é determinado pela posição "Art. X" no texto legal. Se o trecho que valida a questão aparece DEPOIS de "Art. 3" e ANTES de "Art. 4", então o artigo correto é OBRIGATORIAMENTE Art. 3 — mesmo que o conteúdo pareça relacionado a outro artigo. NÃO use raciocínio semântico para determinar o número do artigo.
-12. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO: Se a questão #2615 menciona Art. 2 mas o trecho validador está no bloco do Art. 3, o comentário DEVE citar Art. 3. Qualquer citação que não corresponda ao bloco real será REJEITADA e a questão EXCLUÍDA.
+8. VERIFICAÇÃO OBRIGATÓRIA: Antes de citar "Art. X", faça a busca exata da string "Art. X" no texto legal. Se NÃO encontrar essa string exata, NÃO cite esse artigo.
+9. CONSISTÊNCIA SNIPPET-ARTIGO: O trecho entre aspas DEVE pertencer ao artigo citado.
+10. FIDELIDADE AO artNum CANÔNICO: O número do artigo é determinado pela posição "Art. X" no texto legal.
+11. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO.
+12. PRIORIZE SEMPRE A CORREÇÃO: Reescreva e corrija a questão. Marque valida=false SOMENTE se for absolutamente impossível criar uma questão válida com o texto legal disponível.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
 - PEGADINHAS INTELIGENTES: distratores com troca de "deverá"/"poderá", inversão de prazos, "vedado"/"facultado".
-- Mescle: algumas questões com exemplos práticos; outras pegadinhas típicas de concurso; outras com literalidade da lei.
-- PRIORIZE questões complexas e bem estruturadas.
+- COMENTÁRIO COMPLETO: Explique por que a correta é válida, transcreva trecho literal, e explique brevemente por que cada distrator está errado.
 ${articleContext}
 
 TEXTO LEGAL COMPLETO (${q.disciplina}):
@@ -1074,7 +1080,8 @@ Enunciado: ${q.enunciado}
 A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
 Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${q.comentario}
 
-${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : "Corrija a questão mantendo o estilo."}
+${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário."}
+PRIORIZE A CORREÇÃO — só marque valida=false em último caso absoluto.
 Responda APENAS JSON (sem markdown):
 {"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
 
