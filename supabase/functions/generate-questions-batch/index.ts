@@ -594,7 +594,7 @@ JSON array:
               { role: "system", content: systemPrompt },
               { role: "user", content: prompt },
             ],
-            temperature: 0.7,
+            temperature: 0.8,
             max_tokens: maxTokens,
           }),
           signal: controller.signal,
