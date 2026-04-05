@@ -531,6 +531,65 @@ function literalProofCheck(correctAltText: string, blocks: ArticleBlock[]): {
   return { found: false, article: null, score: 0 };
 }
 
+/** VERIFICAÇÃO COMPLETA: verifica TODAS as 5 alternativas contra o texto legal */
+function fullAlternativesCheck(q: Record<string, any>, blocks: ArticleBlock[]): {
+  allValid: boolean;
+  correctValid: boolean;
+  incorrectIssues: Array<{ key: string; label: string; issue: string }>;
+  correctIssue: string | null;
+} {
+  const gabarito = clampGabarito(q.gabarito);
+  const issues: Array<{ key: string; label: string; issue: string }> = [];
+  let correctValid = true;
+  let correctIssue: string | null = null;
+  const labels = ["A", "B", "C", "D", "E"];
+
+  for (let i = 0; i < ALT_KEYS.length; i++) {
+    const altText = normalizeWhitespace(q[ALT_KEYS[i]] || "");
+    if (altText.length < 5) {
+      if (i === gabarito) { correctValid = false; correctIssue = "Alternativa correta vazia"; }
+      else issues.push({ key: ALT_KEYS[i], label: labels[i], issue: "Alternativa vazia ou muito curta" });
+      continue;
+    }
+
+    // Check if the alternative's content has ANY basis in the legal text
+    const proof = literalProofCheck(altText, blocks);
+    
+    if (i === gabarito) {
+      // Correct alternative MUST have strong literal proof
+      if (!proof.found) {
+        correctValid = false;
+        correctIssue = "Alternativa correta sem base literal na lei";
+      }
+    } else {
+      // Incorrect alternatives: check for factual consistency
+      // An incorrect alternative should ideally be a plausible distractor
+      // but if it contains a direct quote that's CORRECT, it might confuse
+      // We flag if an incorrect alt has HIGHER literal proof than the correct one
+      // or if it's an exact copy of legal text (should be subtly wrong)
+      if (proof.found && proof.score >= 0.95) {
+        // This incorrect alternative is TOO literal — it might actually be correct
+        // which means the gabarito could be wrong
+        const correctProof = literalProofCheck(normalizeWhitespace(q[ALT_KEYS[gabarito]] || ""), blocks);
+        if (!correctProof.found || correctProof.score < proof.score) {
+          issues.push({
+            key: ALT_KEYS[i],
+            label: labels[i],
+            issue: `Alternativa incorreta (${labels[i]}) tem base literal MAIS FORTE que o gabarito — possível gabarito invertido`
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    allValid: correctValid && issues.length === 0,
+    correctValid,
+    incorrectIssues: issues,
+    correctIssue,
+  };
+}
+
 // ── SYSTEM PROMPT MÁXIMA SEGURANÇA ───────────────────────────────────────
 
 function buildSystemPromptMaxSecurity(availableArticles: string, correctCitation: string | null): string {
