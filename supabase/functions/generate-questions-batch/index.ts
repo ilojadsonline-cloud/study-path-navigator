@@ -474,41 +474,49 @@ serve(async (req) => {
         const num = i + 1;
         switch (a) {
           case "TEORIA_PURA":
-            return `Questão ${num}: LITERALIDADE DA LEI — Teste o conhecimento exato do texto legal. Apresente uma afirmativa sobre um instituto jurídico e o candidato deve identificar a alternativa que reproduz fielmente o que a lei dispõe. A alternativa correta DEVE ser transcrição ou paráfrase direta.`;
+            return `Questão ${num}: LITERALIDADE COMPLEXA — Apresente uma situação em que o candidato precisa distinguir entre conceitos jurídicos SIMILARES previstos na lei. O enunciado deve conter uma premissa verdadeira e pedir que identifique a CONSEQUÊNCIA JURÍDICA correta. Alternativas incorretas usam termos da própria lei mas em contextos ERRADOS (troca de sujeito, de condição ou de efeito jurídico).`;
           case "CASO_PRATICO":
-            return `Questão ${num}: CASO PRÁTICO (estilo CESPE/FGV) — Crie um cenário DETALHADO (3-5 linhas) com personagem fictício cujo posto/graduação seja COERENTE com o dispositivo legal. RESPEITE RIGOROSAMENTE a hierarquia militar: se a lei atribui competência ao Comandante-Geral, NÃO use Capitão; se trata de Praças, NÃO use Oficiais. Exemplo: "O Soldado PM Silva, com 3 anos de serviço, foi designado para...". O candidato APLICA a regra ao caso concreto.`;
+            return `Questão ${num}: CASO PRÁTICO COMPLEXO (estilo CESPE/FGV) — Crie um cenário DETALHADO (4-6 linhas) com MÚLTIPLOS ELEMENTOS relevantes: personagem com posto/graduação coerente, circunstância temporal, condição específica e um dilema jurídico. O candidato deve analisar TODOS os elementos para chegar à resposta. Inclua detalhes que funcionem como ARMADILHAS para quem não lê com atenção. Ex: prazos que quase se confundem, competências que parecem sobrepostas, condições cumulativas.`;
           case "PEGADINHA_DETALHE":
-            return `Questão ${num}: PEGADINHA DE DETALHE (estilo CESPE) — Foque em termos que geram confusão: "deverá" vs "poderá", "vedado" vs "facultado", "exclusivamente" vs "preferencialmente", inversão de prazos, troca de competências, alteração de sujeitos. A alternativa correta é LITERAL; as incorretas trocam UM detalhe sutil mas juridicamente decisivo.`;
+            return `Questão ${num}: PEGADINHA SOFISTICADA (estilo CESPE) — Construa alternativas que diferem em apenas UMA PALAVRA juridicamente decisiva: "deverá/poderá", "vedado/facultado", "cumulativamente/alternativamente", "suspensão/demissão". O enunciado deve ser longo o suficiente (3-4 linhas) para distrair o candidato do detalhe crítico. A alternativa correta é LITERAL; as incorretas são QUASE corretas.`;
           case "COMBINACAO_ARTIGOS":
-            return `Questão ${num}: COMBINAÇÃO DE DISPOSITIVOS (estilo FGV) — Elabore uma questão que exija o conhecimento COMBINADO de dois ou mais dispositivos da mesma lei. O enunciado deve apresentar uma situação que demande a interpretação conjunta de artigos relacionados. A resposta correta integra corretamente os dispositivos; as incorretas confundem a relação entre eles.`;
+            return `Questão ${num}: COMBINAÇÃO AVANÇADA DE DISPOSITIVOS (estilo FGV) — Elabore questão que exija RACIOCÍNIO EM CADEIA: o candidato precisa identificar a regra geral (Art. X), verificar se há exceção (Art. Y) e aplicar o resultado ao caso concreto. O enunciado deve narrar uma situação que, à primeira vista, parece se enquadrar numa regra, mas na verdade se encaixa em outra. As alternativas incorretas aplicam os dispositivos isoladamente.`;
           case "JURISPRUDENCIA_APLICADA":
-            return `Questão ${num}: APLICAÇÃO PRÁTICA AVANÇADA (estilo VUNESP) — Crie um cenário que explore as CONSEQUÊNCIAS JURÍDICAS de uma ação ou omissão prevista na lei. O candidato deve identificar o desdobramento legal correto. Exemplos: sanções, prazos, procedimentos que decorrem da situação narrada.`;
+            return `Questão ${num}: CONSEQUÊNCIAS JURÍDICAS ENCADEADAS (estilo VUNESP) — Apresente uma sequência de fatos (ação → consequência → desdobramento) e pergunte qual é o resultado jurídico FINAL conforme a lei. O candidato precisa percorrer TODA a cadeia normativa. As alternativas incorretas interrompem a cadeia em diferentes pontos ou aplicam consequências de situações SIMILARES mas distintas.`;
           case "EXCECAO_REGRA":
-            return `Questão ${num}: EXCEÇÃO À REGRA (estilo CESPE/FCC) — Explore EXCEÇÕES, RESSALVAS ou CONDIÇÕES ESPECIAIS previstas na lei. Use "Constitui exceção à regra...", "Salvo disposição em contrário...", "Excetua-se da regra geral...". A alternativa correta identifica precisamente a exceção prevista no texto legal.`;
+            return `Questão ${num}: EXCEÇÃO DENTRO DA EXCEÇÃO (estilo CESPE/FCC) — Explore situações onde há REGRA GERAL → EXCEÇÃO → RESSALVA À EXCEÇÃO. O enunciado deve descrever um caso que se enquadra (ou não) na exceção, e o candidato deve determinar qual regime jurídico se aplica. Use "NÃO constitui exceção à regra...", "Aplica-se a regra geral, EXCETO quando...", "A ressalva prevista NÃO se aplica ao caso de...".`;
           case "INTERPRETACAO_SISTEMATICA":
-            return `Questão ${num}: INTERPRETAÇÃO SISTEMÁTICA — Elabore questão que exija compreensão do CONTEXTO e da LÓGICA do instituto jurídico, não apenas a memorização isolada. A questão pode pedir ao candidato que identifique a finalidade de um dispositivo, o princípio que o fundamenta ou a consequência lógica da norma.`;
+            return `Questão ${num}: INTERPRETAÇÃO TELEOLÓGICA E SISTEMÁTICA — Elabore questão que exija compreensão da FINALIDADE do instituto jurídico e sua RELAÇÃO com outros dispositivos da mesma lei. O candidato deve demonstrar que entende o PORQUÊ da norma, não apenas o QUÊ. Pergunte sobre a ratio legis, o bem jurídico protegido ou a coerência do sistema normativo. As incorretas confundem a finalidade com a de institutos similares.`;
         }
       })
       .join("\n\n");
 
     // System prompt: define the AI persona as an elite exam board
-    const systemPrompt = `Você é uma BANCA EXAMINADORA DE ELITE para concursos militares (CFO/CHOA), com o rigor e a criatividade das bancas CESPE/CEBRASPE, FGV e VUNESP.
+    const systemPrompt = `Você é uma BANCA EXAMINADORA DE ALTÍSSIMO NÍVEL para concursos militares (CFO/CHOA), com o rigor intelectual das bancas CESPE/CEBRASPE, FGV e VUNESP em suas provas mais difíceis.
+
+NÍVEL DE COMPLEXIDADE EXIGIDO: ALTO
+Suas questões devem exigir RACIOCÍNIO JURÍDICO AVANÇADO. Não basta conhecer o artigo — o candidato precisa INTERPRETAR, COMBINAR e APLICAR dispositivos legais a situações complexas.
+
+TÉCNICAS DE ELEVAÇÃO DE COMPLEXIDADE (use obrigatoriamente):
+1. ENUNCIADOS LONGOS E CONTEXTUALIZADOS: Crie cenários com 3-6 linhas, detalhando circunstâncias, condições e exceções que exijam análise cuidadosa antes de responder.
+2. ALTERNATIVAS COM GRADAÇÃO DE CORREÇÃO: Todas as 5 alternativas devem parecer plausíveis a um candidato mediano. A diferença entre a correta e as incorretas deve residir em DETALHES JURÍDICOS SUTIS — uma palavra, um prazo, uma condição, uma competência.
+3. RACIOCÍNIO MULTINÍVEL: Questões que exijam pelo menos 2 etapas de raciocínio (ex: identificar a regra aplicável E depois verificar se há exceção; ou combinar dois dispositivos para chegar à conclusão).
+4. ARMADILHAS INTELIGENTES: Use alternativas que invertem sutilmente a regra (ex: trocar "vedado" por "facultado"), que misturam competências de autoridades diferentes, que alteram condições ou prazos, ou que aplicam regra geral onde há exceção.
+5. CONTEXTUALIZAÇÃO MILITAR REALISTA: Cenários devem envolver situações operacionais verossímeis com postos, graduações e cargos FIÉIS à hierarquia da lei. Use nomes fictícios para personagens.
+6. INTERSEÇÃO DE DISPOSITIVOS: Sempre que possível, elabore questões que exijam conhecimento de MAIS DE UM dispositivo legal para chegar à resposta correta.
 
 PRINCÍPIOS FUNDAMENTAIS:
-1. CRIATIVIDADE COM PRECISÃO: Suas questões devem ser CRIATIVAS e VARIADAS, explorando diferentes ângulos do mesmo dispositivo legal. NUNCA repita o mesmo padrão de questão.
-2. HIERARQUIA MILITAR: RESPEITE ABSOLUTAMENTE a cadeia de comando. Se a lei diz "Comandante-Geral", a questão DEVE usar Comandante-Geral, NUNCA substituir por outra autoridade.
-3. CONTEXTO JURÍDICO: Cada questão deve demonstrar compreensão PROFUNDA do instituto jurídico, não apenas reprodução mecânica do texto.
-4. ALTERNATIVAS INTELIGENTES: As alternativas incorretas devem ser PLAUSÍVEIS e DISTINTAS entre si — nunca óbvias. Use trocas sutis de termos, inversão de condições, confusão de competências.
-5. FIDELIDADE AO TEXTO LEGAL: A alternativa correta DEVE estar fundamentada no texto da lei. Cite LITERALMENTE trechos no comentário.
-6. DIVERSIDADE DE ABORDAGEM: Alterne entre questões teóricas, casos práticos, pegadinhas de detalhe, combinação de artigos, exceções e interpretação sistemática.
-7. PROIBIÇÃO DE DECOREBA: NUNCA cite números de artigos no enunciado. O candidato deve demonstrar COMPREENSÃO, não memorização.
-8. CADA QUESTÃO É ÚNICA: Varie o estilo de redação, a estrutura do enunciado e o tipo de raciocínio exigido em CADA questão.
+1. CRIATIVIDADE COM PRECISÃO: Explore ângulos inéditos do dispositivo legal — consequências implícitas, condições cumulativas, ressalvas pouco percebidas, interações com outros artigos.
+2. HIERARQUIA MILITAR: RESPEITE ABSOLUTAMENTE a cadeia de comando conforme o texto legal. Se a lei diz "Comandante-Geral", use Comandante-Geral.
+3. FIDELIDADE AO TEXTO LEGAL: A alternativa correta DEVE estar fundamentada LITERALMENTE no texto da lei. NUNCA invente regras que não existem no texto.
+4. PROIBIÇÃO DE DECOREBA: NUNCA cite números de artigos no enunciado. O candidato demonstra COMPREENSÃO, não memorização.
+5. CADA QUESTÃO É ÚNICA: Varie estilo, estrutura, tipo de raciocínio e padrão de enunciado em CADA questão.
 
-ESTRUTURA DO COMENTÁRIO (obrigatória):
-a) Raciocínio jurídico: explique POR QUE a alternativa correta é a única válida.
-b) Transcrição literal: "Conforme o Art. X: '[trecho exato da lei]'."
-c) Análise das incorretas: explique brevemente o erro de CADA alternativa incorreta.
-d) Formato: "A alternativa [X] está correta porque... Conforme o Art. Y da [Lei]: '[transcrição]'. As demais alternativas estão incorretas: A) [erro]; B) [erro]; ..."
+ESTRUTURA DO COMENTÁRIO (obrigatória e detalhada):
+a) RACIOCÍNIO JURÍDICO: Explique o percurso lógico-jurídico para chegar à resposta, incluindo premissas e conclusão.
+b) TRANSCRIÇÃO LITERAL: "Conforme o Art. X: '[trecho exato da lei]'." — cite o dispositivo completo relevante.
+c) ANÁLISE INDIVIDUALIZADA DAS INCORRETAS: Para CADA alternativa incorreta, explique ESPECIFICAMENTE qual detalhe está errado e qual seria a redação correta conforme a lei. Ex: "A alternativa A está incorreta porque afirma 'poderá', quando o Art. Y dispõe que 'deverá', indicando obrigatoriedade e não facultatividade."
+d) CONCLUSÃO PEDAGÓGICA: Feche com uma frase que sintetize o ponto-chave que o candidato deveria dominar.
 
 Responda EXCLUSIVAMENTE com o JSON array solicitado, sem explicações extras.`;
 
@@ -551,7 +559,7 @@ REGRAS TÉCNICAS:
 - Artigos existentes na lei: ${availableArticles}
 - Cite SOMENTE artigos que existam na lei acima.
 - gabarito = inteiro: 0=A, 1=B, 2=C, 3=D, 4=E.
-- Distribua dificuldade: ~30% Fácil, ~40% Médio, ~30% Difícil.
+- Distribua dificuldade: ~15% Fácil, ~40% Médio, ~45% Difícil. PRIORIZE questões de nível Médio e Difícil.
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
 
 JSON array:
@@ -586,7 +594,7 @@ JSON array:
               { role: "system", content: systemPrompt },
               { role: "user", content: prompt },
             ],
-            temperature: 0.7,
+            temperature: 0.8,
             max_tokens: maxTokens,
           }),
           signal: controller.signal,
