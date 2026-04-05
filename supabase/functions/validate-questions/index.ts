@@ -531,6 +531,65 @@ function literalProofCheck(correctAltText: string, blocks: ArticleBlock[]): {
   return { found: false, article: null, score: 0 };
 }
 
+/** VERIFICAÇÃO COMPLETA: verifica TODAS as 5 alternativas contra o texto legal */
+function fullAlternativesCheck(q: Record<string, any>, blocks: ArticleBlock[]): {
+  allValid: boolean;
+  correctValid: boolean;
+  incorrectIssues: Array<{ key: string; label: string; issue: string }>;
+  correctIssue: string | null;
+} {
+  const gabarito = clampGabarito(q.gabarito);
+  const issues: Array<{ key: string; label: string; issue: string }> = [];
+  let correctValid = true;
+  let correctIssue: string | null = null;
+  const labels = ["A", "B", "C", "D", "E"];
+
+  for (let i = 0; i < ALT_KEYS.length; i++) {
+    const altText = normalizeWhitespace(q[ALT_KEYS[i]] || "");
+    if (altText.length < 5) {
+      if (i === gabarito) { correctValid = false; correctIssue = "Alternativa correta vazia"; }
+      else issues.push({ key: ALT_KEYS[i], label: labels[i], issue: "Alternativa vazia ou muito curta" });
+      continue;
+    }
+
+    // Check if the alternative's content has ANY basis in the legal text
+    const proof = literalProofCheck(altText, blocks);
+    
+    if (i === gabarito) {
+      // Correct alternative MUST have strong literal proof
+      if (!proof.found) {
+        correctValid = false;
+        correctIssue = "Alternativa correta sem base literal na lei";
+      }
+    } else {
+      // Incorrect alternatives: check for factual consistency
+      // An incorrect alternative should ideally be a plausible distractor
+      // but if it contains a direct quote that's CORRECT, it might confuse
+      // We flag if an incorrect alt has HIGHER literal proof than the correct one
+      // or if it's an exact copy of legal text (should be subtly wrong)
+      if (proof.found && proof.score >= 0.95) {
+        // This incorrect alternative is TOO literal — it might actually be correct
+        // which means the gabarito could be wrong
+        const correctProof = literalProofCheck(normalizeWhitespace(q[ALT_KEYS[gabarito]] || ""), blocks);
+        if (!correctProof.found || correctProof.score < proof.score) {
+          issues.push({
+            key: ALT_KEYS[i],
+            label: labels[i],
+            issue: `Alternativa incorreta (${labels[i]}) tem base literal MAIS FORTE que o gabarito — possível gabarito invertido`
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    allValid: correctValid && issues.length === 0,
+    correctValid,
+    incorrectIssues: issues,
+    correctIssue,
+  };
+}
+
 // ── SYSTEM PROMPT MÁXIMA SEGURANÇA ───────────────────────────────────────
 
 function buildSystemPromptMaxSecurity(availableArticles: string, correctCitation: string | null): string {
@@ -557,23 +616,23 @@ Use o número do artigo exatamente como ele aparece no campo "artNum" do bloco d
 Você é um ROBÔ DE BUSCA LITERAL. É PROIBIDO usar qualquer conhecimento ou entendimento jurídico que não esteja no texto fornecido. Se a lei diz X e você acha que é Y, escreva X.
 
 REGRAS ABSOLUTAS:
-1. TRAVA DE PROVA LITERAL: Cada alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Se não encontrar o trecho exato, marque valida=false.
-2. CONFRONTO DE ARTIGOS: A citação no comentário DEVE ser EXATAMENTE a determinada pelo código. Se o texto está no Art. 1º, parágrafo único, o comentário DEVE citar exatamente Art. 1º, parágrafo único.
-3. PROIBIÇÃO DE CONHECIMENTO EXTERNO: Você NÃO pode usar nenhum conhecimento jurídico, doutrinário ou interpretativo. APENAS o texto literal fornecido.
-4. GABARITO BLINDADO: O gabarito é SEMPRE um inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA use letras ou números fora desse intervalo.
-5. FILTRO DE UNICIDADE: Não repita o mesmo artigo-base ou enunciado de questões existentes.
+1. TRAVA DE PROVA LITERAL: A alternativa correta DEVE conter texto que existe LITERALMENTE na lei.
+2. VERIFICAÇÃO DE TODAS AS ALTERNATIVAS: Verifique CADA uma das 5 alternativas contra o texto legal.
+   - A correta deve ser fiel ao texto da lei.
+   - As incorretas devem ser distratores plausíveis com erros SUTIS (trocar palavras-chave, inverter conceitos). NÃO podem ser cópias corretas da lei.
+3. CONFRONTO DE ARTIGOS: A citação no comentário DEVE ser EXATAMENTE a determinada pelo código.
+4. PROIBIÇÃO DE CONHECIMENTO EXTERNO: APENAS o texto literal fornecido.
+5. GABARITO BLINDADO: inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E).
+6. FILTRO DE UNICIDADE: Não repita o mesmo artigo-base ou enunciado de questões existentes.
+7. PRIORIZE CORREÇÃO: Reescreva e corrija sempre que possível. Marque valida=false SOMENTE em último caso absoluto.
 
 REGRAS PEDAGÓGICAS (OBRIGATÓRIAS):
-- PROIBIDO DECOREBA: O enunciado NÃO PODE mencionar número de artigo. NUNCA "O que diz o Art. X?", "Segundo o Art. X...". REESCREVA como CASO PRÁTICO.
-- CASO PRÁTICO: Descreva uma SITUAÇÃO CONCRETA do cotidiano militar com personagens fictícios (Soldado Silva, Cabo Pereira, Sargento Lima). O candidato aplica a lei ao caso.
-- CONTEXTO HIERÁRQUICO: Em questões com casos práticos, RESPEITE RIGOROSAMENTE a hierarquia militar conforme o texto legal. Se a lei atribui competência ao Comandante-Geral, NÃO atribua ao Capitão. Se a lei fala de Praças, NÃO use Oficiais no cenário. Os personagens fictícios devem ter postos/graduações COERENTES com o dispositivo legal abordado.
-- PEGADINHAS INTELIGENTES: Alternativas incorretas usam trocadilhos jurídicos (trocar "deverá"/"poderá", inverter prazos, trocar "vedado"/"facultado"). Distratores plausíveis.
+- PROIBIDO DECOREBA: O enunciado NÃO PODE mencionar número de artigo. Sempre CASO PRÁTICO.
+- CASO PRÁTICO: Situação concreta do cotidiano militar com personagens fictícios (Soldado Silva, Cabo Pereira).
+- CONTEXTO HIERÁRQUICO: Respeite RIGOROSAMENTE a hierarquia militar conforme o texto legal.
+- PEGADINHAS INTELIGENTES: Alternativas incorretas usam trocadilhos jurídicos sutis.
 - O número do artigo aparece SOMENTE no comentário como fundamentação.
-- COMENTÁRIO EXPLICATIVO COMPLETO: O comentário DEVE:
-  1) Explicar POR QUE a alternativa correta é a única válida, fundamentando o raciocínio jurídico.
-  2) Transcrever LITERALMENTE o trecho da lei entre aspas com citação do artigo/parágrafo/inciso.
-  3) Explicar brevemente por que as demais alternativas estão erradas (qual detalhe foi alterado).
-  4) Formato: "A alternativa [X] está correta porque... Conforme o Art. Y da [Lei]: '[transcrição]'. As demais alternativas estão incorretas: [breve explicação]."
+- COMENTÁRIO EXPLICATIVO COMPLETO: Explique por que a correta é válida (com transcrição literal), e por que CADA distrator está errado.
 
 Responda APENAS JSON válido, sem markdown, sem explicações adicionais.`;
 }
@@ -744,14 +803,24 @@ serve(async (req) => {
       const targetCitationText = getCitationReferenceText(targetArticleBlock, deterministicCitation);
       const commentCitedArts = extractAllCitedArticles(q.comentario || "");
 
+      // ── VERIFICAÇÃO COMPLETA DE TODAS AS ALTERNATIVAS ──
+      const fullCheck = fullAlternativesCheck(q, blocks);
+
       let needsFix = false;
       let fixReason = "";
 
-      // Check 0 (NEW): LITERAL PROOF — correct answer MUST be found in law
-      if (!literalCheck.found) {
+      // Check 0: LITERAL PROOF on correct answer
+      if (!fullCheck.correctValid) {
         needsFix = true;
-        fixReason = "PROVA LITERAL FALHOU: texto da alternativa correta NÃO encontrado na lei — questão INVÁLIDA";
-        console.log(`[VALIDAR] #${q.id} TRAVA LITERAL: resposta correta sem base na lei`);
+        fixReason = `PROVA LITERAL FALHOU: ${fullCheck.correctIssue || "alternativa correta sem base na lei"}`;
+        console.log(`[VALIDAR] #${q.id} TRAVA LITERAL: ${fixReason}`);
+      }
+
+      // Check 0.5: Incorrect alternatives with issues (e.g. gabarito invertido)
+      if (!needsFix && fullCheck.incorrectIssues.length > 0) {
+        needsFix = true;
+        fixReason = fullCheck.incorrectIssues[0].issue;
+        console.log(`[VALIDAR] #${q.id} ALT-CHECK: ${fixReason}`);
       }
 
       // Check 1: ALL cited articles must exist in law
@@ -958,18 +1027,23 @@ serve(async (req) => {
       const validArticlesList = buildValidArticlesList(blocks);
 
       const isLiteralFailure = fixReason.includes("PROVA LITERAL");
+      const hasAltIssues = fullCheck.incorrectIssues.length > 0;
+      const altIssuesText = hasAltIssues
+        ? `\n\nPROBLEMAS DETECTADOS NAS ALTERNATIVAS:\n${fullCheck.incorrectIssues.map(i => `- ${i.label}) ${i.issue}`).join("\n")}`
+        : "";
 
       const prompt = `${isLiteralFailure
         ? `ATENÇÃO: A questão abaixo FALHOU na TRAVA DE PROVA LITERAL. A alternativa correta NÃO tem base no texto legal. Você DEVE REESCREVER A QUESTÃO DO ZERO usando APENAS trechos que EXISTEM LITERALMENTE no texto legal fornecido.`
         : `A questão abaixo tem um ERRO CONFIRMADO: "${fixReason}".`
       }
 ${focusCitation ? `A busca literal confirmou conteúdo em ${focusCitation} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
+${altIssuesText}
 
 ${deterministicCitation && targetCitationText ? `CITAÇÃO JURÍDICA OBRIGATÓRIA: ${deterministicCitation}
 
 TEXTO DO DISPOSITIVO PARA REFERÊNCIA: ${targetCitationText}
 
-INSTRUÇÃO PARA O COMENTÁRIO: Você deve gerar um comentário que valide a alternativa correta. Você é PROIBIDO de escrever qualquer outra citação legal no comentário. Use OBRIGATORIAMENTE "${deterministicCitation}" fornecida acima. Não tente “corrigir” ou mudar essa citação.` : ""}
+INSTRUÇÃO PARA O COMENTÁRIO: Você deve gerar um comentário que valide a alternativa correta. Você é PROIBIDO de escrever qualquer outra citação legal no comentário. Use OBRIGATORIAMENTE "${deterministicCitation}" fornecida acima. Não tente "corrigir" ou mudar essa citação.` : ""}
 
 ARTIGOS PERMITIDOS NESTA LEI: [${availableArticles}]
 
@@ -978,23 +1052,24 @@ ${validArticlesList}
 
 REGRAS INVIOLÁVEIS:
 1. A alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Copie trechos reais.
-2. O comentário DEVE citar o artigo EXATO onde o texto foi encontrado, com transcrição LITERAL entre aspas.
+2. TODAS as 5 alternativas devem ser verificadas contra o texto legal:
+   - A alternativa CORRETA deve reproduzir fielmente o conteúdo da lei.
+   - As alternativas INCORRETAS devem ser distratores PLAUSÍVEIS mas com erros sutis (trocar palavras-chave, inverter conceitos, alterar prazos/condições). NÃO podem ser cópias literais corretas da lei.
 3. ${deterministicCitation ? `O comentário DEVE obrigatoriamente citar ${deterministicCitation} (definida pelo código TypeScript e confirmada por busca literal).` : (focusCitation ? `O comentário DEVE obrigatoriamente citar ${focusCitation} (confirmada por busca literal).` : "Escolha qualquer artigo da LISTA ACIMA e baseie a questão nele." )}
 4. SOMENTE cite artigos da lista acima. Se um artigo NÃO está na lista, ele NÃO EXISTE no texto legal.
 5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
 6. NÃO use conhecimento externo. APENAS o texto fornecido.
 7. O trecho entre aspas no comentário DEVE existir LITERALMENTE no artigo citado. Copie e cole do texto.
-8. VERIFICAÇÃO OBRIGATÓRIA: Antes de citar "Art. X", faça a busca exata da string "Art. X" no texto legal. Se NÃO encontrar essa string exata, NÃO cite esse artigo. NUNCA INVENTE OU INFIRA NÚMEROS DE ARTIGOS.
-9. CONSISTÊNCIA SNIPPET-ARTIGO: O trecho entre aspas DEVE pertencer ao artigo citado. Se você cita Art. 3 e transcreve texto, esse texto DEVE estar dentro do bloco do Art. 3 no texto legal — NÃO em outro artigo.
-10. EM CASO DE DÚVIDA: omita a citação do artigo ou indique "referência não confirmada" em vez de citar um artigo incorreto.
-11. FIDELIDADE AO artNum CANÔNICO: O número do artigo é determinado pela posição "Art. X" no texto legal. Se o trecho que valida a questão aparece DEPOIS de "Art. 3" e ANTES de "Art. 4", então o artigo correto é OBRIGATORIAMENTE Art. 3 — mesmo que o conteúdo pareça relacionado a outro artigo. NÃO use raciocínio semântico para determinar o número do artigo.
-12. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO: Se a questão #2615 menciona Art. 2 mas o trecho validador está no bloco do Art. 3, o comentário DEVE citar Art. 3. Qualquer citação que não corresponda ao bloco real será REJEITADA e a questão EXCLUÍDA.
+8. VERIFICAÇÃO OBRIGATÓRIA: Antes de citar "Art. X", faça a busca exata da string "Art. X" no texto legal. Se NÃO encontrar essa string exata, NÃO cite esse artigo.
+9. CONSISTÊNCIA SNIPPET-ARTIGO: O trecho entre aspas DEVE pertencer ao artigo citado.
+10. FIDELIDADE AO artNum CANÔNICO: O número do artigo é determinado pela posição "Art. X" no texto legal.
+11. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO.
+12. PRIORIZE SEMPRE A CORREÇÃO: Reescreva e corrija a questão. Marque valida=false SOMENTE se for absolutamente impossível criar uma questão válida com o texto legal disponível.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
 - PEGADINHAS INTELIGENTES: distratores com troca de "deverá"/"poderá", inversão de prazos, "vedado"/"facultado".
-- Mescle: algumas questões com exemplos práticos; outras pegadinhas típicas de concurso; outras com literalidade da lei.
-- PRIORIZE questões complexas e bem estruturadas.
+- COMENTÁRIO COMPLETO: Explique por que a correta é válida, transcreva trecho literal, e explique brevemente por que cada distrator está errado.
 ${articleContext}
 
 TEXTO LEGAL COMPLETO (${q.disciplina}):
@@ -1005,7 +1080,8 @@ Enunciado: ${q.enunciado}
 A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
 Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${q.comentario}
 
-${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : "Corrija a questão mantendo o estilo."}
+${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário."}
+PRIORIZE A CORREÇÃO — só marque valida=false em último caso absoluto.
 Responda APENAS JSON (sem markdown):
 {"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
 
@@ -1080,6 +1156,12 @@ Responda APENAS JSON (sem markdown):
             details.push({ id: q.id, status: "excluida", motivo: "Pós-IA: prova literal falhou novamente" });
             await new Promise(r => setTimeout(r, 300));
             continue;
+          }
+
+          // POST-AI: verificação completa de TODAS as alternativas
+          const aiFullCheck = fullAlternativesCheck(result, blocks);
+          if (aiFullCheck.incorrectIssues.length > 0) {
+            console.log(`[VALIDAR] #${q.id} PÓS-IA ALT-CHECK: ${aiFullCheck.incorrectIssues.map(i => i.issue).join("; ")}`);
           }
 
           if (deterministicArticle && aiLiteralCheck.article && aiLiteralCheck.article !== deterministicArticle) {
