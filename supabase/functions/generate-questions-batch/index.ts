@@ -290,6 +290,164 @@ function truncateLegalText(text: string, maxChars: number): string {
   return text.substring(0, maxChars).trim() + "\n[...]";
 }
 
+function stripJsonFences(text: string): string {
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+}
+
+function repairJsonCandidate(text: string): string {
+  return text
+    .replace(/^\uFEFF/, "")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/,\s*([}\]])/g, "$1")
+    .trim();
+}
+
+function extractBalancedJsonPayload(text: string): string {
+  const cleaned = stripJsonFences(text);
+  const start = cleaned.search(/[\[{]/);
+  if (start === -1) return cleaned;
+
+  const stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < cleaned.length; i++) {
+    const char = cleaned[i];
+
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{" || char === "[") {
+      stack.push(char);
+      continue;
+    }
+
+    if (char === "}" || char === "]") {
+      const last = stack[stack.length - 1];
+      const matches = (char === "}" && last === "{") || (char === "]" && last === "[");
+
+      if (matches) {
+        stack.pop();
+        if (stack.length === 0) return cleaned.substring(start, i + 1);
+      }
+    }
+  }
+
+  return cleaned.substring(start).trim();
+}
+
+function normalizeParsedQuestionsRoot(parsed: unknown): any[] | null {
+  if (Array.isArray(parsed)) return parsed;
+  if (!parsed || typeof parsed !== "object") return null;
+
+  const record = parsed as Record<string, unknown>;
+  if (Array.isArray(record.questions)) return record.questions as any[];
+  if (Array.isArray(record.items)) return record.items as any[];
+
+  return null;
+}
+
+function extractArraySourceForSalvage(text: string): string {
+  const questionsMatch = text.match(/"questions"\s*:/i);
+  if (questionsMatch?.index !== undefined) {
+    const arrayStart = text.indexOf("[", questionsMatch.index);
+    if (arrayStart !== -1) return text.substring(arrayStart);
+  }
+
+  const arrayStart = text.indexOf("[");
+  return arrayStart !== -1 ? text.substring(arrayStart) : text;
+}
+
+function salvageQuestionObjects(text: string): any[] {
+  const source = extractArraySourceForSalvage(text);
+  const parsed: any[] = [];
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let objectStart = -1;
+
+  for (let i = 0; i < source.length; i++) {
+    const char = source[i];
+
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{") {
+      if (depth === 0) objectStart = i;
+      depth++;
+      continue;
+    }
+
+    if (char === "}") {
+      if (depth > 0) depth--;
+      if (depth === 0 && objectStart !== -1) {
+        const chunk = source.substring(objectStart, i + 1);
+        try {
+          parsed.push(JSON.parse(repairJsonCandidate(chunk)));
+        } catch {
+          // ignore malformed partial chunk
+        }
+        objectStart = -1;
+      }
+    }
+  }
+
+  return parsed;
+}
+
+function parseQuestionsFromModelContent(content: string): { questions: any[]; salvaged: boolean } {
+  const cleaned = stripJsonFences(content);
+  const extracted = extractBalancedJsonPayload(cleaned);
+  const candidates = [
+    cleaned,
+    extracted,
+    repairJsonCandidate(cleaned),
+    repairJsonCandidate(extracted),
+  ].filter(Boolean);
+
+  for (const candidate of [...new Set(candidates)]) {
+    try {
+      const parsed = JSON.parse(candidate);
+      const questions = normalizeParsedQuestionsRoot(parsed);
+      if (questions) return { questions, salvaged: false };
+    } catch {
+      // continue to next candidate
+    }
+  }
+
+  const salvagedQuestions = salvageQuestionObjects(extracted);
+  if (salvagedQuestions.length > 0) {
+    return { questions: salvagedQuestions, salvaged: true };
+  }
+
+  throw new Error("INVALID_JSON");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -518,7 +676,7 @@ b) TRANSCRIÇÃO LITERAL: "Conforme o Art. X: '[trecho exato da lei]'." — cite
 c) ANÁLISE INDIVIDUALIZADA DAS INCORRETAS: Para CADA alternativa incorreta, explique ESPECIFICAMENTE qual detalhe está errado e qual seria a redação correta conforme a lei. Ex: "A alternativa A está incorreta porque afirma 'poderá', quando o Art. Y dispõe que 'deverá', indicando obrigatoriedade e não facultatividade."
 d) CONCLUSÃO PEDAGÓGICA: Feche com uma frase que sintetize o ponto-chave que o candidato deveria dominar.
 
-Responda EXCLUSIVAMENTE com o JSON array solicitado, sem explicações extras.`;
+Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do JSON, no formato {"questions":[...]}.`;
 
     // Build the full legal context — send up to 18KB of law text for systemic understanding
     const legalContextTruncated = truncateLegalText(leiSeca, 18000);
@@ -562,8 +720,8 @@ REGRAS TÉCNICAS:
 - Distribua dificuldade: ~15% Fácil, ~40% Médio, ~45% Difícil. PRIORIZE questões de nível Médio e Difícil.
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
 
-JSON array:
-[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}]`;
+OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
+{"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}]}`;
 
     // API call with retry logic
     const MAX_API_RETRIES = 2;
@@ -572,8 +730,8 @@ JSON array:
     let aiResponseText = "";
     let lastFetchError: any = null;
 
-    // Scale max_tokens based on batch size
-    const maxTokens = Math.min(4096, 800 + batchSize * 700);
+    // Larger output budget reduces truncation on longer comments/cenários.
+    const maxTokens = Math.min(4096, 1400 + batchSize * 900);
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
@@ -592,6 +750,7 @@ JSON array:
               { role: "system", content: systemPrompt },
               { role: "user", content: prompt },
             ],
+            response_format: { type: "json_object" },
             max_tokens: maxTokens,
           }),
           signal: controller.signal,
@@ -682,18 +841,23 @@ JSON array:
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    let content = aiData.choices?.[0]?.message?.content || "[]";
-    content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-    content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const finishReason = aiData.choices?.[0]?.finish_reason || "unknown";
+    console.log(`[GERAR] Finish reason: ${finishReason}`);
 
-    let rawQuestions;
+    const content = aiData.choices?.[0]?.message?.content || '{"questions":[]}';
+
+    let rawQuestions: any[];
     try {
-      rawQuestions = JSON.parse(content);
+      const parsed = parseQuestionsFromModelContent(content);
+      rawQuestions = parsed.questions;
+      if (parsed.salvaged) {
+        console.log(`[GERAR] JSON parcial recuperado: ${rawQuestions.length} questão(ões) válidas extraídas`);
+      }
     } catch {
       console.error("[GERAR] JSON parse failed:", content.substring(0, 200));
       return new Response(JSON.stringify({
         status: "erro", mensagem: "IA retornou JSON inválido.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "INVALID_JSON", descricao: "JSON inválido" }] },
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "INVALID_JSON", descricao: `JSON inválido (finish_reason=${finishReason})` }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
