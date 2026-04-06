@@ -653,7 +653,7 @@ serve(async (req) => {
     const mode: "rules" | "ai" = body.mode || "rules";
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
 
     // 1. Fetch questions batch
     const { data: questions, error } = await supabase
@@ -1002,10 +1002,10 @@ serve(async (req) => {
       // ══════════════════════════════════════════════════════════════════
       // AI MODE — SEGURANÇA MÁXIMA: rewrite from scratch using law text
       // ══════════════════════════════════════════════════════════════════
-      if (!OPENROUTER_API_KEY) {
-        questoesRevisaoManual.push({ id: q.id, motivo: "OPENROUTER_API_KEY não configurada" });
-        errosEncontrados.push({ codigo: "NO_API_KEY", descricao: "OPENROUTER_API_KEY ausente" });
-        details.push({ id: q.id, status: "erro", motivo: "Sem API key OpenRouter" });
+      if (!DEEPSEEK_API_KEY) {
+        questoesRevisaoManual.push({ id: q.id, motivo: "DEEPSEEK_API_KEY não configurada" });
+        errosEncontrados.push({ codigo: "NO_API_KEY", descricao: "DEEPSEEK_API_KEY ausente" });
+        details.push({ id: q.id, status: "erro", motivo: "Sem API key DeepSeek" });
         continue;
       }
 
@@ -1089,21 +1089,18 @@ Responda APENAS JSON (sem markdown):
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 60000);
 
-        const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        const aiResponse = await fetch("https://api.deepseek.com/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-            "HTTP-Referer": "https://exam-roadmap-buddy.lovable.app",
-            "X-Title": "Exam Roadmap Buddy",
+            Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "deepseek/deepseek-r1-distill-llama-70b",
+            model: "deepseek-chat",
             messages: [
               { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, deterministicCitation) },
               { role: "user", content: prompt },
             ],
-            temperature: 0.0,
             max_tokens: 4000,
           }),
           signal: controller.signal,
@@ -1115,7 +1112,7 @@ Responda APENAS JSON (sem markdown):
           const errText = await aiResponse.text();
           if (aiResponse.status === 429) {
             return new Response(JSON.stringify({
-              status: "parcial", mensagem: "Rate limit OpenRouter. Aguarde.", paused: true,
+              status: "parcial", mensagem: "Rate limit DeepSeek. Aguarde.", paused: true,
               detalhes: {
                 total_processado: okCount + fixedCount + deletedCount,
                 questoes_criadas: 0, questoes_corrigidas: fixedCount,
@@ -1126,11 +1123,12 @@ Responda APENAS JSON (sem markdown):
               last_id: q.id, details, timestamp,
             }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
-          throw new Error(`OpenRouter ${aiResponse.status}: ${errText.substring(0, 200)}`);
+          throw new Error(`DeepSeek ${aiResponse.status}: ${errText.substring(0, 200)}`);
         }
 
         const aiData = await aiResponse.json();
         let content = aiData.choices?.[0]?.message?.content || "";
+        content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
         content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         const result = JSON.parse(content);
 
