@@ -980,18 +980,10 @@ serve(async (req) => {
 
       // ── No fix needed ─────────────────────────────────
       if (!needsFix) {
-        // In AI mode, still do a full audit of all alternatives' content
-        if (mode === "ai" && lawText && DEEPSEEK_API_KEY) {
-          // Flag for full AI audit even if no structural issue found
-          needsFix = true;
-          fixReason = "AUDITORIA COMPLETA IA: verificação de fidelidade de todas as alternativas ao texto legal";
-          console.log(`[VALIDAR] #${q.id} AUDITORIA IA: questão será verificada integralmente pela IA`);
-        } else {
-          okCount++;
-          details.push({ id: q.id, status: "ok", motivo: realArticle ? `Validada (${realArticle}, prova literal score=${literalCheck.score.toFixed(2)})` : "Validada OK" });
-          console.log(`[VALIDAR] #${q.id} OK ${realArticle || ""} (literal score=${literalCheck.score.toFixed(2)})`);
-          continue;
-        }
+        okCount++;
+        details.push({ id: q.id, status: "ok", motivo: realArticle ? `Validada (${realArticle}, prova literal score=${literalCheck.score.toFixed(2)})` : "Validada OK" });
+        console.log(`[VALIDAR] #${q.id} OK ${realArticle || ""} (literal score=${literalCheck.score.toFixed(2)})`);
+        continue;
       }
 
       // ══════════════════════════════════════════════════════════════════
