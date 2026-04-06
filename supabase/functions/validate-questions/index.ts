@@ -960,12 +960,32 @@ serve(async (req) => {
         }
       }
 
+      // Check 7 (NEW): AUDITORIA FACTUAL PROFUNDA — verifica detalhes específicos
+      // (números de seção, prazos, nomes de cargos) contra o texto legal
+      if (!needsFix && lawText) {
+        const factualAudit = deepFactualAudit(q, blocks, lawText);
+        if (factualAudit.needsAudit) {
+          needsFix = true;
+          const firstSuspect = factualAudit.suspiciousAlts[0];
+          fixReason = `ERRO FACTUAL: Alt ${firstSuspect.label}) ${firstSuspect.detail}`;
+          console.log(`[VALIDAR] #${q.id} AUDITORIA FACTUAL: ${factualAudit.suspiciousAlts.map(s => `${s.label}: ${s.detail}`).join("; ")}`);
+        }
+      }
+
       // ── No fix needed ─────────────────────────────────
       if (!needsFix) {
-        okCount++;
-        details.push({ id: q.id, status: "ok", motivo: realArticle ? `Validada (${realArticle}, prova literal score=${literalCheck.score.toFixed(2)})` : "Validada OK" });
-        console.log(`[VALIDAR] #${q.id} OK ${realArticle || ""} (literal score=${literalCheck.score.toFixed(2)})`);
-        continue;
+        // In AI mode, still do a full audit of all alternatives' content
+        if (mode === "ai" && lawText && DEEPSEEK_API_KEY) {
+          // Flag for full AI audit even if no structural issue found
+          needsFix = true;
+          fixReason = "AUDITORIA COMPLETA IA: verificação de fidelidade de todas as alternativas ao texto legal";
+          console.log(`[VALIDAR] #${q.id} AUDITORIA IA: questão será verificada integralmente pela IA`);
+        } else {
+          okCount++;
+          details.push({ id: q.id, status: "ok", motivo: realArticle ? `Validada (${realArticle}, prova literal score=${literalCheck.score.toFixed(2)})` : "Validada OK" });
+          console.log(`[VALIDAR] #${q.id} OK ${realArticle || ""} (literal score=${literalCheck.score.toFixed(2)})`);
+          continue;
+        }
       }
 
       // ══════════════════════════════════════════════════════════════════
