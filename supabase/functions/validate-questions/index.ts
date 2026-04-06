@@ -552,24 +552,15 @@ function fullAlternativesCheck(q: Record<string, any>, blocks: ArticleBlock[]): 
       continue;
     }
 
-    // Check if the alternative's content has ANY basis in the legal text
     const proof = literalProofCheck(altText, blocks);
     
     if (i === gabarito) {
-      // Correct alternative MUST have strong literal proof
       if (!proof.found) {
         correctValid = false;
         correctIssue = "Alternativa correta sem base literal na lei";
       }
     } else {
-      // Incorrect alternatives: check for factual consistency
-      // An incorrect alternative should ideally be a plausible distractor
-      // but if it contains a direct quote that's CORRECT, it might confuse
-      // We flag if an incorrect alt has HIGHER literal proof than the correct one
-      // or if it's an exact copy of legal text (should be subtly wrong)
       if (proof.found && proof.score >= 0.95) {
-        // This incorrect alternative is TOO literal — it might actually be correct
-        // which means the gabarito could be wrong
         const correctProof = literalProofCheck(normalizeWhitespace(q[ALT_KEYS[gabarito]] || ""), blocks);
         if (!correctProof.found || correctProof.score < proof.score) {
           issues.push({
@@ -587,6 +578,73 @@ function fullAlternativesCheck(q: Record<string, any>, blocks: ArticleBlock[]): 
     correctValid,
     incorrectIssues: issues,
     correctIssue,
+  };
+}
+
+/** AUDITORIA PROFUNDA: verifica detalhes factuais específicos (números, seções, prazos, nomes)
+ *  nas alternativas contra o texto legal. Detecta erros sutis como "2ª seção" vs "1ª seção". */
+function deepFactualAudit(q: Record<string, any>, blocks: ArticleBlock[], lawText: string): {
+  needsAudit: boolean;
+  suspiciousAlts: Array<{ key: string; label: string; detail: string }>;
+} {
+  const labels = ["A", "B", "C", "D", "E"];
+  const suspicious: Array<{ key: string; label: string; detail: string }> = [];
+  const normLaw = normalize(lawText);
+  
+  // Patterns that indicate specific factual claims that MUST match the law exactly
+  const factualPatterns = [
+    // Ordinal numbers (1ª, 2ª, 3ª seção/seçao/comissão etc)
+    /(\d+)[ªºa°]\s*(seção|secao|seçao|comissão|comissao|câmara|turma|divisão|grupo|batalhão|companhia|pelotão|região)/gi,
+    // Specific time periods
+    /(\d+)\s*(dias?|meses?|anos?|horas?)/gi,
+    // Specific percentages
+    /(\d+)\s*%/g,
+    // "chefe da X seção" pattern
+    /chefe\s+d[aeo]\s+(\d+)[ªºa°]?\s*(seção|secao|seçao)/gi,
+    // Specific ranks/positions that could be wrong
+    /(comandante|chefe|presidente|secretário|diretor|inspetor)\s+d[aeo]\s+([A-Za-zÀ-ú\s]+)/gi,
+    // "não precisa" vs "precisa" / "dispensada" vs "exigida"
+    /(dispensad[ao]|exigid[ao]|obrigatóri[ao]|facultativ[ao]|vedad[ao]|permitid[ao])/gi,
+    // IPM, sindicância, laudo patterns
+    /(sindicância|sindicancia|IPM|inquérito|inquerito|laudo|perícia|pericia|JMCS|junta\s+médica)/gi,
+  ];
+
+  for (let i = 0; i < ALT_KEYS.length; i++) {
+    const altText = normalizeWhitespace(q[ALT_KEYS[i]] || "");
+    if (altText.length < 10) continue;
+
+    for (const pattern of factualPatterns) {
+      pattern.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = pattern.exec(altText)) !== null) {
+        const claim = match[0];
+        const normClaim = normalize(claim);
+        // Check if this exact factual claim appears anywhere in the law
+        if (normClaim.length >= 4 && !normLaw.includes(normClaim)) {
+          // The specific claim is NOT in the law text — suspicious
+          // But check if a VARIANT exists (e.g., "1ª seção" instead of "2ª seção")
+          const basePattern = normClaim.replace(/\d+/, "\\d+");
+          try {
+            const variantRegex = new RegExp(basePattern, "i");
+            const lawMatch = normLaw.match(variantRegex);
+            if (lawMatch && lawMatch[0] !== normClaim) {
+              suspicious.push({
+                key: ALT_KEYS[i],
+                label: labels[i],
+                detail: `"${claim}" não encontrado na lei — lei contém "${lawMatch[0]}" (possível erro factual)`
+              });
+            }
+          } catch (_) {
+            // Regex error, skip
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    needsAudit: suspicious.length > 0,
+    suspiciousAlts: suspicious,
   };
 }
 
