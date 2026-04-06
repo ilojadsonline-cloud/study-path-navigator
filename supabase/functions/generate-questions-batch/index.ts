@@ -634,7 +634,7 @@ JSON array:
       const isTimeout = lastFetchError?.name === "AbortError";
       console.error(`[GERAR] Todas as tentativas falharam:`, String(lastFetchError));
       return new Response(JSON.stringify({
-        status: "erro", mensagem: isTimeout ? "OpenRouter demorou demais para responder." : `Erro de conexão: ${lastFetchError?.message}`,
+        status: "erro", mensagem: isTimeout ? "DeepSeek demorou demais para responder." : `Erro de conexão: ${lastFetchError?.message}`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isTimeout ? "TIMEOUT" : "FETCH_ERROR", descricao: String(lastFetchError) }] },
         error: String(lastFetchError), timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
