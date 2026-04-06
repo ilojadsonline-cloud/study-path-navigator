@@ -1105,17 +1105,45 @@ serve(async (req) => {
       const validArticlesList = buildValidArticlesList(blocks);
 
       const isLiteralFailure = fixReason.includes("PROVA LITERAL");
+      const isFullAudit = fixReason.includes("AUDITORIA COMPLETA IA");
+      const isFactualError = fixReason.includes("ERRO FACTUAL");
       const hasAltIssues = fullCheck.incorrectIssues.length > 0;
+      
+      // Build factual audit details if available
+      let factualAuditText = "";
+      if (lawText) {
+        const factualAudit = deepFactualAudit(q, blocks, lawText);
+        if (factualAudit.suspiciousAlts.length > 0) {
+          factualAuditText = `\n\nERROS FACTUAIS DETECTADOS AUTOMATICAMENTE:\n${factualAudit.suspiciousAlts.map(s => `- Alt ${s.label}) ${s.detail}`).join("\n")}`;
+        }
+      }
+      
       const altIssuesText = hasAltIssues
         ? `\n\nPROBLEMAS DETECTADOS NAS ALTERNATIVAS:\n${fullCheck.incorrectIssues.map(i => `- ${i.label}) ${i.issue}`).join("\n")}`
         : "";
 
-      const prompt = `${isLiteralFailure
-        ? `ATENÇÃO: A questão abaixo FALHOU na TRAVA DE PROVA LITERAL. A alternativa correta NÃO tem base no texto legal. Você DEVE REESCREVER A QUESTÃO DO ZERO usando APENAS trechos que EXISTEM LITERALMENTE no texto legal fornecido.`
-        : `A questão abaixo tem um ERRO CONFIRMADO: "${fixReason}".`
+      const prompt = `${isFullAudit
+        ? `AUDITORIA COMPLETA: Você deve LER CADA UMA DAS 5 ALTERNATIVAS da questão abaixo e VERIFICAR PALAVRA POR PALAVRA se o conteúdo está correto conforme o texto legal fornecido.
+        
+ATENÇÃO ESPECIAL para:
+- Números de seções/comissões (ex: "1ª seção" vs "2ª seção") 
+- Nomes de cargos e responsabilidades (ex: quem é responsável pelo quê)
+- Condições e requisitos (ex: se precisa ou não de sindicância/IPM/laudo)
+- Prazos e percentuais
+- Competências e atribuições (ex: quem preside, quem secretaria)
+- Exceções e ressalvas legais
+
+Se QUALQUER alternativa contiver informação que CONTRADIZ o texto legal, corrija-a imediatamente.
+Se a alternativa correta estiver errada, troque o gabarito ou reescreva.
+Se uma alternativa incorreta estiver acidentalmente correta segundo a lei, modifique-a para ser um distrator plausível.`
+        : isLiteralFailure
+          ? `ATENÇÃO: A questão abaixo FALHOU na TRAVA DE PROVA LITERAL. A alternativa correta NÃO tem base no texto legal. Você DEVE REESCREVER A QUESTÃO DO ZERO usando APENAS trechos que EXISTEM LITERALMENTE no texto legal fornecido.`
+          : isFactualError
+            ? `ATENÇÃO: A questão abaixo contém ERROS FACTUAIS nas alternativas. Dados específicos (números, seções, cargos, condições) NÃO correspondem ao texto legal. Verifique CADA alternativa contra a lei e corrija os dados incorretos.`
+            : `A questão abaixo tem um ERRO CONFIRMADO: "${fixReason}".`
       }
 ${focusCitation ? `A busca literal confirmou conteúdo em ${focusCitation} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
-${altIssuesText}
+${altIssuesText}${factualAuditText}
 
 ${deterministicCitation && targetCitationText ? `CITAÇÃO JURÍDICA OBRIGATÓRIA: ${deterministicCitation}
 
@@ -1130,9 +1158,13 @@ ${validArticlesList}
 
 REGRAS INVIOLÁVEIS:
 1. A alternativa correta DEVE conter texto que existe LITERALMENTE na lei. Copie trechos reais.
-2. TODAS as 5 alternativas devem ser verificadas contra o texto legal:
+2. VERIFICAÇÃO OBRIGATÓRIA DE TODAS AS 5 ALTERNATIVAS:
+   - Leia CADA alternativa (A, B, C, D, E) individualmente.
+   - Para CADA alternativa, localize no texto legal o trecho correspondente.
+   - Verifique se TODOS os detalhes estão corretos: números, seções, cargos, prazos, condições, exceções.
+   - Se um detalhe na alternativa CONTRADIZ a lei (ex: diz "2ª seção" mas a lei diz "1ª seção"), CORRIJA.
    - A alternativa CORRETA deve reproduzir fielmente o conteúdo da lei.
-   - As alternativas INCORRETAS devem ser distratores PLAUSÍVEIS mas com erros sutis (trocar palavras-chave, inverter conceitos, alterar prazos/condições). NÃO podem ser cópias literais corretas da lei.
+   - As alternativas INCORRETAS devem ser distratores PLAUSÍVEIS mas com erros sutis. NÃO podem ser cópias literais corretas da lei.
 3. ${deterministicCitation ? `O comentário DEVE obrigatoriamente citar ${deterministicCitation} (definida pelo código TypeScript e confirmada por busca literal).` : (focusCitation ? `O comentário DEVE obrigatoriamente citar ${focusCitation} (confirmada por busca literal).` : "Escolha qualquer artigo da LISTA ACIMA e baseie a questão nele." )}
 4. SOMENTE cite artigos da lista acima. Se um artigo NÃO está na lista, ele NÃO EXISTE no texto legal.
 5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
@@ -1143,6 +1175,7 @@ REGRAS INVIOLÁVEIS:
 10. FIDELIDADE AO artNum CANÔNICO: O número do artigo é determinado pela posição "Art. X" no texto legal.
 11. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO.
 12. PRIORIZE SEMPRE A CORREÇÃO: Reescreva e corrija a questão. Marque valida=false SOMENTE se for absolutamente impossível criar uma questão válida com o texto legal disponível.
+13. COMENTÁRIO DEVE EXPLICAR CADA ALTERNATIVA: No comentário, explique por que a correta está certa (com transcrição literal da lei) e por que CADA distrator está errado (indicando qual seria o correto segundo a lei).
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
@@ -1153,12 +1186,12 @@ ${articleContext}
 TEXTO LEGAL COMPLETO (${q.disciplina}):
 ${lawText.substring(0, 25000)}
 
-QUESTÃO COM ERRO:
+QUESTÃO ${isFullAudit ? "PARA AUDITORIA COMPLETA" : "COM ERRO"}:
 Enunciado: ${q.enunciado}
 A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
 Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${q.comentario}
 
-${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário."}
+${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : isFullAudit ? "VERIFIQUE CADA ALTERNATIVA CONTRA O TEXTO LEGAL. Se todas estiverem corretas, devolva a questão como está. Se encontrar QUALQUER erro factual, corrija." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário."}
 PRIORIZE A CORREÇÃO — só marque valida=false em último caso absoluto.
 Responda APENAS JSON (sem markdown):
 {"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
