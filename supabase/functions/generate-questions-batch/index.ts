@@ -642,7 +642,7 @@ JSON array:
 
     if (aiStatus === 429) {
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "Rate limit do OpenRouter.", paused: true,
+        status: "erro", mensagem: "Rate limit do DeepSeek.", paused: true,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "RATE_LIMIT", descricao: "Aguarde 1 minuto" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
