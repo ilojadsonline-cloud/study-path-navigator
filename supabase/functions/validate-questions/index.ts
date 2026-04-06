@@ -653,7 +653,7 @@ serve(async (req) => {
     const mode: "rules" | "ai" = body.mode || "rules";
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
 
     // 1. Fetch questions batch
     const { data: questions, error } = await supabase
