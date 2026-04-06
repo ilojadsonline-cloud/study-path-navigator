@@ -1128,6 +1128,7 @@ Responda APENAS JSON (sem markdown):
 
         const aiData = await aiResponse.json();
         let content = aiData.choices?.[0]?.message?.content || "";
+        content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
         content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         const result = JSON.parse(content);
 
