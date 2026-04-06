@@ -649,14 +649,14 @@ JSON array:
     }
 
     if (aiStatus === 402) {
-      let creditMessage = "Créditos insuficientes no OpenRouter.";
+      let creditMessage = "Créditos insuficientes no DeepSeek.";
       try {
         const parsed = JSON.parse(aiResponseText);
         creditMessage = parsed?.error?.message || creditMessage;
       } catch { /* ignore */ }
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "OpenRouter sem saldo/limite disponível.", paused: true,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "OPENROUTER_402", descricao: creditMessage }] },
+        status: "erro", mensagem: "DeepSeek sem saldo/limite disponível.", paused: true,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "DEEPSEEK_402", descricao: creditMessage }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
