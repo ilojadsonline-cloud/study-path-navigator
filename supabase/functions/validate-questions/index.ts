@@ -1112,7 +1112,7 @@ Responda APENAS JSON (sem markdown):
           const errText = await aiResponse.text();
           if (aiResponse.status === 429) {
             return new Response(JSON.stringify({
-              status: "parcial", mensagem: "Rate limit OpenRouter. Aguarde.", paused: true,
+              status: "parcial", mensagem: "Rate limit DeepSeek. Aguarde.", paused: true,
               detalhes: {
                 total_processado: okCount + fixedCount + deletedCount,
                 questoes_criadas: 0, questoes_corrigidas: fixedCount,
@@ -1123,7 +1123,7 @@ Responda APENAS JSON (sem markdown):
               last_id: q.id, details, timestamp,
             }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
-          throw new Error(`OpenRouter ${aiResponse.status}: ${errText.substring(0, 200)}`);
+          throw new Error(`DeepSeek ${aiResponse.status}: ${errText.substring(0, 200)}`);
         }
 
         const aiData = await aiResponse.json();

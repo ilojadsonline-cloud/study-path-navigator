@@ -676,8 +676,8 @@ JSON array:
     } catch {
       console.error("[GERAR] JSON externo inválido:", aiResponseText.substring(0, 200));
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "Resposta inválida do OpenRouter.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "OPENROUTER_INVALID_JSON", descricao: "JSON externo inválido" }] },
+        status: "erro", mensagem: "Resposta inválida do DeepSeek.",
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "DEEPSEEK_INVALID_JSON", descricao: "JSON externo inválido" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
