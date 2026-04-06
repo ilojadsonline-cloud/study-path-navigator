@@ -597,7 +597,7 @@ JSON array:
           signal: controller.signal,
         });
         aiStatus = response.status;
-        console.log(`[GERAR] OpenRouter status: ${aiStatus}, attempt ${attempt + 1}`);
+        console.log(`[GERAR] DeepSeek status: ${aiStatus}, attempt ${attempt + 1}`);
         aiResponseText = await response.text();
         clearTimeout(timeoutId);
 
