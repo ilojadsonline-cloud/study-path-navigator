@@ -1002,10 +1002,10 @@ serve(async (req) => {
       // ══════════════════════════════════════════════════════════════════
       // AI MODE — SEGURANÇA MÁXIMA: rewrite from scratch using law text
       // ══════════════════════════════════════════════════════════════════
-      if (!OPENROUTER_API_KEY) {
-        questoesRevisaoManual.push({ id: q.id, motivo: "OPENROUTER_API_KEY não configurada" });
-        errosEncontrados.push({ codigo: "NO_API_KEY", descricao: "OPENROUTER_API_KEY ausente" });
-        details.push({ id: q.id, status: "erro", motivo: "Sem API key OpenRouter" });
+      if (!DEEPSEEK_API_KEY) {
+        questoesRevisaoManual.push({ id: q.id, motivo: "DEEPSEEK_API_KEY não configurada" });
+        errosEncontrados.push({ codigo: "NO_API_KEY", descricao: "DEEPSEEK_API_KEY ausente" });
+        details.push({ id: q.id, status: "erro", motivo: "Sem API key DeepSeek" });
         continue;
       }
 
