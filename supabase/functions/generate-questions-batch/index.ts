@@ -662,9 +662,9 @@ JSON array:
     }
 
     if (!aiStatus || aiStatus < 200 || aiStatus >= 300) {
-      console.error(`[GERAR] OpenRouter error: ${aiStatus} ${aiResponseText.substring(0, 300)}`);
+      console.error(`[GERAR] DeepSeek error: ${aiStatus} ${aiResponseText.substring(0, 300)}`);
       return new Response(JSON.stringify({
-        status: "erro", mensagem: `Erro OpenRouter (${aiStatus ?? "desconhecido"})`,
+        status: "erro", mensagem: `Erro DeepSeek (${aiStatus ?? "desconhecido"})`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "API_ERROR", descricao: aiResponseText.substring(0, 200) }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
