@@ -1096,7 +1096,7 @@ Responda APENAS JSON (sem markdown):
             Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "deepseek-reasoner",
+            model: "deepseek-chat",
             messages: [
               { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, deterministicCitation) },
               { role: "user", content: prompt },
