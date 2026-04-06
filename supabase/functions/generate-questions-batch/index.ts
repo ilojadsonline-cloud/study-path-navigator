@@ -567,7 +567,7 @@ JSON array:
 
     // API call with retry logic
     const MAX_API_RETRIES = 2;
-    const OPENROUTER_TIMEOUT_MS = 110000; // 110s — within Supabase 150s limit
+    const DEEPSEEK_TIMEOUT_MS = 110000; // 110s — within Supabase 150s limit
     let aiStatus: number | null = null;
     let aiResponseText = "";
     let lastFetchError: any = null;
