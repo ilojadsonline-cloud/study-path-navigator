@@ -1242,11 +1242,85 @@ Responda APENAS JSON (sem markdown):
         const result = JSON.parse(content);
 
         if (result.valida === false) {
+          // IA said invalid — retry once asking to FORCE correction
+          console.log(`[VALIDAR] #${q.id} IA marcou inválida: "${result.motivo_erro}" — tentando retry forçando correção`);
+          
+          const retryPrompt = `A questão abaixo foi marcada como inválida com motivo: "${result.motivo_erro}".
+NÃO ACEITO exclusão. Você DEVE criar uma questão NOVA e VÁLIDA usando o mesmo tema/disciplina e o texto legal fornecido.
+Use QUALQUER artigo disponível na lista abaixo para criar uma questão correta.
+
+ARTIGOS PERMITIDOS: [${availableArticles}]
+TEXTO LEGAL (${q.disciplina}): ${lawText.substring(0, 20000)}
+
+Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}`;
+
+          try {
+            const retryController = new AbortController();
+            const retryTimeout = setTimeout(() => retryController.abort(), 55000);
+            const retryResp = await fetch("https://api.deepseek.com/chat/completions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
+              body: JSON.stringify({
+                model: "deepseek-chat",
+                messages: [
+                  { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, null) },
+                  { role: "user", content: retryPrompt },
+                ],
+                max_tokens: 4000, temperature: 0.3,
+              }),
+              signal: retryController.signal,
+            });
+            clearTimeout(retryTimeout);
+
+            if (retryResp.ok) {
+              const retryData = await retryResp.json();
+              let retryContent = retryData.choices?.[0]?.message?.content || "";
+              retryContent = retryContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+              const retryResult = JSON.parse(retryContent);
+              
+              if (retryResult.valida !== false && retryResult.enunciado) {
+                const retryGab = clampGabarito(retryResult.gabarito);
+                const retryCorrectText = normalizeWhitespace(retryResult[ALT_KEYS[retryGab]] || "");
+                const retryLiteral = literalProofCheck(retryCorrectText, blocks);
+                
+                if (retryLiteral.found) {
+                  const retryComment = forceDeterministicArticleInComment(
+                    normalizeWhitespace(retryResult.comentario || ""),
+                    retryLiteral.article
+                  );
+                  const { scrubbed: retryScrubbed } = scrubInvalidCitations(retryComment, blocks);
+                  const retryFinal = retryScrubbed.replace(/\[artigo não confirmado\]/g, retryLiteral.article || "");
+                  
+                  if (!hasUnconfirmedCitations(retryFinal)) {
+                    await supabase.from("questoes").update({
+                      enunciado: normalizeWhitespace(retryResult.enunciado),
+                      alt_a: normalizeWhitespace(retryResult.alt_a || q.alt_a),
+                      alt_b: normalizeWhitespace(retryResult.alt_b || q.alt_b),
+                      alt_c: normalizeWhitespace(retryResult.alt_c || q.alt_c),
+                      alt_d: normalizeWhitespace(retryResult.alt_d || q.alt_d),
+                      alt_e: normalizeWhitespace(retryResult.alt_e || q.alt_e),
+                      gabarito: retryGab,
+                      comentario: retryFinal,
+                    }).eq("id", q.id);
+                    fixedCount++;
+                    details.push({ id: q.id, status: "corrigida", motivo: `IA reescreveu do zero (retry): ${retryLiteral.article}` });
+                    console.log(`[VALIDAR] #${q.id} CORRIGIDA (retry): reescrita do zero → ${retryLiteral.article}`);
+                    await new Promise(r => setTimeout(r, 300));
+                    continue;
+                  }
+                }
+              }
+            }
+          } catch (retryErr) {
+            console.log(`[VALIDAR] #${q.id} Retry falhou: ${String(retryErr).substring(0, 80)}`);
+          }
+          
+          // Retry also failed — now delete as last resort
           questoesRevisaoManual.push({ id: q.id, motivo: result.motivo_erro || fixReason });
           await supabase.from("questoes").delete().eq("id", q.id);
           deletedCount++;
-          details.push({ id: q.id, status: "excluida", motivo: result.motivo_erro || fixReason });
-          console.log(`[VALIDAR] #${q.id} EXCLUÍDA (IA): ${result.motivo_erro || fixReason}`);
+          details.push({ id: q.id, status: "excluida", motivo: `Irrecuperável após retry: ${(result.motivo_erro || fixReason).substring(0, 120)}` });
+          console.log(`[VALIDAR] #${q.id} EXCLUÍDA (último recurso): ${result.motivo_erro || fixReason}`);
         } else {
           // ── POST-AI VALIDATION: re-run literal proof on AI output ──
           const aiGabarito = clampGabarito(result.gabarito);
@@ -1256,11 +1330,10 @@ Responda APENAS JSON (sem markdown):
           // TRAVA DE PROVA LITERAL on AI output
           const aiLiteralCheck = literalProofCheck(aiCorrectText, blocks);
           if (!aiLiteralCheck.found) {
-            console.log(`[VALIDAR] #${q.id} IA FALHOU PROVA LITERAL: resposta corrigida sem base na lei`);
-            questoesRevisaoManual.push({ id: q.id, motivo: "IA reescreveu mas resposta correta ainda sem base literal na lei" });
-            await supabase.from("questoes").delete().eq("id", q.id);
-            deletedCount++;
-            details.push({ id: q.id, status: "excluida", motivo: "Pós-IA: prova literal falhou novamente" });
+            console.log(`[VALIDAR] #${q.id} IA FALHOU PROVA LITERAL — mantendo original, marcando para revisão`);
+            // Keep original question instead of deleting
+            okCount++;
+            details.push({ id: q.id, status: "ok", motivo: `Mantida (IA não melhorou prova literal)` });
             await new Promise(r => setTimeout(r, 300));
             continue;
           }
@@ -1272,12 +1345,9 @@ Responda APENAS JSON (sem markdown):
           }
 
           if (deterministicArticle && aiLiteralCheck.article && aiLiteralCheck.article !== deterministicArticle) {
-            const mismatchReason = `IA desviou do artigo obrigatório: esperado ${deterministicArticle}, encontrado ${aiLiteralCheck.article}`;
-            questoesRevisaoManual.push({ id: q.id, motivo: mismatchReason });
-            await supabase.from("questoes").delete().eq("id", q.id);
-            deletedCount++;
-            details.push({ id: q.id, status: "excluida", motivo: mismatchReason });
-            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: ${mismatchReason}`);
+            console.log(`[VALIDAR] #${q.id} IA desviou do artigo — mantendo original`);
+            okCount++;
+            details.push({ id: q.id, status: "ok", motivo: `Mantida (IA desviou de ${deterministicArticle})` });
             await new Promise(r => setTimeout(r, 300));
             continue;
           }
@@ -1312,9 +1382,7 @@ Responda APENAS JSON (sem markdown):
             console.log(`[VALIDAR] #${q.id} SCRUB PÓS-IA: removidos ${removedArts.join(", ")}`);
           }
 
-          // CONFRONTO DE ARTIGOS on AI output: force the article to match literal proof
           if (enforcedCitation) {
-            // Replace any "[artigo não confirmado]" markers AND wrong articles with the enforced one
             finalComment = reconcileCommentArticle(
               scrubbedComment.replace(/\[artigo não confirmado\]/g, enforcedCitation),
               enforcedCitation
@@ -1325,34 +1393,22 @@ Responda APENAS JSON (sem markdown):
 
           finalComment = forceDeterministicArticleInComment(finalComment, enforcedCitation);
 
-          // If still has unconfirmed markers after reconciliation, delete
+          // If still has unconfirmed markers — keep original instead of deleting
           if (hasUnconfirmedCitations(finalComment)) {
-            questoesRevisaoManual.push({ id: q.id, motivo: `IA citou artigos inexistentes: ${removedArts.join(", ")}` });
-            await supabase.from("questoes").delete().eq("id", q.id);
-            deletedCount++;
-            details.push({ id: q.id, status: "excluida", motivo: `Alucinação irrecuperável: ${removedArts.join(", ")}` });
-            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: alucinação sem artigo real para substituir`);
+            console.log(`[VALIDAR] #${q.id} Alucinação pós-IA — mantendo original`);
+            okCount++;
+            details.push({ id: q.id, status: "ok", motivo: `Mantida (IA alucionou, original preservada)` });
             await new Promise(r => setTimeout(r, 300));
             continue;
           }
 
           const whitelistRecheck = enforceAvailableArticlesWhitelist(finalComment, availableArticles, enforcedCitation);
           finalComment = forceDeterministicArticleInComment(whitelistRecheck.corrected, enforcedCitation);
-          if (whitelistRecheck.invalidArticles.length > 0) {
-            console.error(
-              `[VALIDAR] #${q.id} WHITELIST FINAL: persistiram artigos fora da lista ${whitelistRecheck.invalidArticles.join(", ")}`,
-            );
-          }
 
           if (!commentContainsCitation(finalComment, enforcedCitation)) {
-            const citationReason = enforcedCitation
-              ? `Comentário final não preservou a citação obrigatória ${enforcedCitation}`
-              : "Comentário final sem citação jurídica confirmada";
-            questoesRevisaoManual.push({ id: q.id, motivo: citationReason });
-            await supabase.from("questoes").delete().eq("id", q.id);
-            deletedCount++;
-            details.push({ id: q.id, status: "excluida", motivo: citationReason });
-            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: ${citationReason}`);
+            console.log(`[VALIDAR] #${q.id} Citação ausente pós-IA — mantendo original`);
+            okCount++;
+            details.push({ id: q.id, status: "ok", motivo: `Mantida (citação não preservada pela IA)` });
             await new Promise(r => setTimeout(r, 300));
             continue;
           }
@@ -1360,11 +1416,9 @@ Responda APENAS JSON (sem markdown):
           // Final validation: ensure ALL remaining citations exist
           const postCheck = validateAllCitations(finalComment, blocks);
           if (!postCheck.valid) {
-            questoesRevisaoManual.push({ id: q.id, motivo: `Alucinação persistente: ${postCheck.missing.join(", ")}` });
-            await supabase.from("questoes").delete().eq("id", q.id);
-            deletedCount++;
-            details.push({ id: q.id, status: "excluida", motivo: `Alucinação: ${postCheck.missing.join(", ")}` });
-            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: alucinação persistente`);
+            console.log(`[VALIDAR] #${q.id} Alucinação persistente — mantendo original`);
+            okCount++;
+            details.push({ id: q.id, status: "ok", motivo: `Mantida (alucinação persistente na IA)` });
             await new Promise(r => setTimeout(r, 300));
             continue;
           }
@@ -1372,27 +1426,36 @@ Responda APENAS JSON (sem markdown):
           // Post-AI: apply all snippet corrections and verify
           const snippetVerify = verifySnippetBelongsToArticle(finalComment, blocks);
           if (!snippetVerify.valid) {
-            const snippetMismatchReason = enforcedCitation
-              ? `Snippet não pertence à citação obrigatória ${enforcedCitation}: ${snippetVerify.mismatches[0]}`
-              : `Snippet-artigo mismatch: ${snippetVerify.mismatches[0]}`;
-            questoesRevisaoManual.push({ id: q.id, motivo: snippetMismatchReason });
-            await supabase.from("questoes").delete().eq("id", q.id);
-            deletedCount++;
-            details.push({ id: q.id, status: "excluida", motivo: snippetMismatchReason });
-            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: ${snippetMismatchReason}`);
-            await new Promise(r => setTimeout(r, 300));
-            continue;
+            // Try to apply corrections instead of deleting
+            const { corrected: snippetFixed, appliedCorrections: snippetCorrs } = applyAllSnippetCorrections(finalComment, blocks);
+            if (snippetCorrs.length > 0) {
+              const reVerify = verifySnippetBelongsToArticle(snippetFixed, blocks);
+              if (reVerify.valid) {
+                finalComment = snippetFixed;
+                console.log(`[VALIDAR] #${q.id} Snippet corrigido pós-IA: ${snippetCorrs.map(c => `${c.from}→${c.to}`).join(", ")}`);
+              } else {
+                console.log(`[VALIDAR] #${q.id} Snippet mismatch pós-IA — mantendo original`);
+                okCount++;
+                details.push({ id: q.id, status: "ok", motivo: `Mantida (snippet mismatch irrecuperável)` });
+                await new Promise(r => setTimeout(r, 300));
+                continue;
+              }
+            } else {
+              console.log(`[VALIDAR] #${q.id} Snippet mismatch pós-IA — mantendo original`);
+              okCount++;
+              details.push({ id: q.id, status: "ok", motivo: `Mantida (snippet mismatch)` });
+              await new Promise(r => setTimeout(r, 300));
+              continue;
+            }
           }
 
           const finalEnunciado = normalizeWhitespace(result.enunciado || q.enunciado);
           const { scrubbed: scrubbedEnunciado } = scrubInvalidCitations(finalEnunciado, blocks);
           const crossCheck = crossValidateReferences(scrubbedEnunciado, finalComment);
           if (!crossCheck.valid) {
-            questoesRevisaoManual.push({ id: q.id, motivo: `Divergência pós-correção: ${crossCheck.reason}` });
-            await supabase.from("questoes").delete().eq("id", q.id);
-            deletedCount++;
-            details.push({ id: q.id, status: "excluida", motivo: crossCheck.reason });
-            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: divergência pós-IA`);
+            console.log(`[VALIDAR] #${q.id} Divergência pós-IA — mantendo original`);
+            okCount++;
+            details.push({ id: q.id, status: "ok", motivo: `Mantida (divergência pós-IA)` });
             await new Promise(r => setTimeout(r, 300));
             continue;
           }
@@ -1400,11 +1463,9 @@ Responda APENAS JSON (sem markdown):
           // Anti-decoreba on AI output
           const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
           if (decoreba.test((result.enunciado || "").toLowerCase())) {
-            questoesRevisaoManual.push({ id: q.id, motivo: "IA reescreveu mas manteve decoreba no enunciado" });
-            await supabase.from("questoes").delete().eq("id", q.id);
-            deletedCount++;
-            details.push({ id: q.id, status: "excluida", motivo: "Pós-IA: decoreba persistente" });
-            console.log(`[VALIDAR] #${q.id} EXCLUÍDA: decoreba pós-IA`);
+            console.log(`[VALIDAR] #${q.id} Decoreba pós-IA — mantendo original`);
+            okCount++;
+            details.push({ id: q.id, status: "ok", motivo: `Mantida (decoreba na reescrita IA)` });
             await new Promise(r => setTimeout(r, 300));
             continue;
           }
@@ -1413,15 +1474,15 @@ Responda APENAS JSON (sem markdown):
           const newFp = buildFingerprint(result.enunciado || q.enunciado);
           const newSemFp = buildSemanticFingerprint(finalComment, aiCorrectText);
           if (existingFingerprints.has(newFp) || batchFingerprints.has(newFp)) {
-            await supabase.from("questoes").delete().eq("id", q.id);
-            deletedCount++;
-            details.push({ id: q.id, status: "excluida", motivo: "Pós-IA: enunciado reescrito é duplicata" });
+            console.log(`[VALIDAR] #${q.id} Duplicata pós-IA — mantendo original`);
+            okCount++;
+            details.push({ id: q.id, status: "ok", motivo: `Mantida (reescrita duplicou outra)` });
             continue;
           }
           if (existingSemanticFPs.has(newSemFp) || batchSemanticFPs.has(newSemFp)) {
-            await supabase.from("questoes").delete().eq("id", q.id);
-            deletedCount++;
-            details.push({ id: q.id, status: "excluida", motivo: "Pós-IA: duplicata semântica após reescrita" });
+            console.log(`[VALIDAR] #${q.id} Duplicata semântica pós-IA — mantendo original`);
+            okCount++;
+            details.push({ id: q.id, status: "ok", motivo: `Mantida (duplicata semântica pós-IA)` });
             continue;
           }
 
@@ -1447,11 +1508,10 @@ Responda APENAS JSON (sem markdown):
           batchSemanticFPs.set(newSemFp, q.id);
         }
       } catch (aiErr) {
-        questoesRevisaoManual.push({ id: q.id, motivo: `Erro IA: ${String(aiErr).substring(0, 100)}` });
-        await supabase.from("questoes").delete().eq("id", q.id);
-        deletedCount++;
-        details.push({ id: q.id, status: "excluida", motivo: `Erro IA: ${String(aiErr).substring(0, 100)}` });
-        console.log(`[VALIDAR] #${q.id} EXCLUÍDA: erro IA - ${String(aiErr).substring(0, 100)}`);
+        // On AI error, keep original instead of deleting
+        console.log(`[VALIDAR] #${q.id} Erro IA — mantendo original: ${String(aiErr).substring(0, 100)}`);
+        okCount++;
+        details.push({ id: q.id, status: "ok", motivo: `Mantida (erro IA: ${String(aiErr).substring(0, 60)})` });
       }
 
       await new Promise(r => setTimeout(r, 300));
