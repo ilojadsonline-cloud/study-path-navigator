@@ -1217,6 +1217,7 @@ Responda APENAS JSON (sem markdown):
               { role: "user", content: prompt },
             ],
             max_tokens: 4000,
+            temperature: 0.1,
           }),
           signal: controller.signal,
         });
