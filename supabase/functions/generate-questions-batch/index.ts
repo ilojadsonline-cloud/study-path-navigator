@@ -83,6 +83,96 @@ function findArticleForText(snippet: string, blocks: ArticleBlock[]): string | n
   return null;
 }
 
+/** Find which article block contains the most overlap with a given text */
+function findBestArticleForText(snippet: string, blocks: ArticleBlock[]): { article: string; score: number } | null {
+  const normSnippet = normalize(snippet);
+  if (normSnippet.length < 10) return null;
+  const snippetWords = new Set(normSnippet.split(" ").filter(w => w.length > 3));
+  if (snippetWords.size < 3) return null;
+
+  let bestBlock: ArticleBlock | null = null;
+  let bestScore = 0;
+
+  for (const block of blocks) {
+    const blockWords = new Set(block.normText.split(" ").filter(w => w.length > 3));
+    let overlap = 0;
+    for (const w of snippetWords) {
+      if (blockWords.has(w)) overlap++;
+    }
+    const score = overlap / snippetWords.size;
+    if (score > bestScore && score >= 0.4) {
+      bestScore = score;
+      bestBlock = block;
+    }
+  }
+
+  return bestBlock ? { article: `Art. ${bestBlock.artNum}`, score: bestScore } : null;
+}
+
+/** Verifica se o trecho citado entre aspas no comentário pertence ao artigo indicado */
+function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]): { valid: boolean; mismatches: string[]; corrections: Array<{citedNum: string; actualNum: string}> } {
+  const mismatches: string[] = [];
+  const corrections: Array<{citedNum: string; actualNum: string}> = [];
+  const citationPattern = /Art\.?\s*(\d+)[^"""''']*?["""''']([^"""''']{15,500})["""''']/gi;
+  let match: RegExpExecArray | null;
+  while ((match = citationPattern.exec(comment)) !== null) {
+    const citedNum = match[1];
+    const snippet = normalizeWhitespace(match[2]);
+    const normSnippet = normalize(snippet);
+    if (normSnippet.length < 15) continue;
+
+    const actualArticle = findArticleForText(snippet, blocks);
+    if (actualArticle) {
+      const actualNum = actualArticle.match(/\d+/)?.[0];
+      if (actualNum && actualNum !== citedNum) {
+        mismatches.push(`Cita Art. ${citedNum} mas trecho pertence ao Art. ${actualNum}`);
+        corrections.push({ citedNum, actualNum });
+      }
+    } else {
+      const block = blocks.find(b => b.artNum === citedNum);
+      if (block) {
+        const snippetWords = new Set(normSnippet.split(" ").filter(w => w.length > 3));
+        const blockWords = new Set(block.normText.split(" ").filter(w => w.length > 3));
+        let overlap = 0;
+        for (const w of snippetWords) if (blockWords.has(w)) overlap++;
+        const score = snippetWords.size > 0 ? overlap / snippetWords.size : 0;
+        if (score < 0.3) {
+          mismatches.push(`Trecho entre aspas não encontrado no Art. ${citedNum} (overlap=${(score*100).toFixed(0)}%)`);
+          const best = findBestArticleForText(snippet, blocks);
+          if (best && best.score >= 0.4) {
+            const bestNum = best.article.match(/\d+/)?.[0];
+            if (bestNum && bestNum !== citedNum) {
+              corrections.push({ citedNum, actualNum: bestNum });
+            }
+          }
+        }
+      }
+    }
+  }
+  return { valid: mismatches.length === 0, mismatches, corrections };
+}
+
+/** Apply ALL snippet-vs-article corrections found */
+function applyAllSnippetCorrections(comment: string, blocks: ArticleBlock[]): { corrected: string; appliedCorrections: Array<{from: string; to: string}> } {
+  let result = comment;
+  const applied: Array<{from: string; to: string}> = [];
+  const check = verifySnippetBelongsToArticle(result, blocks);
+  
+  if (check.corrections.length > 0) {
+    for (const corr of check.corrections) {
+      if (articleExistsInBlocks(corr.actualNum, blocks)) {
+        result = result.replace(
+          new RegExp(`\\bArt\\.?\\s*${corr.citedNum}(?:º|°|o)?\\b(?!\\d)`, "gi"),
+          `Art. ${corr.actualNum}`
+        );
+        applied.push({ from: `Art. ${corr.citedNum}`, to: `Art. ${corr.actualNum}` });
+      }
+    }
+  }
+  
+  return { corrected: result, appliedCorrections: applied };
+}
+
 function extractAllCitedArticles(text: string): string[] {
   const matches = text.match(/Art\.?\s*(\d+)/gi) || [];
   return [...new Set(matches.map(m => m.match(/\d+/)?.[0] || "").filter(Boolean))];
