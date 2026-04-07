@@ -1170,12 +1170,16 @@ REGRAS INVIOLÁVEIS:
 5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
 6. NÃO use conhecimento externo. APENAS o texto fornecido.
 7. O trecho entre aspas no comentário DEVE existir LITERALMENTE no artigo citado. Copie e cole do texto.
-8. VERIFICAÇÃO OBRIGATÓRIA: Antes de citar "Art. X", faça a busca exata da string "Art. X" no texto legal. Se NÃO encontrar essa string exata, NÃO cite esse artigo.
+8. VERIFICAÇÃO OBRIGATÓRIA DE ARTIGO: Antes de citar "Art. X", localize o trecho no texto legal. Use o número do artigo onde o trecho REALMENTE aparece. Se o conteúdo sobre "exclusão de QA" está no Art. 33, cite Art. 33 — JAMAIS cite Art. 19 ou outro.
 9. CONSISTÊNCIA SNIPPET-ARTIGO: O trecho entre aspas DEVE pertencer ao artigo citado.
 10. FIDELIDADE AO artNum CANÔNICO: O número do artigo é determinado pela posição "Art. X" no texto legal.
 11. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO.
 12. PRIORIZE SEMPRE A CORREÇÃO: Reescreva e corrija a questão. Marque valida=false SOMENTE se for absolutamente impossível criar uma questão válida com o texto legal disponível.
-13. COMENTÁRIO DEVE EXPLICAR CADA ALTERNATIVA: No comentário, explique por que a correta está certa (com transcrição literal da lei) e por que CADA distrator está errado (indicando qual seria o correto segundo a lei).
+13. COMENTÁRIO PEDAGÓGICO COMPLETO (estilo professor):
+    - Comece com "Conforme o Art. X da [lei]:" + transcrição LITERAL
+    - Para CADA alternativa incorreta: "A alternativa X está incorreta porque afirma '[trecho errado]', quando a lei dispõe que '[trecho correto]'."
+    - NÃO PULE nenhuma alternativa incorreta — explique TODAS.
+    - Feche com conclusão pedagógica.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
