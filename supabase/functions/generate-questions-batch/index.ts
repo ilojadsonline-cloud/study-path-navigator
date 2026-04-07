@@ -853,6 +853,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
             ],
             response_format: { type: "json_object" },
             max_tokens: maxTokens,
+            temperature: 0.15,
           }),
           signal: controller.signal,
         });
