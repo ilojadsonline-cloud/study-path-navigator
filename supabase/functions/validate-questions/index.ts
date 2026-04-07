@@ -688,15 +688,17 @@ REGRAS ABSOLUTAS:
 5. GABARITO BLINDADO: inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E).
 6. FILTRO DE UNICIDADE: Não repita o mesmo artigo-base ou enunciado de questões existentes.
 7. PRIORIZE CORREÇÃO: Reescreva e corrija sempre que possível. Marque valida=false SOMENTE em último caso absoluto.
-8. COMENTÁRIO DEVE EXPLICAR CADA ALTERNATIVA: Para cada distrator, explique brevemente por que está errado e qual seria o correto segundo a lei.
+8. COMENTÁRIO PEDAGÓGICO OBRIGATÓRIO (estilo professor explicando ao aluno):
+   - Comece com "Conforme o Art. X da [nome da lei]:" + transcrição LITERAL do trecho que fundamenta a resposta.
+   - VERIFIQUE O NÚMERO DO ARTIGO: localize o trecho literal no texto legal e use o número do artigo onde ele REALMENTE aparece. Se o texto sobre "exclusão de QA" está no Art. 33, cite Art. 33 — JAMAIS cite Art. 19 ou outro número.
+   - Para CADA alternativa incorreta, explique: "A alternativa X está incorreta porque afirma '[trecho]', quando na verdade a lei dispõe que '[trecho correto]' no Art. Y."
+   - NÃO PULE nenhuma alternativa incorreta — explique TODAS.
+   - Feche com conclusão pedagógica.
 
-REGRAS PEDAGÓGICAS (OBRIGATÓRIAS):
-- PROIBIDO DECOREBA: O enunciado NÃO PODE mencionar número de artigo. Sempre CASO PRÁTICO.
-- CASO PRÁTICO: Situação concreta do cotidiano militar com personagens fictícios (Soldado Silva, Cabo Pereira).
-- CONTEXTO HIERÁRQUICO: Respeite RIGOROSAMENTE a hierarquia militar conforme o texto legal.
-- PEGADINHAS INTELIGENTES: Alternativas incorretas usam trocadilhos jurídicos sutis.
-- O número do artigo aparece SOMENTE no comentário como fundamentação.
-- COMENTÁRIO EXPLICATIVO COMPLETO: Explique por que a correta é válida (com transcrição literal), e por que CADA distrator está errado.
+REGRA CRÍTICA — VERIFICAÇÃO DE ARTIGOS:
+- Antes de escrever "Art. X" no comentário, LOCALIZE o trecho citado no texto legal fornecido.
+- Verifique em qual "Art." ele realmente aparece.
+- Um comentário com artigo errado é TÃO GRAVE quanto uma alternativa incorreta.
 
 Responda APENAS JSON válido, sem markdown, sem explicações adicionais.`;
 }
@@ -1168,12 +1170,16 @@ REGRAS INVIOLÁVEIS:
 5. Gabarito: inteiro 0-4 (0=A, 1=B, 2=C, 3=D, 4=E). NUNCA letras.
 6. NÃO use conhecimento externo. APENAS o texto fornecido.
 7. O trecho entre aspas no comentário DEVE existir LITERALMENTE no artigo citado. Copie e cole do texto.
-8. VERIFICAÇÃO OBRIGATÓRIA: Antes de citar "Art. X", faça a busca exata da string "Art. X" no texto legal. Se NÃO encontrar essa string exata, NÃO cite esse artigo.
+8. VERIFICAÇÃO OBRIGATÓRIA DE ARTIGO: Antes de citar "Art. X", localize o trecho no texto legal. Use o número do artigo onde o trecho REALMENTE aparece. Se o conteúdo sobre "exclusão de QA" está no Art. 33, cite Art. 33 — JAMAIS cite Art. 19 ou outro.
 9. CONSISTÊNCIA SNIPPET-ARTIGO: O trecho entre aspas DEVE pertencer ao artigo citado.
 10. FIDELIDADE AO artNum CANÔNICO: O número do artigo é determinado pela posição "Art. X" no texto legal.
 11. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO.
 12. PRIORIZE SEMPRE A CORREÇÃO: Reescreva e corrija a questão. Marque valida=false SOMENTE se for absolutamente impossível criar uma questão válida com o texto legal disponível.
-13. COMENTÁRIO DEVE EXPLICAR CADA ALTERNATIVA: No comentário, explique por que a correta está certa (com transcrição literal da lei) e por que CADA distrator está errado (indicando qual seria o correto segundo a lei).
+13. COMENTÁRIO PEDAGÓGICO COMPLETO (estilo professor):
+    - Comece com "Conforme o Art. X da [lei]:" + transcrição LITERAL
+    - Para CADA alternativa incorreta: "A alternativa X está incorreta porque afirma '[trecho errado]', quando a lei dispõe que '[trecho correto]'."
+    - NÃO PULE nenhuma alternativa incorreta — explique TODAS.
+    - Feche com conclusão pedagógica.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
@@ -1211,6 +1217,7 @@ Responda APENAS JSON (sem markdown):
               { role: "user", content: prompt },
             ],
             max_tokens: 4000,
+            temperature: 0.1,
           }),
           signal: controller.signal,
         });

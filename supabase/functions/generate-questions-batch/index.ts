@@ -83,6 +83,96 @@ function findArticleForText(snippet: string, blocks: ArticleBlock[]): string | n
   return null;
 }
 
+/** Find which article block contains the most overlap with a given text */
+function findBestArticleForText(snippet: string, blocks: ArticleBlock[]): { article: string; score: number } | null {
+  const normSnippet = normalize(snippet);
+  if (normSnippet.length < 10) return null;
+  const snippetWords = new Set(normSnippet.split(" ").filter(w => w.length > 3));
+  if (snippetWords.size < 3) return null;
+
+  let bestBlock: ArticleBlock | null = null;
+  let bestScore = 0;
+
+  for (const block of blocks) {
+    const blockWords = new Set(block.normText.split(" ").filter(w => w.length > 3));
+    let overlap = 0;
+    for (const w of snippetWords) {
+      if (blockWords.has(w)) overlap++;
+    }
+    const score = overlap / snippetWords.size;
+    if (score > bestScore && score >= 0.4) {
+      bestScore = score;
+      bestBlock = block;
+    }
+  }
+
+  return bestBlock ? { article: `Art. ${bestBlock.artNum}`, score: bestScore } : null;
+}
+
+/** Verifica se o trecho citado entre aspas no comentário pertence ao artigo indicado */
+function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]): { valid: boolean; mismatches: string[]; corrections: Array<{citedNum: string; actualNum: string}> } {
+  const mismatches: string[] = [];
+  const corrections: Array<{citedNum: string; actualNum: string}> = [];
+  const citationPattern = /Art\.?\s*(\d+)[^"""''']*?["""''']([^"""''']{15,500})["""''']/gi;
+  let match: RegExpExecArray | null;
+  while ((match = citationPattern.exec(comment)) !== null) {
+    const citedNum = match[1];
+    const snippet = normalizeWhitespace(match[2]);
+    const normSnippet = normalize(snippet);
+    if (normSnippet.length < 15) continue;
+
+    const actualArticle = findArticleForText(snippet, blocks);
+    if (actualArticle) {
+      const actualNum = actualArticle.match(/\d+/)?.[0];
+      if (actualNum && actualNum !== citedNum) {
+        mismatches.push(`Cita Art. ${citedNum} mas trecho pertence ao Art. ${actualNum}`);
+        corrections.push({ citedNum, actualNum });
+      }
+    } else {
+      const block = blocks.find(b => b.artNum === citedNum);
+      if (block) {
+        const snippetWords = new Set(normSnippet.split(" ").filter(w => w.length > 3));
+        const blockWords = new Set(block.normText.split(" ").filter(w => w.length > 3));
+        let overlap = 0;
+        for (const w of snippetWords) if (blockWords.has(w)) overlap++;
+        const score = snippetWords.size > 0 ? overlap / snippetWords.size : 0;
+        if (score < 0.3) {
+          mismatches.push(`Trecho entre aspas não encontrado no Art. ${citedNum} (overlap=${(score*100).toFixed(0)}%)`);
+          const best = findBestArticleForText(snippet, blocks);
+          if (best && best.score >= 0.4) {
+            const bestNum = best.article.match(/\d+/)?.[0];
+            if (bestNum && bestNum !== citedNum) {
+              corrections.push({ citedNum, actualNum: bestNum });
+            }
+          }
+        }
+      }
+    }
+  }
+  return { valid: mismatches.length === 0, mismatches, corrections };
+}
+
+/** Apply ALL snippet-vs-article corrections found */
+function applyAllSnippetCorrections(comment: string, blocks: ArticleBlock[]): { corrected: string; appliedCorrections: Array<{from: string; to: string}> } {
+  let result = comment;
+  const applied: Array<{from: string; to: string}> = [];
+  const check = verifySnippetBelongsToArticle(result, blocks);
+  
+  if (check.corrections.length > 0) {
+    for (const corr of check.corrections) {
+      if (articleExistsInBlocks(corr.actualNum, blocks)) {
+        result = result.replace(
+          new RegExp(`\\bArt\\.?\\s*${corr.citedNum}(?:º|°|o)?\\b(?!\\d)`, "gi"),
+          `Art. ${corr.actualNum}`
+        );
+        applied.push({ from: `Art. ${corr.citedNum}`, to: `Art. ${corr.actualNum}` });
+      }
+    }
+  }
+  
+  return { corrected: result, appliedCorrections: applied };
+}
+
 function extractAllCitedArticles(text: string): string[] {
   const matches = text.match(/Art\.?\s*(\d+)/gi) || [];
   return [...new Set(matches.map(m => m.match(/\d+/)?.[0] || "").filter(Boolean))];
@@ -670,11 +760,22 @@ PRINCÍPIOS FUNDAMENTAIS:
 4. PROIBIÇÃO DE DECOREBA: NUNCA cite números de artigos no enunciado. O candidato demonstra COMPREENSÃO, não memorização.
 5. CADA QUESTÃO É ÚNICA: Varie estilo, estrutura, tipo de raciocínio e padrão de enunciado em CADA questão.
 
-ESTRUTURA DO COMENTÁRIO (obrigatória e detalhada):
-a) RACIOCÍNIO JURÍDICO: Explique o percurso lógico-jurídico para chegar à resposta, incluindo premissas e conclusão.
-b) TRANSCRIÇÃO LITERAL: "Conforme o Art. X: '[trecho exato da lei]'." — cite o dispositivo completo relevante.
-c) ANÁLISE INDIVIDUALIZADA DAS INCORRETAS: Para CADA alternativa incorreta, explique ESPECIFICAMENTE qual detalhe está errado e qual seria a redação correta conforme a lei. Ex: "A alternativa A está incorreta porque afirma 'poderá', quando o Art. Y dispõe que 'deverá', indicando obrigatoriedade e não facultatividade."
+ESTRUTURA DO COMENTÁRIO (obrigatória e detalhada — estilo professor explicando ao aluno):
+a) IDENTIFICAÇÃO DO FUNDAMENTO: Comece com "Conforme o Art. X da [nome da lei]:" seguido da transcrição LITERAL do trecho que fundamenta a resposta correta. O número do artigo DEVE ser verificado: localize o texto exato na lei e use o número do artigo onde ele realmente aparece. Se o trecho está no Art. 33, cite Art. 33 — NUNCA cite um artigo diferente.
+b) EXPLICAÇÃO DA CORRETA: Explique POR QUE a alternativa correta está certa, conectando cada elemento da alternativa ao texto literal da lei.
+c) ANÁLISE INDIVIDUALIZADA DE CADA INCORRETA (OBRIGATÓRIO — NÃO PULE NENHUMA):
+   - Para a alternativa A (se incorreta): "A alternativa A está incorreta porque afirma '[trecho errado]', quando na verdade a lei dispõe que '[trecho correto da lei]'."
+   - Para a alternativa B (se incorreta): idem
+   - Para a alternativa C (se incorreta): idem
+   - Para a alternativa D (se incorreta): idem
+   - Para a alternativa E (se incorreta): idem
+   Cada explicação deve indicar QUAL SERIA o correto conforme a lei.
 d) CONCLUSÃO PEDAGÓGICA: Feche com uma frase que sintetize o ponto-chave que o candidato deveria dominar.
+
+REGRA CRÍTICA PARA NÚMEROS DE ARTIGOS NO COMENTÁRIO:
+- Antes de citar "Art. X", LOCALIZE o trecho literal no texto legal e verifique em qual artigo ele realmente aparece.
+- Se o trecho sobre "exclusão de QA" está no Art. 33, cite Art. 33 — JAMAIS cite Art. 19 ou outro número.
+- O número do artigo NÃO é um detalhe menor: um artigo errado invalida toda a questão.
 
 Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do JSON, no formato {"questions":[...]}.`;
 
@@ -752,6 +853,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
             ],
             response_format: { type: "json_object" },
             max_tokens: maxTokens,
+            temperature: 0.15,
           }),
           signal: controller.signal,
         });
@@ -971,6 +1073,31 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         questoesRevisaoManual.push({ motivo: "Comentário sem citação de artigo" });
         console.log(`[GERAR] Q${idx+1} descartada: sem artigo no comentário`);
         continue;
+      }
+
+      // ── Snippet-article verification: quoted text must belong to cited article ──
+      const snippetCheck = verifySnippetBelongsToArticle(q.comentario, blocks);
+      if (!snippetCheck.valid) {
+        // Try auto-correction
+        const { corrected: snippetFixed, appliedCorrections: snippetCorrs } = applyAllSnippetCorrections(q.comentario, blocks);
+        if (snippetCorrs.length > 0) {
+          const reVerify = verifySnippetBelongsToArticle(snippetFixed, blocks);
+          const reCheck = validateAllCitations(snippetFixed, blocks);
+          if (reVerify.valid && reCheck.valid) {
+            q.comentario = snippetFixed;
+            console.log(`[GERAR] Q${idx+1} AUTO-FIX snippet: ${snippetCorrs.map(c => `${c.from}→${c.to}`).join(", ")}`);
+          } else {
+            discarded++;
+            questoesRevisaoManual.push({ motivo: `Snippet-artigo mismatch: ${snippetCheck.mismatches[0]}` });
+            console.log(`[GERAR] Q${idx+1} descartada: snippet-artigo mismatch irrecuperável`);
+            continue;
+          }
+        } else {
+          discarded++;
+          questoesRevisaoManual.push({ motivo: `Snippet-artigo mismatch: ${snippetCheck.mismatches[0]}` });
+          console.log(`[GERAR] Q${idx+1} descartada: ${snippetCheck.mismatches[0]}`);
+          continue;
+        }
       }
 
       // ── Cross-validation ──
