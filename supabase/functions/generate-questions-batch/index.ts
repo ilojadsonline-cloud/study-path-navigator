@@ -1074,6 +1074,31 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
+      // ── Snippet-article verification: quoted text must belong to cited article ──
+      const snippetCheck = verifySnippetBelongsToArticle(q.comentario, blocks);
+      if (!snippetCheck.valid) {
+        // Try auto-correction
+        const { corrected: snippetFixed, appliedCorrections: snippetCorrs } = applyAllSnippetCorrections(q.comentario, blocks);
+        if (snippetCorrs.length > 0) {
+          const reVerify = verifySnippetBelongsToArticle(snippetFixed, blocks);
+          const reCheck = validateAllCitations(snippetFixed, blocks);
+          if (reVerify.valid && reCheck.valid) {
+            q.comentario = snippetFixed;
+            console.log(`[GERAR] Q${idx+1} AUTO-FIX snippet: ${snippetCorrs.map(c => `${c.from}→${c.to}`).join(", ")}`);
+          } else {
+            discarded++;
+            questoesRevisaoManual.push({ motivo: `Snippet-artigo mismatch: ${snippetCheck.mismatches[0]}` });
+            console.log(`[GERAR] Q${idx+1} descartada: snippet-artigo mismatch irrecuperável`);
+            continue;
+          }
+        } else {
+          discarded++;
+          questoesRevisaoManual.push({ motivo: `Snippet-artigo mismatch: ${snippetCheck.mismatches[0]}` });
+          console.log(`[GERAR] Q${idx+1} descartada: ${snippetCheck.mismatches[0]}`);
+          continue;
+        }
+      }
+
       // ── Cross-validation ──
       const crossCheck = crossValidateReferences(q.enunciado, q.comentario);
       if (!crossCheck.valid) {
