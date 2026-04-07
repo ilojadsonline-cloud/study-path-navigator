@@ -760,11 +760,22 @@ PRINCÍPIOS FUNDAMENTAIS:
 4. PROIBIÇÃO DE DECOREBA: NUNCA cite números de artigos no enunciado. O candidato demonstra COMPREENSÃO, não memorização.
 5. CADA QUESTÃO É ÚNICA: Varie estilo, estrutura, tipo de raciocínio e padrão de enunciado em CADA questão.
 
-ESTRUTURA DO COMENTÁRIO (obrigatória e detalhada):
-a) RACIOCÍNIO JURÍDICO: Explique o percurso lógico-jurídico para chegar à resposta, incluindo premissas e conclusão.
-b) TRANSCRIÇÃO LITERAL: "Conforme o Art. X: '[trecho exato da lei]'." — cite o dispositivo completo relevante.
-c) ANÁLISE INDIVIDUALIZADA DAS INCORRETAS: Para CADA alternativa incorreta, explique ESPECIFICAMENTE qual detalhe está errado e qual seria a redação correta conforme a lei. Ex: "A alternativa A está incorreta porque afirma 'poderá', quando o Art. Y dispõe que 'deverá', indicando obrigatoriedade e não facultatividade."
+ESTRUTURA DO COMENTÁRIO (obrigatória e detalhada — estilo professor explicando ao aluno):
+a) IDENTIFICAÇÃO DO FUNDAMENTO: Comece com "Conforme o Art. X da [nome da lei]:" seguido da transcrição LITERAL do trecho que fundamenta a resposta correta. O número do artigo DEVE ser verificado: localize o texto exato na lei e use o número do artigo onde ele realmente aparece. Se o trecho está no Art. 33, cite Art. 33 — NUNCA cite um artigo diferente.
+b) EXPLICAÇÃO DA CORRETA: Explique POR QUE a alternativa correta está certa, conectando cada elemento da alternativa ao texto literal da lei.
+c) ANÁLISE INDIVIDUALIZADA DE CADA INCORRETA (OBRIGATÓRIO — NÃO PULE NENHUMA):
+   - Para a alternativa A (se incorreta): "A alternativa A está incorreta porque afirma '[trecho errado]', quando na verdade a lei dispõe que '[trecho correto da lei]'."
+   - Para a alternativa B (se incorreta): idem
+   - Para a alternativa C (se incorreta): idem
+   - Para a alternativa D (se incorreta): idem
+   - Para a alternativa E (se incorreta): idem
+   Cada explicação deve indicar QUAL SERIA o correto conforme a lei.
 d) CONCLUSÃO PEDAGÓGICA: Feche com uma frase que sintetize o ponto-chave que o candidato deveria dominar.
+
+REGRA CRÍTICA PARA NÚMEROS DE ARTIGOS NO COMENTÁRIO:
+- Antes de citar "Art. X", LOCALIZE o trecho literal no texto legal e verifique em qual artigo ele realmente aparece.
+- Se o trecho sobre "exclusão de QA" está no Art. 33, cite Art. 33 — JAMAIS cite Art. 19 ou outro número.
+- O número do artigo NÃO é um detalhe menor: um artigo errado invalida toda a questão.
 
 Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do JSON, no formato {"questions":[...]}.`;
 
