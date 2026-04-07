@@ -688,15 +688,17 @@ REGRAS ABSOLUTAS:
 5. GABARITO BLINDADO: inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E).
 6. FILTRO DE UNICIDADE: Não repita o mesmo artigo-base ou enunciado de questões existentes.
 7. PRIORIZE CORREÇÃO: Reescreva e corrija sempre que possível. Marque valida=false SOMENTE em último caso absoluto.
-8. COMENTÁRIO DEVE EXPLICAR CADA ALTERNATIVA: Para cada distrator, explique brevemente por que está errado e qual seria o correto segundo a lei.
+8. COMENTÁRIO PEDAGÓGICO OBRIGATÓRIO (estilo professor explicando ao aluno):
+   - Comece com "Conforme o Art. X da [nome da lei]:" + transcrição LITERAL do trecho que fundamenta a resposta.
+   - VERIFIQUE O NÚMERO DO ARTIGO: localize o trecho literal no texto legal e use o número do artigo onde ele REALMENTE aparece. Se o texto sobre "exclusão de QA" está no Art. 33, cite Art. 33 — JAMAIS cite Art. 19 ou outro número.
+   - Para CADA alternativa incorreta, explique: "A alternativa X está incorreta porque afirma '[trecho]', quando na verdade a lei dispõe que '[trecho correto]' no Art. Y."
+   - NÃO PULE nenhuma alternativa incorreta — explique TODAS.
+   - Feche com conclusão pedagógica.
 
-REGRAS PEDAGÓGICAS (OBRIGATÓRIAS):
-- PROIBIDO DECOREBA: O enunciado NÃO PODE mencionar número de artigo. Sempre CASO PRÁTICO.
-- CASO PRÁTICO: Situação concreta do cotidiano militar com personagens fictícios (Soldado Silva, Cabo Pereira).
-- CONTEXTO HIERÁRQUICO: Respeite RIGOROSAMENTE a hierarquia militar conforme o texto legal.
-- PEGADINHAS INTELIGENTES: Alternativas incorretas usam trocadilhos jurídicos sutis.
-- O número do artigo aparece SOMENTE no comentário como fundamentação.
-- COMENTÁRIO EXPLICATIVO COMPLETO: Explique por que a correta é válida (com transcrição literal), e por que CADA distrator está errado.
+REGRA CRÍTICA — VERIFICAÇÃO DE ARTIGOS:
+- Antes de escrever "Art. X" no comentário, LOCALIZE o trecho citado no texto legal fornecido.
+- Verifique em qual "Art." ele realmente aparece.
+- Um comentário com artigo errado é TÃO GRAVE quanto uma alternativa incorreta.
 
 Responda APENAS JSON válido, sem markdown, sem explicações adicionais.`;
 }
