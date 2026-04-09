@@ -831,8 +831,8 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
     let aiResponseText = "";
     let lastFetchError: any = null;
 
-    // Larger output budget reduces truncation on longer comments/cenários.
-    const maxTokens = Math.min(4096, 1400 + batchSize * 900);
+    // Larger output budget — rich comments need space for per-alternative analysis.
+    const maxTokens = Math.min(6000, 2000 + batchSize * 1100);
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
