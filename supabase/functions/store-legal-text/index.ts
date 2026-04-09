@@ -27,12 +27,15 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Delete old version completely before inserting new one
+    await supabase
+      .from("discipline_legal_texts")
+      .delete()
+      .eq("disciplina", disciplina);
+
     const { data, error } = await supabase
       .from("discipline_legal_texts")
-      .upsert(
-        { disciplina, lei_nome, content, updated_at: new Date().toISOString() },
-        { onConflict: "disciplina" }
-      )
+      .insert({ disciplina, lei_nome, content, updated_at: new Date().toISOString() })
       .select("id, disciplina, updated_at")
       .single();
 
