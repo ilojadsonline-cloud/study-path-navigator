@@ -245,6 +245,62 @@ function crossValidateReferences(enunciado: string, comment: string): { valid: b
   return { valid: true, reason: "" };
 }
 
+/** Compute how much literal support an alternative has in the law text */
+function computeAltLiteralSupport(altText: string, lawNorm: string): number {
+  const norm = normalize(altText);
+  const words = norm.split(" ").filter(w => w.length > 3);
+  if (words.length === 0) return 0;
+  let matched = 0;
+  for (const w of words) { if (lawNorm.includes(w)) matched++; }
+  return matched / words.length;
+}
+
+/** Check if the correct alternative's key phrases exist in the specific cited article block */
+function computeArticleSpecificProof(altText: string, commentText: string, blocks: ArticleBlock[]): number {
+  const citedNums = extractAllCitedArticles(commentText);
+  if (citedNums.length === 0) return 0;
+  
+  // Combine all cited article blocks
+  const citedBlocksText = citedNums
+    .map(num => blocks.find(b => b.artNum === num))
+    .filter(Boolean)
+    .map(b => b!.normText)
+    .join(" ");
+  
+  if (!citedBlocksText) return 0;
+  
+  const normAlt = normalize(altText);
+  const words = normAlt.split(" ").filter(w => w.length > 3);
+  if (words.length === 0) return 0;
+  
+  let matched = 0;
+  for (const w of words) { if (citedBlocksText.includes(w)) matched++; }
+  return matched / words.length;
+}
+
+/** Detect ambiguity: check if any incorrect alternative has support >= threshold */
+function detectAmbiguity(q: any, blocks: ArticleBlock[], lawNorm: string): { ambiguous: boolean; details: string } {
+  const gab = typeof q.gabarito === "number" ? q.gabarito : 0;
+  const correctKey = ALT_KEYS[Math.min(Math.max(gab, 0), 4)];
+  const correctScore = computeAltLiteralSupport(q[correctKey] || "", lawNorm);
+  
+  const highSupportIncorrect: string[] = [];
+  for (let i = 0; i < ALT_KEYS.length; i++) {
+    if (i === gab) continue;
+    const altText = q[ALT_KEYS[i]] || "";
+    const score = computeAltLiteralSupport(altText, lawNorm);
+    // If an incorrect alt has >= 85% literal support AND is close to the correct one
+    if (score >= 0.85 && score >= correctScore * 0.9) {
+      highSupportIncorrect.push(`${String.fromCharCode(65 + i)}=${(score * 100).toFixed(0)}%`);
+    }
+  }
+  
+  if (highSupportIncorrect.length > 0) {
+    return { ambiguous: true, details: `Alternativas incorretas com alto suporte literal: ${highSupportIncorrect.join(", ")}` };
+  }
+  return { ambiguous: false, details: "" };
+}
+
 function buildFingerprint(enunciado: string): string {
   return normalize(enunciado).replace(/\s+/g, "").substring(0, 80);
 }
@@ -761,15 +817,16 @@ PRINCÍPIOS FUNDAMENTAIS:
 5. CADA QUESTÃO É ÚNICA: Varie estilo, estrutura, tipo de raciocínio e padrão de enunciado em CADA questão.
 
 ESTRUTURA DO COMENTÁRIO (obrigatória e detalhada — estilo professor explicando ao aluno):
-a) IDENTIFICAÇÃO DO FUNDAMENTO: Comece com "Conforme o Art. X da [nome da lei]:" seguido da transcrição LITERAL do trecho que fundamenta a resposta correta. O número do artigo DEVE ser verificado: localize o texto exato na lei e use o número do artigo onde ele realmente aparece. Se o trecho está no Art. 33, cite Art. 33 — NUNCA cite um artigo diferente.
-b) EXPLICAÇÃO DA CORRETA: Explique POR QUE a alternativa correta está certa, conectando cada elemento da alternativa ao texto literal da lei.
+a) IDENTIFICAÇÃO DO FUNDAMENTO: Comece com "Conforme o Art. X da [nome da lei]:" seguido da transcrição LITERAL e EXATA do trecho que fundamenta a resposta correta, copiado CARACTERE POR CARACTERE do texto legal fornecido. O número do artigo DEVE ser verificado: localize o texto exato na lei e use o número do artigo onde ele realmente aparece. Se o trecho está no Art. 33, cite Art. 33 — NUNCA cite um artigo diferente.
+   ATENÇÃO: Antes de escrever o número do artigo, RELEIA o texto legal e CONFIRME que o trecho citado entre aspas está DENTRO daquele artigo. Se houver dúvida, busque o trecho no texto completo.
+b) EXPLICAÇÃO DA CORRETA: Explique POR QUE a alternativa correta está certa, conectando cada elemento da alternativa ao texto literal da lei. A alternativa correta deve ser uma PARÁFRASE FIEL do dispositivo — o leitor deve conseguir encontrar cada afirmação no artigo citado.
 c) ANÁLISE INDIVIDUALIZADA DE CADA INCORRETA (OBRIGATÓRIO — NÃO PULE NENHUMA):
-   - Para a alternativa A (se incorreta): "A alternativa A está incorreta porque afirma '[trecho errado]', quando na verdade a lei dispõe que '[trecho correto da lei]'."
+   - Para a alternativa A (se incorreta): "A alternativa A está incorreta porque afirma '[trecho errado]', quando na verdade o Art. Y dispõe que '[trecho correto LITERAL da lei]'."
    - Para a alternativa B (se incorreta): idem
    - Para a alternativa C (se incorreta): idem
    - Para a alternativa D (se incorreta): idem
    - Para a alternativa E (se incorreta): idem
-   Cada explicação deve indicar QUAL SERIA o correto conforme a lei.
+   Cada explicação deve indicar QUAL dispositivo legal a alternativa contradiz e transcrever o trecho correto.
 d) CONCLUSÃO PEDAGÓGICA: Feche com uma frase que sintetize o ponto-chave que o candidato deveria dominar.
 
 REGRA CRÍTICA PARA NÚMEROS DE ARTIGOS NO COMENTÁRIO:
@@ -804,9 +861,13 @@ MÉTODO DE CRIAÇÃO:
 2) Explore DIFERENTES ASPECTOS do artigo: caput, incisos, parágrafos, exceções, condições, prazos, competências, sujeitos.
 3) VARIE o estilo de redação: perguntas diretas, asserções para julgar, cenários para analisar, situações para classificar.
 4) Crie 5 alternativas (A-E) sem prefixo de letra:
-   - A CORRETA reflete LITERALMENTE o que a lei dispõe.
-   - As INCORRETAS usam TROCAS SUTIS: verbos (deverá/poderá), prazos, condições, sujeitos, autoridades competentes.
-   - CADA alternativa incorreta deve ter um erro DIFERENTE e SUTIL.
+   - A CORRETA reflete LITERALMENTE o que a lei dispõe — deve ser possível encontrar o trecho exato no artigo citado.
+   - As INCORRETAS devem conter ERROS CLAROS E VERIFICÁVEIS contra o texto da lei. Cada alternativa incorreta deve contradizer explicitamente um dispositivo legal específico:
+     * TROQUE um elemento concreto: prazo (30→60 dias), autoridade (Comandante-Geral→Chefe do EMG), condição (cumulativa→alternativa), verbo (deverá→poderá, vedado→facultado).
+     * A incorreção deve ser DETECTÁVEL por quem lê o artigo — não basta ser "plausível", deve ser DEMONSTRAVELMENTE FALSA.
+     * NUNCA crie alternativa incorreta que reproduza FIELMENTE outro dispositivo da mesma lei — isso gera ambiguidade.
+   - CADA alternativa incorreta deve ter um erro DIFERENTE e referir-se a um aspecto DIFERENTE.
+   - TESTE MENTAL: para cada alternativa incorreta, pergunte-se "consigo apontar QUAL trecho da lei ela contradiz?" Se não, reescreva.
 5) DISTRIBUA o gabarito: não concentre todas as respostas na mesma letra.
 6) O COMENTÁRIO segue a estrutura obrigatória definida no sistema.
 
@@ -831,8 +892,8 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
     let aiResponseText = "";
     let lastFetchError: any = null;
 
-    // Larger output budget reduces truncation on longer comments/cenários.
-    const maxTokens = Math.min(4096, 1400 + batchSize * 900);
+    // Larger output budget — rich comments need space for per-alternative analysis.
+    const maxTokens = Math.min(6000, 2000 + batchSize * 1100);
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
@@ -1109,22 +1170,31 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── Literal proof check ──
-      const normCorrectAlt = normalize(correctAltText);
-      const correctAltWords = normCorrectAlt.split(" ").filter(w => w.length > 3);
-      let literalProofScore = 0;
-      if (correctAltWords.length > 0) {
-        const lawNorm = normalize(leiSeca);
-        let matchedWords = 0;
-        for (const word of correctAltWords) {
-          if (lawNorm.includes(word)) matchedWords++;
-        }
-        literalProofScore = matchedWords / correctAltWords.length;
-      }
-      if (literalProofScore < 0.5) {
+      // ── Literal proof check (whole law) ──
+      const lawNorm = normalize(leiSeca);
+      const literalProofScore = computeAltLiteralSupport(correctAltText, lawNorm);
+      if (literalProofScore < 0.6) {
         discarded++;
         questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (${literalProofScore.toFixed(2)})` });
-        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.5`);
+        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.6`);
+        continue;
+      }
+
+      // ── Article-specific proof: correct alt must match cited article ──
+      const articleSpecificScore = computeArticleSpecificProof(correctAltText, q.comentario, blocks);
+      if (articleSpecificScore < 0.4) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Alternativa correta não encontrada no artigo citado (score=${articleSpecificScore.toFixed(2)})` });
+        console.log(`[GERAR] Q${idx+1} descartada: alt correta não bate com artigo citado (${articleSpecificScore.toFixed(2)})`);
+        continue;
+      }
+
+      // ── Ambiguity detection: reject if incorrect alts have high literal support ──
+      const ambiguityCheck = detectAmbiguity(q, blocks, lawNorm);
+      if (ambiguityCheck.ambiguous) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: ambiguityCheck.details });
+        console.log(`[GERAR] Q${idx+1} descartada: ambiguidade — ${ambiguityCheck.details}`);
         continue;
       }
 
