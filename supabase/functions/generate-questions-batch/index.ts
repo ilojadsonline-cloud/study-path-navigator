@@ -860,9 +860,13 @@ MÉTODO DE CRIAÇÃO:
 2) Explore DIFERENTES ASPECTOS do artigo: caput, incisos, parágrafos, exceções, condições, prazos, competências, sujeitos.
 3) VARIE o estilo de redação: perguntas diretas, asserções para julgar, cenários para analisar, situações para classificar.
 4) Crie 5 alternativas (A-E) sem prefixo de letra:
-   - A CORRETA reflete LITERALMENTE o que a lei dispõe.
-   - As INCORRETAS usam TROCAS SUTIS: verbos (deverá/poderá), prazos, condições, sujeitos, autoridades competentes.
-   - CADA alternativa incorreta deve ter um erro DIFERENTE e SUTIL.
+   - A CORRETA reflete LITERALMENTE o que a lei dispõe — deve ser possível encontrar o trecho exato no artigo citado.
+   - As INCORRETAS devem conter ERROS CLAROS E VERIFICÁVEIS contra o texto da lei. Cada alternativa incorreta deve contradizer explicitamente um dispositivo legal específico:
+     * TROQUE um elemento concreto: prazo (30→60 dias), autoridade (Comandante-Geral→Chefe do EMG), condição (cumulativa→alternativa), verbo (deverá→poderá, vedado→facultado).
+     * A incorreção deve ser DETECTÁVEL por quem lê o artigo — não basta ser "plausível", deve ser DEMONSTRAVELMENTE FALSA.
+     * NUNCA crie alternativa incorreta que reproduza FIELMENTE outro dispositivo da mesma lei — isso gera ambiguidade.
+   - CADA alternativa incorreta deve ter um erro DIFERENTE e referir-se a um aspecto DIFERENTE.
+   - TESTE MENTAL: para cada alternativa incorreta, pergunte-se "consigo apontar QUAL trecho da lei ela contradiz?" Se não, reescreva.
 5) DISTRIBUA o gabarito: não concentre todas as respostas na mesma letra.
 6) O COMENTÁRIO segue a estrutura obrigatória definida no sistema.
 
