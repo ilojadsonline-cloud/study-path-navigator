@@ -432,15 +432,19 @@ const DISCIPLINES = [
   },
 ];
 
-// 7 approach types for maximum diversity — cycled based on existing question count
+// 10 approach types for maximum diversity — cycled based on existing question count
+// Mix of direct law-text questions AND scenario-based questions
 const APPROACH_TYPES = [
-  "TEORIA_PURA",
+  "LITERALIDADE_DIRETA",
   "CASO_PRATICO",
   "PEGADINHA_DETALHE",
+  "VERDADEIRO_FALSO",
   "COMBINACAO_ARTIGOS",
-  "JURISPRUDENCIA_APLICADA",
+  "CASO_PRATICO_2",
   "EXCECAO_REGRA",
+  "CONCEITO_LEGAL",
   "INTERPRETACAO_SISTEMATICA",
+  "COMPLETAR_DISPOSITIVO",
 ] as const;
 
 /** Truncate legal text intelligently: keep structure, trim at article boundaries */
