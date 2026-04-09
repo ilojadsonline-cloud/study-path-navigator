@@ -884,7 +884,8 @@ ${approachInstructions}
 MÉTODO DE CRIAÇÃO:
 1) Cada questão DEVE ter como BASE PRINCIPAL o artigo-alvo, mas PODE e DEVE referenciar outros artigos quando a situação exigir interpretação conjunta.
 2) Explore DIFERENTES ASPECTOS do artigo: caput, incisos, parágrafos, exceções, condições, prazos, competências, sujeitos.
-3) VARIE o estilo de redação: perguntas diretas, asserções para julgar, cenários para analisar, situações para classificar.
+3) VARIE o formato entre: perguntas diretas sobre a lei ("Assinale a correta sobre..."), cenários fictícios aplicados, completar lacunas, identificar exceções, e asserções verdadeiro/falso. NÃO faça todas as questões no mesmo formato.
+4) NEM TODA QUESTÃO PRECISA DE CENÁRIO FICTÍCIO. Questões diretas sobre o texto legal ("São requisitos para...", "Constitui hipótese de...", "É correto afirmar que...") são igualmente válidas e desejadas.
 4) Crie 5 alternativas (A-E) sem prefixo de letra:
    - A CORRETA reflete LITERALMENTE o que a lei dispõe — deve ser possível encontrar o trecho exato no artigo citado.
    - As INCORRETAS devem conter ERROS CLAROS E VERIFICÁVEIS contra o texto da lei. Cada alternativa incorreta deve contradizer explicitamente um dispositivo legal específico:
