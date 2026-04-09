@@ -278,25 +278,40 @@ function computeArticleSpecificProof(altText: string, commentText: string, block
   return matched / words.length;
 }
 
-/** Detect ambiguity: check if any incorrect alternative has support >= threshold */
-function detectAmbiguity(q: any, blocks: ArticleBlock[], lawNorm: string): { ambiguous: boolean; details: string } {
+/** Detect ambiguity: check if any incorrect alternative has HIGH support in the SPECIFIC cited article (not the whole law) */
+function detectAmbiguity(q: any, blocks: ArticleBlock[], _lawNorm: string): { ambiguous: boolean; details: string } {
   const gab = typeof q.gabarito === "number" ? q.gabarito : 0;
+  
+  // Get the cited article blocks from the comment
+  const citedNums = extractAllCitedArticles(q.comentario || "");
+  if (citedNums.length === 0) return { ambiguous: false, details: "" };
+  
+  const citedBlocksText = citedNums
+    .map(num => blocks.find(b => b.artNum === num))
+    .filter(Boolean)
+    .map(b => b!.normText)
+    .join(" ");
+  
+  if (!citedBlocksText || citedBlocksText.length < 20) return { ambiguous: false, details: "" };
+  
   const correctKey = ALT_KEYS[Math.min(Math.max(gab, 0), 4)];
-  const correctScore = computeAltLiteralSupport(q[correctKey] || "", lawNorm);
+  const correctScore = computeAltLiteralSupport(q[correctKey] || "", citedBlocksText);
   
   const highSupportIncorrect: string[] = [];
   for (let i = 0; i < ALT_KEYS.length; i++) {
     if (i === gab) continue;
     const altText = q[ALT_KEYS[i]] || "";
-    const score = computeAltLiteralSupport(altText, lawNorm);
-    // If an incorrect alt has >= 85% literal support AND is close to the correct one
-    if (score >= 0.85 && score >= correctScore * 0.9) {
+    // Check support against the SPECIFIC cited article, not the whole law
+    const score = computeAltLiteralSupport(altText, citedBlocksText);
+    // Only flag if incorrect alt has >= 90% support in the cited article AND is as good as the correct one
+    if (score >= 0.90 && score >= correctScore * 0.95) {
       highSupportIncorrect.push(`${String.fromCharCode(65 + i)}=${(score * 100).toFixed(0)}%`);
     }
   }
   
-  if (highSupportIncorrect.length > 0) {
-    return { ambiguous: true, details: `Alternativas incorretas com alto suporte literal: ${highSupportIncorrect.join(", ")}` };
+  // Only flag as ambiguous if 2+ incorrect alternatives have very high article-specific support
+  if (highSupportIncorrect.length >= 2) {
+    return { ambiguous: true, details: `Alternativas incorretas com alto suporte no artigo citado: ${highSupportIncorrect.join(", ")}` };
   }
   return { ambiguous: false, details: "" };
 }
