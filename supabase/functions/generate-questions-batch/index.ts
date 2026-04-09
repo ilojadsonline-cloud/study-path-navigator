@@ -1188,10 +1188,10 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       // ── Literal proof check (whole law) ──
       const lawNorm = normalize(leiSeca);
       const literalProofScore = computeAltLiteralSupport(correctAltText, lawNorm);
-      if (literalProofScore < 0.6) {
+      if (literalProofScore < 0.5) {
         discarded++;
         questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (${literalProofScore.toFixed(2)})` });
-        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.6`);
+        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.5`);
         continue;
       }
 
