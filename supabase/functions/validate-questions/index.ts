@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const ALT_KEYS = ["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const;
 type ArticleBlock = { artNum: string; text: string; normText: string };
+type SanitizedLawContext = { lawText: string; blocks: ArticleBlock[] };
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -18,6 +19,125 @@ function normalize(text: string): string {
 
 function normalizeWhitespace(text: unknown): string {
   return String(text ?? "").replace(/\s+/g, " ").trim();
+}
+
+function stripAlternativePrefix(text: string): string {
+  return normalizeWhitespace(text)
+    .replace(/^(?:alternativa|opção|opcao|letra)\s*[a-e]\s*[:)\-.–]?\s*/i, "")
+    .replace(/^[a-e]\s*[:)\-.–]\s*/i, "");
+}
+
+function expandEnumeratedStructure(text: string): string {
+  return text
+    .replace(/\r/g, "")
+    .replace(/([:;])\s*(?=(?:[IVXLCDM]+|[a-z]|\d+)\s*[-).])/g, "$1\n")
+    .replace(/([:;])\s*(?=Par[aá]grafo\s+único\b|§\s*\d+º?)/gi, "$1\n")
+    .replace(/\.\s*(?=Par[aá]grafo\s+único\b|§\s*\d+º?)/gi, ".\n");
+}
+
+function stripLegislativeAnnotations(text: string): string {
+  return text
+    .replace(/^\*+\s*/gm, "")
+    .replace(/\((?:Reda[cç][aã]o\s+(?:dada|determinada)|Acrescentad[oa]|Alterad[oa]|Revogad[oa])[^)]*\)/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function getStructuralItemKey(line: string): string | null {
+  const art = line.match(/^Art\.?\s*(\d+[A-Z]?)/i);
+  if (art) return `art:${art[1]}`;
+
+  if (/^Par[aá]grafo\s+único/i.test(line)) return "paragrafo-unico";
+
+  const paragraph = line.match(/^§\s*(\d+)º?/i);
+  if (paragraph) return `par:${paragraph[1]}`;
+
+  const inciso = line.match(/^([IVXLCDM]+)\s*[-–—]/i);
+  if (inciso) return `inc:${inciso[1].toUpperCase()}`;
+
+  const alinea = line.match(/^([a-z])\)/i);
+  if (alinea) return `al:${alinea[1].toLowerCase()}`;
+
+  const item = line.match(/^(\d+)\./);
+  if (item) return `item:${item[1]}`;
+
+  return null;
+}
+
+function sanitizeArticleBlockText(rawText: string): string {
+  const preparedLines = expandEnumeratedStructure(rawText.replace(/^\*+\s*/gm, "")).split(/\n+/);
+  const keptLines: string[] = [];
+  const seenKeys = new Map<string, number>();
+
+  for (const rawLine of preparedLines) {
+    const normalizedRaw = normalizeWhitespace(rawLine);
+    if (!normalizedRaw) continue;
+
+    const mentionsRevocation = /revogad[oa]/i.test(rawLine);
+    const cleanedLine = normalizeWhitespace(stripLegislativeAnnotations(rawLine));
+    if (!cleanedLine) continue;
+
+    const startsStructuredItem = /^(?:Art\.?\s*\d+[A-Z]?|Par[aá]grafo\s+único|§\s*\d+º?|[IVXLCDM]+\s*[-–—]|[a-z]\)|\d+\.)/i.test(cleanedLine);
+    if (mentionsRevocation && (startsStructuredItem || /(?:al[ií]nea|inciso|item)\b/i.test(rawLine))) {
+      continue;
+    }
+
+    const key = getStructuralItemKey(cleanedLine);
+    if (key) {
+      const previousIndex = seenKeys.get(key);
+      if (previousIndex !== undefined) keptLines[previousIndex] = "";
+      seenKeys.set(key, keptLines.length);
+    }
+
+    keptLines.push(cleanedLine);
+  }
+
+  return keptLines.filter(Boolean).join("\n");
+}
+
+function scoreArticleVariant(text: string): number {
+  let score = Math.min(text.length / 120, 10);
+  if (/reda[cç][aã]o\s+(?:dada|determinada)/i.test(text)) score += 100;
+  if (/acrescentad[oa]/i.test(text)) score += 40;
+  if (/revogad[oa]/i.test(text)) score -= 80;
+  return score;
+}
+
+function buildSanitizedLawContext(rawLawText: string): SanitizedLawContext {
+  const cleanedRawText = rawLawText.replace(/^\*+\s*/gm, "");
+  const rawBlocks = parseArticleBlocks(cleanedRawText);
+
+  if (rawBlocks.length === 0) {
+    const normalized = normalizeWhitespace(stripLegislativeAnnotations(cleanedRawText));
+    return { lawText: normalized, blocks: normalized ? [{ artNum: "0", text: normalized, normText: normalize(normalized) }] : [] };
+  }
+
+  const orderedArticles: string[] = [];
+  const variantsByArticle = new Map<string, ArticleBlock[]>();
+
+  for (const block of rawBlocks) {
+    if (!variantsByArticle.has(block.artNum)) orderedArticles.push(block.artNum);
+    const existing = variantsByArticle.get(block.artNum) ?? [];
+    existing.push(block);
+    variantsByArticle.set(block.artNum, existing);
+  }
+
+  const blocks = orderedArticles
+    .map((artNum) => {
+      const variants = variantsByArticle.get(artNum) ?? [];
+      const preferred = variants.reduce((best, current) => (
+        scoreArticleVariant(current.text) > scoreArticleVariant(best.text) ? current : best
+      ), variants[0]);
+      const sanitizedText = sanitizeArticleBlockText(preferred.text);
+      if (!sanitizedText) return null;
+      return { artNum, text: sanitizedText, normText: normalize(sanitizedText) };
+    })
+    .filter((block): block is ArticleBlock => Boolean(block));
+
+  return {
+    lawText: blocks.map((block) => block.text).join("\n\n"),
+    blocks,
+  };
 }
 
 function escapeRegExp(value: string): string {
@@ -125,6 +245,39 @@ function findBestArticleForText(snippet: string, blocks: ArticleBlock[]): { arti
   }
 
   return bestBlock ? { article: `Art. ${bestBlock.artNum}`, score: bestScore } : null;
+}
+
+function splitAlternativeFragments(text: string): string[] {
+  const normalized = stripAlternativePrefix(text)
+    .replace(/\bal[ée]m de\b/gi, ", ")
+    .replace(/\bassim como\b/gi, ", ");
+
+  const coarseParts = normalized.split(/\s*[,;]\s*/);
+  return coarseParts
+    .flatMap((part) => /\s+e\s+/i.test(part) ? part.split(/\s+e\s+/i) : [part])
+    .map((part) => normalizeWhitespace(part))
+    .filter((part) => part.length >= 4);
+}
+
+function computeAlternativeSupportScore(text: string, blocks: ArticleBlock[]): { score: number; total: number; supported: number } {
+  const fragments = splitAlternativeFragments(text);
+  if (fragments.length < 3) return { score: 0, total: fragments.length, supported: 0 };
+
+  let supported = 0;
+  for (const fragment of fragments) {
+    const normFragment = normalize(fragment);
+    if (!normFragment || normFragment.length < 4) continue;
+
+    const directMatch = blocks.some((block) => block.normText.includes(normFragment));
+    const fuzzyMatch = directMatch ? null : findBestArticleForText(fragment, blocks);
+    if (directMatch || (fuzzyMatch && fuzzyMatch.score >= 0.55)) supported++;
+  }
+
+  return {
+    score: fragments.length > 0 ? supported / fragments.length : 0,
+    total: fragments.length,
+    supported,
+  };
 }
 
 function extractAllCitedArticles(text: string): string[] {
@@ -543,6 +696,7 @@ function fullAlternativesCheck(q: Record<string, any>, blocks: ArticleBlock[]): 
   let correctValid = true;
   let correctIssue: string | null = null;
   const labels = ["A", "B", "C", "D", "E"];
+  const fragmentSupportScores = ALT_KEYS.map((key) => computeAlternativeSupportScore(q[key] || "", blocks));
 
   for (let i = 0; i < ALT_KEYS.length; i++) {
     const altText = normalizeWhitespace(q[ALT_KEYS[i]] || "");
@@ -570,6 +724,25 @@ function fullAlternativesCheck(q: Record<string, any>, blocks: ArticleBlock[]): 
           });
         }
       }
+    }
+  }
+
+  const correctSupport = fragmentSupportScores[gabarito];
+  if (correctSupport.total >= 4) {
+    const ambiguousAlternative = fragmentSupportScores
+      .map((support, index) => ({ ...support, index }))
+      .find(({ index, total, score }) => (
+        index !== gabarito
+        && total >= 4
+        && score >= Math.max(0.75, correctSupport.score - 0.1)
+      ));
+
+    if (ambiguousAlternative) {
+      issues.push({
+        key: ALT_KEYS[ambiguousAlternative.index],
+        label: labels[ambiguousAlternative.index],
+        issue: `Mais de uma alternativa tem forte respaldo no texto legal (${labels[gabarito]}=${(correctSupport.score * 100).toFixed(0)}%, ${labels[ambiguousAlternative.index]}=${(ambiguousAlternative.score * 100).toFixed(0)}%)`,
+      });
     }
   }
 
@@ -735,14 +908,30 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const questionIds = questions.map((question) => question.id);
+    const { data: pendingReports } = await supabase
+      .from("question_reports")
+      .select("questao_id, motivo, status, created_at")
+      .in("questao_id", questionIds)
+      .neq("status", "resolvido")
+      .order("created_at", { ascending: false });
+
+    const reportsByQuestionId = new Map<number, string[]>();
+    for (const report of pendingReports ?? []) {
+      const existing = reportsByQuestionId.get(report.questao_id) ?? [];
+      existing.push(normalizeWhitespace(report.motivo || ""));
+      reportsByQuestionId.set(report.questao_id, existing);
+    }
+
     // 2. Fetch legal texts and parse into article blocks
     const { data: legalRows } = await supabase.from("discipline_legal_texts").select("disciplina, content");
     const legalTexts: Record<string, string> = {};
     const articleBlocksCache: Record<string, Array<ArticleBlock>> = {};
     if (legalRows) {
       for (const row of legalRows) {
-        legalTexts[row.disciplina] = row.content;
-        articleBlocksCache[row.disciplina] = parseArticleBlocks(row.content);
+        const sanitizedLaw = buildSanitizedLawContext(row.content);
+        legalTexts[row.disciplina] = sanitizedLaw.lawText;
+        articleBlocksCache[row.disciplina] = sanitizedLaw.blocks;
       }
     }
 
@@ -778,6 +967,7 @@ serve(async (req) => {
     for (const q of questions!) {
       const lawText = legalTexts[q.disciplina];
       const blocks = articleBlocksCache[q.disciplina] || [];
+      const pendingReportMotives = reportsByQuestionId.get(q.id) ?? [];
 
       // ── Text fingerprint duplicate check ──────────────────────────────
       const fp = buildFingerprint(q.enunciado);
@@ -980,6 +1170,13 @@ serve(async (req) => {
         }
       }
 
+      const reportSuggestsCriticalIssue = pendingReportMotives.some((motivo) => /nenhuma alternativa correta|revogad|alterad|coment[aá]rio|cita|artigo|gabarito|incorret|errad/i.test(motivo));
+      if (!needsFix && mode === "ai" && reportSuggestsCriticalIssue) {
+        needsFix = true;
+        fixReason = `REPORTE DO USUÁRIO: ${pendingReportMotives.join(" | ").substring(0, 220)}`;
+        console.log(`[VALIDAR] #${q.id} REPORTE PENDENTE: ${fixReason}`);
+      }
+
       // ── No fix needed ─────────────────────────────────
       if (!needsFix) {
         okCount++;
@@ -1107,6 +1304,7 @@ serve(async (req) => {
       const isLiteralFailure = fixReason.includes("PROVA LITERAL");
       const isFullAudit = fixReason.includes("AUDITORIA COMPLETA IA");
       const isFactualError = fixReason.includes("ERRO FACTUAL");
+      const isUserReported = fixReason.includes("REPORTE DO USUÁRIO");
       const hasAltIssues = fullCheck.incorrectIssues.length > 0;
       
       // Build factual audit details if available
@@ -1122,7 +1320,11 @@ serve(async (req) => {
         ? `\n\nPROBLEMAS DETECTADOS NAS ALTERNATIVAS:\n${fullCheck.incorrectIssues.map(i => `- ${i.label}) ${i.issue}`).join("\n")}`
         : "";
 
-      const prompt = `${isFullAudit
+      const reportContextText = pendingReportMotives.length > 0
+        ? `\n\nREPORTES PENDENTES DOS USUÁRIOS SOBRE ESTA QUESTÃO:\n${pendingReportMotives.map((motivo, index) => `${index + 1}. ${motivo}`).join("\n")}\nTrate cada reporte como hipótese concreta e confronte integralmente com o texto legal vigente antes de responder.`
+        : "";
+
+      const prompt = `${isFullAudit || isUserReported
         ? `AUDITORIA COMPLETA: Você deve LER CADA UMA DAS 5 ALTERNATIVAS da questão abaixo e VERIFICAR PALAVRA POR PALAVRA se o conteúdo está correto conforme o texto legal fornecido.
         
 ATENÇÃO ESPECIAL para:
@@ -1142,8 +1344,8 @@ Se uma alternativa incorreta estiver acidentalmente correta segundo a lei, modif
             ? `ATENÇÃO: A questão abaixo contém ERROS FACTUAIS nas alternativas. Dados específicos (números, seções, cargos, condições) NÃO correspondem ao texto legal. Verifique CADA alternativa contra a lei e corrija os dados incorretos.`
             : `A questão abaixo tem um ERRO CONFIRMADO: "${fixReason}".`
       }
-${focusCitation ? `A busca literal confirmou conteúdo em ${focusCitation} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
-${altIssuesText}${factualAuditText}
+      ${focusCitation ? `A busca literal confirmou conteúdo em ${focusCitation} do texto legal.` : "O conteúdo correto NÃO foi localizado. CRIE uma questão nova baseada em qualquer artigo do texto legal."}
+      ${altIssuesText}${factualAuditText}${reportContextText}
 
 ${deterministicCitation && targetCitationText ? `CITAÇÃO JURÍDICA OBRIGATÓRIA: ${deterministicCitation}
 
@@ -1195,7 +1397,7 @@ Enunciado: ${q.enunciado}
 A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
 Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${q.comentario}
 
-${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : isFullAudit ? "VERIFIQUE CADA ALTERNATIVA CONTRA O TEXTO LEGAL. Se todas estiverem corretas, devolva a questão como está. Se encontrar QUALQUER erro factual, corrija." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário."}
+${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : (isFullAudit || isUserReported) ? "VERIFIQUE CADA ALTERNATIVA CONTRA O TEXTO LEGAL. Se todas estiverem corretas, devolva a questão como está. Se encontrar QUALQUER erro factual, ambiguidade, dispositivo revogado ou comentário incorreto, corrija." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário."}
 PRIORIZE A CORREÇÃO — só marque valida=false em último caso absoluto.
 Responda APENAS JSON (sem markdown):
 {"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
