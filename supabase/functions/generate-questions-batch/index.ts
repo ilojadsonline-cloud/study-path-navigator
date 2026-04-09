@@ -136,7 +136,7 @@ function verifySnippetBelongsToArticle(comment: string, blocks: ArticleBlock[]):
         let overlap = 0;
         for (const w of snippetWords) if (blockWords.has(w)) overlap++;
         const score = snippetWords.size > 0 ? overlap / snippetWords.size : 0;
-        if (score < 0.3) {
+        if (score < 0.2) {
           mismatches.push(`Trecho entre aspas não encontrado no Art. ${citedNum} (overlap=${(score*100).toFixed(0)}%)`);
           const best = findBestArticleForText(snippet, blocks);
           if (best && best.score >= 0.4) {
