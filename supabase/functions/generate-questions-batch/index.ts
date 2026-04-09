@@ -1197,7 +1197,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
 
       // ── Article-specific proof: correct alt must match cited article ──
       const articleSpecificScore = computeArticleSpecificProof(correctAltText, q.comentario, blocks);
-      if (articleSpecificScore < 0.4) {
+      if (articleSpecificScore < 0.3) {
         discarded++;
         questoesRevisaoManual.push({ motivo: `Alternativa correta não encontrada no artigo citado (score=${articleSpecificScore.toFixed(2)})` });
         console.log(`[GERAR] Q${idx+1} descartada: alt correta não bate com artigo citado (${articleSpecificScore.toFixed(2)})`);
