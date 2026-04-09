@@ -817,15 +817,16 @@ PRINCÍPIOS FUNDAMENTAIS:
 5. CADA QUESTÃO É ÚNICA: Varie estilo, estrutura, tipo de raciocínio e padrão de enunciado em CADA questão.
 
 ESTRUTURA DO COMENTÁRIO (obrigatória e detalhada — estilo professor explicando ao aluno):
-a) IDENTIFICAÇÃO DO FUNDAMENTO: Comece com "Conforme o Art. X da [nome da lei]:" seguido da transcrição LITERAL do trecho que fundamenta a resposta correta. O número do artigo DEVE ser verificado: localize o texto exato na lei e use o número do artigo onde ele realmente aparece. Se o trecho está no Art. 33, cite Art. 33 — NUNCA cite um artigo diferente.
-b) EXPLICAÇÃO DA CORRETA: Explique POR QUE a alternativa correta está certa, conectando cada elemento da alternativa ao texto literal da lei.
+a) IDENTIFICAÇÃO DO FUNDAMENTO: Comece com "Conforme o Art. X da [nome da lei]:" seguido da transcrição LITERAL e EXATA do trecho que fundamenta a resposta correta, copiado CARACTERE POR CARACTERE do texto legal fornecido. O número do artigo DEVE ser verificado: localize o texto exato na lei e use o número do artigo onde ele realmente aparece. Se o trecho está no Art. 33, cite Art. 33 — NUNCA cite um artigo diferente.
+   ATENÇÃO: Antes de escrever o número do artigo, RELEIA o texto legal e CONFIRME que o trecho citado entre aspas está DENTRO daquele artigo. Se houver dúvida, busque o trecho no texto completo.
+b) EXPLICAÇÃO DA CORRETA: Explique POR QUE a alternativa correta está certa, conectando cada elemento da alternativa ao texto literal da lei. A alternativa correta deve ser uma PARÁFRASE FIEL do dispositivo — o leitor deve conseguir encontrar cada afirmação no artigo citado.
 c) ANÁLISE INDIVIDUALIZADA DE CADA INCORRETA (OBRIGATÓRIO — NÃO PULE NENHUMA):
-   - Para a alternativa A (se incorreta): "A alternativa A está incorreta porque afirma '[trecho errado]', quando na verdade a lei dispõe que '[trecho correto da lei]'."
+   - Para a alternativa A (se incorreta): "A alternativa A está incorreta porque afirma '[trecho errado]', quando na verdade o Art. Y dispõe que '[trecho correto LITERAL da lei]'."
    - Para a alternativa B (se incorreta): idem
    - Para a alternativa C (se incorreta): idem
    - Para a alternativa D (se incorreta): idem
    - Para a alternativa E (se incorreta): idem
-   Cada explicação deve indicar QUAL SERIA o correto conforme a lei.
+   Cada explicação deve indicar QUAL dispositivo legal a alternativa contradiz e transcrever o trecho correto.
 d) CONCLUSÃO PEDAGÓGICA: Feche com uma frase que sintetize o ponto-chave que o candidato deveria dominar.
 
 REGRA CRÍTICA PARA NÚMEROS DE ARTIGOS NO COMENTÁRIO:
