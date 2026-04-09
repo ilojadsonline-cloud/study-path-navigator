@@ -1169,22 +1169,31 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── Literal proof check ──
-      const normCorrectAlt = normalize(correctAltText);
-      const correctAltWords = normCorrectAlt.split(" ").filter(w => w.length > 3);
-      let literalProofScore = 0;
-      if (correctAltWords.length > 0) {
-        const lawNorm = normalize(leiSeca);
-        let matchedWords = 0;
-        for (const word of correctAltWords) {
-          if (lawNorm.includes(word)) matchedWords++;
-        }
-        literalProofScore = matchedWords / correctAltWords.length;
-      }
-      if (literalProofScore < 0.5) {
+      // ── Literal proof check (whole law) ──
+      const lawNorm = normalize(leiSeca);
+      const literalProofScore = computeAltLiteralSupport(correctAltText, lawNorm);
+      if (literalProofScore < 0.6) {
         discarded++;
         questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (${literalProofScore.toFixed(2)})` });
-        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.5`);
+        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.6`);
+        continue;
+      }
+
+      // ── Article-specific proof: correct alt must match cited article ──
+      const articleSpecificScore = computeArticleSpecificProof(correctAltText, q.comentario, blocks);
+      if (articleSpecificScore < 0.4) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Alternativa correta não encontrada no artigo citado (score=${articleSpecificScore.toFixed(2)})` });
+        console.log(`[GERAR] Q${idx+1} descartada: alt correta não bate com artigo citado (${articleSpecificScore.toFixed(2)})`);
+        continue;
+      }
+
+      // ── Ambiguity detection: reject if incorrect alts have high literal support ──
+      const ambiguityCheck = detectAmbiguity(q, blocks, lawNorm);
+      if (ambiguityCheck.ambiguous) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: ambiguityCheck.details });
+        console.log(`[GERAR] Q${idx+1} descartada: ambiguidade — ${ambiguityCheck.details}`);
         continue;
       }
 
