@@ -245,6 +245,62 @@ function crossValidateReferences(enunciado: string, comment: string): { valid: b
   return { valid: true, reason: "" };
 }
 
+/** Compute how much literal support an alternative has in the law text */
+function computeAltLiteralSupport(altText: string, lawNorm: string): number {
+  const norm = normalize(altText);
+  const words = norm.split(" ").filter(w => w.length > 3);
+  if (words.length === 0) return 0;
+  let matched = 0;
+  for (const w of words) { if (lawNorm.includes(w)) matched++; }
+  return matched / words.length;
+}
+
+/** Check if the correct alternative's key phrases exist in the specific cited article block */
+function computeArticleSpecificProof(altText: string, commentText: string, blocks: ArticleBlock[]): number {
+  const citedNums = extractAllCitedArticles(commentText);
+  if (citedNums.length === 0) return 0;
+  
+  // Combine all cited article blocks
+  const citedBlocksText = citedNums
+    .map(num => blocks.find(b => b.artNum === num))
+    .filter(Boolean)
+    .map(b => b!.normText)
+    .join(" ");
+  
+  if (!citedBlocksText) return 0;
+  
+  const normAlt = normalize(altText);
+  const words = normAlt.split(" ").filter(w => w.length > 3);
+  if (words.length === 0) return 0;
+  
+  let matched = 0;
+  for (const w of words) { if (citedBlocksText.includes(w)) matched++; }
+  return matched / words.length;
+}
+
+/** Detect ambiguity: check if any incorrect alternative has support >= threshold */
+function detectAmbiguity(q: any, blocks: ArticleBlock[], lawNorm: string): { ambiguous: boolean; details: string } {
+  const gab = typeof q.gabarito === "number" ? q.gabarito : 0;
+  const correctKey = ALT_KEYS[Math.min(Math.max(gab, 0), 4)];
+  const correctScore = computeAltLiteralSupport(q[correctKey] || "", lawNorm);
+  
+  const highSupportIncorrect: string[] = [];
+  for (let i = 0; i < ALT_KEYS.length; i++) {
+    if (i === gab) continue;
+    const altText = q[ALT_KEYS[i]] || "";
+    const score = computeAltLiteralSupport(altText, lawNorm);
+    // If an incorrect alt has >= 85% literal support AND is close to the correct one
+    if (score >= 0.85 && score >= correctScore * 0.9) {
+      highSupportIncorrect.push(`${String.fromCharCode(65 + i)}=${(score * 100).toFixed(0)}%`);
+    }
+  }
+  
+  if (highSupportIncorrect.length > 0) {
+    return { ambiguous: true, details: `Alternativas incorretas com alto suporte literal: ${highSupportIncorrect.join(", ")}` };
+  }
+  return { ambiguous: false, details: "" };
+}
+
 function buildFingerprint(enunciado: string): string {
   return normalize(enunciado).replace(/\s+/g, "").substring(0, 80);
 }
