@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import {
   Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy,
   Star, Zap, CheckCircle2, Clock, BarChart3, Lock, Users, Target,
-  ChevronRight, Eye,
+  ChevronRight, Eye, Gift,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
