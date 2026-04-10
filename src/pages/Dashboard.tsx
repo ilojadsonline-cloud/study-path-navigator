@@ -53,7 +53,7 @@ const CHART_COLORS = {
 };
 
 const Dashboard = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, isTrial, trialEndsAt } = useAuth();
   const navigate = useNavigate();
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
 
@@ -275,6 +275,40 @@ const Dashboard = () => {
           </div>
         ) : (
           <>
+            {/* Trial Banner */}
+            {isTrial && trialEndsAt && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 border border-gold/30 bg-gold/5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-gold/15">
+                    <AlertTriangle className="w-5 h-5 text-gold" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Período de Teste Grátis</p>
+                    <p className="text-xs text-muted-foreground">
+                      Seu acesso gratuito termina em{" "}
+                      <strong className="text-foreground">
+                        {(() => {
+                          const hoursLeft = Math.max(0, Math.round((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60)));
+                          return hoursLeft > 0 ? `${hoursLeft}h` : "breve";
+                        })()}
+                      </strong>
+                      . Assine para não perder o acesso!
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  to="/assinatura"
+                  className="px-4 py-2 rounded-lg gradient-gold text-gold-foreground text-xs font-semibold flex items-center gap-1.5 shrink-0"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  Assinar Agora
+                </Link>
+              </motion.div>
+            )}
             {incompleteSimulado && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
