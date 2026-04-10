@@ -7,6 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const PRICE_PAID = "price_1TI8o8ARWUFKTz2d2rpw2naZ";
+const PRICE_TRIAL = "price_1TKl85ARWUFKTz2dRD3UZO8a";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -18,6 +21,15 @@ serve(async (req) => {
     });
 
     const origin = req.headers.get("origin") || "https://www.metodochoa.com.br";
+
+    // Parse body to check for trial mode
+    let isTrial = false;
+    try {
+      const body = await req.json();
+      isTrial = body?.trial === true;
+    } catch {
+      // No body or invalid JSON — default to paid checkout
+    }
 
     // Try to get user email from auth
     let customerEmail: string | undefined;
@@ -40,20 +52,36 @@ serve(async (req) => {
       }
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const priceId = isTrial ? PRICE_TRIAL : PRICE_PAID;
+
+    const sessionParams: any = {
       customer: customerId,
       customer_email: customerId ? undefined : customerEmail,
-      payment_method_types: ["card"],
       line_items: [
         {
-          price: "price_1TI8o8ARWUFKTz2d2rpw2naZ",
+          price: priceId,
           quantity: 1,
         },
       ],
       mode: "subscription",
       success_url: `${origin}/cadastro?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/assinatura?payment=canceled`,
-    });
+    };
+
+    if (isTrial) {
+      // Trial: 1 day free, no payment method required, auto-cancel when trial ends
+      sessionParams.payment_method_collection = "if_required";
+      sessionParams.subscription_data = {
+        trial_period_days: 1,
+        trial_settings: {
+          end_behavior: {
+            missing_payment_method: "cancel",
+          },
+        },
+      };
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
