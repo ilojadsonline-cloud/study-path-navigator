@@ -6,11 +6,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp,
-  Trophy, Calendar, Zap, Loader2, FileText, PlayCircle
+  Trophy, Calendar, Zap, Loader2, FileText, PlayCircle, AlertTriangle, CreditCard
 } from "lucide-react";
 import { RankingCard } from "@/components/dashboard/RankingCard";
 import { RankingConsentModal } from "@/components/dashboard/RankingConsentModal";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
