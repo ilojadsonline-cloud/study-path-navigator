@@ -42,13 +42,9 @@ serve(async (req) => {
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Collect all email variants to search in Stripe (case-sensitive API!)
-    // We need both original-case and lowercase variants
     const emailsToSearch: string[] = [];
-    
-    // Auth email (Supabase normalizes to lowercase)
     emailsToSearch.push(user.email);
-    
-    // Also check the profile email (may have original casing from registration)
+
     const { data: profileData } = await supabaseClient
       .from("profiles")
       .select("email")
@@ -56,11 +52,9 @@ serve(async (req) => {
       .single();
 
     if (profileData?.email) {
-      // Add the exact profile email (preserves original casing)
       if (!emailsToSearch.includes(profileData.email)) {
         emailsToSearch.push(profileData.email);
       }
-      // Also add lowercase variant if different
       const lowerProfile = profileData.email.toLowerCase();
       if (!emailsToSearch.includes(lowerProfile)) {
         emailsToSearch.push(lowerProfile);
@@ -82,7 +76,7 @@ serve(async (req) => {
     }
 
     if (!stripeCustomer) {
-      logStep("No Stripe customer found for any email", { emails: Array.from(emailsToSearch) });
+      logStep("No Stripe customer found for any email");
       return new Response(JSON.stringify({ subscribed: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -91,50 +85,72 @@ serve(async (req) => {
 
     const customerId = stripeCustomer.id;
 
+    // Check active subscriptions (includes trialing status)
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
-      limit: 1,
+      limit: 10,
     });
 
-    const hasActiveSub = subscriptions.data.length > 0;
-    let subscriptionEnd = null;
+    // Find an active or trialing subscription
+    const activeSub = subscriptions.data.find(
+      (s) => s.status === "active" || s.status === "trialing"
+    );
 
-    if (hasActiveSub) {
-      const subscription = subscriptions.data[0];
-      try {
-        let endTimestamp = subscription.current_period_end;
-        if (endTimestamp === undefined && subscription.items?.data?.[0]) {
-          endTimestamp = (subscription.items.data[0] as any).current_period_end;
-        }
-        logStep("Raw current_period_end", { endTimestamp, type: typeof endTimestamp });
-        if (endTimestamp) {
-          const ms = typeof endTimestamp === 'number' && endTimestamp < 1e12 ? endTimestamp * 1000 : Number(endTimestamp);
-          const date = new Date(ms);
-          if (!isNaN(date.getTime())) {
-            subscriptionEnd = date.toISOString();
-          }
-        }
-      } catch (e) {
-        logStep("Error parsing subscription end date", { error: String(e) });
-      }
-      logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
-    } else {
-      const canceledSubs = await stripe.subscriptions.list({
-        customer: customerId,
-        status: "canceled",
-        limit: 1,
+    if (!activeSub) {
+      // Check canceled subs for logging
+      const hasCanceled = subscriptions.data.some((s) => s.status === "canceled");
+      logStep(hasCanceled ? "Only canceled subscriptions found" : "No subscriptions found");
+      return new Response(JSON.stringify({ subscribed: false }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
       });
-      if (canceledSubs.data.length > 0) {
-        logStep("Found canceled subscription", { id: canceledSubs.data[0].id });
-      } else {
-        logStep("No active or canceled subscription found");
+    }
+
+    // Determine subscription end date
+    let subscriptionEnd = null;
+    try {
+      let endTimestamp = activeSub.current_period_end;
+      if (endTimestamp === undefined && activeSub.items?.data?.[0]) {
+        endTimestamp = (activeSub.items.data[0] as any).current_period_end;
+      }
+      if (endTimestamp) {
+        const ms = typeof endTimestamp === 'number' && endTimestamp < 1e12 ? endTimestamp * 1000 : Number(endTimestamp);
+        const date = new Date(ms);
+        if (!isNaN(date.getTime())) {
+          subscriptionEnd = date.toISOString();
+        }
+      }
+    } catch (e) {
+      logStep("Error parsing subscription end date", { error: String(e) });
+    }
+
+    // Determine if this is a trial subscription
+    const isTrial = activeSub.status === "trialing";
+    let trialEndsAt: string | null = null;
+
+    if (isTrial && activeSub.trial_end) {
+      const trialEndMs = typeof activeSub.trial_end === 'number' && activeSub.trial_end < 1e12
+        ? activeSub.trial_end * 1000
+        : Number(activeSub.trial_end);
+      const trialDate = new Date(trialEndMs);
+      if (!isNaN(trialDate.getTime())) {
+        trialEndsAt = trialDate.toISOString();
       }
     }
 
+    logStep("Subscription found", {
+      subscriptionId: activeSub.id,
+      status: activeSub.status,
+      isTrial,
+      trialEndsAt,
+      endDate: subscriptionEnd,
+    });
+
     return new Response(JSON.stringify({
-      subscribed: hasActiveSub,
+      subscribed: true,
       subscription_end: subscriptionEnd,
+      is_trial: isTrial,
+      trial_ends_at: trialEndsAt,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

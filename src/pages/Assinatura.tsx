@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, Check, Shield, Zap, Star, Clock, Loader2, Mail, AlertTriangle, LogOut } from "lucide-react";
+import { CreditCard, Check, Shield, Zap, Star, Clock, Loader2, Mail, AlertTriangle, LogOut, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
@@ -8,8 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Assinatura = () => {
   const [loading, setLoading] = useState(false);
+  const [trialLoading, setTrialLoading] = useState(false);
   const { toast } = useToast();
-  const { user, subscribed, subscriptionEnd, checkSubscription, signOut } = useAuth();
+  const { user, subscribed, subscriptionEnd, checkSubscription, signOut, isTrial, trialEndsAt } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const paymentStatus = searchParams.get("payment");
@@ -28,7 +29,9 @@ const Assinatura = () => {
   const handleCheckout = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout");
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { trial: false },
+      });
       if (error) throw error;
       if (data?.url) {
         window.location.href = data.url;
@@ -37,6 +40,22 @@ const Assinatura = () => {
       toast({ title: "Erro ao iniciar pagamento", description: err.message, variant: "destructive" });
     }
     setLoading(false);
+  };
+
+  const handleTrialCheckout = async () => {
+    setTrialLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { trial: true },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao iniciar teste grátis", description: err.message, variant: "destructive" });
+    }
+    setTrialLoading(false);
   };
 
   return (
@@ -109,6 +128,19 @@ const Assinatura = () => {
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
             {loading ? "Redirecionando..." : "Assinar Agora"}
           </button>
+
+          {/* Trial Button */}
+          <button
+            onClick={handleTrialCheckout}
+            disabled={trialLoading}
+            className="w-full mt-3 py-3 rounded-xl border border-primary/30 bg-primary/5 text-primary font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/10 transition-colors disabled:opacity-50"
+          >
+            {trialLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
+            {trialLoading ? "Redirecionando..." : "Testar Grátis por 1 Dia"}
+          </button>
+          <p className="text-[10px] text-muted-foreground text-center mt-1.5">
+            Sem cartão de crédito • Cancela automaticamente após 24h
+          </p>
 
           <div className="flex items-center justify-center gap-4 mt-4 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Pagamento seguro</span>

@@ -16,6 +16,8 @@ interface AuthContextType {
   subscriptionEnd: string | null;
   subscriptionLoading: boolean;
   isAdmin: boolean;
+  isTrial: boolean;
+  trialEndsAt: string | null;
   checkSubscription: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -29,6 +31,8 @@ const AuthContext = createContext<AuthContextType>({
   subscriptionEnd: null,
   subscriptionLoading: true,
   isAdmin: false,
+  isTrial: false,
+  trialEndsAt: null,
   checkSubscription: async () => {},
   signOut: async () => {},
 });
@@ -51,7 +55,7 @@ function getCachedSubscription(userId: string) {
   return null;
 }
 
-function setCachedSubscription(userId: string, subscribed: boolean, subscriptionEnd: string | null) {
+function setCachedSubscription(userId: string, subscribed: boolean, subscriptionEnd: string | null, isTrial: boolean = false, trialEndsAt: string | null = null) {
   try {
     localStorage.setItem(
       SUBSCRIPTION_CACHE_KEY,
@@ -59,6 +63,8 @@ function setCachedSubscription(userId: string, subscribed: boolean, subscription
         userId,
         subscribed,
         subscriptionEnd,
+        isTrial,
+        trialEndsAt,
         timestamp: Date.now(),
       }),
     );
@@ -85,6 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTrial, setIsTrial] = useState(false);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
 
   const checkInFlightRef = useRef<Promise<void> | null>(null);
   const lastCheckedUserRef = useRef<string | null>(null);
@@ -98,6 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSubscriptionEnd(null);
     setSubscriptionLoading(false);
     setIsAdmin(false);
+    setIsTrial(false);
+    setTrialEndsAt(null);
     clearCachedSubscription();
   }, []);
 
@@ -121,6 +131,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut();
   }, [signOut]);
 
+  const applySubState = useCallback((sub: boolean, end: string | null, trial: boolean = false, trialEnd: string | null = null) => {
+    setSubscribed(sub);
+    setSubscriptionEnd(end);
+    setIsTrial(trial);
+    setTrialEndsAt(trialEnd);
+  }, []);
+
   const checkSubscription = useCallback(async () => {
     if (checkInFlightRef.current) {
       return checkInFlightRef.current;
@@ -139,8 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!currentSession?.access_token || !currentUserId) {
           const cached = user ? getCachedSubscription(user.id) : null;
           if (cached) {
-            setSubscribed(cached.subscribed);
-            setSubscriptionEnd(cached.subscriptionEnd);
+            applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
           }
           return;
         }
@@ -151,8 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) {
           if (isAuthSessionError(error)) {
             if (cached) {
-              setSubscribed(cached.subscribed);
-              setSubscriptionEnd(cached.subscriptionEnd);
+              applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
             }
             return;
           }
@@ -160,29 +175,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error("Error checking subscription:", error);
 
           if (cached) {
-            setSubscribed(cached.subscribed);
-            setSubscriptionEnd(cached.subscriptionEnd);
+            applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
             return;
           }
 
-          setSubscribed(false);
-          setSubscriptionEnd(null);
+          applySubState(false, null);
           return;
         }
 
         const sub = data?.subscribed ?? false;
         const end = data?.subscription_end ?? null;
+        const trial = data?.is_trial ?? false;
+        const trialEnd = data?.trial_ends_at ?? null;
 
-        setSubscribed(sub);
-        setSubscriptionEnd(end);
-        setCachedSubscription(currentUserId, sub, end);
+        applySubState(sub, end, trial, trialEnd);
+        setCachedSubscription(currentUserId, sub, end, trial, trialEnd);
       } catch (err) {
         if (isAuthSessionError(err)) {
           if (currentUserId) {
             const cached = getCachedSubscription(currentUserId);
             if (cached) {
-              setSubscribed(cached.subscribed);
-              setSubscriptionEnd(cached.subscriptionEnd);
+              applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
             }
           }
           return;
@@ -193,14 +206,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (currentUserId) {
           const cached = getCachedSubscription(currentUserId);
           if (cached) {
-            setSubscribed(cached.subscribed);
-            setSubscriptionEnd(cached.subscriptionEnd);
+            applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
             return;
           }
         }
 
-        setSubscribed(false);
-        setSubscriptionEnd(null);
+        applySubState(false, null);
       } finally {
         setSubscriptionLoading(false);
         checkInFlightRef.current = null;
@@ -209,7 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkInFlightRef.current = promise;
     return promise;
-  }, [handleExpiredSession]);
+  }, [handleExpiredSession, applySubState]);
 
   useEffect(() => {
     const {
@@ -222,21 +233,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const cached = getCachedSubscription(session.user.id);
 
         if (event === "SIGNED_IN") {
-          // On fresh login, only use cache if subscribed=true.
-          // If cache says subscribed=false (stale/expired), keep subscriptionLoading=true
-          // so we wait for the fresh Stripe check before redirecting.
           if (cached?.subscribed) {
-            setSubscribed(true);
-            setSubscriptionEnd(cached.subscriptionEnd);
+            applySubState(true, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
             setSubscriptionLoading(false);
           } else {
-            // Force fresh check — don't trust stale "not subscribed" cache
             setSubscriptionLoading(true);
           }
         } else if (cached) {
-          // TOKEN_REFRESHED or other events: use cache as-is to avoid unmounting
-          setSubscribed(cached.subscribed);
-          setSubscriptionEnd(cached.subscriptionEnd);
+          applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
           setSubscriptionLoading(false);
         }
 
@@ -246,8 +250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         lastCheckedUserRef.current = null;
         setProfile(null);
-        setSubscribed(false);
-        setSubscriptionEnd(null);
+        applySubState(false, null);
         setSubscriptionLoading(false);
         setIsAdmin(false);
         clearCachedSubscription();
@@ -267,8 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const cached = getCachedSubscription(session.user.id);
 
         if (cached) {
-          setSubscribed(cached.subscribed);
-          setSubscriptionEnd(cached.subscriptionEnd);
+          applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
           setSubscriptionLoading(false);
         } else {
           setSubscriptionLoading(true);
@@ -282,7 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchProfile, resetAuthState]);
+  }, [fetchProfile, resetAuthState, applySubState]);
 
   useEffect(() => {
     if (!user) {
@@ -317,7 +319,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const cached = getCachedSubscription(user.id);
         if (!cached) {
-          // Only show loading on first-ever check, not on re-checks
           if (!lastCheckedUserRef.current) {
             setSubscriptionLoading(true);
           }
@@ -340,7 +341,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     updatePresence();
-    const interval = setInterval(updatePresence, 2 * 60_000); // every 2 min
+    const interval = setInterval(updatePresence, 2 * 60_000);
     return () => clearInterval(interval);
   }, [user]);
 
@@ -366,6 +367,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subscriptionEnd,
         subscriptionLoading,
         isAdmin,
+        isTrial,
+        trialEndsAt,
         checkSubscription,
         signOut,
       }}
