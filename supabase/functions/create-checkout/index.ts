@@ -52,6 +52,33 @@ serve(async (req) => {
       }
     }
 
+    // Anti-abuse: for trials, check if this email already had any subscription
+    if (isTrial) {
+      const emailToCheck = customerEmail;
+      if (!emailToCheck) {
+        return new Response(JSON.stringify({ error: "É necessário informar o email para o teste grátis." }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        });
+      }
+
+      // Search for any Stripe customer with this email
+      const existingCustomers = await stripe.customers.list({ email: emailToCheck, limit: 5 });
+      for (const cust of existingCustomers.data) {
+        const subs = await stripe.subscriptions.list({ customer: cust.id, limit: 10 });
+        if (subs.data.length > 0) {
+          // Customer already had a subscription (active, canceled, trialing, etc.)
+          return new Response(JSON.stringify({ 
+            error: "Este email já utilizou o teste grátis. Assine o plano definitivo para continuar.",
+            trial_used: true 
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          });
+        }
+      }
+    }
+
     const priceId = isTrial ? PRICE_TRIAL : PRICE_PAID;
 
     const sessionParams: any = {

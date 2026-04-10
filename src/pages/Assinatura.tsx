@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 const Assinatura = () => {
   const [loading, setLoading] = useState(false);
   const [trialLoading, setTrialLoading] = useState(false);
+  const [trialEmail, setTrialEmail] = useState("");
+  const [showTrialEmail, setShowTrialEmail] = useState(false);
   const { toast } = useToast();
   const { user, subscribed, subscriptionEnd, checkSubscription, signOut, isTrial, trialEndsAt } = useAuth();
   const [searchParams] = useSearchParams();
@@ -43,12 +45,33 @@ const Assinatura = () => {
   };
 
   const handleTrialCheckout = async () => {
+    const emailToUse = user?.email || trialEmail.trim();
+    if (!emailToUse) {
+      setShowTrialEmail(true);
+      toast({ title: "Informe seu email", description: "Digite o email para iniciar o teste grátis.", variant: "destructive" });
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailToUse)) {
+      toast({ title: "Email inválido", description: "Verifique o email informado.", variant: "destructive" });
+      return;
+    }
     setTrialLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { trial: true },
+        body: { trial: true, email: emailToUse },
       });
       if (error) throw error;
+      if (data?.trial_used) {
+        toast({ title: "Teste já utilizado", description: data.error || "Este email já usou o teste grátis.", variant: "destructive" });
+        setTrialLoading(false);
+        return;
+      }
+      if (data?.error) {
+        toast({ title: "Erro", description: data.error, variant: "destructive" });
+        setTrialLoading(false);
+        return;
+      }
       if (data?.url) {
         window.location.href = data.url;
       }
