@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import {
   Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy,
   Star, Zap, CheckCircle2, Clock, BarChart3, Lock, Users, Target,
-  ChevronRight, Eye, Gift,
+  ChevronRight, Eye, Gift, Lightbulb, TrendingUp, Brain, AlertTriangle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
@@ -37,23 +37,11 @@ const stats = [
   { icon: <Target className="w-5 h-5" />, value: "90", label: "Dias de acesso" },
 ];
 
+// Questões reais verificadas com base na legislação vigente
 const exampleQuestions = [
   {
-    disciplina: "Estatuto dos Militares (Lei 2.578/12)",
-    enunciado: "Conforme a Lei nº 2.578/2012 (Estatuto dos Militares do Estado do Tocantins), o militar estadual que, em situação de serviço, praticar ato de bravura com risco de vida, poderá ser agraciado com qual recompensa?",
-    alternativas: [
-      "Promoção por tempo de serviço, independentemente de vaga.",
-      "Dispensa do serviço por 30 dias como prêmio.",
-      "Medalha de mérito militar, na forma da legislação específica.",
-      "Elogio verbal do comandante, sem registro em ficha.",
-      "Licença-prêmio de 90 dias com remuneração integral.",
-    ],
-    gabarito: 2,
-    comentario: "Conforme o Art. 34, inciso IV, da Lei 2.578/2012, são recompensas do militar estadual, entre outras: as condecorações e medalhas previstas em legislação específica, concedidas por atos de bravura, mérito ou serviços relevantes.",
-  },
-  {
     disciplina: "RDMETO (Decreto 4.994/14)",
-    enunciado: "De acordo com o RDMETO (Decreto nº 4.994/2014), qual é a classificação correta das transgressões disciplinares quanto à natureza?",
+    enunciado: "De acordo com o RDMETO (Decreto nº 4.994/2014), como são classificadas as transgressões disciplinares quanto à sua natureza?",
     alternativas: [
       "Simples, compostas e qualificadas.",
       "Leves, médias e graves.",
@@ -65,17 +53,53 @@ const exampleQuestions = [
     comentario: "Conforme o Art. 18 do RDMETO (Decreto 4.994/2014), as transgressões disciplinares são classificadas em leves, médias e graves, de acordo com a sua natureza e a repercussão do ato praticado.",
   },
   {
-    disciplina: "CPPM (Decreto-Lei 1.002/69)",
-    enunciado: "Segundo o Código de Processo Penal Militar (CPPM), a quem compete instaurar o Inquérito Policial Militar (IPM) quando o crime militar for praticado por oficial da ativa?",
+    disciplina: "Estatuto dos Militares (Lei 2.578/12)",
+    enunciado: "Nos termos da Lei nº 2.578/2012, assinale a alternativa que apresenta corretamente uma das formas de ingresso na Polícia Militar do Estado do Tocantins:",
     alternativas: [
-      "A qualquer oficial superior da mesma unidade.",
-      "Ao oficial de dia da guarnição.",
-      "Ao Comandante da unidade, Corpo, Formação ou Destacamento a que pertencer o autor do crime.",
-      "Ao delegado de polícia civil da circunscrição.",
-      "Ao Ministério Público Militar, exclusivamente.",
+      "Transferência de outras forças estaduais mediante aprovação do Comandante-Geral.",
+      "Nomeação direta pelo Governador do Estado para qualquer posto ou graduação.",
+      "Matrícula em curso de formação, após aprovação em concurso público de provas ou de provas e títulos.",
+      "Indicação de oficial superior com mais de 20 anos de serviço.",
+      "Convocação compulsória de reservistas das Forças Armadas.",
     ],
     gabarito: 2,
-    comentario: "Conforme o Art. 10, alínea 'a', do CPPM (Decreto-Lei 1.002/69), o Inquérito Policial Militar é instaurado pelo Comandante da unidade, Corpo, Formação ou Destacamento a que pertencer o indiciado, sendo esta a autoridade competente para tal ato.",
+    comentario: "Conforme o Art. 11 da Lei 2.578/2012, o ingresso na Polícia Militar será voluntário e dar-se-á mediante matrícula em curso de formação, após aprovação em concurso público de provas ou de provas e títulos.",
+  },
+  {
+    disciplina: "CPPM (Decreto-Lei 1.002/69)",
+    enunciado: "Segundo o Código de Processo Penal Militar (CPPM), qual é o prazo para conclusão do Inquérito Policial Militar quando o indiciado estiver preso?",
+    alternativas: [
+      "10 dias, improrrogáveis.",
+      "30 dias, prorrogáveis por mais 30.",
+      "20 dias, prorrogáveis por mais 20.",
+      "15 dias, prorrogáveis uma única vez.",
+      "40 dias, improrrogáveis.",
+    ],
+    gabarito: 2,
+    comentario: "Conforme o Art. 20 do CPPM (Decreto-Lei 1.002/69), o inquérito deverá terminar dentro em 20 (vinte) dias, se o indiciado estiver preso, contado esse prazo a partir do dia em que se executar a ordem de prisão.",
+  },
+];
+
+const whyQuestions = [
+  {
+    icon: <Brain className="w-6 h-6" />,
+    title: "Fixação pela prática",
+    desc: "Resolver questões ativa a memória de longo prazo. Você aprende mais resolvendo do que apenas relendo a lei.",
+  },
+  {
+    icon: <Target className="w-6 h-6" />,
+    title: "Foco no que cai na prova",
+    desc: "Nossas questões são baseadas nos artigos mais cobrados, direcionando seu estudo para o que realmente importa.",
+  },
+  {
+    icon: <TrendingUp className="w-6 h-6" />,
+    title: "Mede sua evolução real",
+    desc: "Dashboard com taxa de acertos, horas de estudo e progresso por disciplina — saiba exatamente onde melhorar.",
+  },
+  {
+    icon: <Lightbulb className="w-6 h-6" />,
+    title: "Comentários na lei seca",
+    desc: "Cada questão tem gabarito comentado com citação do artigo da lei, reforçando a fundamentação legal.",
   },
 ];
 
@@ -155,44 +179,132 @@ const Landing = () => {
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs font-semibold mb-6 glow-gold">
               <Star className="w-3.5 h-3.5" />
-              Preparação exclusiva para PMTO 2026
+              Complemento ideal para sua preparação PMTO 2026
             </div>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-[1.1] mb-6">
-              Sua aprovação no
+              Pratique com
               <br />
-              <span className="text-gradient-primary">CHOA começa aqui</span>
+              <span className="text-gradient-primary">questões reais do CHOA</span>
             </h1>
-             <p className="text-muted-foreground max-w-2xl mx-auto mb-10 text-base md:text-lg leading-relaxed">
-               Plataforma com <strong className="text-foreground">+1.000 questões</strong> e simulados exclusiva para preparação do Processo Seletivo Interno 
-               da <strong className="text-foreground">Polícia Militar do Estado do Tocantins</strong>. 
-               Edital verticalizado, ranking competitivo e conteúdo 100% baseado na legislação tocantinense.
-             </p>
+            <p className="text-muted-foreground max-w-2xl mx-auto mb-4 text-base md:text-lg leading-relaxed">
+              O <strong className="text-foreground">Método CHOA</strong> não é um cursinho online.
+              É uma <strong className="text-foreground">plataforma de questões e simulados</strong> feita para quem já está estudando e quer
+              {" "}<strong className="text-foreground">fixar o conteúdo praticando</strong>.
+            </p>
+            <p className="text-muted-foreground max-w-xl mx-auto mb-10 text-sm">
+              +1.000 questões baseadas na legislação do Tocantins, com gabarito comentado na lei seca.
+              Ideal para complementar seu cursinho, grupo de estudos ou preparação individual.
+            </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                to="/assinatura"
-                className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
-              >
-                Começar Agora
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link
                 to="/assinatura?trial=1"
-                className="px-10 py-4 rounded-xl border border-primary/40 bg-primary/5 text-primary font-semibold text-base flex items-center gap-2 hover:bg-primary/10 transition-colors"
+                className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
               >
                 <Gift className="w-5 h-5" />
                 Testar Grátis por 1 Dia
               </Link>
+              <Link
+                to="/assinatura"
+                className="px-10 py-4 rounded-xl border border-primary/40 bg-primary/5 text-primary font-semibold text-base flex items-center gap-2 hover:bg-primary/10 transition-colors"
+              >
+                Assinar por R$ 89,90
+                <ArrowRight className="w-5 h-5" />
+              </Link>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">Sem cartão de crédito • Cancela automaticamente após 24h</p>
+            <p className="text-xs text-muted-foreground mt-3">Teste grátis sem cartão de crédito • Cancela automaticamente após 24h</p>
           </motion.div>
+        </section>
+
+        {/* Aviso: não é cursinho */}
+        <section className="max-w-4xl mx-auto px-4 pb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="glass-card rounded-2xl p-6 md:p-8 border-gold/20"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-gold/10 text-gold shrink-0">
+                <AlertTriangle className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg mb-2 text-foreground">
+                  O Método CHOA <span className="text-gradient-gold">não substitui</span> seu cursinho ou grupo de estudos
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                  Nossa plataforma é um <strong className="text-foreground">complemento</strong> para sua preparação.
+                  Aqui você <strong className="text-foreground">pratica resolvendo questões</strong> baseadas na legislação cobrada no processo seletivo interno.
+                  É a ferramenta ideal para quem já está estudando e quer testar o que aprendeu.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                    <span className="text-foreground">Complementa qualquer método de estudo</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                    <span className="text-foreground">Questões 100% baseadas na lei do TO</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                    <span className="text-foreground">Ideal para fixação e revisão</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                    <span className="text-foreground">Simula o estilo da prova real</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
+        {/* Por que estudar por questões? */}
+        <section className="max-w-5xl mx-auto px-4 pb-20">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4">
+              <Brain className="w-3.5 h-3.5" />
+              Ciência da aprendizagem
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black mb-3">
+              Por que estudar por <span className="text-gradient-primary">questões funciona</span>?
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto text-sm md:text-base">
+              Estudos comprovam que a prática ativa supera a leitura passiva. Resolver questões é o método mais eficaz de fixação.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {whyQuestions.map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                className="glass-card rounded-xl p-5 hover:border-primary/30 transition-all duration-300 group text-center"
+              >
+                <div className="p-3 rounded-xl bg-primary/10 text-primary w-fit mx-auto mb-3 group-hover:glow-primary transition-all">
+                  {item.icon}
+                </div>
+                <h3 className="font-bold text-sm mb-1.5">{item.title}</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
         </section>
 
         {/* Stats */}
         <section className="max-w-4xl mx-auto px-4 pb-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
             className="grid grid-cols-2 md:grid-cols-4 gap-4"
           >
             {stats.map((s, i) => (
@@ -205,6 +317,141 @@ const Landing = () => {
               </div>
             ))}
           </motion.div>
+        </section>
+
+        {/* Exemplo de Questão Interativa */}
+        <section className="max-w-4xl mx-auto px-4 pb-20">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs font-semibold mb-4">
+              <HelpCircle className="w-3.5 h-3.5" />
+              Experimente agora
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black mb-3">
+              Resolva questões <span className="text-gradient-gold">reais da plataforma</span>
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto text-sm md:text-base">
+              As questões abaixo são exemplos reais do nosso banco, com gabarito comentado na lei seca. Clique em uma alternativa!
+            </p>
+          </motion.div>
+
+          {/* Question tabs */}
+          <div className="flex gap-2 mb-6 justify-center flex-wrap">
+            {exampleQuestions.map((q, i) => (
+              <button
+                key={i}
+                onClick={() => resetQuestion(i)}
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  selectedQuestion === i
+                    ? "gradient-primary text-primary-foreground glow-primary"
+                    : "glass-card text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Questão {i + 1}
+              </button>
+            ))}
+          </div>
+
+          <motion.div
+            key={selectedQuestion}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card rounded-2xl p-6 md:p-8 border-primary/10"
+          >
+            {/* Discipline badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4">
+              <BookOpen className="w-3 h-3" />
+              {currentQuestion.disciplina}
+            </div>
+
+            {/* Question */}
+            <p className="text-sm md:text-base text-foreground leading-relaxed mb-6 font-medium">
+              {currentQuestion.enunciado}
+            </p>
+
+            {/* Alternatives */}
+            <div className="space-y-3 mb-6">
+              {currentQuestion.alternativas.map((alt, i) => {
+                const letter = String.fromCharCode(65 + i);
+                const isCorrect = i === currentQuestion.gabarito;
+                const isSelected = selectedAnswer === i;
+
+                let borderClass = "border-border/30 hover:border-primary/30";
+                if (showAnswer) {
+                  if (isCorrect) borderClass = "border-success/60 bg-success/10";
+                  else if (isSelected && !isCorrect) borderClass = "border-destructive/60 bg-destructive/10";
+                  else borderClass = "border-border/20 opacity-60";
+                }
+
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleAnswer(i)}
+                    className={`w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all duration-300 ${borderClass} ${!showAnswer ? "cursor-pointer" : "cursor-default"}`}
+                  >
+                    <span translate="no" className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
+                      showAnswer && isCorrect ? "bg-success/20 text-success" :
+                      showAnswer && isSelected && !isCorrect ? "bg-destructive/20 text-destructive" :
+                      "bg-primary/10 text-primary"
+                    }`}>
+                      {letter}
+                    </span>
+                    <span className="text-sm text-foreground/90 leading-relaxed pt-1">{alt}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Answer feedback */}
+            {showAnswer && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`rounded-xl p-4 border ${
+                  selectedAnswer === currentQuestion.gabarito
+                    ? "bg-success/5 border-success/30"
+                    : "bg-destructive/5 border-destructive/30"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className={`w-4 h-4 ${
+                    selectedAnswer === currentQuestion.gabarito ? "text-success" : "text-destructive"
+                  }`} />
+                  <span className={`text-sm font-bold ${
+                    selectedAnswer === currentQuestion.gabarito ? "text-success" : "text-destructive"
+                  }`}>
+                    {selectedAnswer === currentQuestion.gabarito ? "Resposta Correta!" : "Resposta Incorreta"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {currentQuestion.comentario}
+                </p>
+              </motion.div>
+            )}
+
+            {/* Info */}
+            {!showAnswer && (
+              <p className="text-xs text-muted-foreground text-center">
+                👆 Clique em uma alternativa para ver a resposta comentada
+              </p>
+            )}
+          </motion.div>
+
+          {/* CTA after question */}
+          <div className="text-center mt-6">
+            <p className="text-sm text-muted-foreground mb-3">Gostou? Temos mais de 1.000 questões como estas.</p>
+            <Link
+              to="/assinatura?trial=1"
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity glow-primary"
+            >
+              <Gift className="w-4 h-4" />
+              Testar Grátis por 1 Dia
+            </Link>
+          </div>
         </section>
 
         {/* Conheça a Plataforma - Screenshots */}
@@ -270,129 +517,6 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* Exemplo de Questão Interativa */}
-        <section className="max-w-4xl mx-auto px-4 pb-20">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs font-semibold mb-4">
-              <HelpCircle className="w-3.5 h-3.5" />
-              Teste seu conhecimento
-            </div>
-            <h2 className="text-3xl md:text-4xl font-black mb-3">
-              Experimente uma <span className="text-gradient-gold">questão real</span>
-            </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto text-sm md:text-base">
-              Veja como são as questões da nossa plataforma. Clique em uma alternativa para conferir a resposta!
-            </p>
-          </motion.div>
-
-          {/* Question tabs */}
-          <div className="flex gap-2 mb-6 justify-center">
-            {exampleQuestions.map((q, i) => (
-              <button
-                key={i}
-                onClick={() => resetQuestion(i)}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  selectedQuestion === i
-                    ? "gradient-primary text-primary-foreground glow-primary"
-                    : "glass-card text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Questão {i + 1}
-              </button>
-            ))}
-          </div>
-
-          <motion.div
-            key={selectedQuestion}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-card rounded-2xl p-6 md:p-8 border-primary/10"
-          >
-            {/* Discipline badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4">
-              <BookOpen className="w-3 h-3" />
-              {currentQuestion.disciplina}
-            </div>
-
-            {/* Question */}
-            <p className="text-sm md:text-base text-foreground leading-relaxed mb-6 font-medium">
-              {currentQuestion.enunciado}
-            </p>
-
-            {/* Alternatives */}
-            <div className="space-y-3 mb-6">
-              {currentQuestion.alternativas.map((alt, i) => {
-                const letter = String.fromCharCode(65 + i);
-                const isCorrect = i === currentQuestion.gabarito;
-                const isSelected = selectedAnswer === i;
-
-                let borderClass = "border-border/30 hover:border-primary/30";
-                if (showAnswer) {
-                  if (isCorrect) borderClass = "border-green-500/60 bg-green-500/10";
-                  else if (isSelected && !isCorrect) borderClass = "border-red-500/60 bg-red-500/10";
-                  else borderClass = "border-border/20 opacity-60";
-                }
-
-                return (
-                  <button
-                    key={i}
-                    onClick={() => handleAnswer(i)}
-                    className={`w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all duration-300 ${borderClass} ${!showAnswer ? "cursor-pointer" : "cursor-default"}`}
-                  >
-                    <span translate="no" className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
-                      showAnswer && isCorrect ? "bg-green-500/20 text-green-400" :
-                      showAnswer && isSelected && !isCorrect ? "bg-red-500/20 text-red-400" :
-                      "bg-primary/10 text-primary"
-                    }`}>
-                      {letter}
-                    </span>
-                    <span className="text-sm text-foreground/90 leading-relaxed pt-1">{alt}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Answer feedback */}
-            {showAnswer && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`rounded-xl p-4 border ${
-                  selectedAnswer === currentQuestion.gabarito
-                    ? "bg-green-500/5 border-green-500/30"
-                    : "bg-red-500/5 border-red-500/30"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle2 className={`w-4 h-4 ${
-                    selectedAnswer === currentQuestion.gabarito ? "text-green-400" : "text-red-400"
-                  }`} />
-                  <span className={`text-sm font-bold ${
-                    selectedAnswer === currentQuestion.gabarito ? "text-green-400" : "text-red-400"
-                  }`}>
-                    {selectedAnswer === currentQuestion.gabarito ? "Resposta Correta!" : "Resposta Incorreta"}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {currentQuestion.comentario}
-                </p>
-              </motion.div>
-            )}
-
-            {/* Info */}
-            {!showAnswer && (
-              <p className="text-xs text-muted-foreground text-center">
-                👆 Clique em uma alternativa para ver a resposta comentada
-              </p>
-            )}
-          </motion.div>
-        </section>
-
         {/* Como funciona */}
         <section className="max-w-5xl mx-auto px-4 pb-20">
           <motion.div
@@ -405,7 +529,7 @@ const Landing = () => {
               Como funciona o <span className="text-gradient-primary">Método CHOA</span>?
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto text-sm md:text-base">
-              Um sistema completo de preparação dividido em módulos estratégicos para maximizar sua performance.
+              Use como complemento ao seu cursinho ou grupo de estudos. Pratique, meça sua evolução e fixe o conteúdo.
             </p>
           </motion.div>
 
@@ -511,8 +635,8 @@ const Landing = () => {
                 <span className="text-muted-foreground ml-2 text-base">/ 90 dias</span>
               </div>
               <p className="text-sm text-muted-foreground mb-8 max-w-md">
-                Acesso completo a toda a plataforma por 90 dias corridos. 
-                Estude sem limites e garanta sua aprovação.
+                Acesso completo a toda a plataforma por 90 dias corridos.
+                Complemente sua preparação com questões e simulados ilimitados.
               </p>
 
               <div className="grid sm:grid-cols-2 gap-3 mb-8">
@@ -524,13 +648,23 @@ const Landing = () => {
                 ))}
               </div>
 
-              <Link
-                to="/assinatura"
-                className="inline-flex items-center gap-2 px-10 py-4 rounded-xl gradient-gold text-gold-foreground font-bold text-base hover:opacity-90 transition-opacity glow-gold"
-              >
-                Assinar Agora
-                <ArrowRight className="w-5 h-5" />
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  to="/assinatura"
+                  className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-xl gradient-gold text-gold-foreground font-bold text-base hover:opacity-90 transition-opacity glow-gold"
+                >
+                  Assinar Agora
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+                <Link
+                  to="/assinatura?trial=1"
+                  className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-xl border border-primary/30 bg-primary/5 text-primary font-semibold text-base hover:bg-primary/10 transition-colors"
+                >
+                  <Gift className="w-5 h-5" />
+                  Testar Grátis por 1 Dia
+                </Link>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-2">Teste grátis sem cartão • Cancela automaticamente após 24h</p>
             </div>
           </motion.div>
         </section>
@@ -547,26 +681,26 @@ const Landing = () => {
               <Shield className="w-8 h-8 text-primary-foreground" />
             </div>
             <h2 className="text-2xl md:text-3xl font-black mb-3">
-              Pronto para garantir sua vaga?
+              Já está estudando? Potencialize seus resultados.
             </h2>
             <p className="text-muted-foreground text-sm md:text-base max-w-lg mx-auto mb-8">
-              Comece sua preparação hoje com o método mais completo para o CHOA 2026. 
-              Junte-se aos policiais que escolheram se preparar de verdade.
+              Use o Método CHOA como complemento da sua preparação.
+              Pratique com questões reais, meça sua evolução e chegue confiante na prova.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                to="/assinatura"
-                className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
-              >
-                Começar Agora
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link
                 to="/assinatura?trial=1"
-                className="px-10 py-4 rounded-xl border border-primary/40 bg-primary/5 text-primary font-semibold text-base flex items-center gap-2 hover:bg-primary/10 transition-colors"
+                className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
               >
                 <Gift className="w-5 h-5" />
                 Testar Grátis por 1 Dia
+              </Link>
+              <Link
+                to="/assinatura"
+                className="px-10 py-4 rounded-xl border border-primary/40 bg-primary/5 text-primary font-semibold text-base flex items-center gap-2 hover:bg-primary/10 transition-colors"
+              >
+                Assinar por R$ 89,90
+                <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
           </motion.div>
