@@ -24,15 +24,17 @@ serve(async (req) => {
 
     // Parse body to check for trial mode
     let isTrial = false;
+    let bodyEmail: string | undefined;
     try {
       const body = await req.json();
       isTrial = body?.trial === true;
+      bodyEmail = body?.email;
     } catch {
       // No body or invalid JSON — default to paid checkout
     }
 
-    // Try to get user email from auth
-    let customerEmail: string | undefined;
+    // Try to get user email from auth or body
+    let customerEmail: string | undefined = bodyEmail;
     let customerId: string | undefined;
     const authHeader = req.headers.get("Authorization");
     if (authHeader) {
@@ -43,11 +45,38 @@ serve(async (req) => {
       const token = authHeader.replace("Bearer ", "");
       const { data } = await supabaseClient.auth.getUser(token);
       if (data?.user?.email) {
-        customerEmail = data.user.email;
+        if (!customerEmail) customerEmail = data.user.email;
         // Check if customer already exists in Stripe
-        const customers = await stripe.customers.list({ email: customerEmail, limit: 1 });
+        const customers = await stripe.customers.list({ email: data.user.email, limit: 1 });
         if (customers.data.length > 0) {
           customerId = customers.data[0].id;
+        }
+      }
+    }
+
+    // Anti-abuse: for trials, check if this email already had any subscription
+    if (isTrial) {
+      const emailToCheck = customerEmail;
+      if (!emailToCheck) {
+        return new Response(JSON.stringify({ error: "É necessário informar o email para o teste grátis." }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        });
+      }
+
+      // Search for any Stripe customer with this email
+      const existingCustomers = await stripe.customers.list({ email: emailToCheck, limit: 5 });
+      for (const cust of existingCustomers.data) {
+        const subs = await stripe.subscriptions.list({ customer: cust.id, limit: 10 });
+        if (subs.data.length > 0) {
+          // Customer already had a subscription (active, canceled, trialing, etc.)
+          return new Response(JSON.stringify({ 
+            error: "Este email já utilizou o teste grátis. Assine o plano definitivo para continuar.",
+            trial_used: true 
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          });
         }
       }
     }
