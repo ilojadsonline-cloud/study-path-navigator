@@ -562,11 +562,11 @@ const Landing = () => {
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <Link
-                to="/"
-                className="px-10 py-4 rounded-xl border border-border/50 text-foreground font-medium text-base hover:bg-secondary transition-colors flex items-center gap-2"
+                to="/assinatura?trial=1"
+                className="px-10 py-4 rounded-xl border border-primary/40 bg-primary/5 text-primary font-semibold text-base flex items-center gap-2 hover:bg-primary/10 transition-colors"
               >
-                <Clock className="w-4 h-4" />
-                Voltar à Página Inicial
+                <Gift className="w-5 h-5" />
+                Testar Grátis por 1 Dia
               </Link>
             </div>
           </motion.div>
