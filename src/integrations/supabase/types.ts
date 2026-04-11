@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      cronogramas: {
+        Row: {
+          atividades: Json
+          ativo: boolean
+          created_at: string
+          dias_semana: string[]
+          distribuicao: Json
+          horario_fim: string
+          horario_inicio: string
+          horas_semanais: number
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          atividades?: Json
+          ativo?: boolean
+          created_at?: string
+          dias_semana?: string[]
+          distribuicao?: Json
+          horario_fim?: string
+          horario_inicio?: string
+          horas_semanais?: number
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          atividades?: Json
+          ativo?: boolean
+          created_at?: string
+          dias_semana?: string[]
+          distribuicao?: Json
+          horario_fim?: string
+          horario_inicio?: string
+          horas_semanais?: number
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       discipline_legal_texts: {
         Row: {
           content: string
