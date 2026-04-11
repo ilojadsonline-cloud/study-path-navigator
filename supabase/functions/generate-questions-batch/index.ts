@@ -1216,6 +1216,23 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
+      // ── Repetitive/looping comment detection ──
+      const artMentionsGen = (q.comentario || "").match(/Art\.?\s*\d+[A-Z]?/gi) || [];
+      if (artMentionsGen.length >= 6) {
+        const freqGen = new Map<string, number>();
+        for (const m of artMentionsGen) {
+          const key = normalize(m);
+          freqGen.set(key, (freqGen.get(key) || 0) + 1);
+        }
+        const maxFreqGen = Math.max(...freqGen.values());
+        if (maxFreqGen >= 5) {
+          discarded++;
+          questoesRevisaoManual.push({ motivo: `Comentário com texto repetitivo/loop (Art. citado ${maxFreqGen}x)` });
+          console.log(`[GERAR] Q${idx+1} descartada: comentário repetitivo`);
+          continue;
+        }
+      }
+
       // ── Final reconciliation ──
       if (resolvedArticle) {
         const resolvedNum = resolvedArticle.match(/\d+/)?.[0];
