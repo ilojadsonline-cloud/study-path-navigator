@@ -1431,7 +1431,7 @@ ${lawText.substring(0, 25000)}
 QUESTÃO ${isFullAudit ? "PARA AUDITORIA COMPLETA" : "COM ERRO"}:
 Enunciado: ${q.enunciado}
 A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
-Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${q.comentario}
+Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${isLoopingComment ? "[COMENTÁRIO COM ERRO DE LOOP/REPETIÇÃO — IGNORAR E REESCREVER DO ZERO]" : (q.comentario || "").substring(0, 2000)}
 
 ${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : (isFullAudit || isUserReported) ? "VERIFIQUE CADA ALTERNATIVA CONTRA O TEXTO LEGAL. Se todas estiverem corretas, devolva a questão como está. Se encontrar QUALQUER erro factual, ambiguidade, dispositivo revogado ou comentário incorreto, corrija." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário."}
 PRIORIZE A CORREÇÃO — só marque valida=false em último caso absoluto.
