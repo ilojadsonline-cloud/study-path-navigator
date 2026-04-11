@@ -1669,29 +1669,34 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
           }
 
           // Post-AI: apply all snippet corrections and verify
-          const snippetVerify = verifySnippetBelongsToArticle(finalComment, blocks);
-          if (!snippetVerify.valid) {
-            // Try to apply corrections instead of deleting
-            const { corrected: snippetFixed, appliedCorrections: snippetCorrs } = applyAllSnippetCorrections(finalComment, blocks);
-            if (snippetCorrs.length > 0) {
-              const reVerify = verifySnippetBelongsToArticle(snippetFixed, blocks);
-              if (reVerify.valid) {
-                finalComment = snippetFixed;
-                console.log(`[VALIDAR] #${q.id} Snippet corrigido pós-IA: ${snippetCorrs.map(c => `${c.from}→${c.to}`).join(", ")}`);
+          // For looping comments, skip strict snippet check — the AI wrote from scratch
+          if (!isLoopingComment) {
+            const snippetVerify = verifySnippetBelongsToArticle(finalComment, blocks);
+            if (!snippetVerify.valid) {
+              // Try to apply corrections instead of deleting
+              const { corrected: snippetFixed, appliedCorrections: snippetCorrs } = applyAllSnippetCorrections(finalComment, blocks);
+              if (snippetCorrs.length > 0) {
+                const reVerify = verifySnippetBelongsToArticle(snippetFixed, blocks);
+                if (reVerify.valid) {
+                  finalComment = snippetFixed;
+                  console.log(`[VALIDAR] #${q.id} Snippet corrigido pós-IA: ${snippetCorrs.map(c => `${c.from}→${c.to}`).join(", ")}`);
+                } else {
+                  console.log(`[VALIDAR] #${q.id} Snippet mismatch pós-IA — mantendo original`);
+                  okCount++;
+                  details.push({ id: q.id, status: "ok", motivo: `Mantida (snippet mismatch irrecuperável)` });
+                  await new Promise(r => setTimeout(r, 300));
+                  continue;
+                }
               } else {
                 console.log(`[VALIDAR] #${q.id} Snippet mismatch pós-IA — mantendo original`);
                 okCount++;
-                details.push({ id: q.id, status: "ok", motivo: `Mantida (snippet mismatch irrecuperável)` });
+                details.push({ id: q.id, status: "ok", motivo: `Mantida (snippet mismatch)` });
                 await new Promise(r => setTimeout(r, 300));
                 continue;
               }
-            } else {
-              console.log(`[VALIDAR] #${q.id} Snippet mismatch pós-IA — mantendo original`);
-              okCount++;
-              details.push({ id: q.id, status: "ok", motivo: `Mantida (snippet mismatch)` });
-              await new Promise(r => setTimeout(r, 300));
-              continue;
             }
+          } else {
+            console.log(`[VALIDAR] #${q.id} Comentário loop — snippet check relaxado para reescrita IA`);
           }
 
           const finalEnunciado = normalizeWhitespace(result.enunciado || q.enunciado);
