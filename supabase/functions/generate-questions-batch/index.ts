@@ -1218,21 +1218,61 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── Repetitive/looping comment detection ──
+      // ── Repetitive/looping comment detection (ENHANCED) ──
       const artMentionsGen = (q.comentario || "").match(/Art\.?\s*\d+[A-Z]?/gi) || [];
-      if (artMentionsGen.length >= 6) {
-        const freqGen = new Map<string, number>();
-        for (const m of artMentionsGen) {
-          const key = normalize(m);
-          freqGen.set(key, (freqGen.get(key) || 0) + 1);
+      const freqGen = new Map<string, number>();
+      for (const m of artMentionsGen) {
+        const key = normalize(m);
+        freqGen.set(key, (freqGen.get(key) || 0) + 1);
+      }
+      const maxFreqGen = freqGen.size > 0 ? Math.max(...freqGen.values()) : 0;
+      // Same article 4+ times = loop
+      if (maxFreqGen >= 4) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Comentário com artigo repetido ${maxFreqGen}x` });
+        console.log(`[GERAR] Q${idx+1} descartada: artigo repetido ${maxFreqGen}x`);
+        continue;
+      }
+      // Total 8+ article mentions = bloated
+      if (artMentionsGen.length >= 8) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Comentário com ${artMentionsGen.length} menções de artigos (excesso)` });
+        console.log(`[GERAR] Q${idx+1} descartada: ${artMentionsGen.length} menções de artigos`);
+        continue;
+      }
+      // Consecutive same articles
+      if (artMentionsGen.length >= 3) {
+        let consec = 1;
+        let loopDetected = false;
+        for (let ai = 1; ai < artMentionsGen.length; ai++) {
+          if (normalize(artMentionsGen[ai]) === normalize(artMentionsGen[ai - 1])) {
+            consec++;
+            if (consec >= 3) { loopDetected = true; break; }
+          } else { consec = 1; }
         }
-        const maxFreqGen = Math.max(...freqGen.values());
-        if (maxFreqGen >= 5) {
+        if (loopDetected) {
           discarded++;
-          questoesRevisaoManual.push({ motivo: `Comentário com texto repetitivo/loop (Art. citado ${maxFreqGen}x)` });
-          console.log(`[GERAR] Q${idx+1} descartada: comentário repetitivo`);
+          questoesRevisaoManual.push({ motivo: `Comentário com artigos consecutivos repetidos` });
+          console.log(`[GERAR] Q${idx+1} descartada: artigos consecutivos repetidos`);
           continue;
         }
+      }
+      // Generic text loop
+      if ((q.comentario || "").length > 100) {
+        const loopChunks = (q.comentario || "").match(/(.{15,80})\1{2,}/);
+        if (loopChunks) {
+          discarded++;
+          questoesRevisaoManual.push({ motivo: `Comentário com padrão de texto repetido` });
+          console.log(`[GERAR] Q${idx+1} descartada: padrão de texto repetido`);
+          continue;
+        }
+      }
+      // Excessively long comment
+      if ((q.comentario || "").length > 2500) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Comentário excessivamente longo (${(q.comentario || "").length} chars)` });
+        console.log(`[GERAR] Q${idx+1} descartada: comentário com ${(q.comentario || "").length} chars`);
+        continue;
       }
 
       // ── Final reconciliation ──
