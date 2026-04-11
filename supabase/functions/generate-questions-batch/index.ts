@@ -897,7 +897,7 @@ MÉTODO DE CRIAÇÃO:
    - CADA alternativa incorreta deve ter um erro DIFERENTE e referir-se a um aspecto DIFERENTE.
    - TESTE MENTAL: para cada alternativa incorreta, pergunte-se "consigo apontar QUAL trecho da lei ela contradiz?" Se não, reescreva.
 5) DISTRIBUA o gabarito: não concentre todas as respostas na mesma letra.
-6) O COMENTÁRIO segue a estrutura obrigatória definida no sistema.
+6) O COMENTÁRIO segue a estrutura obrigatória do sistema. LEMBRETE: cite o artigo UMA VEZ, máximo 1500 chars, estilo professor/tutor.
 
 PROIBIÇÕES ABSOLUTAS NO ENUNCIADO:
 - "O que diz o Art. X?", "Qual artigo trata de...", "Segundo o Art. X, ...", "De acordo com o Art. X, ..."
