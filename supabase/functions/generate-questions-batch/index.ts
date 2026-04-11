@@ -841,22 +841,23 @@ PRINCÍPIOS FUNDAMENTAIS:
 4. PROIBIÇÃO DE DECOREBA: NUNCA cite números de artigos no enunciado. O candidato demonstra COMPREENSÃO, não memorização.
 5. CADA QUESTÃO É ÚNICA: Varie estilo, estrutura, tipo de raciocínio e padrão de enunciado em CADA questão.
 
-ESTRUTURA DO COMENTÁRIO (obrigatória e detalhada — estilo professor explicando ao aluno):
-a) IDENTIFICAÇÃO DO FUNDAMENTO: Comece com "Conforme o Art. X da [nome da lei]:" seguido da transcrição LITERAL e EXATA do trecho que fundamenta a resposta correta, copiado CARACTERE POR CARACTERE do texto legal fornecido. O número do artigo DEVE ser verificado: localize o texto exato na lei e use o número do artigo onde ele realmente aparece. Se o trecho está no Art. 33, cite Art. 33 — NUNCA cite um artigo diferente.
-   ATENÇÃO: Antes de escrever o número do artigo, RELEIA o texto legal e CONFIRME que o trecho citado entre aspas está DENTRO daquele artigo. Se houver dúvida, busque o trecho no texto completo.
-b) EXPLICAÇÃO DA CORRETA: Explique POR QUE a alternativa correta está certa, conectando cada elemento da alternativa ao texto literal da lei. A alternativa correta deve ser uma PARÁFRASE FIEL do dispositivo — o leitor deve conseguir encontrar cada afirmação no artigo citado.
-c) ANÁLISE INDIVIDUALIZADA DE CADA INCORRETA (OBRIGATÓRIO — NÃO PULE NENHUMA):
-   - Para a alternativa A (se incorreta): "A alternativa A está incorreta porque afirma '[trecho errado]', quando na verdade o Art. Y dispõe que '[trecho correto LITERAL da lei]'."
-   - Para a alternativa B (se incorreta): idem
-   - Para a alternativa C (se incorreta): idem
-   - Para a alternativa D (se incorreta): idem
-   - Para a alternativa E (se incorreta): idem
-   Cada explicação deve indicar QUAL dispositivo legal a alternativa contradiz e transcrever o trecho correto.
-d) CONCLUSÃO PEDAGÓGICA: Feche com uma frase que sintetize o ponto-chave que o candidato deveria dominar.
+COMENTÁRIO NO ESTILO DE PROFESSOR (REGRA MAIS IMPORTANTE — é a premissa da plataforma):
+O comentário deve soar como um professor explicando ao aluno em sala de aula, NÃO como um documento jurídico robótico.
 
-REGRA CRÍTICA PARA NÚMEROS DE ARTIGOS NO COMENTÁRIO:
-- Antes de citar "Art. X", LOCALIZE o trecho literal no texto legal e verifique em qual artigo ele realmente aparece.
-- Se o trecho sobre "exclusão de QA" está no Art. 33, cite Art. 33 — JAMAIS cite Art. 19 ou outro número.
+FORMATO OBRIGATÓRIO:
+- PARÁGRAFO 1: Cite o artigo UMA ÚNICA VEZ no início ("Conforme o Art. X do [nome da lei]:") e transcreva o trecho relevante entre aspas. NUNCA repita o número do artigo no restante do comentário.
+- PARÁGRAFO 2: Explique COM SUAS PALAVRAS por que a alternativa correta está certa, conectando o texto legal ao cenário da questão.
+- PARÁGRAFO 3: Para cada alternativa incorreta, explique BREVEMENTE o erro em linguagem natural (ex: "A alternativa B erra ao afirmar que... quando na verdade..."). SEM repetir "Art. X" a cada frase.
+- PARÁGRAFO 4: Conclusão pedagógica curta — dica de estudo ou ponto-chave para memorizar.
+
+PROIBIÇÕES NO COMENTÁRIO:
+- PROIBIDO repetir o número do artigo mais de 2 vezes no comentário inteiro.
+- PROIBIDO usar formatação robótica como "a) IDENTIFICAÇÃO DO FUNDAMENTO:", "b) EXPLICAÇÃO DA CORRETA:", "c) ANÁLISE INDIVIDUALIZADA".
+- PROIBIDO copiar trechos enormes da lei. Uma citação literal curta basta.
+- O comentário deve ter no MÁXIMO 1500 caracteres.
+
+REGRA PARA NÚMEROS DE ARTIGOS:
+- Antes de citar "Art. X", LOCALIZE o trecho no texto legal e verifique em qual artigo ele realmente aparece.
 - O número do artigo NÃO é um detalhe menor: um artigo errado invalida toda a questão.
 
 Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do JSON, no formato {"questions":[...]}.`;
