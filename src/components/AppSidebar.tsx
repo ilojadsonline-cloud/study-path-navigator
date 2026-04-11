@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, BookOpen, HelpCircle, Shuffle,
+  LayoutDashboard, BookOpen, HelpCircle, Shuffle, CalendarDays,
   CreditCard, LogOut, Shield, MessageSquare, Settings, Flag,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -16,6 +16,7 @@ const menuItems = [
   { title: "Edital Verticalizado", url: "/edital", icon: BookOpen },
   { title: "Banco de Questões", url: "/questoes", icon: HelpCircle },
   { title: "Simulados", url: "/simulados", icon: Shuffle },
+  { title: "Cronograma", url: "/cronograma", icon: CalendarDays },
   { title: "Assinatura", url: "/assinatura", icon: CreditCard },
   { title: "Meus Reportes", url: "/meus-reportes", icon: Flag },
   { title: "Configurações", url: "/configuracoes", icon: Settings },

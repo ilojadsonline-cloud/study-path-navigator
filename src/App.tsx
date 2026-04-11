@@ -25,6 +25,7 @@ import Landing from "./pages/Landing";
 import ContatoPublico from "./pages/ContatoPublico";
 import Configuracoes from "./pages/Configuracoes";
 import MeusReportes from "./pages/MeusReportes";
+import Cronograma from "./pages/Cronograma";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/edital" element={<ProtectedRoute><Edital /></ProtectedRoute>} />
             <Route path="/questoes" element={<ProtectedRoute><Questoes /></ProtectedRoute>} />
             <Route path="/simulados" element={<ProtectedRoute><Simulados /></ProtectedRoute>} />
+            <Route path="/cronograma" element={<ProtectedRoute><Cronograma /></ProtectedRoute>} />
             <Route path="/admin/gerar-questoes" element={<ProtectedRoute><GerarQuestoes /></ProtectedRoute>} />
             <Route path="/admin/validar-questoes" element={<ProtectedRoute><ValidarQuestoes /></ProtectedRoute>} />
             <Route path="/admin/textos-legais" element={<ProtectedRoute><AdminTextosLegais /></ProtectedRoute>} />
