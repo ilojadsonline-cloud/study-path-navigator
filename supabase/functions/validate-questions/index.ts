@@ -1733,7 +1733,7 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
             details.push({ id: q.id, status: "ok", motivo: `Mantida (reescrita duplicou outra)` });
             continue;
           }
-          if (existingSemanticFPs.has(newSemFp) || batchSemanticFPs.has(newSemFp)) {
+          if (!isLoopingComment && (existingSemanticFPs.has(newSemFp) || batchSemanticFPs.has(newSemFp))) {
             console.log(`[VALIDAR] #${q.id} Duplicata semântica pós-IA — mantendo original`);
             okCount++;
             details.push({ id: q.id, status: "ok", motivo: `Mantida (duplicata semântica pós-IA)` });
