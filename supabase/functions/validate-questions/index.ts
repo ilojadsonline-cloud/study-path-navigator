@@ -1064,6 +1064,7 @@ serve(async (req) => {
 
       let needsFix = false;
       let fixReason = "";
+      let isLoopingComment = false;
 
       // Check 0: LITERAL PROOF on correct answer
       if (!fullCheck.correctValid) {
