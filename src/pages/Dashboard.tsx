@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { toast as sonnerToast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { StatCard } from "@/components/StatCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,6 +57,24 @@ const Dashboard = () => {
   const { user, profile, isTrial, trialEndsAt } = useAuth();
   const navigate = useNavigate();
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
+
+  // Alert about new Cronograma feature (show once)
+  useEffect(() => {
+    const key = "cronograma_feature_alert_shown";
+    if (!localStorage.getItem(key)) {
+      localStorage.setItem(key, "1");
+      setTimeout(() => {
+        sonnerToast("📅 Nova Funcionalidade: Cronograma de Estudos!", {
+          description: "Organize seus estudos com cronogramas personalizados. Acesse pelo menu lateral!",
+          duration: 8000,
+          action: {
+            label: "Ver agora",
+            onClick: () => navigate("/cronograma"),
+          },
+        });
+      }, 1500);
+    }
+  }, [navigate]);
 
   const [loading, setLoading] = useState(true);
   const [totalQuestoes, setTotalQuestoes] = useState(0);
