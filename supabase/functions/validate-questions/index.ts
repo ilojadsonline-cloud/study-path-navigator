@@ -1148,36 +1148,61 @@ serve(async (req) => {
         }
       }
 
-      // Check 5.5: Repetitive/looping comment detection
-      // Catches comments like "Art. 62, Art. 62, parágrafo único, Art. 62, Art. 62..."
+      // Check 5.5: Repetitive/looping comment detection (ENHANCED)
+      // Catches "Art. 62, Art. 62, parágrafo único, Art. 62..." and similar loops
       if (!needsFix) {
         const comentario = q.comentario || "";
-        // Extract all "Art. X" occurrences and check for excessive repetition
         const artMentions = comentario.match(/Art\.?\s*\d+[A-Z]?/gi) || [];
-        if (artMentions.length >= 6) {
-          // Count frequency of each article mention
-          const freq = new Map<string, number>();
-          for (const m of artMentions) {
-            const key = normalize(m);
-            freq.set(key, (freq.get(key) || 0) + 1);
-          }
-          const maxFreq = Math.max(...freq.values());
-          // If the same article is mentioned 5+ times, it's likely a loop/glitch
-          if (maxFreq >= 5) {
-            needsFix = true;
-            fixReason = `Comentário com texto repetitivo/loop (Art. citado ${maxFreq}x)`;
-            console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário repetitivo — ${Array.from(freq.entries()).map(([k,v]) => `${k}:${v}x`).join(", ")}`);
+        // Count frequency of each normalized article mention
+        const freq = new Map<string, number>();
+        for (const m of artMentions) {
+          const key = normalize(m);
+          freq.set(key, (freq.get(key) || 0) + 1);
+        }
+        const maxFreq = freq.size > 0 ? Math.max(...freq.values()) : 0;
+        // Flag if same article cited 4+ times (lowered from 5)
+        if (maxFreq >= 4) {
+          needsFix = true;
+          fixReason = `Comentário com artigo repetido excessivamente (${maxFreq}x)`;
+          console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário repetitivo — ${Array.from(freq.entries()).map(([k,v]) => `${k}:${v}x`).join(", ")}`);
+        }
+        // Flag if total article mentions are excessive (e.g. 8+ mentions = likely loop)
+        if (!needsFix && artMentions.length >= 8) {
+          needsFix = true;
+          fixReason = `Comentário com excesso de citações de artigos (${artMentions.length} menções)`;
+          console.log(`[VALIDAR] #${q.id} PROBLEMA: ${artMentions.length} menções de artigos no comentário`);
+        }
+        // Detect "Art. X, Art. X, parágrafo único, Art. X" pattern (adjacent repeated articles)
+        if (!needsFix && artMentions.length >= 3) {
+          let consecutiveSame = 1;
+          for (let i = 1; i < artMentions.length; i++) {
+            if (normalize(artMentions[i]) === normalize(artMentions[i - 1])) {
+              consecutiveSame++;
+              if (consecutiveSame >= 3) {
+                needsFix = true;
+                fixReason = `Comentário com artigos consecutivos repetidos (${consecutiveSame}x seguidas)`;
+                console.log(`[VALIDAR] #${q.id} PROBLEMA: artigos consecutivos repetidos`);
+                break;
+              }
+            } else {
+              consecutiveSame = 1;
+            }
           }
         }
-        // Also detect any repeated substring pattern in comment (generic loop detection)
+        // Detect any repeated substring pattern (generic loop)
         if (!needsFix && comentario.length > 100) {
-          // Check if any 20+ char substring repeats 4+ times
-          const chunks = comentario.match(/(.{20,80})\1{3,}/);
+          const chunks = comentario.match(/(.{15,80})\1{2,}/);
           if (chunks) {
             needsFix = true;
             fixReason = "Comentário com padrão de texto repetido (glitch de geração)";
             console.log(`[VALIDAR] #${q.id} PROBLEMA: padrão repetido no comentário`);
           }
+        }
+        // Detect excessively long comments (likely bloated with repetitions)
+        if (!needsFix && comentario.length > 3000) {
+          needsFix = true;
+          fixReason = `Comentário excessivamente longo (${comentario.length} chars — possível loop)`;
+          console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário com ${comentario.length} chars`);
         }
       }
 
