@@ -861,17 +861,17 @@ REGRAS ABSOLUTAS:
 5. GABARITO BLINDADO: inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E).
 6. FILTRO DE UNICIDADE: Não repita o mesmo artigo-base ou enunciado de questões existentes.
 7. PRIORIZE CORREÇÃO: Reescreva e corrija sempre que possível. Marque valida=false SOMENTE em último caso absoluto.
-8. COMENTÁRIO PEDAGÓGICO OBRIGATÓRIO (estilo professor explicando ao aluno):
-   - Comece com "Conforme o Art. X da [nome da lei]:" + transcrição LITERAL do trecho que fundamenta a resposta.
-   - VERIFIQUE O NÚMERO DO ARTIGO: localize o trecho literal no texto legal e use o número do artigo onde ele REALMENTE aparece. Se o texto sobre "exclusão de QA" está no Art. 33, cite Art. 33 — JAMAIS cite Art. 19 ou outro número.
-   - Para CADA alternativa incorreta, explique: "A alternativa X está incorreta porque afirma '[trecho]', quando na verdade a lei dispõe que '[trecho correto]' no Art. Y."
-   - NÃO PULE nenhuma alternativa incorreta — explique TODAS.
-   - Feche com conclusão pedagógica.
+8. COMENTÁRIO PEDAGÓGICO — ESTILO PROFESSOR/TUTOR (conciso e claro):
+   - Cite o artigo UMA ÚNICA VEZ: "A resposta correta é [letra] conforme o Art. X da [lei]: '[trecho literal]'."
+   - Explique por que a correta está certa em 1-2 frases simples.
+   - Para CADA incorreta, 1 frase curta: "A alternativa X erra ao dizer '[trecho]', pois a lei prevê '[correto]'."
+   - Feche com 1 dica prática para o candidato.
+   - NUNCA repita "Art. X" múltiplas vezes. Cite UMA VEZ no início. Máximo 1500 caracteres.
+   - Comentários repetitivos ou com loops de texto serão REJEITADOS automaticamente.
 
 REGRA CRÍTICA — VERIFICAÇÃO DE ARTIGOS:
-- Antes de escrever "Art. X" no comentário, LOCALIZE o trecho citado no texto legal fornecido.
-- Verifique em qual "Art." ele realmente aparece.
-- Um comentário com artigo errado é TÃO GRAVE quanto uma alternativa incorreta.
+- Antes de escrever "Art. X", LOCALIZE o trecho no texto legal e confirme o número correto.
+- CITE O ARTIGO UMA ÚNICA VEZ. Repetir "Art. X, Art. X, Art. X" é um ERRO GRAVÍSSIMO.
 
 Responda APENAS JSON válido, sem markdown, sem explicações adicionais.`;
 }
