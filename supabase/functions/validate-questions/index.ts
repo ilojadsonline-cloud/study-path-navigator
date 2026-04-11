@@ -1715,10 +1715,10 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
             continue;
           }
 
-          // Duplicate check on AI-rewritten question
+          // Duplicate check on AI-rewritten question (skip if fixing looping comment — same enunciado is expected)
           const newFp = buildFingerprint(result.enunciado || q.enunciado);
           const newSemFp = buildSemanticFingerprint(finalComment, aiCorrectText);
-          if (existingFingerprints.has(newFp) || batchFingerprints.has(newFp)) {
+          if (!isLoopingComment && (existingFingerprints.has(newFp) || batchFingerprints.has(newFp))) {
             console.log(`[VALIDAR] #${q.id} Duplicata pós-IA — mantendo original`);
             okCount++;
             details.push({ id: q.id, status: "ok", motivo: `Mantida (reescrita duplicou outra)` });
