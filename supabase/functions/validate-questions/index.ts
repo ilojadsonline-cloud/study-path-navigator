@@ -1435,16 +1435,18 @@ REGRAS INVIOLÁVEIS:
 10. FIDELIDADE AO artNum CANÔNICO: O número do artigo é determinado pela posição "Art. X" no texto legal.
 11. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO.
 12. PRIORIZE SEMPRE A CORREÇÃO: Reescreva e corrija a questão. Marque valida=false SOMENTE se for absolutamente impossível criar uma questão válida com o texto legal disponível.
-13. COMENTÁRIO PEDAGÓGICO COMPLETO (estilo professor):
-    - Comece com "Conforme o Art. X da [lei]:" + transcrição LITERAL
-    - Para CADA alternativa incorreta: "A alternativa X está incorreta porque afirma '[trecho errado]', quando a lei dispõe que '[trecho correto]'."
-    - NÃO PULE nenhuma alternativa incorreta — explique TODAS.
-    - Feche com conclusão pedagógica.
+13. COMENTÁRIO — ESTILO PROFESSOR/TUTOR (conciso e direto):
+    - Cite o artigo UMA ÚNICA VEZ: "A resposta correta é [letra] conforme o Art. X da [lei]: '[trecho]'."
+    - Explique a correta em 1-2 frases simples. Para cada incorreta, 1 frase curta dizendo o erro.
+    - Feche com 1 dica prática.
+    - NUNCA repita "Art. X" múltiplas vezes. Máximo 1500 caracteres.
+    - Comentários com loops de texto ("Art. X, Art. X, Art. X...") serão AUTOMATICAMENTE REJEITADOS.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
 - PEGADINHAS INTELIGENTES: distratores com troca de "deverá"/"poderá", inversão de prazos, "vedado"/"facultado".
-- COMENTÁRIO COMPLETO: Explique por que a correta é válida, transcreva trecho literal, e explique brevemente por que cada distrator está errado.
+- COMENTÁRIO CONCISO ESTILO TUTOR: cite o artigo UMA VEZ, explique a correta, depois 1 frase por distrator. Máx 1500 chars.
+- PROIBIDO REPETIR "Art. X, Art. X, parágrafo único, Art. X" — isso é um erro grave.
 ${articleContext}
 
 TEXTO LEGAL COMPLETO (${q.disciplina}):
@@ -1458,7 +1460,8 @@ Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${q.comen
 ${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : (isFullAudit || isUserReported) ? "VERIFIQUE CADA ALTERNATIVA CONTRA O TEXTO LEGAL. Se todas estiverem corretas, devolva a questão como está. Se encontrar QUALQUER erro factual, ambiguidade, dispositivo revogado ou comentário incorreto, corrija." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário."}
 PRIORIZE A CORREÇÃO — só marque valida=false em último caso absoluto.
 Responda APENAS JSON (sem markdown):
-{"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
+{"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"A resposta correta é [letra] conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
+
 
       try {
         const controller = new AbortController();
