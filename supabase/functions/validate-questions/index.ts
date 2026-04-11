@@ -1064,9 +1064,43 @@ serve(async (req) => {
 
       let needsFix = false;
       let fixReason = "";
+      let isLoopingComment = false;
 
-      // Check 0: LITERAL PROOF on correct answer
-      if (!fullCheck.correctValid) {
+      // Check 0 (PRIORITY): Repetitive/looping comment detection — MUST run first
+      {
+        const comentario = q.comentario || "";
+        const artMentions = comentario.match(/Art\.?\s*\d+[A-Z]?/gi) || [];
+        if (artMentions.length >= 6) {
+          const freq = new Map<string, number>();
+          for (const m of artMentions) { const key = normalize(m); freq.set(key, (freq.get(key) || 0) + 1); }
+          const maxFreq = Math.max(...freq.values());
+          if (maxFreq >= 5) {
+            needsFix = true;
+            isLoopingComment = true;
+            fixReason = `Comentário com texto repetitivo/loop (Art. citado ${maxFreq}x)`;
+            console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário repetitivo — ${Array.from(freq.entries()).map(([k,v]) => `${k}:${v}x`).join(", ")}`);
+          }
+        }
+        if (!needsFix && comentario.length > 100) {
+          const chunks = comentario.match(/(.{20,80})\1{3,}/);
+          if (chunks) {
+            needsFix = true;
+            isLoopingComment = true;
+            fixReason = "Comentário com padrão de texto repetido (glitch de geração)";
+            console.log(`[VALIDAR] #${q.id} PROBLEMA: padrão repetido no comentário`);
+          }
+        }
+        // Also flag absurdly long comments (>3000 chars is suspicious)
+        if (!needsFix && comentario.length > 3000) {
+          needsFix = true;
+          isLoopingComment = true;
+          fixReason = `Comentário excessivamente longo (${comentario.length} chars — provável glitch)`;
+          console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário com ${comentario.length} chars`);
+        }
+      }
+
+      // Check 0.5: LITERAL PROOF on correct answer
+      if (!needsFix && !fullCheck.correctValid) {
         needsFix = true;
         fixReason = `PROVA LITERAL FALHOU: ${fullCheck.correctIssue || "alternativa correta sem base na lei"}`;
         console.log(`[VALIDAR] #${q.id} TRAVA LITERAL: ${fixReason}`);
@@ -1148,38 +1182,7 @@ serve(async (req) => {
         }
       }
 
-      // Check 5.5: Repetitive/looping comment detection
-      // Catches comments like "Art. 62, Art. 62, parágrafo único, Art. 62, Art. 62..."
-      if (!needsFix) {
-        const comentario = q.comentario || "";
-        // Extract all "Art. X" occurrences and check for excessive repetition
-        const artMentions = comentario.match(/Art\.?\s*\d+[A-Z]?/gi) || [];
-        if (artMentions.length >= 6) {
-          // Count frequency of each article mention
-          const freq = new Map<string, number>();
-          for (const m of artMentions) {
-            const key = normalize(m);
-            freq.set(key, (freq.get(key) || 0) + 1);
-          }
-          const maxFreq = Math.max(...freq.values());
-          // If the same article is mentioned 5+ times, it's likely a loop/glitch
-          if (maxFreq >= 5) {
-            needsFix = true;
-            fixReason = `Comentário com texto repetitivo/loop (Art. citado ${maxFreq}x)`;
-            console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário repetitivo — ${Array.from(freq.entries()).map(([k,v]) => `${k}:${v}x`).join(", ")}`);
-          }
-        }
-        // Also detect any repeated substring pattern in comment (generic loop detection)
-        if (!needsFix && comentario.length > 100) {
-          // Check if any 20+ char substring repeats 4+ times
-          const chunks = comentario.match(/(.{20,80})\1{3,}/);
-          if (chunks) {
-            needsFix = true;
-            fixReason = "Comentário com padrão de texto repetido (glitch de geração)";
-            console.log(`[VALIDAR] #${q.id} PROBLEMA: padrão repetido no comentário`);
-          }
-        }
-      }
+      // (Check 5.5 moved to Check 0 — looping comments detected first)
 
       // Check 6: Anti-decoreba
       if (!needsFix) {
@@ -1428,9 +1431,9 @@ ${lawText.substring(0, 25000)}
 QUESTÃO ${isFullAudit ? "PARA AUDITORIA COMPLETA" : "COM ERRO"}:
 Enunciado: ${q.enunciado}
 A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
-Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${q.comentario}
+Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${isLoopingComment ? "[COMENTÁRIO COM ERRO DE LOOP/REPETIÇÃO — IGNORAR E REESCREVER DO ZERO]" : (q.comentario || "").substring(0, 2000)}
 
-${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : (isFullAudit || isUserReported) ? "VERIFIQUE CADA ALTERNATIVA CONTRA O TEXTO LEGAL. Se todas estiverem corretas, devolva a questão como está. Se encontrar QUALQUER erro factual, ambiguidade, dispositivo revogado ou comentário incorreto, corrija." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário."}
+${isLoopingComment ? "O COMENTÁRIO ORIGINAL ESTÁ CORROMPIDO (texto em loop/repetição infinita). REESCREVA O COMENTÁRIO DO ZERO no estilo pedagógico de professor, mantendo o enunciado e alternativas se estiverem corretos. Verifique todas as alternativas contra o texto legal." : isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : (isFullAudit || isUserReported) ? "VERIFIQUE CADA ALTERNATIVA CONTRA O TEXTO LEGAL. Se todas estiverem corretas, devolva a questão como está. Se encontrar QUALQUER erro factual, ambiguidade, dispositivo revogado ou comentário incorreto, corrija." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário."}
 PRIORIZE A CORREÇÃO — só marque valida=false em último caso absoluto.
 Responda APENAS JSON (sem markdown):
 {"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
@@ -1601,8 +1604,12 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
               [aiCorrectText, ...citationSnippets, ...extractCommentEvidenceSnippets(result.comentario || "")],
             )
             ?? enforcedArticle;
+          // When comment is looping, NEVER fall back to original q.comentario
+          const baseComment = isLoopingComment
+            ? (result.comentario || `Conforme o ${enforcedCitation || "texto legal"}.`)
+            : (result.comentario || q.comentario);
           let finalComment = forceDeterministicArticleInComment(
-            normalizeWhitespace(result.comentario || q.comentario),
+            normalizeWhitespace(baseComment),
             enforcedCitation,
           );
 
@@ -1666,29 +1673,34 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
           }
 
           // Post-AI: apply all snippet corrections and verify
-          const snippetVerify = verifySnippetBelongsToArticle(finalComment, blocks);
-          if (!snippetVerify.valid) {
-            // Try to apply corrections instead of deleting
-            const { corrected: snippetFixed, appliedCorrections: snippetCorrs } = applyAllSnippetCorrections(finalComment, blocks);
-            if (snippetCorrs.length > 0) {
-              const reVerify = verifySnippetBelongsToArticle(snippetFixed, blocks);
-              if (reVerify.valid) {
-                finalComment = snippetFixed;
-                console.log(`[VALIDAR] #${q.id} Snippet corrigido pós-IA: ${snippetCorrs.map(c => `${c.from}→${c.to}`).join(", ")}`);
+          // For looping comments, skip strict snippet check — the AI wrote from scratch
+          if (!isLoopingComment) {
+            const snippetVerify = verifySnippetBelongsToArticle(finalComment, blocks);
+            if (!snippetVerify.valid) {
+              // Try to apply corrections instead of deleting
+              const { corrected: snippetFixed, appliedCorrections: snippetCorrs } = applyAllSnippetCorrections(finalComment, blocks);
+              if (snippetCorrs.length > 0) {
+                const reVerify = verifySnippetBelongsToArticle(snippetFixed, blocks);
+                if (reVerify.valid) {
+                  finalComment = snippetFixed;
+                  console.log(`[VALIDAR] #${q.id} Snippet corrigido pós-IA: ${snippetCorrs.map(c => `${c.from}→${c.to}`).join(", ")}`);
+                } else {
+                  console.log(`[VALIDAR] #${q.id} Snippet mismatch pós-IA — mantendo original`);
+                  okCount++;
+                  details.push({ id: q.id, status: "ok", motivo: `Mantida (snippet mismatch irrecuperável)` });
+                  await new Promise(r => setTimeout(r, 300));
+                  continue;
+                }
               } else {
                 console.log(`[VALIDAR] #${q.id} Snippet mismatch pós-IA — mantendo original`);
                 okCount++;
-                details.push({ id: q.id, status: "ok", motivo: `Mantida (snippet mismatch irrecuperável)` });
+                details.push({ id: q.id, status: "ok", motivo: `Mantida (snippet mismatch)` });
                 await new Promise(r => setTimeout(r, 300));
                 continue;
               }
-            } else {
-              console.log(`[VALIDAR] #${q.id} Snippet mismatch pós-IA — mantendo original`);
-              okCount++;
-              details.push({ id: q.id, status: "ok", motivo: `Mantida (snippet mismatch)` });
-              await new Promise(r => setTimeout(r, 300));
-              continue;
             }
+          } else {
+            console.log(`[VALIDAR] #${q.id} Comentário loop — snippet check relaxado para reescrita IA`);
           }
 
           const finalEnunciado = normalizeWhitespace(result.enunciado || q.enunciado);
@@ -1712,16 +1724,16 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
             continue;
           }
 
-          // Duplicate check on AI-rewritten question
+          // Duplicate check on AI-rewritten question (skip if fixing looping comment — same enunciado is expected)
           const newFp = buildFingerprint(result.enunciado || q.enunciado);
           const newSemFp = buildSemanticFingerprint(finalComment, aiCorrectText);
-          if (existingFingerprints.has(newFp) || batchFingerprints.has(newFp)) {
+          if (!isLoopingComment && (existingFingerprints.has(newFp) || batchFingerprints.has(newFp))) {
             console.log(`[VALIDAR] #${q.id} Duplicata pós-IA — mantendo original`);
             okCount++;
             details.push({ id: q.id, status: "ok", motivo: `Mantida (reescrita duplicou outra)` });
             continue;
           }
-          if (existingSemanticFPs.has(newSemFp) || batchSemanticFPs.has(newSemFp)) {
+          if (!isLoopingComment && (existingSemanticFPs.has(newSemFp) || batchSemanticFPs.has(newSemFp))) {
             console.log(`[VALIDAR] #${q.id} Duplicata semântica pós-IA — mantendo original`);
             okCount++;
             details.push({ id: q.id, status: "ok", motivo: `Mantida (duplicata semântica pós-IA)` });
