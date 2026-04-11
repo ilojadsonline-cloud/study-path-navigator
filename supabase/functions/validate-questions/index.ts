@@ -1417,16 +1417,18 @@ REGRAS INVIOLÁVEIS:
 10. FIDELIDADE AO artNum CANÔNICO: O número do artigo é determinado pela posição "Art. X" no texto legal.
 11. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO.
 12. PRIORIZE SEMPRE A CORREÇÃO: Reescreva e corrija a questão. Marque valida=false SOMENTE se for absolutamente impossível criar uma questão válida com o texto legal disponível.
-13. COMENTÁRIO PEDAGÓGICO COMPLETO (estilo professor):
-    - Comece com "Conforme o Art. X da [lei]:" + transcrição LITERAL
-    - Para CADA alternativa incorreta: "A alternativa X está incorreta porque afirma '[trecho errado]', quando a lei dispõe que '[trecho correto]'."
-    - NÃO PULE nenhuma alternativa incorreta — explique TODAS.
-    - Feche com conclusão pedagógica.
+13. COMENTÁRIO DE PROFESSOR (NÃO ROBÓTICO):
+    - Cite o artigo UMA VEZ no início com o trecho literal relevante entre aspas.
+    - Explique com suas palavras por que a correta está certa.
+    - Para cada alternativa incorreta, explique BREVEMENTE o erro em linguagem natural.
+    - Feche com uma dica pedagógica curta.
+    - PROIBIDO repetir "Art. X" mais de 2 vezes no comentário inteiro.
+    - PROIBIDO formato "a) IDENTIFICAÇÃO... b) EXPLICAÇÃO... c) ANÁLISE..."
+    - Máximo 1500 caracteres no comentário.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
 - PEGADINHAS INTELIGENTES: distratores com troca de "deverá"/"poderá", inversão de prazos, "vedado"/"facultado".
-- COMENTÁRIO COMPLETO: Explique por que a correta é válida, transcreva trecho literal, e explique brevemente por que cada distrator está errado.
 ${articleContext}
 
 TEXTO LEGAL COMPLETO (${q.disciplina}):
