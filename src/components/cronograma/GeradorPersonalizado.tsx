@@ -24,8 +24,8 @@ export function GeradorPersonalizado({ onGenerate, onBack }: Props) {
   const [horarioFim, setHorarioFim] = useState("23:00");
   const [nome, setNome] = useState("");
 
-  const questoes = Math.max(0, 100 - videoaulas - lei);
-  const isDistribuicaoValida = videoaulas + lei <= 100;
+  const somaTotal = videoaulas + lei + questoes;
+  const isDistribuicaoValida = somaTotal === 100;
 
   const toggleDia = (dia: string) => {
     setDias(prev => prev.includes(dia) ? prev.filter(d => d !== dia) : [...prev, dia]);
