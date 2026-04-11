@@ -861,17 +861,17 @@ REGRAS ABSOLUTAS:
 5. GABARITO BLINDADO: inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E).
 6. FILTRO DE UNICIDADE: Não repita o mesmo artigo-base ou enunciado de questões existentes.
 7. PRIORIZE CORREÇÃO: Reescreva e corrija sempre que possível. Marque valida=false SOMENTE em último caso absoluto.
-8. COMENTÁRIO PEDAGÓGICO OBRIGATÓRIO (estilo professor explicando ao aluno):
-   - Comece com "Conforme o Art. X da [nome da lei]:" + transcrição LITERAL do trecho que fundamenta a resposta.
-   - VERIFIQUE O NÚMERO DO ARTIGO: localize o trecho literal no texto legal e use o número do artigo onde ele REALMENTE aparece. Se o texto sobre "exclusão de QA" está no Art. 33, cite Art. 33 — JAMAIS cite Art. 19 ou outro número.
-   - Para CADA alternativa incorreta, explique: "A alternativa X está incorreta porque afirma '[trecho]', quando na verdade a lei dispõe que '[trecho correto]' no Art. Y."
-   - NÃO PULE nenhuma alternativa incorreta — explique TODAS.
-   - Feche com conclusão pedagógica.
+8. COMENTÁRIO PEDAGÓGICO — ESTILO PROFESSOR/TUTOR (conciso e claro):
+   - Cite o artigo UMA ÚNICA VEZ: "A resposta correta é [letra] conforme o Art. X da [lei]: '[trecho literal]'."
+   - Explique por que a correta está certa em 1-2 frases simples.
+   - Para CADA incorreta, 1 frase curta: "A alternativa X erra ao dizer '[trecho]', pois a lei prevê '[correto]'."
+   - Feche com 1 dica prática para o candidato.
+   - NUNCA repita "Art. X" múltiplas vezes. Cite UMA VEZ no início. Máximo 1500 caracteres.
+   - Comentários repetitivos ou com loops de texto serão REJEITADOS automaticamente.
 
 REGRA CRÍTICA — VERIFICAÇÃO DE ARTIGOS:
-- Antes de escrever "Art. X" no comentário, LOCALIZE o trecho citado no texto legal fornecido.
-- Verifique em qual "Art." ele realmente aparece.
-- Um comentário com artigo errado é TÃO GRAVE quanto uma alternativa incorreta.
+- Antes de escrever "Art. X", LOCALIZE o trecho no texto legal e confirme o número correto.
+- CITE O ARTIGO UMA ÚNICA VEZ. Repetir "Art. X, Art. X, Art. X" é um ERRO GRAVÍSSIMO.
 
 Responda APENAS JSON válido, sem markdown, sem explicações adicionais.`;
 }
@@ -1148,36 +1148,61 @@ serve(async (req) => {
         }
       }
 
-      // Check 5.5: Repetitive/looping comment detection
-      // Catches comments like "Art. 62, Art. 62, parágrafo único, Art. 62, Art. 62..."
+      // Check 5.5: Repetitive/looping comment detection (ENHANCED)
+      // Catches "Art. 62, Art. 62, parágrafo único, Art. 62..." and similar loops
       if (!needsFix) {
         const comentario = q.comentario || "";
-        // Extract all "Art. X" occurrences and check for excessive repetition
         const artMentions = comentario.match(/Art\.?\s*\d+[A-Z]?/gi) || [];
-        if (artMentions.length >= 6) {
-          // Count frequency of each article mention
-          const freq = new Map<string, number>();
-          for (const m of artMentions) {
-            const key = normalize(m);
-            freq.set(key, (freq.get(key) || 0) + 1);
-          }
-          const maxFreq = Math.max(...freq.values());
-          // If the same article is mentioned 5+ times, it's likely a loop/glitch
-          if (maxFreq >= 5) {
-            needsFix = true;
-            fixReason = `Comentário com texto repetitivo/loop (Art. citado ${maxFreq}x)`;
-            console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário repetitivo — ${Array.from(freq.entries()).map(([k,v]) => `${k}:${v}x`).join(", ")}`);
+        // Count frequency of each normalized article mention
+        const freq = new Map<string, number>();
+        for (const m of artMentions) {
+          const key = normalize(m);
+          freq.set(key, (freq.get(key) || 0) + 1);
+        }
+        const maxFreq = freq.size > 0 ? Math.max(...freq.values()) : 0;
+        // Flag if same article cited 4+ times (lowered from 5)
+        if (maxFreq >= 4) {
+          needsFix = true;
+          fixReason = `Comentário com artigo repetido excessivamente (${maxFreq}x)`;
+          console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário repetitivo — ${Array.from(freq.entries()).map(([k,v]) => `${k}:${v}x`).join(", ")}`);
+        }
+        // Flag if total article mentions are excessive (e.g. 8+ mentions = likely loop)
+        if (!needsFix && artMentions.length >= 8) {
+          needsFix = true;
+          fixReason = `Comentário com excesso de citações de artigos (${artMentions.length} menções)`;
+          console.log(`[VALIDAR] #${q.id} PROBLEMA: ${artMentions.length} menções de artigos no comentário`);
+        }
+        // Detect "Art. X, Art. X, parágrafo único, Art. X" pattern (adjacent repeated articles)
+        if (!needsFix && artMentions.length >= 3) {
+          let consecutiveSame = 1;
+          for (let i = 1; i < artMentions.length; i++) {
+            if (normalize(artMentions[i]) === normalize(artMentions[i - 1])) {
+              consecutiveSame++;
+              if (consecutiveSame >= 3) {
+                needsFix = true;
+                fixReason = `Comentário com artigos consecutivos repetidos (${consecutiveSame}x seguidas)`;
+                console.log(`[VALIDAR] #${q.id} PROBLEMA: artigos consecutivos repetidos`);
+                break;
+              }
+            } else {
+              consecutiveSame = 1;
+            }
           }
         }
-        // Also detect any repeated substring pattern in comment (generic loop detection)
+        // Detect any repeated substring pattern (generic loop)
         if (!needsFix && comentario.length > 100) {
-          // Check if any 20+ char substring repeats 4+ times
-          const chunks = comentario.match(/(.{20,80})\1{3,}/);
+          const chunks = comentario.match(/(.{15,80})\1{2,}/);
           if (chunks) {
             needsFix = true;
             fixReason = "Comentário com padrão de texto repetido (glitch de geração)";
             console.log(`[VALIDAR] #${q.id} PROBLEMA: padrão repetido no comentário`);
           }
+        }
+        // Detect excessively long comments (likely bloated with repetitions)
+        if (!needsFix && comentario.length > 3000) {
+          needsFix = true;
+          fixReason = `Comentário excessivamente longo (${comentario.length} chars — possível loop)`;
+          console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário com ${comentario.length} chars`);
         }
       }
 
@@ -1410,16 +1435,18 @@ REGRAS INVIOLÁVEIS:
 10. FIDELIDADE AO artNum CANÔNICO: O número do artigo é determinado pela posição "Art. X" no texto legal.
 11. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO.
 12. PRIORIZE SEMPRE A CORREÇÃO: Reescreva e corrija a questão. Marque valida=false SOMENTE se for absolutamente impossível criar uma questão válida com o texto legal disponível.
-13. COMENTÁRIO PEDAGÓGICO COMPLETO (estilo professor):
-    - Comece com "Conforme o Art. X da [lei]:" + transcrição LITERAL
-    - Para CADA alternativa incorreta: "A alternativa X está incorreta porque afirma '[trecho errado]', quando a lei dispõe que '[trecho correto]'."
-    - NÃO PULE nenhuma alternativa incorreta — explique TODAS.
-    - Feche com conclusão pedagógica.
+13. COMENTÁRIO — ESTILO PROFESSOR/TUTOR (conciso e direto):
+    - Cite o artigo UMA ÚNICA VEZ: "A resposta correta é [letra] conforme o Art. X da [lei]: '[trecho]'."
+    - Explique a correta em 1-2 frases simples. Para cada incorreta, 1 frase curta dizendo o erro.
+    - Feche com 1 dica prática.
+    - NUNCA repita "Art. X" múltiplas vezes. Máximo 1500 caracteres.
+    - Comentários com loops de texto ("Art. X, Art. X, Art. X...") serão AUTOMATICAMENTE REJEITADOS.
 
 REGRAS PEDAGÓGICAS:
 - PROIBIDO número de artigo no enunciado. Sempre CASO PRÁTICO com personagens fictícios.
 - PEGADINHAS INTELIGENTES: distratores com troca de "deverá"/"poderá", inversão de prazos, "vedado"/"facultado".
-- COMENTÁRIO COMPLETO: Explique por que a correta é válida, transcreva trecho literal, e explique brevemente por que cada distrator está errado.
+- COMENTÁRIO CONCISO ESTILO TUTOR: cite o artigo UMA VEZ, explique a correta, depois 1 frase por distrator. Máx 1500 chars.
+- PROIBIDO REPETIR "Art. X, Art. X, parágrafo único, Art. X" — isso é um erro grave.
 ${articleContext}
 
 TEXTO LEGAL COMPLETO (${q.disciplina}):
@@ -1433,7 +1460,8 @@ Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${q.comen
 ${isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : (isFullAudit || isUserReported) ? "VERIFIQUE CADA ALTERNATIVA CONTRA O TEXTO LEGAL. Se todas estiverem corretas, devolva a questão como está. Se encontrar QUALQUER erro factual, ambiguidade, dispositivo revogado ou comentário incorreto, corrija." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário."}
 PRIORIZE A CORREÇÃO — só marque valida=false em último caso absoluto.
 Responda APENAS JSON (sem markdown):
-{"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
+{"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"A resposta correta é [letra] conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
+
 
       try {
         const controller = new AbortController();
@@ -1578,6 +1606,33 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
             details.push({ id: q.id, status: "ok", motivo: `Mantida (IA não melhorou prova literal)` });
             await new Promise(r => setTimeout(r, 300));
             continue;
+          }
+
+          // POST-AI: check for repetitive/looping comment in AI output
+          const aiComment = normalizeWhitespace(result.comentario || "");
+          const aiArtMentions = aiComment.match(/Art\.?\s*\d+[A-Z]?/gi) || [];
+          const aiFreq = new Map<string, number>();
+          for (const m of aiArtMentions) { const key = normalize(m); aiFreq.set(key, (aiFreq.get(key) || 0) + 1); }
+          const aiMaxFreq = aiFreq.size > 0 ? Math.max(...aiFreq.values()) : 0;
+          if (aiMaxFreq >= 4 || aiArtMentions.length >= 8 || aiComment.length > 2500) {
+            console.log(`[VALIDAR] #${q.id} IA GEROU COMENTÁRIO REPETITIVO (freq=${aiMaxFreq}, mentions=${aiArtMentions.length}, len=${aiComment.length}) — excluindo questão`);
+            await supabase.from("questoes").delete().eq("id", q.id);
+            deletedCount++;
+            details.push({ id: q.id, status: "excluida", motivo: `Comentário da IA repetitivo/loop (${aiMaxFreq}x, ${aiArtMentions.length} menções)` });
+            await new Promise(r => setTimeout(r, 300));
+            continue;
+          }
+          // Check for generic text loops in AI output
+          if (aiComment.length > 100) {
+            const aiLoopChunks = aiComment.match(/(.{15,80})\1{2,}/);
+            if (aiLoopChunks) {
+              console.log(`[VALIDAR] #${q.id} IA GEROU PADRÃO DE LOOP — excluindo questão`);
+              await supabase.from("questoes").delete().eq("id", q.id);
+              deletedCount++;
+              details.push({ id: q.id, status: "excluida", motivo: `Comentário da IA com padrão de texto repetido` });
+              await new Promise(r => setTimeout(r, 300));
+              continue;
+            }
           }
 
           // POST-AI: verificação completa de TODAS as alternativas

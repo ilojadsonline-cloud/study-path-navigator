@@ -841,23 +841,25 @@ PRINCÍPIOS FUNDAMENTAIS:
 4. PROIBIÇÃO DE DECOREBA: NUNCA cite números de artigos no enunciado. O candidato demonstra COMPREENSÃO, não memorização.
 5. CADA QUESTÃO É ÚNICA: Varie estilo, estrutura, tipo de raciocínio e padrão de enunciado em CADA questão.
 
-ESTRUTURA DO COMENTÁRIO (obrigatória e detalhada — estilo professor explicando ao aluno):
-a) IDENTIFICAÇÃO DO FUNDAMENTO: Comece com "Conforme o Art. X da [nome da lei]:" seguido da transcrição LITERAL e EXATA do trecho que fundamenta a resposta correta, copiado CARACTERE POR CARACTERE do texto legal fornecido. O número do artigo DEVE ser verificado: localize o texto exato na lei e use o número do artigo onde ele realmente aparece. Se o trecho está no Art. 33, cite Art. 33 — NUNCA cite um artigo diferente.
-   ATENÇÃO: Antes de escrever o número do artigo, RELEIA o texto legal e CONFIRME que o trecho citado entre aspas está DENTRO daquele artigo. Se houver dúvida, busque o trecho no texto completo.
-b) EXPLICAÇÃO DA CORRETA: Explique POR QUE a alternativa correta está certa, conectando cada elemento da alternativa ao texto literal da lei. A alternativa correta deve ser uma PARÁFRASE FIEL do dispositivo — o leitor deve conseguir encontrar cada afirmação no artigo citado.
-c) ANÁLISE INDIVIDUALIZADA DE CADA INCORRETA (OBRIGATÓRIO — NÃO PULE NENHUMA):
-   - Para a alternativa A (se incorreta): "A alternativa A está incorreta porque afirma '[trecho errado]', quando na verdade o Art. Y dispõe que '[trecho correto LITERAL da lei]'."
-   - Para a alternativa B (se incorreta): idem
-   - Para a alternativa C (se incorreta): idem
-   - Para a alternativa D (se incorreta): idem
-   - Para a alternativa E (se incorreta): idem
-   Cada explicação deve indicar QUAL dispositivo legal a alternativa contradiz e transcrever o trecho correto.
-d) CONCLUSÃO PEDAGÓGICA: Feche com uma frase que sintetize o ponto-chave que o candidato deveria dominar.
+ESTRUTURA DO COMENTÁRIO (obrigatória — estilo PROFESSOR/TUTOR explicando ao aluno de forma clara e direta):
+O comentário deve soar como um professor respondendo a dúvida de um aluno. Seja DIRETO, CLARO e PEDAGÓGICO. Evite linguagem rebuscada ou repetitiva. Cite o artigo UMA ÚNICA VEZ. NUNCA repita "Art. X" múltiplas vezes no mesmo comentário.
+
+FORMATO OBRIGATÓRIO:
+a) FUNDAMENTO LEGAL (1 parágrafo curto): "A resposta correta é a alternativa [letra] porque, conforme o Art. X da [lei], '[transcreva o trecho relevante UMA VEZ]'." — cite o artigo APENAS AQUI, UMA VEZ.
+b) POR QUE A CORRETA ESTÁ CERTA (1-2 frases): Explique de forma simples a conexão entre a alternativa e o texto legal. Como se estivesse explicando a um colega.
+c) POR QUE CADA INCORRETA ESTÁ ERRADA (1 frase por alternativa): Para cada distrator, diga de forma concisa qual é o erro. Ex: "A alternativa B erra ao dizer 'poderá', pois a lei usa 'deverá'." NÃO repita a citação do artigo — já foi feita no item (a).
+d) DICA FINAL (1 frase): Uma dica prática para o candidato memorizar o ponto-chave.
+
+REGRAS ABSOLUTAS DO COMENTÁRIO:
+- CITE O ARTIGO UMA ÚNICA VEZ no início. NUNCA repita "Art. X" em cada parágrafo.
+- Máximo 1500 caracteres. Seja conciso. Comentários longos e repetitivos serão REJEITADOS.
+- Use linguagem acessível, como um tutor paciente.
+- NUNCA escreva "Art. X, Art. X, parágrafo único, Art. X" — isso é um ERRO GRAVE de formatação.
 
 REGRA CRÍTICA PARA NÚMEROS DE ARTIGOS NO COMENTÁRIO:
-- Antes de citar "Art. X", LOCALIZE o trecho literal no texto legal e verifique em qual artigo ele realmente aparece.
-- Se o trecho sobre "exclusão de QA" está no Art. 33, cite Art. 33 — JAMAIS cite Art. 19 ou outro número.
-- O número do artigo NÃO é um detalhe menor: um artigo errado invalida toda a questão.
+- Antes de citar "Art. X", LOCALIZE o trecho no texto legal e confirme o número correto.
+- CITE O ARTIGO UMA ÚNICA VEZ. Repetir "Art. X, Art. X, Art. X" é um ERRO GRAVÍSSIMO que resultará em exclusão automática.
+- Máximo 1500 caracteres no comentário. Comentários longos e repetitivos serão REJEITADOS.
 
 Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do JSON, no formato {"questions":[...]}.`;
 
@@ -895,7 +897,7 @@ MÉTODO DE CRIAÇÃO:
    - CADA alternativa incorreta deve ter um erro DIFERENTE e referir-se a um aspecto DIFERENTE.
    - TESTE MENTAL: para cada alternativa incorreta, pergunte-se "consigo apontar QUAL trecho da lei ela contradiz?" Se não, reescreva.
 5) DISTRIBUA o gabarito: não concentre todas as respostas na mesma letra.
-6) O COMENTÁRIO segue a estrutura obrigatória definida no sistema.
+6) O COMENTÁRIO segue a estrutura obrigatória do sistema. LEMBRETE: cite o artigo UMA VEZ, máximo 1500 chars, estilo professor/tutor.
 
 PROIBIÇÕES ABSOLUTAS NO ENUNCIADO:
 - "O que diz o Art. X?", "Qual artigo trata de...", "Segundo o Art. X, ...", "De acordo com o Art. X, ..."
@@ -1216,21 +1218,61 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── Repetitive/looping comment detection ──
+      // ── Repetitive/looping comment detection (ENHANCED) ──
       const artMentionsGen = (q.comentario || "").match(/Art\.?\s*\d+[A-Z]?/gi) || [];
-      if (artMentionsGen.length >= 6) {
-        const freqGen = new Map<string, number>();
-        for (const m of artMentionsGen) {
-          const key = normalize(m);
-          freqGen.set(key, (freqGen.get(key) || 0) + 1);
+      const freqGen = new Map<string, number>();
+      for (const m of artMentionsGen) {
+        const key = normalize(m);
+        freqGen.set(key, (freqGen.get(key) || 0) + 1);
+      }
+      const maxFreqGen = freqGen.size > 0 ? Math.max(...freqGen.values()) : 0;
+      // Same article 4+ times = loop
+      if (maxFreqGen >= 4) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Comentário com artigo repetido ${maxFreqGen}x` });
+        console.log(`[GERAR] Q${idx+1} descartada: artigo repetido ${maxFreqGen}x`);
+        continue;
+      }
+      // Total 8+ article mentions = bloated
+      if (artMentionsGen.length >= 8) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Comentário com ${artMentionsGen.length} menções de artigos (excesso)` });
+        console.log(`[GERAR] Q${idx+1} descartada: ${artMentionsGen.length} menções de artigos`);
+        continue;
+      }
+      // Consecutive same articles
+      if (artMentionsGen.length >= 3) {
+        let consec = 1;
+        let loopDetected = false;
+        for (let ai = 1; ai < artMentionsGen.length; ai++) {
+          if (normalize(artMentionsGen[ai]) === normalize(artMentionsGen[ai - 1])) {
+            consec++;
+            if (consec >= 3) { loopDetected = true; break; }
+          } else { consec = 1; }
         }
-        const maxFreqGen = Math.max(...freqGen.values());
-        if (maxFreqGen >= 5) {
+        if (loopDetected) {
           discarded++;
-          questoesRevisaoManual.push({ motivo: `Comentário com texto repetitivo/loop (Art. citado ${maxFreqGen}x)` });
-          console.log(`[GERAR] Q${idx+1} descartada: comentário repetitivo`);
+          questoesRevisaoManual.push({ motivo: `Comentário com artigos consecutivos repetidos` });
+          console.log(`[GERAR] Q${idx+1} descartada: artigos consecutivos repetidos`);
           continue;
         }
+      }
+      // Generic text loop
+      if ((q.comentario || "").length > 100) {
+        const loopChunks = (q.comentario || "").match(/(.{15,80})\1{2,}/);
+        if (loopChunks) {
+          discarded++;
+          questoesRevisaoManual.push({ motivo: `Comentário com padrão de texto repetido` });
+          console.log(`[GERAR] Q${idx+1} descartada: padrão de texto repetido`);
+          continue;
+        }
+      }
+      // Excessively long comment
+      if ((q.comentario || "").length > 2500) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Comentário excessivamente longo (${(q.comentario || "").length} chars)` });
+        console.log(`[GERAR] Q${idx+1} descartada: comentário com ${(q.comentario || "").length} chars`);
+        continue;
       }
 
       // ── Final reconciliation ──
