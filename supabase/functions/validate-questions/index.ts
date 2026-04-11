@@ -575,6 +575,131 @@ function forceDeterministicArticleInComment(comment: string, targetCitation: str
   );
 }
 
+function truncateSmart(text: string, maxLength: number): string {
+  const normalizedText = normalizeWhitespace(text);
+  if (normalizedText.length <= maxLength) return normalizedText;
+
+  const truncated = normalizedText.slice(0, maxLength + 1);
+  const boundary = Math.max(
+    truncated.lastIndexOf(". "),
+    truncated.lastIndexOf("; "),
+    truncated.lastIndexOf(", "),
+    truncated.lastIndexOf(" "),
+  );
+
+  const cutAt = boundary > maxLength * 0.6 ? boundary : maxLength;
+  return `${truncated.slice(0, cutAt).trim()}…`;
+}
+
+function stripArticleHeading(text: string): string {
+  return normalizeWhitespace(text).replace(
+    /^Art\.?\s*\d+[A-Z]?(?:º|°|o)?(?:\s*,\s*par[aá]grafo\s+[úu]nico)?\s*[-:–—.]?\s*/i,
+    "",
+  );
+}
+
+type CommentQualityAudit = {
+  valid: boolean;
+  isLooping: boolean;
+  reason: string;
+  debug: string;
+};
+
+function analyzeCommentQuality(comment: string): CommentQualityAudit {
+  const normalizedComment = normalizeWhitespace(comment);
+  if (!normalizedComment) {
+    return { valid: false, isLooping: false, reason: "Comentário vazio", debug: "comentário vazio" };
+  }
+
+  const artMentions = normalizedComment.match(/Art\.?\s*\d+[A-Z]?(?:º|°|o)?/gi) || [];
+  const freq = new Map<string, number>();
+
+  for (const mention of artMentions) {
+    const key = normalize(mention);
+    freq.set(key, (freq.get(key) || 0) + 1);
+  }
+
+  const maxFreq = freq.size > 0 ? Math.max(...freq.values()) : 0;
+  if (maxFreq >= 3) {
+    return {
+      valid: false,
+      isLooping: true,
+      reason: `Comentário cita artigo excessivamente (Art. mencionado ${maxFreq}x — máximo permitido: 2)`,
+      debug: `artigo repetido demais — ${Array.from(freq.entries()).map(([key, value]) => `${key}:${value}x`).join(", ")}`,
+    };
+  }
+
+  if (artMentions.length > 2) {
+    return {
+      valid: false,
+      isLooping: true,
+      reason: `Comentário com excesso de citações de artigos (${artMentions.length} menções — estilo robótico)`,
+      debug: `${artMentions.length} menções de artigos no comentário`,
+    };
+  }
+
+  if (normalizedComment.length > 100) {
+    const repeatedChunk = normalizedComment.match(/(.{20,80}?)\1{2,}/i);
+    if (repeatedChunk) {
+      return {
+        valid: false,
+        isLooping: true,
+        reason: "Comentário com padrão de texto repetido (glitch de geração)",
+        debug: "padrão repetido no comentário",
+      };
+    }
+  }
+
+  if (normalizedComment.length > 1500) {
+    return {
+      valid: false,
+      isLooping: true,
+      reason: `Comentário excessivamente longo (${normalizedComment.length} chars — provável glitch ou estilo não pedagógico)`,
+      debug: `comentário com ${normalizedComment.length} chars`,
+    };
+  }
+
+  return { valid: true, isLooping: false, reason: "", debug: "" };
+}
+
+function buildAlternativeSnapshot(source: Record<string, any>, gabarito: number): Array<{ label: string; text: string; isCorrect: boolean }> {
+  return ALT_KEYS.map((key, index) => ({
+    label: String.fromCharCode(65 + index),
+    text: normalizeWhitespace(source[key] || ""),
+    isCorrect: index === gabarito,
+  }));
+}
+
+function buildProfessorFallbackComment(params: {
+  citation: string | null;
+  referenceText: string;
+  correctLabel: string;
+  correctAltText: string;
+  alternatives: Array<{ label: string; text: string; isCorrect: boolean }>;
+}): string {
+  const citation = normalizeWhitespace(params.citation || "Art. X");
+  const quotedBase = stripArticleHeading(params.referenceText) || stripAlternativePrefix(params.correctAltText);
+  const quotedSnippet = truncateSmart(quotedBase.replace(/^["“”']+|["“”']+$/g, ""), 260);
+  const correctCore = truncateSmart(stripAlternativePrefix(params.correctAltText), 220);
+
+  const distractorTemplates = [
+    "altera um requisito que o dispositivo não autoriza",
+    "atribui à norma um alcance que o texto não traz",
+    "troca condição, competência ou consequência prevista no dispositivo",
+    "acrescenta informação sem apoio no texto legal aplicado",
+  ];
+
+  const distractorLines = params.alternatives
+    .filter((alternative) => !alternative.isCorrect)
+    .map((alternative, index) => `A alternativa ${alternative.label} está errada porque ${distractorTemplates[index % distractorTemplates.length]}.`)
+    .join(" ");
+
+  return truncateSmart(
+    `Conforme o ${citation}: "${quotedSnippet}". A alternativa ${params.correctLabel} está correta porque reproduz o núcleo da regra aplicável: ${correctCore}. ${distractorLines} Dica: foque em quem pratica o ato, em quais condições ele ocorre e qual consequência a norma estabelece.`,
+    1450,
+  );
+}
+
 /** Apply ALL snippet-vs-article corrections found, not just the first */
 function applyAllSnippetCorrections(comment: string, blocks: ArticleBlock[]): { corrected: string; appliedCorrections: Array<{from: string; to: string}> } {
   let result = comment;
@@ -1058,50 +1183,10 @@ serve(async (req) => {
       // ── VERIFICAÇÃO COMPLETA DE TODAS AS ALTERNATIVAS ──
       const fullCheck = fullAlternativesCheck(q, blocks);
 
+      const commentQuality = analyzeCommentQuality(q.comentario || "");
       let needsFix = false;
       let fixReason = "";
-      let isLoopingComment = false;
-
-      // Check 0 (PRIORITY): Repetitive/looping comment detection — MUST run first
-      {
-        const comentario = q.comentario || "";
-        const artMentions = comentario.match(/Art\.?\s*\d+[A-Z]?/gi) || [];
-        // Any single article cited 3+ times = excessive repetition (professor style = cite ONCE)
-        if (artMentions.length >= 3) {
-          const freq = new Map<string, number>();
-          for (const m of artMentions) { const key = normalize(m); freq.set(key, (freq.get(key) || 0) + 1); }
-          const maxFreq = Math.max(...freq.values());
-          if (maxFreq >= 3) {
-            needsFix = true;
-            isLoopingComment = true;
-            fixReason = `Comentário cita artigo excessivamente (Art. mencionado ${maxFreq}x — máximo permitido: 2)`;
-            console.log(`[VALIDAR] #${q.id} PROBLEMA: artigo repetido demais — ${Array.from(freq.entries()).map(([k,v]) => `${k}:${v}x`).join(", ")}`);
-          }
-          // Total article mentions > 6 even if distributed = robotic/non-pedagogical
-          if (!needsFix && artMentions.length > 6) {
-            needsFix = true;
-            isLoopingComment = true;
-            fixReason = `Comentário com excesso de citações de artigos (${artMentions.length} menções — estilo robótico)`;
-            console.log(`[VALIDAR] #${q.id} PROBLEMA: ${artMentions.length} menções de artigos no comentário`);
-          }
-        }
-        if (!needsFix && comentario.length > 100) {
-          const chunks = comentario.match(/(.{20,80})\1{3,}/);
-          if (chunks) {
-            needsFix = true;
-            isLoopingComment = true;
-            fixReason = "Comentário com padrão de texto repetido (glitch de geração)";
-            console.log(`[VALIDAR] #${q.id} PROBLEMA: padrão repetido no comentário`);
-          }
-        }
-        // Also flag absurdly long comments (>2000 chars is suspicious for a pedagogical comment)
-        if (!needsFix && comentario.length > 2000) {
-          needsFix = true;
-          isLoopingComment = true;
-          fixReason = `Comentário excessivamente longo (${comentario.length} chars — provável glitch ou estilo não pedagógico)`;
-          console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário com ${comentario.length} chars`);
-        }
-      }
+      const isLoopingComment = commentQuality.isLooping;
 
       // Check 0.5: LITERAL PROOF on correct answer
       if (!needsFix && !fullCheck.correctValid) {
@@ -1217,6 +1302,31 @@ serve(async (req) => {
         console.log(`[VALIDAR] #${q.id} REPORTE PENDENTE: ${fixReason}`);
       }
 
+      if (!needsFix && !commentQuality.valid) {
+        const currentGabarito = clampGabarito(q.gabarito);
+        const professorComment = buildProfessorFallbackComment({
+          citation: deterministicCitation,
+          referenceText: targetCitationText || correctAltText,
+          correctLabel: String.fromCharCode(65 + currentGabarito),
+          correctAltText,
+          alternatives: buildAlternativeSnapshot(q, currentGabarito),
+        });
+        const professorAudit = analyzeCommentQuality(professorComment);
+        const professorCitationCheck = validateAllCitations(professorComment, blocks);
+
+        if (deterministicCitation && professorAudit.valid && professorCitationCheck.valid && commentContainsCitation(professorComment, deterministicCitation)) {
+          await supabase.from("questoes").update({ comentario: professorComment }).eq("id", q.id);
+          fixedCount++;
+          details.push({ id: q.id, status: "corrigida", motivo: `Comentário reescrito no estilo de professor (${deterministicCitation})` });
+          console.log(`[VALIDAR] #${q.id} CORRIGIDA: comentário reescrito no estilo de professor → ${deterministicCitation}`);
+          continue;
+        }
+
+        needsFix = true;
+        fixReason = commentQuality.reason;
+        console.log(`[VALIDAR] #${q.id} PROBLEMA: ${commentQuality.debug}`);
+      }
+
       // ── No fix needed ─────────────────────────────────
       if (!needsFix) {
         okCount++;
@@ -1256,16 +1366,27 @@ serve(async (req) => {
         }
 
         if (fixableCitation && (fixReason.includes("CONFRONTO") || fixReason.includes("cita") || fixReason.includes("Artigos inexistentes") || fixReason.includes("não cita") || fixReason.includes("SNIPPET") || fixReason.includes("omite"))) {
+          const rulesGabarito = clampGabarito(q.gabarito);
           const baseComment = appliedCorrections.length > 0
             ? snippetCorrectedComment
             : (removedRulesArts.length > 0
                 ? scrubbedRulesComment.replace(/\[artigo não confirmado\]/g, fixableCitation)
                 : q.comentario);
-          const newComment = reconcileCommentArticle(baseComment, fixableCitation);
+          const rebuiltRulesComment = buildProfessorFallbackComment({
+            citation: fixableCitation,
+            referenceText: getCitationReferenceText(getArticleBlock(fixableArticle, blocks), fixableCitation) || correctAltText,
+            correctLabel: String.fromCharCode(65 + rulesGabarito),
+            correctAltText,
+            alternatives: buildAlternativeSnapshot(q, rulesGabarito),
+          });
+          const newComment = analyzeCommentQuality(baseComment).valid
+            ? reconcileCommentArticle(baseComment, fixableCitation)
+            : rebuiltRulesComment;
           const recheck = validateAllCitations(newComment, blocks);
           const postFixSnippetCheck = verifySnippetBelongsToArticle(newComment, blocks);
+          const rulesCommentAudit = analyzeCommentQuality(newComment);
           
-          if (recheck.valid && !hasUnconfirmedCitations(newComment) && postFixSnippetCheck.valid && commentContainsCitation(newComment, fixableCitation)) {
+          if (recheck.valid && !hasUnconfirmedCitations(newComment) && postFixSnippetCheck.valid && commentContainsCitation(newComment, fixableCitation) && rulesCommentAudit.valid) {
             // Nuclear final pass: every cited article must exist in law
             const finalCited = extractAllCitedArticles(newComment);
             const allExist = finalCited.every(a => articleExistsInLaw(a, blocks));
@@ -1278,6 +1399,8 @@ serve(async (req) => {
             } else {
               console.log(`[VALIDAR] #${q.id} NUCLEAR FALHOU: artigos inexistentes: ${finalCited.filter(a => !articleExistsInLaw(a, blocks)).map(a => `Art. ${a}`).join(", ")}`);
             }
+          } else if (!rulesCommentAudit.valid) {
+            console.log(`[VALIDAR] #${q.id} PÓS-FIX COMENTÁRIO INVÁLIDO: ${rulesCommentAudit.debug}`);
           } else if (!postFixSnippetCheck.valid) {
             console.log(`[VALIDAR] #${q.id} PÓS-FIX SNIPPET FALHOU: ${postFixSnippetCheck.mismatches[0]}`);
             // Retry applying all snippet corrections on the fixed comment
@@ -1285,7 +1408,8 @@ serve(async (req) => {
             if (retryCorrs.length > 0) {
               const retryCheck = validateAllCitations(retryCorrected, blocks);
               const retrySnippet = verifySnippetBelongsToArticle(retryCorrected, blocks);
-              if (retryCheck.valid && retrySnippet.valid && !hasUnconfirmedCitations(retryCorrected)) {
+              const retryCommentAudit = analyzeCommentQuality(retryCorrected);
+              if (retryCheck.valid && retrySnippet.valid && !hasUnconfirmedCitations(retryCorrected) && retryCommentAudit.valid) {
                 const retryFinalCited = extractAllCitedArticles(retryCorrected);
                 if (retryFinalCited.every(a => articleExistsInLaw(a, blocks))) {
                   await supabase.from("questoes").update({ comentario: retryCorrected }).eq("id", q.id);
@@ -1535,14 +1659,26 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
                 const retryLiteral = literalProofCheck(retryCorrectText, blocks);
                 
                 if (retryLiteral.found) {
+                  const retryAlternatives = buildAlternativeSnapshot(retryResult, retryGab);
                   const retryComment = forceDeterministicArticleInComment(
                     normalizeWhitespace(retryResult.comentario || ""),
                     retryLiteral.article
                   );
                   const { scrubbed: retryScrubbed } = scrubInvalidCitations(retryComment, blocks);
-                  const retryFinal = retryScrubbed.replace(/\[artigo não confirmado\]/g, retryLiteral.article || "");
+                  let retryFinal = retryScrubbed.replace(/\[artigo não confirmado\]/g, retryLiteral.article || "");
+                  let retryCommentAudit = analyzeCommentQuality(retryFinal);
+                  if (!retryCommentAudit.valid) {
+                    retryFinal = buildProfessorFallbackComment({
+                      citation: retryLiteral.article,
+                      referenceText: getCitationReferenceText(getArticleBlock(retryLiteral.article, blocks), retryLiteral.article) || retryCorrectText,
+                      correctLabel: String.fromCharCode(65 + retryGab),
+                      correctAltText: retryCorrectText,
+                      alternatives: retryAlternatives,
+                    });
+                    retryCommentAudit = analyzeCommentQuality(retryFinal);
+                  }
                   
-                  if (!hasUnconfirmedCitations(retryFinal)) {
+                  if (!hasUnconfirmedCitations(retryFinal) && retryCommentAudit.valid && validateAllCitations(retryFinal, blocks).valid && commentContainsCitation(retryFinal, retryLiteral.article)) {
                     await supabase.from("questoes").update({
                       enunciado: normalizeWhitespace(retryResult.enunciado),
                       alt_a: normalizeWhitespace(retryResult.alt_a || q.alt_a),
@@ -1659,6 +1795,26 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
 
           const whitelistRecheck = enforceAvailableArticlesWhitelist(finalComment, availableArticles, enforcedCitation);
           finalComment = forceDeterministicArticleInComment(whitelistRecheck.corrected, enforcedCitation);
+
+          let finalCommentAudit = analyzeCommentQuality(finalComment);
+          if (!finalCommentAudit.valid) {
+            finalComment = buildProfessorFallbackComment({
+              citation: enforcedCitation,
+              referenceText: getCitationReferenceText(getArticleBlock(enforcedArticle, blocks), enforcedCitation) || aiCorrectText,
+              correctLabel: String.fromCharCode(65 + aiGabarito),
+              correctAltText: aiCorrectText,
+              alternatives: buildAlternativeSnapshot(result, aiGabarito),
+            });
+            finalCommentAudit = analyzeCommentQuality(finalComment);
+          }
+
+          if (!finalCommentAudit.valid) {
+            console.log(`[VALIDAR] #${q.id} Comentário pós-IA ainda inválido — mantendo original`);
+            okCount++;
+            details.push({ id: q.id, status: "ok", motivo: `Mantida (comentário pós-IA inválido)` });
+            await new Promise(r => setTimeout(r, 300));
+            continue;
+          }
 
           if (!commentContainsCitation(finalComment, enforcedCitation)) {
             console.log(`[VALIDAR] #${q.id} Citação ausente pós-IA — mantendo original`);
