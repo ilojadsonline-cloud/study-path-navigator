@@ -1604,8 +1604,12 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
               [aiCorrectText, ...citationSnippets, ...extractCommentEvidenceSnippets(result.comentario || "")],
             )
             ?? enforcedArticle;
+          // When comment is looping, NEVER fall back to original q.comentario
+          const baseComment = isLoopingComment
+            ? (result.comentario || `Conforme o ${enforcedCitation || "texto legal"}.`)
+            : (result.comentario || q.comentario);
           let finalComment = forceDeterministicArticleInComment(
-            normalizeWhitespace(result.comentario || q.comentario),
+            normalizeWhitespace(baseComment),
             enforcedCitation,
           );
 
