@@ -18,13 +18,14 @@ export function GeradorPersonalizado({ onGenerate, onBack }: Props) {
   const [horas, setHoras] = useState(20);
   const [videoaulas, setVideoaulas] = useState(40);
   const [lei, setLei] = useState(30);
+  const [questoes, setQuestoes] = useState(30);
   const [dias, setDias] = useState<string[]>(["segunda", "terca", "quarta", "quinta", "sexta"]);
   const [horarioInicio, setHorarioInicio] = useState("19:00");
   const [horarioFim, setHorarioFim] = useState("23:00");
   const [nome, setNome] = useState("");
 
-  const questoes = Math.max(0, 100 - videoaulas - lei);
-  const isDistribuicaoValida = videoaulas + lei <= 100;
+  const somaTotal = videoaulas + lei + questoes;
+  const isDistribuicaoValida = somaTotal === 100;
 
   const toggleDia = (dia: string) => {
     setDias(prev => prev.includes(dia) ? prev.filter(d => d !== dia) : [...prev, dia]);
@@ -76,14 +77,15 @@ export function GeradorPersonalizado({ onGenerate, onBack }: Props) {
           </div>
           <div>
             <Label>Leitura de Lei: <span className="font-bold">{lei}%</span></Label>
-            <Slider value={[lei]} onValueChange={v => setLei(v[0])} min={0} max={100 - videoaulas} step={5} className="mt-2" />
+            <Slider value={[lei]} onValueChange={v => setLei(v[0])} min={0} max={100} step={5} className="mt-2" />
           </div>
           <div>
-            <Label>Questões: <span className="font-bold text-primary">{questoes}%</span> (automático)</Label>
+            <Label>Questões: <span className="font-bold">{questoes}%</span></Label>
+            <Slider value={[questoes]} onValueChange={v => setQuestoes(v[0])} min={0} max={100} step={5} className="mt-2" />
           </div>
-          {!isDistribuicaoValida && (
-            <p className="text-destructive text-sm">A soma de Videoaulas + Lei deve ser ≤ 100%</p>
-          )}
+          <div className={`text-sm font-medium ${isDistribuicaoValida ? 'text-success' : 'text-destructive'}`}>
+            Total: {somaTotal}% {isDistribuicaoValida ? "✓" : "(deve somar 100%)"}
+          </div>
         </CardContent>
       </Card>
 
