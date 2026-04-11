@@ -77,14 +77,15 @@ export function GeradorPersonalizado({ onGenerate, onBack }: Props) {
           </div>
           <div>
             <Label>Leitura de Lei: <span className="font-bold">{lei}%</span></Label>
-            <Slider value={[lei]} onValueChange={v => setLei(v[0])} min={0} max={100 - videoaulas} step={5} className="mt-2" />
+            <Slider value={[lei]} onValueChange={v => setLei(v[0])} min={0} max={100} step={5} className="mt-2" />
           </div>
           <div>
-            <Label>Questões: <span className="font-bold text-primary">{questoes}%</span> (automático)</Label>
+            <Label>Questões: <span className="font-bold">{questoes}%</span></Label>
+            <Slider value={[questoes]} onValueChange={v => setQuestoes(v[0])} min={0} max={100} step={5} className="mt-2" />
           </div>
-          {!isDistribuicaoValida && (
-            <p className="text-destructive text-sm">A soma de Videoaulas + Lei deve ser ≤ 100%</p>
-          )}
+          <div className={`text-sm font-medium ${isDistribuicaoValida ? 'text-success' : 'text-destructive'}`}>
+            Total: {somaTotal}% {isDistribuicaoValida ? "✓" : "(deve somar 100%)"}
+          </div>
         </CardContent>
       </Card>
 
