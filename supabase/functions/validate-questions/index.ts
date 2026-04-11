@@ -1182,38 +1182,7 @@ serve(async (req) => {
         }
       }
 
-      // Check 5.5: Repetitive/looping comment detection
-      // Catches comments like "Art. 62, Art. 62, parágrafo único, Art. 62, Art. 62..."
-      if (!needsFix) {
-        const comentario = q.comentario || "";
-        // Extract all "Art. X" occurrences and check for excessive repetition
-        const artMentions = comentario.match(/Art\.?\s*\d+[A-Z]?/gi) || [];
-        if (artMentions.length >= 6) {
-          // Count frequency of each article mention
-          const freq = new Map<string, number>();
-          for (const m of artMentions) {
-            const key = normalize(m);
-            freq.set(key, (freq.get(key) || 0) + 1);
-          }
-          const maxFreq = Math.max(...freq.values());
-          // If the same article is mentioned 5+ times, it's likely a loop/glitch
-          if (maxFreq >= 5) {
-            needsFix = true;
-            fixReason = `Comentário com texto repetitivo/loop (Art. citado ${maxFreq}x)`;
-            console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário repetitivo — ${Array.from(freq.entries()).map(([k,v]) => `${k}:${v}x`).join(", ")}`);
-          }
-        }
-        // Also detect any repeated substring pattern in comment (generic loop detection)
-        if (!needsFix && comentario.length > 100) {
-          // Check if any 20+ char substring repeats 4+ times
-          const chunks = comentario.match(/(.{20,80})\1{3,}/);
-          if (chunks) {
-            needsFix = true;
-            fixReason = "Comentário com padrão de texto repetido (glitch de geração)";
-            console.log(`[VALIDAR] #${q.id} PROBLEMA: padrão repetido no comentário`);
-          }
-        }
-      }
+      // (Check 5.5 moved to Check 0 — looping comments detected first)
 
       // Check 6: Anti-decoreba
       if (!needsFix) {
