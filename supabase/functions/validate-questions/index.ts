@@ -1066,8 +1066,41 @@ serve(async (req) => {
       let fixReason = "";
       let isLoopingComment = false;
 
-      // Check 0: LITERAL PROOF on correct answer
-      if (!fullCheck.correctValid) {
+      // Check 0 (PRIORITY): Repetitive/looping comment detection — MUST run first
+      {
+        const comentario = q.comentario || "";
+        const artMentions = comentario.match(/Art\.?\s*\d+[A-Z]?/gi) || [];
+        if (artMentions.length >= 6) {
+          const freq = new Map<string, number>();
+          for (const m of artMentions) { const key = normalize(m); freq.set(key, (freq.get(key) || 0) + 1); }
+          const maxFreq = Math.max(...freq.values());
+          if (maxFreq >= 5) {
+            needsFix = true;
+            isLoopingComment = true;
+            fixReason = `Comentário com texto repetitivo/loop (Art. citado ${maxFreq}x)`;
+            console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário repetitivo — ${Array.from(freq.entries()).map(([k,v]) => `${k}:${v}x`).join(", ")}`);
+          }
+        }
+        if (!needsFix && comentario.length > 100) {
+          const chunks = comentario.match(/(.{20,80})\1{3,}/);
+          if (chunks) {
+            needsFix = true;
+            isLoopingComment = true;
+            fixReason = "Comentário com padrão de texto repetido (glitch de geração)";
+            console.log(`[VALIDAR] #${q.id} PROBLEMA: padrão repetido no comentário`);
+          }
+        }
+        // Also flag absurdly long comments (>3000 chars is suspicious)
+        if (!needsFix && comentario.length > 3000) {
+          needsFix = true;
+          isLoopingComment = true;
+          fixReason = `Comentário excessivamente longo (${comentario.length} chars — provável glitch)`;
+          console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário com ${comentario.length} chars`);
+        }
+      }
+
+      // Check 0.5: LITERAL PROOF on correct answer
+      if (!needsFix && !fullCheck.correctValid) {
         needsFix = true;
         fixReason = `PROVA LITERAL FALHOU: ${fullCheck.correctIssue || "alternativa correta sem base na lei"}`;
         console.log(`[VALIDAR] #${q.id} TRAVA LITERAL: ${fixReason}`);
