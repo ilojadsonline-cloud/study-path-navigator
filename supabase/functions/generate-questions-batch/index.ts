@@ -857,9 +857,9 @@ REGRAS ABSOLUTAS DO COMENTÁRIO:
 - NUNCA escreva "Art. X, Art. X, parágrafo único, Art. X" — isso é um ERRO GRAVE de formatação.
 
 REGRA CRÍTICA PARA NÚMEROS DE ARTIGOS NO COMENTÁRIO:
-- Antes de citar "Art. X", LOCALIZE o trecho literal no texto legal e verifique em qual artigo ele realmente aparece.
-- Se o trecho sobre "exclusão de QA" está no Art. 33, cite Art. 33 — JAMAIS cite Art. 19 ou outro número.
-- O número do artigo NÃO é um detalhe menor: um artigo errado invalida toda a questão.
+- Antes de citar "Art. X", LOCALIZE o trecho no texto legal e confirme o número correto.
+- CITE O ARTIGO UMA ÚNICA VEZ. Repetir "Art. X, Art. X, Art. X" é um ERRO GRAVÍSSIMO que resultará em exclusão automática.
+- Máximo 1500 caracteres no comentário. Comentários longos e repetitivos serão REJEITADOS.
 
 Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do JSON, no formato {"questions":[...]}.`;
 
