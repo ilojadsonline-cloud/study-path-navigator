@@ -1608,6 +1608,33 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
             continue;
           }
 
+          // POST-AI: check for repetitive/looping comment in AI output
+          const aiComment = normalizeWhitespace(result.comentario || "");
+          const aiArtMentions = aiComment.match(/Art\.?\s*\d+[A-Z]?/gi) || [];
+          const aiFreq = new Map<string, number>();
+          for (const m of aiArtMentions) { const key = normalize(m); aiFreq.set(key, (aiFreq.get(key) || 0) + 1); }
+          const aiMaxFreq = aiFreq.size > 0 ? Math.max(...aiFreq.values()) : 0;
+          if (aiMaxFreq >= 4 || aiArtMentions.length >= 8 || aiComment.length > 2500) {
+            console.log(`[VALIDAR] #${q.id} IA GEROU COMENTÁRIO REPETITIVO (freq=${aiMaxFreq}, mentions=${aiArtMentions.length}, len=${aiComment.length}) — excluindo questão`);
+            await supabase.from("questoes").delete().eq("id", q.id);
+            deletedCount++;
+            details.push({ id: q.id, status: "excluida", motivo: `Comentário da IA repetitivo/loop (${aiMaxFreq}x, ${aiArtMentions.length} menções)` });
+            await new Promise(r => setTimeout(r, 300));
+            continue;
+          }
+          // Check for generic text loops in AI output
+          if (aiComment.length > 100) {
+            const aiLoopChunks = aiComment.match(/(.{15,80})\1{2,}/);
+            if (aiLoopChunks) {
+              console.log(`[VALIDAR] #${q.id} IA GEROU PADRÃO DE LOOP — excluindo questão`);
+              await supabase.from("questoes").delete().eq("id", q.id);
+              deletedCount++;
+              details.push({ id: q.id, status: "excluida", motivo: `Comentário da IA com padrão de texto repetido` });
+              await new Promise(r => setTimeout(r, 300));
+              continue;
+            }
+          }
+
           // POST-AI: verificação completa de TODAS as alternativas
           const aiFullCheck = fullAlternativesCheck(result, blocks);
           if (aiFullCheck.incorrectIssues.length > 0) {
