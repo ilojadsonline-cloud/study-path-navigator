@@ -18,6 +18,7 @@ export function GeradorPersonalizado({ onGenerate, onBack }: Props) {
   const [horas, setHoras] = useState(20);
   const [videoaulas, setVideoaulas] = useState(40);
   const [lei, setLei] = useState(30);
+  const [questoes, setQuestoes] = useState(30);
   const [dias, setDias] = useState<string[]>(["segunda", "terca", "quarta", "quinta", "sexta"]);
   const [horarioInicio, setHorarioInicio] = useState("19:00");
   const [horarioFim, setHorarioFim] = useState("23:00");
