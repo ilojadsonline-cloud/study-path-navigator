@@ -1070,15 +1070,23 @@ serve(async (req) => {
       {
         const comentario = q.comentario || "";
         const artMentions = comentario.match(/Art\.?\s*\d+[A-Z]?/gi) || [];
-        if (artMentions.length >= 6) {
+        // Any single article cited 3+ times = excessive repetition (professor style = cite ONCE)
+        if (artMentions.length >= 3) {
           const freq = new Map<string, number>();
           for (const m of artMentions) { const key = normalize(m); freq.set(key, (freq.get(key) || 0) + 1); }
           const maxFreq = Math.max(...freq.values());
-          if (maxFreq >= 5) {
+          if (maxFreq >= 3) {
             needsFix = true;
             isLoopingComment = true;
-            fixReason = `Comentário com texto repetitivo/loop (Art. citado ${maxFreq}x)`;
-            console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário repetitivo — ${Array.from(freq.entries()).map(([k,v]) => `${k}:${v}x`).join(", ")}`);
+            fixReason = `Comentário cita artigo excessivamente (Art. mencionado ${maxFreq}x — máximo permitido: 2)`;
+            console.log(`[VALIDAR] #${q.id} PROBLEMA: artigo repetido demais — ${Array.from(freq.entries()).map(([k,v]) => `${k}:${v}x`).join(", ")}`);
+          }
+          // Total article mentions > 6 even if distributed = robotic/non-pedagogical
+          if (!needsFix && artMentions.length > 6) {
+            needsFix = true;
+            isLoopingComment = true;
+            fixReason = `Comentário com excesso de citações de artigos (${artMentions.length} menções — estilo robótico)`;
+            console.log(`[VALIDAR] #${q.id} PROBLEMA: ${artMentions.length} menções de artigos no comentário`);
           }
         }
         if (!needsFix && comentario.length > 100) {
@@ -1090,11 +1098,11 @@ serve(async (req) => {
             console.log(`[VALIDAR] #${q.id} PROBLEMA: padrão repetido no comentário`);
           }
         }
-        // Also flag absurdly long comments (>3000 chars is suspicious)
-        if (!needsFix && comentario.length > 3000) {
+        // Also flag absurdly long comments (>2000 chars is suspicious for a pedagogical comment)
+        if (!needsFix && comentario.length > 2000) {
           needsFix = true;
           isLoopingComment = true;
-          fixReason = `Comentário excessivamente longo (${comentario.length} chars — provável glitch)`;
+          fixReason = `Comentário excessivamente longo (${comentario.length} chars — provável glitch ou estilo não pedagógico)`;
           console.log(`[VALIDAR] #${q.id} PROBLEMA: comentário com ${comentario.length} chars`);
         }
       }
