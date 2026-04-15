@@ -1090,6 +1090,7 @@ serve(async (req) => {
     const existingFingerprints = new Map<string, number>();
     const existingSemanticFPs = new Map<string, number>();
     const existingForSimilarity: Array<{ id: number; enunciado: string }> = [];
+    const existingPrefixFPs = new Map<string, number>();
     if (existingQuestions) {
       for (const eq of existingQuestions) {
         if (!batchIds.has(eq.id)) {
@@ -1098,6 +1099,7 @@ serve(async (req) => {
           const correctText = eq[correctKey] || "";
           existingSemanticFPs.set(buildSemanticFingerprint(eq.comentario || "", correctText), eq.id);
           existingForSimilarity.push({ id: eq.id, enunciado: eq.enunciado });
+          existingPrefixFPs.set(normalize(eq.enunciado).substring(0, 50), eq.id);
         }
       }
     }
@@ -1109,6 +1111,7 @@ serve(async (req) => {
     const batchFingerprints = new Map<string, number>();
     const batchSemanticFPs = new Map<string, number>();
     const batchForSimilarity: Array<{ id: number; enunciado: string }> = [];
+    const batchPrefixFPs = new Map<string, number>();
 
     for (const q of questions!) {
       const lawText = legalTexts[q.disciplina];
@@ -1157,16 +1160,36 @@ serve(async (req) => {
       }
       batchSemanticFPs.set(semFP, q.id);
 
+      // ── Prefix-based duplicate check (first 50 chars normalized) ──
+      const prefix = normalize(q.enunciado).substring(0, 50);
+      const prefixExistingId = existingPrefixFPs.get(prefix);
+      const prefixBatchId = batchPrefixFPs.get(prefix);
+      if (prefixExistingId && prefixExistingId !== q.id) {
+        await supabase.from("questoes").delete().eq("id", q.id);
+        deletedCount++;
+        details.push({ id: q.id, status: "excluida", motivo: `Prefixo idêntico à questão #${prefixExistingId} (primeiros 50 chars)` });
+        console.log(`[VALIDAR] #${q.id} EXCLUÍDA: prefixo idêntico a #${prefixExistingId}`);
+        continue;
+      }
+      if (prefixBatchId && prefixBatchId !== q.id) {
+        await supabase.from("questoes").delete().eq("id", q.id);
+        deletedCount++;
+        details.push({ id: q.id, status: "excluida", motivo: `Prefixo idêntico à questão #${prefixBatchId} (no lote)` });
+        console.log(`[VALIDAR] #${q.id} EXCLUÍDA: prefixo idêntico a #${prefixBatchId} (lote)`);
+        continue;
+      }
+      batchPrefixFPs.set(prefix, q.id);
+
       // ── Similarity-based duplicate check (catches rephrased questions) ──
-      const similarExistingId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55);
+      const similarExistingId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.45);
       if (similarExistingId) {
         await supabase.from("questoes").delete().eq("id", q.id);
         deletedCount++;
-        details.push({ id: q.id, status: "excluida", motivo: `Questão muito similar à #${similarExistingId} (overlap > 55%)` });
+        details.push({ id: q.id, status: "excluida", motivo: `Questão muito similar à #${similarExistingId} (overlap > 45%)` });
         console.log(`[VALIDAR] #${q.id} EXCLUÍDA: similar a #${similarExistingId}`);
         continue;
       }
-      const similarBatchId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55);
+      const similarBatchId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.45);
       if (similarBatchId !== null) {
         await supabase.from("questoes").delete().eq("id", q.id);
         deletedCount++;
