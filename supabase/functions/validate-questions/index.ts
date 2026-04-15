@@ -1641,18 +1641,28 @@ Responda APENAS JSON (sem markdown):
         content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         const result = JSON.parse(content);
 
-        if (result.valida === false) {
-          // IA said invalid — retry once asking to FORCE correction
-          console.log(`[VALIDAR] #${q.id} IA marcou inválida: "${result.motivo_erro}" — tentando retry forçando correção`);
+        // ── Normalize new structured format to flat format for downstream processing ──
+        const isNewFormat = result.status && result.questao_versao_aprimorada;
+        const isExclusion = result.status === "REPROVADA_PARA_EXCLUSAO";
+        const isOldInvalid = result.valida === false;
+        
+        // Extract the improved question from the new format
+        const improved = isNewFormat ? result.questao_versao_aprimorada : result;
+        const motivos = result.motivos_reprovacao || [];
+
+        if (isExclusion || (isOldInvalid && !isNewFormat)) {
+          const motivoTexto = motivos.length > 0 ? motivos.join("; ") : (result.motivo_erro || fixReason);
+          console.log(`[VALIDAR] #${q.id} IA marcou para exclusão: "${motivoTexto}" — tentando retry forçando correção`);
           
-          const retryPrompt = `A questão abaixo foi marcada como inválida com motivo: "${result.motivo_erro}".
+          const retryPrompt = `A questão abaixo foi marcada como REPROVADA_PARA_EXCLUSAO com motivos: "${motivoTexto}".
 NÃO ACEITO exclusão. Você DEVE criar uma questão NOVA e VÁLIDA usando o mesmo tema/disciplina e o texto legal fornecido.
 Use QUALQUER artigo disponível na lista abaixo para criar uma questão correta.
 
 ARTIGOS PERMITIDOS: [${availableArticles}]
 TEXTO LEGAL (${q.disciplina}): ${lawText.substring(0, 20000)}
 
-Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}`;
+Responda APENAS JSON no formato:
+{"status":"REPROVADA_COM_CORRECOES","motivos_reprovacao":[],"questao_versao_aprimorada":{"enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}}`;
 
           try {
             const retryController = new AbortController();
@@ -1666,7 +1676,7 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
                   { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, null) },
                   { role: "user", content: retryPrompt },
                 ],
-                max_tokens: 4000, temperature: 0.3,
+                max_tokens: 4000, temperature: 0.1,
               }),
               signal: retryController.signal,
             });
@@ -1678,15 +1688,19 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
               retryContent = retryContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
               const retryResult = JSON.parse(retryContent);
               
-              if (retryResult.valida !== false && retryResult.enunciado) {
-                const retryGab = clampGabarito(retryResult.gabarito);
-                const retryCorrectText = normalizeWhitespace(retryResult[ALT_KEYS[retryGab]] || "");
+              // Extract from new format or flat
+              const retryImproved = retryResult.questao_versao_aprimorada || retryResult;
+              const retryNotExclusion = retryResult.status !== "REPROVADA_PARA_EXCLUSAO" && retryResult.valida !== false;
+              
+              if (retryNotExclusion && retryImproved.enunciado) {
+                const retryGab = clampGabarito(retryImproved.gabarito);
+                const retryCorrectText = normalizeWhitespace(retryImproved[ALT_KEYS[retryGab]] || "");
                 const retryLiteral = literalProofCheck(retryCorrectText, blocks);
                 
                 if (retryLiteral.found) {
-                  const retryAlternatives = buildAlternativeSnapshot(retryResult, retryGab);
+                  const retryAlternatives = buildAlternativeSnapshot(retryImproved, retryGab);
                   const retryComment = forceDeterministicArticleInComment(
-                    normalizeWhitespace(retryResult.comentario || ""),
+                    normalizeWhitespace(retryImproved.comentario || ""),
                     retryLiteral.article
                   );
                   const { scrubbed: retryScrubbed } = scrubInvalidCitations(retryComment, blocks);
@@ -1705,12 +1719,12 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
                   
                   if (!hasUnconfirmedCitations(retryFinal) && retryCommentAudit.valid && validateAllCitations(retryFinal, blocks).valid && commentContainsCitation(retryFinal, retryLiteral.article)) {
                     await supabase.from("questoes").update({
-                      enunciado: normalizeWhitespace(retryResult.enunciado),
-                      alt_a: normalizeWhitespace(retryResult.alt_a || q.alt_a),
-                      alt_b: normalizeWhitespace(retryResult.alt_b || q.alt_b),
-                      alt_c: normalizeWhitespace(retryResult.alt_c || q.alt_c),
-                      alt_d: normalizeWhitespace(retryResult.alt_d || q.alt_d),
-                      alt_e: normalizeWhitespace(retryResult.alt_e || q.alt_e),
+                      enunciado: normalizeWhitespace(retryImproved.enunciado),
+                      alt_a: normalizeWhitespace(retryImproved.alt_a || q.alt_a),
+                      alt_b: normalizeWhitespace(retryImproved.alt_b || q.alt_b),
+                      alt_c: normalizeWhitespace(retryImproved.alt_c || q.alt_c),
+                      alt_d: normalizeWhitespace(retryImproved.alt_d || q.alt_d),
+                      alt_e: normalizeWhitespace(retryImproved.alt_e || q.alt_e),
                       gabarito: retryGab,
                       comentario: retryFinal,
                     }).eq("id", q.id);
@@ -1728,16 +1742,17 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
           }
           
           // Retry also failed — now delete as last resort
-          questoesRevisaoManual.push({ id: q.id, motivo: result.motivo_erro || fixReason });
+          questoesRevisaoManual.push({ id: q.id, motivo: motivoTexto });
           await supabase.from("questoes").delete().eq("id", q.id);
           deletedCount++;
-          details.push({ id: q.id, status: "excluida", motivo: `Irrecuperável após retry: ${(result.motivo_erro || fixReason).substring(0, 120)}` });
-          console.log(`[VALIDAR] #${q.id} EXCLUÍDA (último recurso): ${result.motivo_erro || fixReason}`);
+          details.push({ id: q.id, status: "excluida", motivo: `Irrecuperável após retry: ${motivoTexto.substring(0, 120)}` });
+          console.log(`[VALIDAR] #${q.id} EXCLUÍDA (último recurso): ${motivoTexto}`);
         } else {
+          // APROVADA or REPROVADA_COM_CORRECOES — apply the improved version
           // ── POST-AI VALIDATION: re-run literal proof on AI output ──
-          const aiGabarito = clampGabarito(result.gabarito);
+          const aiGabarito = clampGabarito(improved.gabarito);
           const aiCorrectKey = ALT_KEYS[aiGabarito];
-          const aiCorrectText = normalizeWhitespace(result[aiCorrectKey] || "");
+          const aiCorrectText = normalizeWhitespace(improved[aiCorrectKey] || "");
 
           // TRAVA DE PROVA LITERAL on AI output
           const aiLiteralCheck = literalProofCheck(aiCorrectText, blocks);
