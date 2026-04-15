@@ -1090,6 +1090,7 @@ serve(async (req) => {
     const existingFingerprints = new Map<string, number>();
     const existingSemanticFPs = new Map<string, number>();
     const existingForSimilarity: Array<{ id: number; enunciado: string }> = [];
+    const existingPrefixFPs = new Map<string, number>();
     if (existingQuestions) {
       for (const eq of existingQuestions) {
         if (!batchIds.has(eq.id)) {
@@ -1098,6 +1099,7 @@ serve(async (req) => {
           const correctText = eq[correctKey] || "";
           existingSemanticFPs.set(buildSemanticFingerprint(eq.comentario || "", correctText), eq.id);
           existingForSimilarity.push({ id: eq.id, enunciado: eq.enunciado });
+          existingPrefixFPs.set(normalize(eq.enunciado).substring(0, 50), eq.id);
         }
       }
     }
@@ -1109,6 +1111,7 @@ serve(async (req) => {
     const batchFingerprints = new Map<string, number>();
     const batchSemanticFPs = new Map<string, number>();
     const batchForSimilarity: Array<{ id: number; enunciado: string }> = [];
+    const batchPrefixFPs = new Map<string, number>();
 
     for (const q of questions!) {
       const lawText = legalTexts[q.disciplina];
