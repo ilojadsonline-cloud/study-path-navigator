@@ -1783,13 +1783,13 @@ Responda APENAS JSON no formato:
           const enforcedCitation = deterministicCitation
             ?? buildDeterministicCitation(
               getArticleBlock(enforcedArticle, blocks),
-              [aiCorrectText, ...citationSnippets, ...extractCommentEvidenceSnippets(result.comentario || "")],
+              [aiCorrectText, ...citationSnippets, ...extractCommentEvidenceSnippets(improved.comentario || "")],
             )
             ?? enforcedArticle;
           // When comment is looping, NEVER fall back to original q.comentario
           const baseComment = isLoopingComment
-            ? (result.comentario || `Conforme o ${enforcedCitation || "texto legal"}.`)
-            : (result.comentario || q.comentario);
+            ? (improved.comentario || `Conforme o ${enforcedCitation || "texto legal"}.`)
+            : (improved.comentario || q.comentario);
           let finalComment = forceDeterministicArticleInComment(
             normalizeWhitespace(baseComment),
             enforcedCitation,
