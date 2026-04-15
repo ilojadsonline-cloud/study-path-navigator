@@ -677,6 +677,8 @@ serve(async (req) => {
     if (existingQ) {
       existingQ.forEach((eq) => {
         existingFingerprints.add(buildFingerprint(eq.enunciado));
+        // Also add prefix fingerprint for prefix dedup
+        existingFingerprints.add(normalize(eq.enunciado).substring(0, 50));
         const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
         const correctText = eq[correctKey] || "";
         existingSemanticFPs.add(buildSemanticFingerprint(eq.comentario || "", correctText));
@@ -905,6 +907,16 @@ PROIBIÇÕES ABSOLUTAS NO ENUNCIADO:
 - "O que diz o Art. X?", "Qual artigo trata de...", "Segundo o Art. X, ...", "De acordo com o Art. X, ..."
 - Qualquer menção direta ao número de artigo no enunciado.
 
+PROIBIÇÕES ABSOLUTAS NAS ALTERNATIVAS:
+- NUNCA crie alternativas que sejam apenas números de artigos ou de leis (ex: "Art. 15", "Lei nº 2.578/2012").
+- Cada alternativa DEVE conter uma AFIRMAÇÃO SUBSTANTIVA sobre o conteúdo da lei, NUNCA uma mera referência numérica.
+- Alternativas como "Art. 10", "Art. 15 da Lei 2.578", "Lei Complementar 128" são PROIBIDAS — o candidato deve demonstrar COMPREENSÃO do conteúdo, não memorização de números.
+
+DIVERSIDADE OBRIGATÓRIA:
+- Cada questão do lote DEVE abordar um ASPECTO DIFERENTE da lei. NÃO repita o mesmo tema, situação ou estrutura.
+- VARIE o tipo de raciocínio exigido: análise de caso, identificação de exceção, definição legal, combinação de dispositivos.
+- NÃO crie questões que apenas reformulem o mesmo cenário com palavras diferentes — cada questão deve testar um CONHECIMENTO DISTINTO.
+
 REGRAS TÉCNICAS:
 - Artigos existentes na lei: ${availableArticles}
 - Cite SOMENTE artigos que existam na lei acima.
@@ -1100,12 +1112,32 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: decoreba`); continue;
       }
 
+      // ── Anti-citação-seca nas alternativas ──
+      // Rejeita questões onde alternativas são apenas "Art. X", "Art. X da Lei Y", números de lei secos
+      const dryAltPattern = /^\s*(art\.?\s*\d+[a-z]?(\s*(,|e)\s*art\.?\s*\d+[a-z]?)*\s*(d[aoe]\s+lei.*|d[aoe]\s+decreto.*|d[aoe]\s+lc.*)?\.?\s*|lei\s*(n[°º]?\s*)?\d[\d\.\/]*\s*\.?\s*|decreto\s*(n[°º]?\s*)?\d[\d\.\/]*\s*\.?\s*|lc\s*(n[°º]?\s*)?\d[\d\.\/]*\s*\.?\s*)$/i;
+      const dryAltCount = alts.filter(a => dryAltPattern.test(a)).length;
+      if (dryAltCount >= 2) {
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: ${dryAltCount} alternativas são apenas citação seca de artigo/lei`); continue;
+      }
+      // Also reject if ANY alt is just a bare article number with no substance
+      const bareArtPattern = /^\s*art\.?\s*\d+[a-z]?\s*\.?\s*$/i;
+      if (alts.some(a => bareArtPattern.test(a))) {
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: alternativa é apenas número de artigo`); continue;
+      }
+
+      // ── Prefix dedup (first 50 normalized chars) ──
+      const prefixFP = normalize(q.enunciado).substring(0, 50);
+      if (existingFingerprints.has(prefixFP) || batchFingerprints.has(prefixFP)) {
+        discarded++; console.log(`[GERAR] Q${idx+1} descartada: prefixo duplicado`); continue;
+      }
+
       // ── Fingerprint dedup ──
       const fp = buildFingerprint(q.enunciado);
       if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) {
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata textual`); continue;
       }
       batchFingerprints.add(fp);
+      batchFingerprints.add(prefixFP);
 
       // ── Semantic dedup ──
       const correctAltKey = ALT_KEYS[q.gabarito];
