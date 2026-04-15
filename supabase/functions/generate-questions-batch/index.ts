@@ -1117,11 +1117,11 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       batchSemanticFPs.add(semFP);
 
       // ── Similarity dedup ──
-      const similarId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55);
+      const similarId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.45);
       if (similarId) {
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: similar à #${similarId}`); continue;
       }
-      const batchSimilarId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55);
+      const batchSimilarId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.45);
       if (batchSimilarId !== null) {
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: similar a outra no lote`); continue;
       }
