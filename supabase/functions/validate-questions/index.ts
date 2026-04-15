@@ -1843,7 +1843,7 @@ Responda APENAS JSON no formato:
               referenceText: getCitationReferenceText(getArticleBlock(enforcedArticle, blocks), enforcedCitation) || aiCorrectText,
               correctLabel: String.fromCharCode(65 + aiGabarito),
               correctAltText: aiCorrectText,
-              alternatives: buildAlternativeSnapshot(result, aiGabarito),
+              alternatives: buildAlternativeSnapshot(improved, aiGabarito),
             });
             finalCommentAudit = analyzeCommentQuality(finalComment);
           }
@@ -1905,7 +1905,7 @@ Responda APENAS JSON no formato:
             console.log(`[VALIDAR] #${q.id} Comentário loop — snippet check relaxado para reescrita IA`);
           }
 
-          const finalEnunciado = normalizeWhitespace(result.enunciado || q.enunciado);
+          const finalEnunciado = normalizeWhitespace(improved.enunciado || q.enunciado);
           const { scrubbed: scrubbedEnunciado } = scrubInvalidCitations(finalEnunciado, blocks);
           const crossCheck = crossValidateReferences(scrubbedEnunciado, finalComment);
           if (!crossCheck.valid) {
@@ -1918,7 +1918,7 @@ Responda APENAS JSON no formato:
 
           // Anti-decoreba on AI output
           const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
-          if (decoreba.test((result.enunciado || "").toLowerCase())) {
+          if (decoreba.test((improved.enunciado || "").toLowerCase())) {
             console.log(`[VALIDAR] #${q.id} Decoreba pós-IA — mantendo original`);
             okCount++;
             details.push({ id: q.id, status: "ok", motivo: `Mantida (decoreba na reescrita IA)` });
@@ -1927,7 +1927,7 @@ Responda APENAS JSON no formato:
           }
 
           // Duplicate check on AI-rewritten question (skip if fixing looping comment — same enunciado is expected)
-          const newFp = buildFingerprint(result.enunciado || q.enunciado);
+          const newFp = buildFingerprint(improved.enunciado || q.enunciado);
           const newSemFp = buildSemanticFingerprint(finalComment, aiCorrectText);
           if (!isLoopingComment && (existingFingerprints.has(newFp) || batchFingerprints.has(newFp))) {
             console.log(`[VALIDAR] #${q.id} Duplicata pós-IA — mantendo original`);
@@ -1945,11 +1945,11 @@ Responda APENAS JSON no formato:
           // All checks passed — save
           const updateData: Record<string, unknown> = {
             enunciado: scrubbedEnunciado,
-            alt_a: normalizeWhitespace(result.alt_a || q.alt_a),
-            alt_b: normalizeWhitespace(result.alt_b || q.alt_b),
-            alt_c: normalizeWhitespace(result.alt_c || q.alt_c),
-            alt_d: normalizeWhitespace(result.alt_d || q.alt_d),
-            alt_e: normalizeWhitespace(result.alt_e || q.alt_e),
+            alt_a: normalizeWhitespace(improved.alt_a || q.alt_a),
+            alt_b: normalizeWhitespace(improved.alt_b || q.alt_b),
+            alt_c: normalizeWhitespace(improved.alt_c || q.alt_c),
+            alt_d: normalizeWhitespace(improved.alt_d || q.alt_d),
+            alt_e: normalizeWhitespace(improved.alt_e || q.alt_e),
             gabarito: aiGabarito,
             comentario: finalComment,
           };
