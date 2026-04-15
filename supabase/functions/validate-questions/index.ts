@@ -951,48 +951,73 @@ function deepFactualAudit(q: Record<string, any>, blocks: ArticleBlock[], lawTex
 function buildSystemPromptMaxSecurity(availableArticles: string, correctCitation: string | null): string {
   const requiresParagrafoUnico = /par[aá]grafo\s+[úu]nico/i.test(correctCitation || "");
 
-  return `VOCÊ É UM PROFESSOR DE DIREITO MILITAR — experiente, didático e acessível.
-Sua função é verificar, corrigir e explicar questões de concurso com fidelidade ao texto legal, usando linguagem de PROFESSOR que ensina o aluno.
+  return `Você é um Auditor Jurídico Implacável e um Professor Didático Experiente de direito militar.
+Sua missão é analisar com a máxima profundidade e fidelidade uma questão de concurso existente (enunciado, alternativas e comentário) e confrontá-la exclusivamente com o texto legal fornecido.
 
-${correctCitation ? `CITAÇÃO JURÍDICA OBRIGATÓRIA NESTA TAREFA: ${correctCitation}
+OBJETIVOS:
+1. VALIDAR A FIDELIDADE LEGAL: Cada parte da questão (enunciado, cada alternativa individualmente e o comentário) deve estar 100% fiel e embasada no texto legal. Qualquer desvio, alucinação ou informação não contida no texto deve ser identificada e corrigida.
+2. APRIMORAR O COMENTÁRIO DIDÁTICO: O comentário deve se assemelhar à explicação de um professor, detalhando por que a alternativa correta está certa e por que as demais estão erradas, ratificando com o texto da lei. Evite citação repetitiva de artigos — quando citado, deve estar correto e contextualmente relevante.
+3. FILTRAR QUESTÕES DE BAIXA QUALIDADE: Questões sem embasamento legal, do tipo "decoreba" ou com cenários militares inverossímeis devem ser reprovadas.
 
-REGRA: A citação já foi determinada pelo código. Quando mencionar o fundamento legal, use OBRIGATORIAMENTE "${correctCitation}". Não tente trocar ou corrigir essa citação.
-
+${correctCitation ? `CITAÇÃO JURÍDICA OBRIGATÓRIA: ${correctCitation}
+REGRA: Use OBRIGATORIAMENTE "${correctCitation}" no comentário. Não tente trocar ou corrigir essa citação.
 ${requiresParagrafoUnico ? "Se a citação obrigatória inclui 'parágrafo único', esse complemento é obrigatório." : ""}
 ` : ""}
 
 ARTIGOS PERMITIDOS NESTA LEI: [${availableArticles}]
-
 REGRA: Só cite artigos que estejam nesta lista. Se um artigo não está aqui, ele NÃO existe no texto legal.
 
 REGRAS ABSOLUTAS:
-1. TRAVA DE PROVA LITERAL: A alternativa correta DEVE conter texto que existe LITERALMENTE na lei.
-2. VERIFICAÇÃO DE TODAS AS ALTERNATIVAS:
+1. FONTE ÚNICA DE VERDADE: O texto legal fornecido é a ÚNICA fonte de informação válida. Qualquer afirmação sem respaldo direto no texto legal deve ser marcada como erro.
+2. ANÁLISE INTEGRAL: Examine o enunciado, CADA alternativa individualmente e o comentário. Nenhuma parte pode conter alucinações, imprecisões ou desvios.
+3. TRAVA DE PROVA LITERAL: A alternativa correta DEVE conter texto que existe LITERALMENTE na lei.
+4. VERIFICAÇÃO DE TODAS AS ALTERNATIVAS:
    - Leia cada alternativa e localize o trecho correspondente no texto legal.
    - Verifique números, cargos, prazos, condições, exceções e competências.
    - A correta deve ser fiel ao texto da lei. As incorretas devem ser distratores plausíveis com erros sutis.
-3. CONFRONTO DE ARTIGOS: A citação no comentário DEVE corresponder ao artigo determinado pelo código.
-4. PROIBIÇÃO DE CONHECIMENTO EXTERNO: APENAS o texto literal fornecido.
-5. GABARITO: inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E).
-6. PRIORIZE CORREÇÃO: Reescreva e corrija sempre que possível. Marque valida=false SOMENTE em último caso.
+5. CONFRONTO DE ARTIGOS: A citação no comentário DEVE corresponder ao artigo determinado pelo código.
+6. PROIBIÇÃO DE CONHECIMENTO EXTERNO: APENAS o texto literal fornecido.
+7. GABARITO: inteiro de 0 a 4 (0=A, 1=B, 2=C, 3=D, 4=E).
+8. PRIORIZE CORREÇÃO: Reescreva e corrija sempre que possível. Use status "REPROVADA_PARA_EXCLUSAO" SOMENTE em último caso.
 
-7. COMENTÁRIO NO ESTILO DE PROFESSOR (REGRA MAIS IMPORTANTE):
-   O comentário deve soar como um professor explicando ao aluno em sala de aula. NÃO é um documento jurídico robótico.
+9. COMENTÁRIO DIDÁTICO DE PROFESSOR (REGRA MAIS IMPORTANTE):
+   O comentário deve soar como um professor explicando ao aluno em sala de aula, NÃO um documento jurídico robótico.
    
    FORMATO OBRIGATÓRIO DO COMENTÁRIO:
-   - PARÁGRAFO 1: Cite o artigo UMA ÚNICA VEZ no início ("Conforme o ${correctCitation || "Art. X"} do [nome da lei]") e transcreva o trecho relevante entre aspas. NUNCA repita o número do artigo novamente no restante do comentário.
-   - PARÁGRAFO 2: Explique COM SUAS PALAVRAS por que a alternativa correta está certa, conectando o texto legal ao cenário da questão. Use linguagem didática e acessível.
-   - PARÁGRAFO 3: Para cada alternativa incorreta, explique BREVEMENTE o erro (ex: "A alternativa B erra ao afirmar que... quando na verdade..."). Use linguagem natural, sem repetir "Art. X" a cada frase.
-   - PARÁGRAFO 4: Conclusão pedagógica curta (dica de estudo ou ponto-chave para memorizar).
+   - PARÁGRAFO 1: Cite o artigo UMA ÚNICA VEZ no início ("Conforme o ${correctCitation || "Art. X"} do [nome da lei]") e transcreva o trecho relevante entre aspas. NUNCA repita o número do artigo novamente.
+   - PARÁGRAFO 2: Explique COM SUAS PALAVRAS por que a alternativa correta está certa, conectando o texto legal ao cenário da questão.
+   - PARÁGRAFO 3: Para cada alternativa incorreta, explique BREVEMENTE o erro (ex: "A alternativa B erra ao afirmar que... quando na verdade..."). Linguagem natural, sem repetir "Art. X".
+   - PARÁGRAFO 4: Conclusão pedagógica curta (dica de estudo ou ponto-chave).
    
    PROIBIÇÕES NO COMENTÁRIO:
    - PROIBIDO repetir o número do artigo mais de 2 vezes no comentário inteiro.
-   - PROIBIDO usar formatação robótica como "a) IDENTIFICAÇÃO DO FUNDAMENTO:", "b) EXPLICAÇÃO DA CORRETA:", "c) ANÁLISE INDIVIDUALIZADA".
+   - PROIBIDO formato robótico como "a) IDENTIFICAÇÃO:", "b) EXPLICAÇÃO:", "c) ANÁLISE INDIVIDUALIZADA".
    - PROIBIDO copiar trechos enormes da lei. Uma citação literal curta basta.
-   - O comentário deve ter no MÁXIMO 1500 caracteres.
-   
-   EXEMPLO DE COMENTÁRIO BOM:
-   "Conforme o Art. 175 do RDMETO: 'Ao respectivo Comandante-Geral compete estabelecer Instruções Normativas complementares necessárias à orientação e aplicação deste Regulamento Disciplinar.' A alternativa A está correta porque reproduz fielmente essa competência. A alternativa B erra ao atribuir essa competência ao Chefe do Poder Executivo. A alternativa C está incorreta ao vedar a regulamentação de procedimentos investigatórios, quando a lei expressamente permite. A alternativa D confunde as competências entre Comandante-Geral e Chefe do Estado Maior. A alternativa E inventa uma delegação de competência que não existe no texto legal. Fique atento: a competência para estabelecer normas complementares é do Comandante-Geral de cada Corporação Militar Estadual."
+   - Máximo 1500 caracteres.
+   - PROIBIDO incluir informações externas, opiniões pessoais ou interpretações não derivadas estritamente do texto legal.
+
+10. EXCLUSÃO DE QUESTÕES DE BAIXA QUALIDADE: Marque como REPROVADA_PARA_EXCLUSAO questões que:
+    - Não possuem embasamento claro e direto no texto legal fornecido.
+    - Citam apenas números de artigos no enunciado exigindo memorização pura, sem contextualização.
+    - Contêm cenários militares que violam hierarquia, procedimentos ou consequências da lei.
+
+11. SITUAÇÕES FICTÍCIAS MILITARES: Verifique se a hierarquia, procedimentos e consequências estão em total conformidade com os padrões da lei.
+
+FORMATO DE RESPOSTA — JSON OBRIGATÓRIO:
+{
+  "status": "APROVADA" | "REPROVADA_PARA_EXCLUSAO" | "REPROVADA_COM_CORRECOES",
+  "motivos_reprovacao": ["motivo 1", "motivo 2"],
+  "questao_versao_aprimorada": {
+    "enunciado": "...",
+    "alt_a": "...", "alt_b": "...", "alt_c": "...", "alt_d": "...", "alt_e": "...",
+    "gabarito": 0,
+    "comentario": "..."
+  }
+}
+
+- Se "APROVADA": motivos_reprovacao vazio, questao_versao_aprimorada contém a versão aprimorada (comentário melhorado no estilo professor).
+- Se "REPROVADA_COM_CORRECOES": motivos_reprovacao lista os problemas, questao_versao_aprimorada contém a versão corrigida.
+- Se "REPROVADA_PARA_EXCLUSAO": motivos_reprovacao lista os problemas, questao_versao_aprimorada pode ser null.
 
 Responda APENAS JSON válido, sem markdown, sem explicações adicionais.`;
 }
@@ -1564,9 +1589,9 @@ A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
 Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${isLoopingComment ? "[COMENTÁRIO CORROMPIDO OU REPETITIVO — IGNORAR E REESCREVER DO ZERO NO ESTILO DE PROFESSOR]" : (q.comentario || "").substring(0, 1500)}
 
 ${isLoopingComment ? "O COMENTÁRIO ORIGINAL ESTÁ CORROMPIDO ou repete o número do artigo de forma excessiva e robótica. REESCREVA O COMENTÁRIO DO ZERO como se fosse um professor explicando ao aluno. Cite o artigo UMA VEZ, explique por que a correta está certa, explique brevemente o erro de cada distrator, e termine com uma dica de estudo. Verifique todas as alternativas contra o texto legal." : isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : (isFullAudit || isUserReported) ? "VERIFIQUE CADA ALTERNATIVA CONTRA O TEXTO LEGAL. Se todas estiverem corretas, devolva a questão como está. Se encontrar QUALQUER erro, corrija. REESCREVA o comentário no estilo de professor." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário no estilo de professor."}
-PRIORIZE A CORREÇÃO — só marque valida=false em último caso absoluto.
+PRIORIZE A CORREÇÃO — só use "REPROVADA_PARA_EXCLUSAO" em último caso absoluto.
 Responda APENAS JSON (sem markdown):
-{"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
+{"status":"APROVADA"|"REPROVADA_PARA_EXCLUSAO"|"REPROVADA_COM_CORRECOES","motivos_reprovacao":[],"questao_versao_aprimorada":{"enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}}`;
 
       try {
         const controller = new AbortController();
@@ -1616,18 +1641,28 @@ Responda APENAS JSON (sem markdown):
         content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         const result = JSON.parse(content);
 
-        if (result.valida === false) {
-          // IA said invalid — retry once asking to FORCE correction
-          console.log(`[VALIDAR] #${q.id} IA marcou inválida: "${result.motivo_erro}" — tentando retry forçando correção`);
+        // ── Normalize new structured format to flat format for downstream processing ──
+        const isNewFormat = result.status && result.questao_versao_aprimorada;
+        const isExclusion = result.status === "REPROVADA_PARA_EXCLUSAO";
+        const isOldInvalid = result.valida === false;
+        
+        // Extract the improved question from the new format
+        const improved = isNewFormat ? result.questao_versao_aprimorada : result;
+        const motivos = result.motivos_reprovacao || [];
+
+        if (isExclusion || (isOldInvalid && !isNewFormat)) {
+          const motivoTexto = motivos.length > 0 ? motivos.join("; ") : (result.motivo_erro || fixReason);
+          console.log(`[VALIDAR] #${q.id} IA marcou para exclusão: "${motivoTexto}" — tentando retry forçando correção`);
           
-          const retryPrompt = `A questão abaixo foi marcada como inválida com motivo: "${result.motivo_erro}".
+          const retryPrompt = `A questão abaixo foi marcada como REPROVADA_PARA_EXCLUSAO com motivos: "${motivoTexto}".
 NÃO ACEITO exclusão. Você DEVE criar uma questão NOVA e VÁLIDA usando o mesmo tema/disciplina e o texto legal fornecido.
 Use QUALQUER artigo disponível na lista abaixo para criar uma questão correta.
 
 ARTIGOS PERMITIDOS: [${availableArticles}]
 TEXTO LEGAL (${q.disciplina}): ${lawText.substring(0, 20000)}
 
-Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}`;
+Responda APENAS JSON no formato:
+{"status":"REPROVADA_COM_CORRECOES","motivos_reprovacao":[],"questao_versao_aprimorada":{"enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}}`;
 
           try {
             const retryController = new AbortController();
@@ -1641,7 +1676,7 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
                   { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, null) },
                   { role: "user", content: retryPrompt },
                 ],
-                max_tokens: 4000, temperature: 0.3,
+                max_tokens: 4000, temperature: 0.1,
               }),
               signal: retryController.signal,
             });
@@ -1653,15 +1688,19 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
               retryContent = retryContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
               const retryResult = JSON.parse(retryContent);
               
-              if (retryResult.valida !== false && retryResult.enunciado) {
-                const retryGab = clampGabarito(retryResult.gabarito);
-                const retryCorrectText = normalizeWhitespace(retryResult[ALT_KEYS[retryGab]] || "");
+              // Extract from new format or flat
+              const retryImproved = retryResult.questao_versao_aprimorada || retryResult;
+              const retryNotExclusion = retryResult.status !== "REPROVADA_PARA_EXCLUSAO" && retryResult.valida !== false;
+              
+              if (retryNotExclusion && retryImproved.enunciado) {
+                const retryGab = clampGabarito(retryImproved.gabarito);
+                const retryCorrectText = normalizeWhitespace(retryImproved[ALT_KEYS[retryGab]] || "");
                 const retryLiteral = literalProofCheck(retryCorrectText, blocks);
                 
                 if (retryLiteral.found) {
-                  const retryAlternatives = buildAlternativeSnapshot(retryResult, retryGab);
+                  const retryAlternatives = buildAlternativeSnapshot(retryImproved, retryGab);
                   const retryComment = forceDeterministicArticleInComment(
-                    normalizeWhitespace(retryResult.comentario || ""),
+                    normalizeWhitespace(retryImproved.comentario || ""),
                     retryLiteral.article
                   );
                   const { scrubbed: retryScrubbed } = scrubInvalidCitations(retryComment, blocks);
@@ -1680,12 +1719,12 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
                   
                   if (!hasUnconfirmedCitations(retryFinal) && retryCommentAudit.valid && validateAllCitations(retryFinal, blocks).valid && commentContainsCitation(retryFinal, retryLiteral.article)) {
                     await supabase.from("questoes").update({
-                      enunciado: normalizeWhitespace(retryResult.enunciado),
-                      alt_a: normalizeWhitespace(retryResult.alt_a || q.alt_a),
-                      alt_b: normalizeWhitespace(retryResult.alt_b || q.alt_b),
-                      alt_c: normalizeWhitespace(retryResult.alt_c || q.alt_c),
-                      alt_d: normalizeWhitespace(retryResult.alt_d || q.alt_d),
-                      alt_e: normalizeWhitespace(retryResult.alt_e || q.alt_e),
+                      enunciado: normalizeWhitespace(retryImproved.enunciado),
+                      alt_a: normalizeWhitespace(retryImproved.alt_a || q.alt_a),
+                      alt_b: normalizeWhitespace(retryImproved.alt_b || q.alt_b),
+                      alt_c: normalizeWhitespace(retryImproved.alt_c || q.alt_c),
+                      alt_d: normalizeWhitespace(retryImproved.alt_d || q.alt_d),
+                      alt_e: normalizeWhitespace(retryImproved.alt_e || q.alt_e),
                       gabarito: retryGab,
                       comentario: retryFinal,
                     }).eq("id", q.id);
@@ -1703,16 +1742,17 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
           }
           
           // Retry also failed — now delete as last resort
-          questoesRevisaoManual.push({ id: q.id, motivo: result.motivo_erro || fixReason });
+          questoesRevisaoManual.push({ id: q.id, motivo: motivoTexto });
           await supabase.from("questoes").delete().eq("id", q.id);
           deletedCount++;
-          details.push({ id: q.id, status: "excluida", motivo: `Irrecuperável após retry: ${(result.motivo_erro || fixReason).substring(0, 120)}` });
-          console.log(`[VALIDAR] #${q.id} EXCLUÍDA (último recurso): ${result.motivo_erro || fixReason}`);
+          details.push({ id: q.id, status: "excluida", motivo: `Irrecuperável após retry: ${motivoTexto.substring(0, 120)}` });
+          console.log(`[VALIDAR] #${q.id} EXCLUÍDA (último recurso): ${motivoTexto}`);
         } else {
+          // APROVADA or REPROVADA_COM_CORRECOES — apply the improved version
           // ── POST-AI VALIDATION: re-run literal proof on AI output ──
-          const aiGabarito = clampGabarito(result.gabarito);
+          const aiGabarito = clampGabarito(improved.gabarito);
           const aiCorrectKey = ALT_KEYS[aiGabarito];
-          const aiCorrectText = normalizeWhitespace(result[aiCorrectKey] || "");
+          const aiCorrectText = normalizeWhitespace(improved[aiCorrectKey] || "");
 
           // TRAVA DE PROVA LITERAL on AI output
           const aiLiteralCheck = literalProofCheck(aiCorrectText, blocks);
@@ -1726,7 +1766,7 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
           }
 
           // POST-AI: verificação completa de TODAS as alternativas
-          const aiFullCheck = fullAlternativesCheck(result, blocks);
+          const aiFullCheck = fullAlternativesCheck(improved, blocks);
           if (aiFullCheck.incorrectIssues.length > 0) {
             console.log(`[VALIDAR] #${q.id} PÓS-IA ALT-CHECK: ${aiFullCheck.incorrectIssues.map(i => i.issue).join("; ")}`);
           }
@@ -1743,13 +1783,13 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
           const enforcedCitation = deterministicCitation
             ?? buildDeterministicCitation(
               getArticleBlock(enforcedArticle, blocks),
-              [aiCorrectText, ...citationSnippets, ...extractCommentEvidenceSnippets(result.comentario || "")],
+              [aiCorrectText, ...citationSnippets, ...extractCommentEvidenceSnippets(improved.comentario || "")],
             )
             ?? enforcedArticle;
           // When comment is looping, NEVER fall back to original q.comentario
           const baseComment = isLoopingComment
-            ? (result.comentario || `Conforme o ${enforcedCitation || "texto legal"}.`)
-            : (result.comentario || q.comentario);
+            ? (improved.comentario || `Conforme o ${enforcedCitation || "texto legal"}.`)
+            : (improved.comentario || q.comentario);
           let finalComment = forceDeterministicArticleInComment(
             normalizeWhitespace(baseComment),
             enforcedCitation,
@@ -1803,7 +1843,7 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
               referenceText: getCitationReferenceText(getArticleBlock(enforcedArticle, blocks), enforcedCitation) || aiCorrectText,
               correctLabel: String.fromCharCode(65 + aiGabarito),
               correctAltText: aiCorrectText,
-              alternatives: buildAlternativeSnapshot(result, aiGabarito),
+              alternatives: buildAlternativeSnapshot(improved, aiGabarito),
             });
             finalCommentAudit = analyzeCommentQuality(finalComment);
           }
@@ -1865,7 +1905,7 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
             console.log(`[VALIDAR] #${q.id} Comentário loop — snippet check relaxado para reescrita IA`);
           }
 
-          const finalEnunciado = normalizeWhitespace(result.enunciado || q.enunciado);
+          const finalEnunciado = normalizeWhitespace(improved.enunciado || q.enunciado);
           const { scrubbed: scrubbedEnunciado } = scrubInvalidCitations(finalEnunciado, blocks);
           const crossCheck = crossValidateReferences(scrubbedEnunciado, finalComment);
           if (!crossCheck.valid) {
@@ -1878,7 +1918,7 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
 
           // Anti-decoreba on AI output
           const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
-          if (decoreba.test((result.enunciado || "").toLowerCase())) {
+          if (decoreba.test((improved.enunciado || "").toLowerCase())) {
             console.log(`[VALIDAR] #${q.id} Decoreba pós-IA — mantendo original`);
             okCount++;
             details.push({ id: q.id, status: "ok", motivo: `Mantida (decoreba na reescrita IA)` });
@@ -1887,7 +1927,7 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
           }
 
           // Duplicate check on AI-rewritten question (skip if fixing looping comment — same enunciado is expected)
-          const newFp = buildFingerprint(result.enunciado || q.enunciado);
+          const newFp = buildFingerprint(improved.enunciado || q.enunciado);
           const newSemFp = buildSemanticFingerprint(finalComment, aiCorrectText);
           if (!isLoopingComment && (existingFingerprints.has(newFp) || batchFingerprints.has(newFp))) {
             console.log(`[VALIDAR] #${q.id} Duplicata pós-IA — mantendo original`);
@@ -1905,11 +1945,11 @@ Responda APENAS JSON: {"valida":true,"enunciado":"...","alt_a":"...","alt_b":"..
           // All checks passed — save
           const updateData: Record<string, unknown> = {
             enunciado: scrubbedEnunciado,
-            alt_a: normalizeWhitespace(result.alt_a || q.alt_a),
-            alt_b: normalizeWhitespace(result.alt_b || q.alt_b),
-            alt_c: normalizeWhitespace(result.alt_c || q.alt_c),
-            alt_d: normalizeWhitespace(result.alt_d || q.alt_d),
-            alt_e: normalizeWhitespace(result.alt_e || q.alt_e),
+            alt_a: normalizeWhitespace(improved.alt_a || q.alt_a),
+            alt_b: normalizeWhitespace(improved.alt_b || q.alt_b),
+            alt_c: normalizeWhitespace(improved.alt_c || q.alt_c),
+            alt_d: normalizeWhitespace(improved.alt_d || q.alt_d),
+            alt_e: normalizeWhitespace(improved.alt_e || q.alt_e),
             gabarito: aiGabarito,
             comentario: finalComment,
           };
