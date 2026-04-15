@@ -1589,9 +1589,9 @@ A) ${q.alt_a} | B) ${q.alt_b} | C) ${q.alt_c} | D) ${q.alt_d} | E) ${q.alt_e}
 Gabarito Atual: ${String.fromCharCode(65 + q.gabarito)} | Comentário: ${isLoopingComment ? "[COMENTÁRIO CORROMPIDO OU REPETITIVO — IGNORAR E REESCREVER DO ZERO NO ESTILO DE PROFESSOR]" : (q.comentario || "").substring(0, 1500)}
 
 ${isLoopingComment ? "O COMENTÁRIO ORIGINAL ESTÁ CORROMPIDO ou repete o número do artigo de forma excessiva e robótica. REESCREVA O COMENTÁRIO DO ZERO como se fosse um professor explicando ao aluno. Cite o artigo UMA VEZ, explique por que a correta está certa, explique brevemente o erro de cada distrator, e termine com uma dica de estudo. Verifique todas as alternativas contra o texto legal." : isLiteralFailure ? "REESCREVA A QUESTÃO INTEIRA DO ZERO com base literal na lei." : (isFullAudit || isUserReported) ? "VERIFIQUE CADA ALTERNATIVA CONTRA O TEXTO LEGAL. Se todas estiverem corretas, devolva a questão como está. Se encontrar QUALQUER erro, corrija. REESCREVA o comentário no estilo de professor." : "Corrija a questão INTEIRA: verifique e corrija TODAS as alternativas, o gabarito e o comentário no estilo de professor."}
-PRIORIZE A CORREÇÃO — só marque valida=false em último caso absoluto.
+PRIORIZE A CORREÇÃO — só use "REPROVADA_PARA_EXCLUSAO" em último caso absoluto.
 Responda APENAS JSON (sem markdown):
-{"valida":true/false,"motivo_erro":"se invalida","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}`;
+{"status":"APROVADA"|"REPROVADA_PARA_EXCLUSAO"|"REPROVADA_COM_CORRECOES","motivos_reprovacao":[],"questao_versao_aprimorada":{"enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"Conforme o ${deterministicCitation || "Art. X"} da ...: '...'"}}`;
 
       try {
         const controller = new AbortController();
