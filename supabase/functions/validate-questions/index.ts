@@ -1158,7 +1158,7 @@ serve(async (req) => {
       batchSemanticFPs.set(semFP, q.id);
 
       // ── Similarity-based duplicate check (catches rephrased questions) ──
-      const similarExistingId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55);
+      const similarExistingId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.45);
       if (similarExistingId) {
         await supabase.from("questoes").delete().eq("id", q.id);
         deletedCount++;
@@ -1166,7 +1166,7 @@ serve(async (req) => {
         console.log(`[VALIDAR] #${q.id} EXCLUÍDA: similar a #${similarExistingId}`);
         continue;
       }
-      const similarBatchId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55);
+      const similarBatchId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.45);
       if (similarBatchId !== null) {
         await supabase.from("questoes").delete().eq("id", q.id);
         deletedCount++;
