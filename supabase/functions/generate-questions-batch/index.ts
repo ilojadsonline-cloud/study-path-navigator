@@ -839,6 +839,9 @@ PRINCÍPIOS FUNDAMENTAIS:
 3. FIDELIDADE AO TEXTO LEGAL: A alternativa correta DEVE estar fundamentada LITERALMENTE no texto da lei. NUNCA invente regras que não existem no texto.
 4. PROIBIÇÃO DE DECOREBA: NUNCA cite números de artigos no enunciado. O candidato demonstra COMPREENSÃO, não memorização.
 5. CADA QUESTÃO É ÚNICA: Varie estilo, estrutura, tipo de raciocínio e padrão de enunciado em CADA questão.
+6. SITUAÇÕES FICTÍCIAS MILITARES: Verifique se hierarquia, procedimentos e consequências estão em total conformidade com os padrões da lei.
+7. ANÁLISE INTEGRAL: Examine o enunciado, CADA alternativa individualmente e o comentário antes de finalizar. Nenhuma parte pode conter alucinações, imprecisões ou desvios.
+8. NÃO inclua informações externas, opiniões pessoais ou interpretações que não sejam estritamente derivadas do texto legal.
 
 COMENTÁRIO NO ESTILO DE PROFESSOR (REGRA MAIS IMPORTANTE — é a premissa da plataforma):
 O comentário deve soar como um professor explicando ao aluno em sala de aula, NÃO como um documento jurídico robótico.
@@ -854,12 +857,13 @@ PROIBIÇÕES NO COMENTÁRIO:
 - PROIBIDO usar formatação robótica como "a) IDENTIFICAÇÃO DO FUNDAMENTO:", "b) EXPLICAÇÃO DA CORRETA:", "c) ANÁLISE INDIVIDUALIZADA".
 - PROIBIDO copiar trechos enormes da lei. Uma citação literal curta basta.
 - O comentário deve ter no MÁXIMO 1500 caracteres.
+- PROIBIDO incluir informações externas, opiniões pessoais ou interpretações não derivadas do texto legal.
 
 REGRA PARA NÚMEROS DE ARTIGOS:
 - Antes de citar "Art. X", LOCALIZE o trecho no texto legal e verifique em qual artigo ele realmente aparece.
 - O número do artigo NÃO é um detalhe menor: um artigo errado invalida toda a questão.
 
-Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do JSON, no formato {"questions":[...]}.`;
+Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do JSON, no formato {"questions":[...]}. Configure sua "temperatura interna" para o MÍNIMO — auditoria objetiva baseada APENAS nos fatos do texto legal, sem criatividade indesejada.`;
 
     // Build the full legal context — send up to 18KB of law text for systemic understanding
     const legalContextTruncated = truncateLegalText(leiSeca, 18000);
