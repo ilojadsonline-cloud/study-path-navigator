@@ -1766,7 +1766,7 @@ Responda APENAS JSON no formato:
           }
 
           // POST-AI: verificação completa de TODAS as alternativas
-          const aiFullCheck = fullAlternativesCheck(result, blocks);
+          const aiFullCheck = fullAlternativesCheck(improved, blocks);
           if (aiFullCheck.incorrectIssues.length > 0) {
             console.log(`[VALIDAR] #${q.id} PÓS-IA ALT-CHECK: ${aiFullCheck.incorrectIssues.map(i => i.issue).join("; ")}`);
           }
