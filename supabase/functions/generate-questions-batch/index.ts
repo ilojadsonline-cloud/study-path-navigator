@@ -1221,8 +1221,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── Snippet-article verification: try auto-correction, but don't discard (other checks handle quality) ──
-      const snippetCheck = verifySnippetBelongsToArticle(q.comentario, blocks);
+      // ── AVISO: snippet mismatch — discard instead of keeping ──
       if (!snippetCheck.valid) {
         const { corrected: snippetFixed, appliedCorrections: snippetCorrs } = applyAllSnippetCorrections(q.comentario, blocks);
         if (snippetCorrs.length > 0) {
@@ -1231,10 +1230,16 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
             q.comentario = snippetFixed;
             console.log(`[GERAR] Q${idx+1} AUTO-FIX snippet: ${snippetCorrs.map(c => `${c.from}→${c.to}`).join(", ")}`);
           } else {
-            console.log(`[GERAR] Q${idx+1} AVISO: snippet-artigo mismatch não resolvido, mantendo questão para verificação por outras travas`);
+            discarded++;
+            questoesRevisaoManual.push({ motivo: `Snippet-artigo mismatch não resolvido` });
+            console.log(`[GERAR] Q${idx+1} descartada: snippet-artigo mismatch irrecuperável`);
+            continue;
           }
         } else {
-          console.log(`[GERAR] Q${idx+1} AVISO: ${snippetCheck.mismatches[0]} — mantendo para verificação por outras travas`);
+          discarded++;
+          questoesRevisaoManual.push({ motivo: `Snippet-artigo mismatch: ${snippetCheck.mismatches[0]}` });
+          console.log(`[GERAR] Q${idx+1} descartada: ${snippetCheck.mismatches[0]}`);
+          continue;
         }
       }
 
@@ -1247,14 +1252,33 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── Literal proof check (whole law) ──
+      // ── Literal proof check (whole law) — threshold raised to 0.6 ──
       const lawNorm = normalize(leiSeca);
       const literalProofScore = computeAltLiteralSupport(correctAltText, lawNorm);
-      if (literalProofScore < 0.5) {
+      if (literalProofScore < 0.6) {
         discarded++;
         questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (${literalProofScore.toFixed(2)})` });
-        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.5`);
+        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.6`);
         continue;
+      }
+
+      // ── Article confrontation: verify comment cites the article where the correct alt text is actually found ──
+      const commentCitedArticles = extractAllCitedArticles(q.comentario);
+      if (literalArticle && commentCitedArticles.length > 0) {
+        const literalArtNum = literalArticle.match(/\d+/)?.[0];
+        if (literalArtNum && !commentCitedArticles.includes(literalArtNum)) {
+          // Comment cites a different article than where the correct alt actually appears
+          // Try auto-fix first
+          q.comentario = reconcileCommentArticle(q.comentario, literalArticle);
+          const fixedCited = extractAllCitedArticles(q.comentario);
+          if (!fixedCited.includes(literalArtNum)) {
+            discarded++;
+            questoesRevisaoManual.push({ motivo: `CONFRONTO DE ARTIGOS: comentário cita Art. ${commentCitedArticles[0]} mas alternativa correta encontrada no ${literalArticle}` });
+            console.log(`[GERAR] Q${idx+1} descartada: confronto de artigos (comentário Art. ${commentCitedArticles[0]} vs literal ${literalArticle})`);
+            continue;
+          }
+          console.log(`[GERAR] Q${idx+1} AUTO-FIX confronto: artigo corrigido para ${literalArticle}`);
+        }
       }
 
       // ── Article-specific proof: correct alt must match cited article ──
