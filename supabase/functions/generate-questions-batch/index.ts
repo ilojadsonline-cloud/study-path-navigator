@@ -1221,7 +1221,8 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── AVISO: snippet mismatch — discard instead of keeping ──
+      // ── Snippet-article verification — discard instead of keeping ──
+      const snippetCheck = verifySnippetBelongsToArticle(q.comentario, blocks);
       if (!snippetCheck.valid) {
         const { corrected: snippetFixed, appliedCorrections: snippetCorrs } = applyAllSnippetCorrections(q.comentario, blocks);
         if (snippetCorrs.length > 0) {
