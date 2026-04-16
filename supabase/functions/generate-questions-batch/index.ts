@@ -279,10 +279,29 @@ function computeArticleSpecificProof(altText: string, commentText: string, block
 }
 
 /** Detect ambiguity: check if any incorrect alternative has HIGH support in the SPECIFIC cited article (not the whole law) */
-function detectAmbiguity(q: any, blocks: ArticleBlock[], _lawNorm: string): { ambiguous: boolean; details: string } {
+function detectAmbiguity(q: any, blocks: ArticleBlock[], lawNorm: string): { ambiguous: boolean; details: string } {
   const gab = typeof q.gabarito === "number" ? q.gabarito : 0;
   
-  // Get the cited article blocks from the comment
+  const correctKey = ALT_KEYS[Math.min(Math.max(gab, 0), 4)];
+  const correctAltText = q[correctKey] || "";
+  
+  // ── Check 1: Gabarito inversion against WHOLE LAW ──
+  // If ANY incorrect alt has MORE literal support than the correct one in the full law text, it's likely inverted
+  const correctLawScore = computeAltLiteralSupport(correctAltText, lawNorm);
+  for (let i = 0; i < ALT_KEYS.length; i++) {
+    if (i === gab) continue;
+    const altText = q[ALT_KEYS[i]] || "";
+    const altLawScore = computeAltLiteralSupport(altText, lawNorm);
+    if (altLawScore > correctLawScore && altLawScore >= 0.75) {
+      const letter = String.fromCharCode(65 + i);
+      return { 
+        ambiguous: true, 
+        details: `Alternativa incorreta (${letter}) tem base literal MAIS FORTE que o gabarito (${(altLawScore*100).toFixed(0)}% vs ${(correctLawScore*100).toFixed(0)}%) — possível gabarito invertido`
+      };
+    }
+  }
+  
+  // ── Check 2: Article-specific ambiguity ──
   const citedNums = extractAllCitedArticles(q.comentario || "");
   if (citedNums.length === 0) return { ambiguous: false, details: "" };
   
@@ -294,24 +313,21 @@ function detectAmbiguity(q: any, blocks: ArticleBlock[], _lawNorm: string): { am
   
   if (!citedBlocksText || citedBlocksText.length < 20) return { ambiguous: false, details: "" };
   
-  const correctKey = ALT_KEYS[Math.min(Math.max(gab, 0), 4)];
-  const correctScore = computeAltLiteralSupport(q[correctKey] || "", citedBlocksText);
+  const correctScore = computeAltLiteralSupport(correctAltText, citedBlocksText);
   
   const highSupportIncorrect: string[] = [];
   for (let i = 0; i < ALT_KEYS.length; i++) {
     if (i === gab) continue;
     const altText = q[ALT_KEYS[i]] || "";
-    // Check support against the SPECIFIC cited article, not the whole law
     const score = computeAltLiteralSupport(altText, citedBlocksText);
-    // Only flag if incorrect alt has >= 90% support in the cited article AND is as good as the correct one
-    if (score >= 0.90 && score >= correctScore * 0.95) {
+    // Flag if incorrect alt has >= 85% support in cited article AND is as good as correct
+    if (score >= 0.85 && score >= correctScore * 0.9) {
       highSupportIncorrect.push(`${String.fromCharCode(65 + i)}=${(score * 100).toFixed(0)}%`);
     }
   }
   
-  // Only flag as ambiguous if 2+ incorrect alternatives have very high article-specific support
-  if (highSupportIncorrect.length >= 2) {
-    return { ambiguous: true, details: `Alternativas incorretas com alto suporte no artigo citado: ${highSupportIncorrect.join(", ")}` };
+  if (highSupportIncorrect.length >= 1) {
+    return { ambiguous: true, details: `Alternativa(s) incorreta(s) com suporte igual ou superior ao gabarito no artigo citado: ${highSupportIncorrect.join(", ")}` };
   }
   return { ambiguous: false, details: "" };
 }
@@ -1205,7 +1221,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── Snippet-article verification: try auto-correction, but don't discard (other checks handle quality) ──
+      // ── Snippet-article verification — discard instead of keeping ──
       const snippetCheck = verifySnippetBelongsToArticle(q.comentario, blocks);
       if (!snippetCheck.valid) {
         const { corrected: snippetFixed, appliedCorrections: snippetCorrs } = applyAllSnippetCorrections(q.comentario, blocks);
@@ -1215,10 +1231,16 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
             q.comentario = snippetFixed;
             console.log(`[GERAR] Q${idx+1} AUTO-FIX snippet: ${snippetCorrs.map(c => `${c.from}→${c.to}`).join(", ")}`);
           } else {
-            console.log(`[GERAR] Q${idx+1} AVISO: snippet-artigo mismatch não resolvido, mantendo questão para verificação por outras travas`);
+            discarded++;
+            questoesRevisaoManual.push({ motivo: `Snippet-artigo mismatch não resolvido` });
+            console.log(`[GERAR] Q${idx+1} descartada: snippet-artigo mismatch irrecuperável`);
+            continue;
           }
         } else {
-          console.log(`[GERAR] Q${idx+1} AVISO: ${snippetCheck.mismatches[0]} — mantendo para verificação por outras travas`);
+          discarded++;
+          questoesRevisaoManual.push({ motivo: `Snippet-artigo mismatch: ${snippetCheck.mismatches[0]}` });
+          console.log(`[GERAR] Q${idx+1} descartada: ${snippetCheck.mismatches[0]}`);
+          continue;
         }
       }
 
@@ -1231,14 +1253,33 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── Literal proof check (whole law) ──
+      // ── Literal proof check (whole law) — threshold raised to 0.6 ──
       const lawNorm = normalize(leiSeca);
       const literalProofScore = computeAltLiteralSupport(correctAltText, lawNorm);
-      if (literalProofScore < 0.5) {
+      if (literalProofScore < 0.6) {
         discarded++;
         questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (${literalProofScore.toFixed(2)})` });
-        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.5`);
+        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.6`);
         continue;
+      }
+
+      // ── Article confrontation: verify comment cites the article where the correct alt text is actually found ──
+      const commentCitedArticles = extractAllCitedArticles(q.comentario);
+      if (literalArticle && commentCitedArticles.length > 0) {
+        const literalArtNum = literalArticle.match(/\d+/)?.[0];
+        if (literalArtNum && !commentCitedArticles.includes(literalArtNum)) {
+          // Comment cites a different article than where the correct alt actually appears
+          // Try auto-fix first
+          q.comentario = reconcileCommentArticle(q.comentario, literalArticle);
+          const fixedCited = extractAllCitedArticles(q.comentario);
+          if (!fixedCited.includes(literalArtNum)) {
+            discarded++;
+            questoesRevisaoManual.push({ motivo: `CONFRONTO DE ARTIGOS: comentário cita Art. ${commentCitedArticles[0]} mas alternativa correta encontrada no ${literalArticle}` });
+            console.log(`[GERAR] Q${idx+1} descartada: confronto de artigos (comentário Art. ${commentCitedArticles[0]} vs literal ${literalArticle})`);
+            continue;
+          }
+          console.log(`[GERAR] Q${idx+1} AUTO-FIX confronto: artigo corrigido para ${literalArticle}`);
+        }
       }
 
       // ── Article-specific proof: correct alt must match cited article ──
