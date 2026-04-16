@@ -999,9 +999,17 @@ REGRAS ABSOLUTAS:
 10. EXCLUSÃO DE QUESTÕES DE BAIXA QUALIDADE: Marque como REPROVADA_PARA_EXCLUSAO questões que:
     - Não possuem embasamento claro e direto no texto legal fornecido.
     - Citam apenas números de artigos no enunciado exigindo memorização pura, sem contextualização.
-    - Contêm cenários militares que violam hierarquia, procedimentos ou consequências da lei.
+    - Contêm cenários militares que violam hierarquia, competências ou consequências da lei.
+    - Atribuem a um posto/graduação uma competência ou função que a lei reserva a outro.
 
-11. SITUAÇÕES FICTÍCIAS MILITARES: Verifique se a hierarquia, procedimentos e consequências estão em total conformidade com os padrões da lei.
+11. HIERARQUIA MILITAR — VERIFICAÇÃO OBRIGATÓRIA:
+    - Identifique no texto legal os CÍRCULOS HIERÁRQUICOS (Oficiais Superiores, Intermediários, Subalternos, Subtenentes, Sargentos, Cabos, Soldados etc.) e verifique se a questão os respeita.
+    - CADA POSTO/GRADUAÇÃO tem atribuições e competências específicas definidas na lei. Verifique se o cenário da questão atribui ao personagem SOMENTE atos que seu posto/graduação pode exercer conforme a lei.
+    - Se a questão diz que um Tenente aplicou uma sanção que a lei reserva ao Comandante-Geral, isso é um ERRO GRAVE que deve ser corrigido ou a questão reprovada.
+    - COMPETÊNCIAS FUNCIONAIS: Punições, promoções, transferências, licenciamentos e decisões administrativas têm autoridade competente definida na lei. Verifique se a questão respeita essas atribuições.
+    - Alternativas incorretas PODEM trocar competências entre postos (armadilha válida), mas a alternativa CORRETA e o cenário do enunciado DEVEM ser fiéis à hierarquia legal.
+
+12. SITUAÇÕES FICTÍCIAS MILITARES: Verifique se a hierarquia, procedimentos, competências funcionais e consequências estão em total conformidade com os padrões da lei. Se um ato é de competência exclusiva de determinada autoridade, somente ela pode praticá-lo no cenário.
 
 FORMATO DE RESPOSTA — JSON OBRIGATÓRIO:
 {
