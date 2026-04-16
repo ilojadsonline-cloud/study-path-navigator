@@ -837,13 +837,20 @@ TÉCNICAS DE ELEVAÇÃO DE COMPLEXIDADE (use obrigatoriamente):
 
 PRINCÍPIOS FUNDAMENTAIS:
 1. CRIATIVIDADE COM PRECISÃO: Explore ângulos inéditos do dispositivo legal — consequências implícitas, condições cumulativas, ressalvas pouco percebidas, interações com outros artigos.
-2. HIERARQUIA MILITAR: RESPEITE ABSOLUTAMENTE a cadeia de comando conforme o texto legal. Se a lei diz "Comandante-Geral", use Comandante-Geral.
+2. HIERARQUIA MILITAR — REGRA INVIOLÁVEL:
+   - RESPEITE ABSOLUTAMENTE a cadeia de comando, os círculos hierárquicos e as competências de cada posto/graduação conforme definidos no texto legal.
+   - Se a lei define círculos hierárquicos (ex: Oficiais Superiores, Oficiais Intermediários, Oficiais Subalternos, Subtenentes, Sargentos, Cabos, Soldados), USE EXATAMENTE essas categorias.
+   - CADA POSTO/GRADUAÇÃO tem atribuições e competências específicas na lei. Um Soldado NÃO pode exercer função de Oficial. Um Tenente NÃO tem competência de Coronel. VERIFIQUE no texto legal QUEM tem competência para cada ato antes de montar o cenário.
+   - Ao criar cenários fictícios, VERIFIQUE se o posto/graduação do personagem é compatível com a função, o ato administrativo ou disciplinar descrito. Ex: se a lei diz que "o Comandante-Geral" aplica determinada sanção, NÃO atribua essa competência a um Capitão ou Tenente.
+   - ARMADILHAS VÁLIDAS: Trocar a competência entre postos/graduações é uma excelente armadilha para alternativas incorretas, MAS a alternativa correta DEVE respeitar fielmente a hierarquia da lei.
+   - Se o texto legal menciona "círculos hierárquicos" ou "círculos de convivência", use-os como base para cenários e distratores.
 3. FIDELIDADE AO TEXTO LEGAL: A alternativa correta DEVE estar fundamentada LITERALMENTE no texto da lei. NUNCA invente regras que não existem no texto.
 4. PROIBIÇÃO DE DECOREBA: NUNCA cite números de artigos no enunciado. O candidato demonstra COMPREENSÃO, não memorização.
 5. CADA QUESTÃO É ÚNICA: Varie estilo, estrutura, tipo de raciocínio e padrão de enunciado em CADA questão.
-6. SITUAÇÕES FICTÍCIAS MILITARES: Verifique se hierarquia, procedimentos e consequências estão em total conformidade com os padrões da lei.
+6. SITUAÇÕES FICTÍCIAS MILITARES: Verifique se hierarquia, procedimentos, competências funcionais e consequências estão em total conformidade com os padrões da lei. Se a lei atribui uma função a um posto específico, SOMENTE aquele posto pode exercê-la no cenário.
 7. ANÁLISE INTEGRAL: Examine o enunciado, CADA alternativa individualmente e o comentário antes de finalizar. Nenhuma parte pode conter alucinações, imprecisões ou desvios.
 8. NÃO inclua informações externas, opiniões pessoais ou interpretações que não sejam estritamente derivadas do texto legal.
+9. COMPETÊNCIAS E FUNÇÕES: Ao mencionar atos como punições, promoções, transferências, licenciamentos ou qualquer decisão administrativa/disciplinar, VERIFIQUE no texto legal QUAL autoridade (posto/graduação/cargo) tem competência para praticá-lo. Não generalize — cada ato tem sua autoridade competente definida na lei.
 
 COMENTÁRIO NO ESTILO DE PROFESSOR (REGRA MAIS IMPORTANTE — é a premissa da plataforma):
 O comentário deve soar como um professor explicando ao aluno em sala de aula, NÃO como um documento jurídico robótico.
