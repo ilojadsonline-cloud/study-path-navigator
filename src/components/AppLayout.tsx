@@ -92,7 +92,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               {showNotifications && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                  <div className="absolute right-0 top-12 w-80 glass-card rounded-xl border border-border/50 shadow-xl z-50 overflow-hidden">
+                  <div className="absolute right-0 top-12 w-[calc(100vw-2rem)] max-w-sm sm:w-80 glass-card rounded-xl border border-border/50 shadow-xl z-50 overflow-hidden">
                     <div className="flex items-center justify-between p-4 border-b border-border/30">
                       <h3 className="text-sm font-semibold">Notificações</h3>
                       <div className="flex items-center gap-1">
@@ -137,7 +137,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               )}
             </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 overflow-auto">
+          <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden overflow-y-auto">
             {children}
           </main>
         </div>
