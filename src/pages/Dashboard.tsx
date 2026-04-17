@@ -274,17 +274,17 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 w-full min-w-0">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
               Bem-vindo, <span className="text-gradient-primary">{firstName}</span>
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Continue sua preparação para o CHOA 2026</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Continue sua preparação para o CHOA 2026</p>
           </div>
         </motion.div>
 
@@ -299,13 +299,13 @@ const Dashboard = () => {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 border border-gold/30 bg-gold/5"
+                className="glass-card rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-gold/30 bg-gold/5"
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-gold/15">
+                <div className="flex items-start sm:items-center gap-3 min-w-0">
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-gold/15 shrink-0">
                     <AlertTriangle className="w-5 h-5 text-gold" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-bold text-sm">Período de Teste Grátis</p>
                     <p className="text-xs text-muted-foreground">
                       Seu acesso gratuito termina em{" "}
@@ -321,7 +321,7 @@ const Dashboard = () => {
                 </div>
                 <Link
                   to="/assinatura"
-                  className="px-4 py-2 rounded-lg gradient-gold text-gold-foreground text-xs font-semibold flex items-center gap-1.5 shrink-0"
+                  className="px-4 py-2 rounded-lg gradient-gold text-gold-foreground text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 w-full sm:w-auto"
                 >
                   <CreditCard className="w-3.5 h-3.5" />
                   Assinar Agora
@@ -332,22 +332,22 @@ const Dashboard = () => {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card rounded-xl p-4 flex items-center justify-between border border-warning/30 bg-warning/5"
+                className="glass-card rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-warning/30 bg-warning/5"
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-warning/15">
+                <div className="flex items-start sm:items-center gap-3 min-w-0">
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-warning/15 shrink-0">
                     <PlayCircle className="w-5 h-5 text-warning" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-bold text-sm">Simulado Incompleto</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground break-words">
                       {incompleteSimulado.disciplina} • {incompleteSimulado.respondidas}/{incompleteSimulado.total} respondidas
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => navigate("/simulados")}
-                  className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 w-full sm:w-auto"
                 >
                   <PlayCircle className="w-3.5 h-3.5" />
                   Continuar
@@ -358,33 +358,33 @@ const Dashboard = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass-card rounded-xl p-4 flex items-center justify-between"
+              className="glass-card rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-primary/15">
+              <div className="flex items-start sm:items-center gap-3 min-w-0">
+                <div className="p-2.5 sm:p-3 rounded-xl bg-primary/15 shrink-0">
                   <BookOpen className="w-5 h-5 text-primary" />
                 </div>
-                <div>
-                  <p className="font-bold text-sm flex items-center gap-2">
+                <div className="min-w-0">
+                  <p className="font-bold text-sm flex flex-wrap items-center gap-2">
                     Banco de Questões
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/15 text-success text-[10px] font-bold animate-pulse">
                       ✨ + NOVAS QUESTÕES
                     </span>
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground break-words">
                     <span className="text-primary font-semibold">{totalQuestoes.toLocaleString("pt-BR")}</span> questões disponíveis — banco em constante expansão
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => navigate("/questoes")}
-                className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold"
+                className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold shrink-0 w-full sm:w-auto"
               >
                 Estudar
               </button>
             </motion.div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <StatCard
                 title="Questões Respondidas"
                 value={String(totalRespondidas)}
@@ -397,7 +397,7 @@ const Dashboard = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
-                className="glass-card rounded-xl p-5 relative overflow-hidden group hover:border-primary/30 transition-all duration-300"
+                className="glass-card rounded-xl p-4 sm:p-5 relative overflow-hidden group hover:border-primary/30 transition-all duration-300 min-w-0"
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="p-2.5 rounded-lg bg-primary/10 text-primary">
@@ -405,16 +405,16 @@ const Dashboard = () => {
                   </div>
                 </div>
                 {totalRespondidas > 0 ? (
-                  <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 shrink-0">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 shrink-0">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={doughnutData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={18}
-                            outerRadius={30}
+                            innerRadius={14}
+                            outerRadius={24}
                             dataKey="value"
                             strokeWidth={0}
                           >
@@ -424,9 +424,9 @@ const Dashboard = () => {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-foreground">{taxaAcertos}%</h3>
-                      <p className="text-[10px] text-muted-foreground">
+                    <div className="min-w-0">
+                      <h3 className="text-xl sm:text-2xl font-bold text-foreground">{taxaAcertos}%</h3>
+                      <p className="text-[10px] text-muted-foreground truncate">
                         <span className="text-success">{totalCorretas} ✓</span>
                         {" · "}
                         <span className="text-destructive">{totalErros} ✗</span>
@@ -435,7 +435,7 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   <>
-                    <h3 className="text-2xl font-bold text-foreground">—</h3>
+                    <h3 className="text-xl sm:text-2xl font-bold text-foreground">—</h3>
                     <p className="text-[10px] text-muted-foreground mt-1">Responda questões para ver</p>
                   </>
                 )}
@@ -456,16 +456,16 @@ const Dashboard = () => {
               />
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
-                className="glass-card rounded-xl p-5 space-y-4"
+                className="glass-card rounded-xl p-4 sm:p-5 space-y-4 min-w-0"
               >
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                  <h2 className="font-semibold">Progresso por Disciplina</h2>
+                  <TrendingUp className="w-5 h-5 text-primary shrink-0" />
+                  <h2 className="font-semibold text-sm sm:text-base">Progresso por Disciplina</h2>
                 </div>
                 {disciplinas.length === 0 ? (
                   <div className="text-center py-8">
@@ -501,11 +501,11 @@ const Dashboard = () => {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                className="glass-card rounded-xl p-5 space-y-4"
+                className="glass-card rounded-xl p-4 sm:p-5 space-y-4 min-w-0"
               >
                 <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-gold" />
-                  <h2 className="font-semibold">Últimas Atividades</h2>
+                  <Trophy className="w-5 h-5 text-gold shrink-0" />
+                  <h2 className="font-semibold text-sm sm:text-base">Últimas Atividades</h2>
                 </div>
                 {atividades.length === 0 ? (
                   <div className="text-center py-8">
