@@ -47,7 +47,7 @@ export function AdminGerarTab() {
   const [running, setRunning] = useState(false);
   const [totalGeradas, setTotalGeradas] = useState(0);
   const [batchesPerDiscipline, setBatchesPerDiscipline] = useState(3);
-  const [batchSize, setBatchSize] = useState(3);
+  const [batchSize, setBatchSize] = useState(2);
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([...DISCIPLINES]);
   const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
   const [pendingJob, setPendingJob] = useState<PendingJob | null>(null);
@@ -55,6 +55,7 @@ export function AdminGerarTab() {
   const [etaText, setEtaText] = useState<string>("");
   const stopRef = useRef(false);
   const jobIdRef = useRef<string | null>(null);
+  const effectiveBatchSizeRef = useRef(2);
   const consecutiveFailsRef = useRef(0);
   const batchTimesRef = useRef<number[]>([]);
 
@@ -85,6 +86,10 @@ export function AdminGerarTab() {
     init();
   }, []);
 
+  useEffect(() => {
+    effectiveBatchSizeRef.current = batchSize;
+  }, [batchSize]);
+
   const toggleDiscipline = (d: string) => {
     setSelectedDisciplines(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
   };
@@ -98,36 +103,45 @@ export function AdminGerarTab() {
     }).eq("id", jobId);
   }, []);
 
-  const invokeBatch = async (disciplina: string, batchSize: number): Promise<{ data: any; error: Error | null }> => {
+  const invokeBatch = async (disciplina: string, batchSize: number): Promise<{ data: any; error: Error | null; usedBatchSize: number }> => {
     const discIndex = DISCIPLINES.indexOf(disciplina);
+    const shouldFallback = (message: string) => /tempo limite|demorou demais|AbortError|Failed to fetch|FunctionsHttpError/i.test(message);
 
     try {
-      const { data, error } = await supabase.functions.invoke("generate-questions-batch", {
+      let usedBatchSize = batchSize;
+      let { data, error } = await supabase.functions.invoke("generate-questions-batch", {
         body: { disciplina_index: discIndex, batch_size: batchSize },
       });
+
+      if (error && shouldFallback(error.message) && batchSize > 1) {
+        usedBatchSize = 1;
+        ({ data, error } = await supabase.functions.invoke("generate-questions-batch", {
+          body: { disciplina_index: discIndex, batch_size: 1 },
+        }));
+      }
 
       if (error) {
         const normalizedMessage = /non-2xx|FunctionsHttpError/i.test(error.message)
           ? "A geração excedeu o tempo limite da plataforma antes de concluir o lote."
           : error.message;
-        return { data: null, error: new Error(normalizedMessage) };
+        return { data: null, error: new Error(normalizedMessage), usedBatchSize };
       }
 
       if (data?.paused) {
-        return { data, error: null };
+        return { data, error: null, usedBatchSize };
       }
 
       if (data?.status === "erro" || data?.error) {
-        return { data: null, error: new Error(data?.mensagem || data?.error || "Falha na geração.") };
+        return { data: null, error: new Error(data?.mensagem || data?.error || "Falha na geração."), usedBatchSize };
       }
 
-      return { data, error: null };
+      return { data, error: null, usedBatchSize };
     } catch (err: any) {
       const rawMessage = err?.message || "Falha inesperada ao chamar a geração.";
       const normalizedMessage = /non-2xx|FunctionsHttpError|Failed to fetch/i.test(rawMessage)
         ? "A geração excedeu o tempo limite da plataforma antes de concluir o lote."
         : rawMessage;
-      return { data: null, error: new Error(normalizedMessage) };
+      return { data: null, error: new Error(normalizedMessage), usedBatchSize: batchSize };
     }
   };
 
@@ -162,9 +176,19 @@ export function AdminGerarTab() {
       setResults([...batches]);
 
       const batchStart = Date.now();
-      const { data, error } = await invokeBatch(batches[i].disciplina, batchSize);
+      const attemptedBatchSize = effectiveBatchSizeRef.current;
+      const { data, error, usedBatchSize } = await invokeBatch(batches[i].disciplina, attemptedBatchSize);
       const batchDuration = Date.now() - batchStart;
-      const isCriticalFailure = (message: string) => /tempo limite|OpenRouter demorou demais|excedeu o tempo limite|saldo|limite disponível|conexão persistente/i.test(message);
+      const isCriticalFailure = (message: string) => /saldo|limite disponível|conexão persistente|rate limit/i.test(message);
+
+      if (usedBatchSize !== attemptedBatchSize) {
+        effectiveBatchSizeRef.current = usedBatchSize;
+        setBatchSize(usedBatchSize);
+        toast({
+          title: "Fallback automático ativado",
+          description: "O lote foi reprocessado com 1 questão para evitar novo timeout.",
+        });
+      }
       
       if (error) {
         batches[i].status = "error";
@@ -378,8 +402,11 @@ export function AdminGerarTab() {
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-muted-foreground">Questões por lote:</label>
-          <Input type="number" value={batchSize} onChange={(e) => setBatchSize(Math.max(1, Math.min(5, Number(e.target.value) || 3)))} disabled={running} className="w-16" />
+          <Input type="number" value={batchSize} onChange={(e) => setBatchSize(Math.max(1, Math.min(2, Number(e.target.value) || 2)))} disabled={running} className="w-16" />
         </div>
+        <p className="text-[11px] text-muted-foreground basis-full">
+          Recomendado: 1–2 questões por lote para evitar timeout.
+        </p>
       </div>
 
       <div className="flex gap-3 flex-wrap">

@@ -638,9 +638,9 @@ serve(async (req) => {
 
   try {
     const { disciplina_index, batch_size } = await req.json();
-    const requestedBatchSize = Number(batch_size) || 3;
-    // Allow up to 5 questions per batch for creative diversity
-    const batchSize = Math.max(1, Math.min(5, requestedBatchSize));
+    const requestedBatchSize = Number(batch_size) || 2;
+    // Hard cap at 2 to stay within Supabase/DeepSeek execution budget.
+    const batchSize = Math.max(1, Math.min(2, requestedBatchSize));
     const discIndex = disciplina_index ?? 0;
 
     if (discIndex < 0 || discIndex >= DISCIPLINES.length) {
@@ -891,7 +891,8 @@ REGRA PARA NÚMEROS DE ARTIGOS:
 Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do JSON, no formato {"questions":[...]}. Configure sua "temperatura interna" para o MÍNIMO — auditoria objetiva baseada APENAS nos fatos do texto legal, sem criatividade indesejada.`;
 
     // Build the full legal context — send up to 18KB of law text for systemic understanding
-    const legalContextTruncated = truncateLegalText(leiSeca, 18000);
+    const legalContextBudget = batchSize === 1 ? 14000 : 11000;
+    const legalContextTruncated = truncateLegalText(leiSeca, legalContextBudget);
 
     const prompt = `Gere exatamente ${batchSize} questões de múltipla escolha para "${disc.disciplina}" (${disc.leiNome}).
 
@@ -956,15 +957,15 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
     //   attempt 2: up to 65s
     //   leaving ~12s for parsing/validation/insert.
     const MAX_API_RETRIES = 2;
-    const DEEPSEEK_TIMEOUT_PRIMARY_MS = 70000;
-    const DEEPSEEK_TIMEOUT_RETRY_MS = 65000;
+    const DEEPSEEK_TIMEOUT_PRIMARY_MS = batchSize === 1 ? 50000 : 58000;
+    const DEEPSEEK_TIMEOUT_RETRY_MS = batchSize === 1 ? 42000 : 50000;
     let aiStatus: number | null = null;
     let aiResponseText = "";
     let lastFetchError: any = null;
 
     // Tighter output budget — DeepSeek latency scales with max_tokens.
     // Empirically 1 question ≈ 700-900 tokens including a rich comentário.
-    const maxTokens = Math.min(4200, 1400 + batchSize * 850);
+    const maxTokens = batchSize === 1 ? 1500 : 2600;
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
@@ -992,10 +993,10 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
           }),
           signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         aiStatus = response.status;
         console.log(`[GERAR] DeepSeek status: ${aiStatus}, attempt ${attempt + 1}`);
         aiResponseText = await response.text();
-        clearTimeout(timeoutId);
 
         if (aiStatus === 429 && attempt < MAX_API_RETRIES - 1) {
           // Short backoff to stay within edge function budget.
