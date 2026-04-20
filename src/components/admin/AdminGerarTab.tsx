@@ -86,6 +86,10 @@ export function AdminGerarTab() {
     init();
   }, []);
 
+  useEffect(() => {
+    effectiveBatchSizeRef.current = batchSize;
+  }, [batchSize]);
+
   const toggleDiscipline = (d: string) => {
     setSelectedDisciplines(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
   };
@@ -172,21 +176,24 @@ export function AdminGerarTab() {
       setResults([...batches]);
 
       const batchStart = Date.now();
-      const { data, error } = await invokeBatch(batches[i].disciplina, batchSize);
+      const attemptedBatchSize = effectiveBatchSizeRef.current;
+      const { data, error, usedBatchSize } = await invokeBatch(batches[i].disciplina, attemptedBatchSize);
       const batchDuration = Date.now() - batchStart;
-      const isCriticalFailure = (message: string) => /tempo limite|OpenRouter demorou demais|excedeu o tempo limite|saldo|limite disponível|conexão persistente/i.test(message);
+      const isCriticalFailure = (message: string) => /saldo|limite disponível|conexão persistente|rate limit/i.test(message);
+
+      if (usedBatchSize !== attemptedBatchSize) {
+        effectiveBatchSizeRef.current = usedBatchSize;
+        setBatchSize(usedBatchSize);
+        toast({
+          title: "Fallback automático ativado",
+          description: "O lote foi reprocessado com 1 questão para evitar novo timeout.",
+        });
+      }
       
-        if (error) {
+      if (error) {
         batches[i].status = "error";
         batches[i].error = error.message;
         consecutiveFailsRef.current++;
-          if (/tempo limite|demorou demais|AbortError|excedeu o tempo limite/i.test(error.message) && batchSize > 1) {
-            setBatchSize(1);
-            toast({
-              title: "Fallback automático ativado",
-              description: "O lote excedeu o tempo; as próximas tentativas vão usar 1 questão por lote.",
-            });
-          }
         if (isCriticalFailure(error.message)) {
           toast({ title: "Geração pausada", description: error.message, variant: "destructive" });
           setResults([...batches]);
