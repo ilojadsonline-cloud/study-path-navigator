@@ -951,18 +951,25 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
 {"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}]}`;
 
     // API call with retry logic
+    // Supabase Edge Function hard limit = 150s. We budget:
+    //   attempt 1: up to 70s + 3s backoff
+    //   attempt 2: up to 65s
+    //   leaving ~12s for parsing/validation/insert.
     const MAX_API_RETRIES = 2;
-    const DEEPSEEK_TIMEOUT_MS = 110000; // 110s — within Supabase 150s limit
+    const DEEPSEEK_TIMEOUT_PRIMARY_MS = 70000;
+    const DEEPSEEK_TIMEOUT_RETRY_MS = 65000;
     let aiStatus: number | null = null;
     let aiResponseText = "";
     let lastFetchError: any = null;
 
-    // Larger output budget — rich comments need space for per-alternative analysis.
-    const maxTokens = Math.min(6000, 2000 + batchSize * 1100);
+    // Tighter output budget — DeepSeek latency scales with max_tokens.
+    // Empirically 1 question ≈ 700-900 tokens including a rich comentário.
+    const maxTokens = Math.min(4200, 1400 + batchSize * 850);
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), DEEPSEEK_TIMEOUT_MS);
+      const perAttemptTimeout = attempt === 0 ? DEEPSEEK_TIMEOUT_PRIMARY_MS : DEEPSEEK_TIMEOUT_RETRY_MS;
+      const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
 
       try {
         const response = await fetch("https://api.deepseek.com/chat/completions", {
@@ -979,7 +986,9 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
             ],
             response_format: { type: "json_object" },
             max_tokens: maxTokens,
-            temperature: 0.1,
+            temperature: 0.2,
+            top_p: 0.9,
+            stream: false,
           }),
           signal: controller.signal,
         });
@@ -989,14 +998,15 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         clearTimeout(timeoutId);
 
         if (aiStatus === 429 && attempt < MAX_API_RETRIES - 1) {
-          const retryDelay = 5000 * Math.pow(2, attempt);
+          // Short backoff to stay within edge function budget.
+          const retryDelay = 2500;
           console.log(`[GERAR] Rate limit 429, retry em ${retryDelay}ms`);
           await new Promise(r => setTimeout(r, retryDelay));
           continue;
         }
 
         if (aiStatus && aiStatus >= 500 && attempt < MAX_API_RETRIES - 1) {
-          const retryDelay = 3000 * Math.pow(2, attempt);
+          const retryDelay = 2000;
           console.log(`[GERAR] Server error ${aiStatus}, retry em ${retryDelay}ms`);
           await new Promise(r => setTimeout(r, retryDelay));
           continue;
@@ -1009,9 +1019,11 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         const isTimeout = fetchErr.name === "AbortError";
 
         if (attempt < MAX_API_RETRIES - 1) {
-          const retryDelay = 4000 * Math.pow(2, attempt);
+          // On timeout: retry IMMEDIATELY with no backoff to preserve budget.
+          // On generic fetch error: short fixed backoff.
+          const retryDelay = isTimeout ? 0 : 1500;
           console.log(`[GERAR] ${isTimeout ? "Timeout" : "Fetch error"}, retry em ${retryDelay}ms: ${String(fetchErr)}`);
-          await new Promise(r => setTimeout(r, retryDelay));
+          if (retryDelay > 0) await new Promise(r => setTimeout(r, retryDelay));
           continue;
         }
       }
