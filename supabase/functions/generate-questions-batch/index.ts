@@ -993,10 +993,10 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
           }),
           signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         aiStatus = response.status;
         console.log(`[GERAR] DeepSeek status: ${aiStatus}, attempt ${attempt + 1}`);
         aiResponseText = await response.text();
-        clearTimeout(timeoutId);
 
         if (aiStatus === 429 && attempt < MAX_API_RETRIES - 1) {
           // Short backoff to stay within edge function budget.
