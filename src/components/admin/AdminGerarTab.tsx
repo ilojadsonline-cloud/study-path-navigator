@@ -55,6 +55,7 @@ export function AdminGerarTab() {
   const [etaText, setEtaText] = useState<string>("");
   const stopRef = useRef(false);
   const jobIdRef = useRef<string | null>(null);
+  const effectiveBatchSizeRef = useRef(2);
   const consecutiveFailsRef = useRef(0);
   const batchTimesRef = useRef<number[]>([]);
 
@@ -98,36 +99,45 @@ export function AdminGerarTab() {
     }).eq("id", jobId);
   }, []);
 
-  const invokeBatch = async (disciplina: string, batchSize: number): Promise<{ data: any; error: Error | null }> => {
+  const invokeBatch = async (disciplina: string, batchSize: number): Promise<{ data: any; error: Error | null; usedBatchSize: number }> => {
     const discIndex = DISCIPLINES.indexOf(disciplina);
+    const shouldFallback = (message: string) => /tempo limite|demorou demais|AbortError|Failed to fetch|FunctionsHttpError/i.test(message);
 
     try {
-      const { data, error } = await supabase.functions.invoke("generate-questions-batch", {
+      let usedBatchSize = batchSize;
+      let { data, error } = await supabase.functions.invoke("generate-questions-batch", {
         body: { disciplina_index: discIndex, batch_size: batchSize },
       });
+
+      if (error && shouldFallback(error.message) && batchSize > 1) {
+        usedBatchSize = 1;
+        ({ data, error } = await supabase.functions.invoke("generate-questions-batch", {
+          body: { disciplina_index: discIndex, batch_size: 1 },
+        }));
+      }
 
       if (error) {
         const normalizedMessage = /non-2xx|FunctionsHttpError/i.test(error.message)
           ? "A geração excedeu o tempo limite da plataforma antes de concluir o lote."
           : error.message;
-        return { data: null, error: new Error(normalizedMessage) };
+        return { data: null, error: new Error(normalizedMessage), usedBatchSize };
       }
 
       if (data?.paused) {
-        return { data, error: null };
+        return { data, error: null, usedBatchSize };
       }
 
       if (data?.status === "erro" || data?.error) {
-        return { data: null, error: new Error(data?.mensagem || data?.error || "Falha na geração.") };
+        return { data: null, error: new Error(data?.mensagem || data?.error || "Falha na geração."), usedBatchSize };
       }
 
-      return { data, error: null };
+      return { data, error: null, usedBatchSize };
     } catch (err: any) {
       const rawMessage = err?.message || "Falha inesperada ao chamar a geração.";
       const normalizedMessage = /non-2xx|FunctionsHttpError|Failed to fetch/i.test(rawMessage)
         ? "A geração excedeu o tempo limite da plataforma antes de concluir o lote."
         : rawMessage;
-      return { data: null, error: new Error(normalizedMessage) };
+      return { data: null, error: new Error(normalizedMessage), usedBatchSize: batchSize };
     }
   };
 
