@@ -276,20 +276,20 @@ const Simulados = () => {
   if (started) {
     return (
       <AppLayout>
-        <div className="max-w-4xl mx-auto space-y-6">
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button onClick={voltarParaConfig} className="p-2 rounded-lg bg-secondary hover:bg-primary/15 transition-colors">
+        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button onClick={voltarParaConfig} className="p-2 rounded-lg bg-secondary hover:bg-primary/15 transition-colors shrink-0">
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <div>
-                <h1 className="text-xl font-bold">
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-bold">
                   <span className="text-gradient-primary">Simulado</span>
                 </h1>
-                <p className="text-xs text-muted-foreground">{disciplina} • {stableSimulado.length} questões</p>
+                <p className="text-xs text-muted-foreground truncate">{disciplina} • {stableSimulado.length} questões</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between sm:justify-end gap-3">
               {!finished && (
                 <button
                   onClick={reiniciarSimulado}
@@ -318,17 +318,17 @@ const Simulados = () => {
           </motion.div>
 
           {finished && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-xl ${(acertos / stableSimulado.length) >= 0.7 ? 'bg-success/15' : 'bg-warning/15'}`}>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`p-3 rounded-xl shrink-0 ${(acertos / stableSimulado.length) >= 0.7 ? 'bg-success/15' : 'bg-warning/15'}`}>
                   <CheckCircle className={`w-5 h-5 ${(acertos / stableSimulado.length) >= 0.7 ? 'text-success' : 'text-warning'}`} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="font-bold text-sm">Simulado Finalizado!</p>
                   <p className="text-xs text-muted-foreground">Revise as questões abaixo</p>
                 </div>
               </div>
-              <button onClick={reiniciarSimulado} className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold flex items-center gap-1.5">
+              <button onClick={reiniciarSimulado} className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold flex items-center justify-center gap-1.5 w-full sm:w-auto">
                 <RotateCcw className="w-3.5 h-3.5" />
                 Novo Simulado
               </button>
@@ -337,7 +337,7 @@ const Simulados = () => {
 
           <div className="space-y-6">
             {stableSimulado.map((q, qi) => (
-              <motion.div key={q.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(qi * 0.03, 0.3) }} className="glass-card rounded-xl p-5 space-y-4">
+              <motion.div key={q.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(qi * 0.03, 0.3) }} className="glass-card rounded-xl p-3 sm:p-5 space-y-3 sm:space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-primary">Q{qi + 1}</span>
@@ -399,16 +399,16 @@ const Simulados = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
         <BackButton />
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl md:text-3xl font-bold">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
             <span className="text-gradient-primary">Gerador de Simulado</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Monte seu simulado personalizado — seu progresso é salvo automaticamente</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Monte seu simulado personalizado — seu progresso é salvo automaticamente</p>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-xl p-6 space-y-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-xl p-4 sm:p-6 space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-border/50">
             <div className="p-3 rounded-xl gradient-primary glow-primary">
               <Settings className="w-5 h-5 text-primary-foreground" />
