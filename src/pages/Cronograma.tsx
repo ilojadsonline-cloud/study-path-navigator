@@ -122,10 +122,10 @@ export default function Cronograma() {
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
         <div className="flex items-center gap-3">
-          <CalendarDays className="w-7 h-7 text-primary" />
-          <h1 className="text-2xl font-bold">Cronograma de Estudos</h1>
+          <CalendarDays className="w-6 h-6 sm:w-7 sm:h-7 text-primary shrink-0" />
+          <h1 className="text-xl sm:text-2xl font-bold">Cronograma de Estudos</h1>
         </div>
 
         {view === "list" && (
@@ -179,17 +179,17 @@ export default function Cronograma() {
                   {cronogramas.map(c => (
                     <Card key={c.id} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 w-full">
                           <h3 className="font-semibold truncate">{c.nome}</h3>
                           <p className="text-xs text-muted-foreground">
                             {c.horas_semanais}h/semana • {c.tipo === "padrao" ? "Padrão" : "Personalizado"} • {new Date(c.created_at).toLocaleDateString("pt-BR")}
                           </p>
                         </div>
-                        <div className="flex gap-2 flex-wrap">
-                          <Button variant="outline" size="sm" onClick={() => handleViewExisting(c)}>
+                        <div className="flex gap-2 flex-wrap w-full sm:w-auto">
+                          <Button variant="outline" size="sm" onClick={() => handleViewExisting(c)} className="flex-1 sm:flex-none">
                             <Eye className="w-4 h-4 mr-1" /> Ver
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDuplicate(c)}>
+                          <Button variant="outline" size="sm" onClick={() => handleDuplicate(c)} className="flex-1 sm:flex-none">
                             <Copy className="w-4 h-4 mr-1" /> Duplicar
                           </Button>
                           <Button variant="destructive" size="sm" onClick={() => setDeleteId(c.id)}>

@@ -88,20 +88,20 @@ export function VisualizadorCronograma({ cronograma: initial, onBack, onSaved, e
   const diasAtivos = DIAS_SEMANA_ORDER.filter(d => initial.dias_semana.includes(d));
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold">{initial.nome}</h2>
-          <p className="text-sm text-muted-foreground">{initial.horas_semanais}h semanais • {initial.dias_semana.length} dias</p>
+        <div className="min-w-0">
+          <h2 className="text-lg sm:text-xl font-bold break-words">{initial.nome}</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">{initial.horas_semanais}h semanais • {initial.dias_semana.length} dias</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={onBack}>
+        <div className="flex gap-2 flex-wrap w-full sm:w-auto">
+          <Button variant="outline" size="sm" onClick={onBack} className="flex-1 sm:flex-none">
             <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setEditing(!editing)}>
-            <Pencil className="w-4 h-4 mr-1" /> {editing ? "Concluir Edição" : "Editar"}
+          <Button variant="outline" size="sm" onClick={() => setEditing(!editing)} className="flex-1 sm:flex-none">
+            <Pencil className="w-4 h-4 mr-1" /> {editing ? "Concluir" : "Editar"}
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>
+          <Button size="sm" onClick={handleSave} disabled={saving} className="flex-1 sm:flex-none">
             <Save className="w-4 h-4 mr-1" /> {saving ? "Salvando..." : "Salvar"}
           </Button>
         </div>

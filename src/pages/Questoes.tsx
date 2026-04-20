@@ -236,21 +236,21 @@ const Questoes = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         <BackButton />
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
               <span className="text-gradient-primary">Banco de Questões</span>
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               {allQuestoes.length} questões disponíveis
               {visibleCount < allQuestoes.length && ` · Mostrando ${visibleCount}`}
             </p>
           </div>
           <button
             onClick={() => setFilterOpen(!filterOpen)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-secondary hover:bg-primary/15 hover:text-primary text-sm font-medium transition-all"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-secondary hover:bg-primary/15 hover:text-primary text-sm font-medium transition-all w-full sm:w-auto"
           >
             <Filter className="w-4 h-4" />
             Filtros
@@ -264,7 +264,7 @@ const Questoes = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="glass-card rounded-xl p-4 grid grid-cols-3 gap-3"
+              className="glass-card rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 overflow-hidden"
             >
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Disciplina</label>
@@ -334,7 +334,7 @@ const Questoes = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(qi * 0.03, 0.3) }}
-                className="glass-card rounded-xl p-5 space-y-4"
+                className="glass-card rounded-xl p-3 sm:p-5 space-y-3 sm:space-y-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2 flex-wrap">
