@@ -47,7 +47,7 @@ export function AdminGerarTab() {
   const [running, setRunning] = useState(false);
   const [totalGeradas, setTotalGeradas] = useState(0);
   const [batchesPerDiscipline, setBatchesPerDiscipline] = useState(3);
-  const [batchSize, setBatchSize] = useState(3);
+  const [batchSize, setBatchSize] = useState(2);
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([...DISCIPLINES]);
   const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
   const [pendingJob, setPendingJob] = useState<PendingJob | null>(null);
@@ -166,10 +166,17 @@ export function AdminGerarTab() {
       const batchDuration = Date.now() - batchStart;
       const isCriticalFailure = (message: string) => /tempo limite|OpenRouter demorou demais|excedeu o tempo limite|saldo|limite disponível|conexão persistente/i.test(message);
       
-      if (error) {
+        if (error) {
         batches[i].status = "error";
         batches[i].error = error.message;
         consecutiveFailsRef.current++;
+          if (/tempo limite|demorou demais|AbortError|excedeu o tempo limite/i.test(error.message) && batchSize > 1) {
+            setBatchSize(1);
+            toast({
+              title: "Fallback automático ativado",
+              description: "O lote excedeu o tempo; as próximas tentativas vão usar 1 questão por lote.",
+            });
+          }
         if (isCriticalFailure(error.message)) {
           toast({ title: "Geração pausada", description: error.message, variant: "destructive" });
           setResults([...batches]);
@@ -378,8 +385,11 @@ export function AdminGerarTab() {
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-muted-foreground">Questões por lote:</label>
-          <Input type="number" value={batchSize} onChange={(e) => setBatchSize(Math.max(1, Math.min(5, Number(e.target.value) || 3)))} disabled={running} className="w-16" />
+          <Input type="number" value={batchSize} onChange={(e) => setBatchSize(Math.max(1, Math.min(2, Number(e.target.value) || 2)))} disabled={running} className="w-16" />
         </div>
+        <p className="text-[11px] text-muted-foreground basis-full">
+          Recomendado: 1–2 questões por lote para evitar timeout.
+        </p>
       </div>
 
       <div className="flex gap-3 flex-wrap">
