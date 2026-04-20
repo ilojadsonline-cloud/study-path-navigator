@@ -27,7 +27,7 @@ const GerarQuestoes = () => {
   const [running, setRunning] = useState(false);
   const [totalGeradas, setTotalGeradas] = useState(0);
   const [batchesPerDiscipline, setBatchesPerDiscipline] = useState(3);
-  const [batchSize, setBatchSize] = useState(3);
+  const [batchSize, setBatchSize] = useState(2);
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([...disciplinas]);
   const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
   const { toast } = useToast();
@@ -79,7 +79,7 @@ const GerarQuestoes = () => {
 
         if (error) {
           const message = /non-2xx|FunctionsHttpError|Failed to fetch/i.test(error.message)
-            ? "A geração excedeu o tempo limite da plataforma antes de concluir o lote."
+            ? "Tempo limite excedido. Reduza 'Questões por lote' para 1 ou 2 e tente novamente."
             : error.message;
           throw new Error(message);
         }
@@ -179,12 +179,17 @@ const GerarQuestoes = () => {
             <label className="text-xs text-muted-foreground">Questões por lote:</label>
             <input
               type="number"
+              min={1}
+              max={3}
               value={batchSize}
-              onChange={(e) => setBatchSize(Math.max(1, Math.min(5, Number(e.target.value) || 3)))}
+              onChange={(e) => setBatchSize(Math.max(1, Math.min(3, Number(e.target.value) || 2)))}
               disabled={running}
               className="w-16 rounded-lg bg-secondary border-none text-sm p-2 text-foreground"
             />
           </div>
+          <p className="text-[11px] text-muted-foreground basis-full">
+            Recomendado: 1–2 questões por lote para evitar timeout do DeepSeek.
+          </p>
         </div>
 
         <button
