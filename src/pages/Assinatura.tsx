@@ -185,29 +185,46 @@ const Assinatura = () => {
               <button
                 type="button"
                 onClick={() => setProvider("stripe")}
-                className={`py-2.5 px-3 rounded-xl border text-sm font-semibold transition-all ${
+                className={`py-3 px-3 rounded-xl border text-sm font-semibold transition-all text-left ${
                   provider === "stripe"
                     ? "border-gold bg-gold/10 text-gold"
                     : "border-border/50 bg-secondary text-muted-foreground hover:border-border"
                 }`}
               >
-                💳 Stripe
-                <span className="block text-[10px] font-normal opacity-80">Cartão internacional</span>
+                <div className="flex items-center gap-1.5">💳 Stripe</div>
+                <span className="block text-[10px] font-normal opacity-80 mt-0.5">Cartão de crédito internacional</span>
+                <span className="block text-[10px] font-medium text-success mt-1">✓ Teste sem cartão</span>
               </button>
               <button
                 type="button"
                 onClick={() => setProvider("mercadopago")}
-                className={`py-2.5 px-3 rounded-xl border text-sm font-semibold transition-all ${
+                className={`py-3 px-3 rounded-xl border text-sm font-semibold transition-all text-left ${
                   provider === "mercadopago"
                     ? "border-gold bg-gold/10 text-gold"
                     : "border-border/50 bg-secondary text-muted-foreground hover:border-border"
                 }`}
               >
-                🇧🇷 Mercado Pago
-                <span className="block text-[10px] font-normal opacity-80">PIX, Boleto, Cartão</span>
+                <div className="flex items-center gap-1.5">🇧🇷 Mercado Pago</div>
+                <span className="block text-[10px] font-normal opacity-80 mt-0.5">Cartão, PIX ou Boleto</span>
+                <span className="block text-[10px] font-medium text-warning mt-1">⚠ Teste exige cartão</span>
               </button>
             </div>
           </div>
+
+          {/* Aviso contextual do provedor */}
+          {provider === "stripe" && (
+            <div className="mb-3 p-2.5 rounded-lg bg-success/5 border border-success/20 text-[11px] text-foreground/80 leading-relaxed">
+              <strong className="text-success">Stripe:</strong> aceita apenas <strong>cartão de crédito</strong> por enquanto (PIX em breve). 
+              O <strong>teste de 1 dia é grátis e não exige cartão</strong>.
+            </div>
+          )}
+          {provider === "mercadopago" && (
+            <div className="mb-3 p-2.5 rounded-lg bg-warning/5 border border-warning/20 text-[11px] text-foreground/80 leading-relaxed">
+              <strong className="text-warning">Mercado Pago:</strong> aceita cartão, PIX e boleto. 
+              Para o <strong>teste grátis de 1 dia, é obrigatório vincular um cartão de crédito</strong> (não é cobrado, mas o MP exige a autorização). 
+              Se prefere testar sem cartão, use o <strong>Stripe</strong>.
+            </div>
+          )}
 
           {/* Email input para Mercado Pago (quando não logado) */}
           {provider === "mercadopago" && !user && (showMpEmail || mpEmail) && (
@@ -235,7 +252,7 @@ const Assinatura = () => {
             className="w-full py-4 rounded-xl gradient-gold text-gold-foreground font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity glow-gold disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-            {loading ? "Redirecionando..." : `Assinar via ${provider === "stripe" ? "Stripe" : "Mercado Pago"}`}
+            {loading ? "Redirecionando..." : `Assinar R$ 89,90 via ${provider === "stripe" ? "Stripe" : "Mercado Pago"}`}
           </button>
 
           {/* Trial Section */}
@@ -266,10 +283,10 @@ const Assinatura = () => {
               {trialLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
               {trialLoading ? "Verificando..." : `Testar Grátis por 1 Dia (${provider === "stripe" ? "Stripe" : "Mercado Pago"})`}
             </button>
-            <p className="text-[10px] text-muted-foreground text-center">
+            <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
               {provider === "stripe"
-                ? "Sem cartão de crédito • Cancela automaticamente após 24h"
-                : "Autorize o pagamento • Cancela automaticamente após 24h"}
+                ? "✓ Sem cartão de crédito • Cancela automaticamente após 24h"
+                : "⚠ Exige cartão de crédito (não é cobrado) • Cancela em 24h"}
             </p>
           </div>
 
