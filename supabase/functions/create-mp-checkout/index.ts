@@ -71,12 +71,12 @@ serve(async (req) => {
       reason,
       payer_email: payerEmail,
       back_url: `${origin}/cadastro?mp_status=success`,
-      external_reference: `choa-${isTrial ? "trial" : "paid"}-${Date.now()}`,
+      external_reference: `choa-paid-${Date.now()}`,
       auto_recurring: autoRecurring,
       status: "pending",
     };
 
-    logStep("Criando preapproval", { isTrial, email: payerEmail, body: preapprovalBody });
+    logStep("Criando preapproval", { email: payerEmail, body: preapprovalBody });
 
     const mpRes = await fetch("https://api.mercadopago.com/preapproval", {
       method: "POST",
