@@ -47,8 +47,6 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://www.metodochoa.com.br";
 
-    const origin = req.headers.get("origin") || "https://www.metodochoa.com.br";
-
     // Estratégia: assinatura recorrente trimestral (R$ 89,90 a cada 3 meses) com end_date em 90 dias
     // → cobra 1x agora e auto-cancela após o ciclo (sem renovação automática).
     const now = new Date();
