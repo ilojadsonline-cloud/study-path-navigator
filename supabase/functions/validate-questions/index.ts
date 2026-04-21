@@ -1047,6 +1047,15 @@ serve(async (req) => {
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Prefer Lovable AI Gateway (gemini-2.5-flash) — much faster than DeepSeek.
+    const useLovable = !!LOVABLE_API_KEY;
+    const aiUrl = useLovable
+      ? "https://ai.gateway.lovable.dev/v1/chat/completions"
+      : "https://api.deepseek.com/chat/completions";
+    const aiModel = useLovable ? "google/gemini-2.5-flash" : "deepseek-chat";
+    const aiKey = useLovable ? LOVABLE_API_KEY! : (DEEPSEEK_API_KEY || "");
+    console.log(`[VALIDAR] Provider: ${useLovable ? "Lovable AI (gemini-2.5-flash)" : "DeepSeek"}`);
 
     // 1. Fetch questions batch
     const { data: questions, error } = await supabase
