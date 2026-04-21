@@ -79,6 +79,7 @@ const Assinatura = () => {
   };
 
   const handleTrialCheckout = async () => {
+    // Trial é exclusivo do Stripe
     const emailToUse = user?.email || trialEmail.trim();
     if (!emailToUse) {
       setShowTrialEmail(true);
@@ -92,8 +93,7 @@ const Assinatura = () => {
     }
     setTrialLoading(true);
     try {
-      const fnName = provider === "stripe" ? "create-checkout" : "create-mp-checkout";
-      const { data, error } = await supabase.functions.invoke(fnName, {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { trial: true, email: emailToUse },
       });
       if (error) throw error;
