@@ -77,7 +77,18 @@ serve(async (req) => {
     }
 
     if (!stripeCustomer) {
-      logStep("No Stripe customer found for any email");
+      logStep("No Stripe customer found, tentando Mercado Pago");
+      // Fallback: tentar Mercado Pago
+      if (mpToken) {
+        const mpResult = await checkMercadoPago(mpToken, emailsToSearch);
+        if (mpResult.subscribed) {
+          logStep("MP subscription found", { end: mpResult.subscription_end });
+          return new Response(JSON.stringify(mpResult), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+      }
       return new Response(JSON.stringify({ subscribed: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
