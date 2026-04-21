@@ -27,7 +27,8 @@ serve(async (req) => {
       body = await req.json();
     } catch {}
 
-    const isTrial = body?.trial === true;
+    // Trial foi descontinuado no Mercado Pago. Sempre cobra a assinatura trimestral.
+    const isTrial = false;
     const payerEmail = (body?.email || "").trim().toLowerCase();
 
     if (!payerEmail) {
@@ -46,85 +47,36 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://www.metodochoa.com.br";
 
-    // Anti-abuso: para trial, verificar se este email já tem qualquer preapproval no MP
-    if (isTrial) {
-      logStep("Verificando histórico de assinaturas MP para trial", { email: payerEmail });
-      const searchUrl = `https://api.mercadopago.com/preapproval/search?payer_email=${encodeURIComponent(payerEmail)}&limit=10`;
-      const searchRes = await fetch(searchUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (searchRes.ok) {
-        const searchData = await searchRes.json();
-        const results = searchData?.results || [];
-        if (results.length > 0) {
-          logStep("Email já utilizou MP", { count: results.length });
-          return new Response(
-            JSON.stringify({
-              error: "Este email já utilizou o teste grátis ou possui assinatura no Mercado Pago. Assine o plano definitivo para continuar.",
-              trial_used: true,
-            }),
-            {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-              status: 400,
-            },
-          );
-        }
-      }
-    }
+    const origin = req.headers.get("origin") || "https://www.metodochoa.com.br";
 
-    // ---- Estratégia ----
-    // PAID: assinatura recorrente trimestral (R$ 89,90 a cada 3 meses) com end_date em 90 dias = cobra 1x e auto-cancela.
-    // TRIAL: usa free_trial nativo do MP (1 dia grátis) + recorrência mensal R$ 89,90, mas com end_date em 1 dia
-    //        para que NÃO chegue a cobrar — o usuário só autoriza o método de pagamento, e a assinatura expira antes da 1ª cobrança.
-
+    // Estratégia: assinatura recorrente trimestral (R$ 89,90 a cada 3 meses) com end_date em 90 dias
+    // → cobra 1x agora e auto-cancela após o ciclo (sem renovação automática).
     const now = new Date();
     const startDate = new Date(now.getTime() + 5 * 60 * 1000); // 5 min de buffer
     const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 90);
 
-    const reason = isTrial
-      ? "Método CHOA 2026 — Teste grátis de 1 dia"
-      : "Método CHOA 2026 — Assinatura Trimestral";
+    const reason = "Método CHOA 2026 — Assinatura Trimestral";
 
-    let autoRecurring: any;
-
-    if (isTrial) {
-      // Trial: end_date = start + 1 dia (assinatura expira antes da 1ª cobrança real)
-      endDate.setDate(endDate.getDate() + 1);
-      autoRecurring = {
-        frequency: 1,
-        frequency_type: "months",
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
-        transaction_amount: PLAN_AMOUNT,
-        currency_id: "BRL",
-        free_trial: {
-          frequency: 1,
-          frequency_type: "days",
-        },
-      };
-    } else {
-      // Pago: cobra agora R$ 89,90 e expira em 90 dias (não renova)
-      endDate.setDate(endDate.getDate() + 90);
-      autoRecurring = {
-        frequency: PLAN_FREQUENCY_MONTHS,
-        frequency_type: "months",
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
-        transaction_amount: PLAN_AMOUNT,
-        currency_id: "BRL",
-      };
-    }
+    const autoRecurring = {
+      frequency: PLAN_FREQUENCY_MONTHS,
+      frequency_type: "months",
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
+      transaction_amount: PLAN_AMOUNT,
+      currency_id: "BRL",
+    };
 
     const preapprovalBody: any = {
       reason,
       payer_email: payerEmail,
       back_url: `${origin}/cadastro?mp_status=success`,
-      external_reference: `choa-${isTrial ? "trial" : "paid"}-${Date.now()}`,
+      external_reference: `choa-paid-${Date.now()}`,
       auto_recurring: autoRecurring,
       status: "pending",
     };
 
-    logStep("Criando preapproval", { isTrial, email: payerEmail, body: preapprovalBody });
+    logStep("Criando preapproval", { email: payerEmail, body: preapprovalBody });
 
     const mpRes = await fetch("https://api.mercadopago.com/preapproval", {
       method: "POST",

@@ -79,6 +79,7 @@ const Assinatura = () => {
   };
 
   const handleTrialCheckout = async () => {
+    // Trial é exclusivo do Stripe
     const emailToUse = user?.email || trialEmail.trim();
     if (!emailToUse) {
       setShowTrialEmail(true);
@@ -92,8 +93,7 @@ const Assinatura = () => {
     }
     setTrialLoading(true);
     try {
-      const fnName = provider === "stripe" ? "create-checkout" : "create-mp-checkout";
-      const { data, error } = await supabase.functions.invoke(fnName, {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { trial: true, email: emailToUse },
       });
       if (error) throw error;
@@ -193,7 +193,7 @@ const Assinatura = () => {
               >
                 <div className="flex items-center gap-1.5">💳 Stripe</div>
                 <span className="block text-[10px] font-normal opacity-80 mt-0.5">Cartão de crédito internacional</span>
-                <span className="block text-[10px] font-medium text-success mt-1">✓ Teste sem cartão</span>
+                <span className="block text-[10px] font-medium text-success mt-1">✓ Inclui teste grátis</span>
               </button>
               <button
                 type="button"
@@ -206,7 +206,7 @@ const Assinatura = () => {
               >
                 <div className="flex items-center gap-1.5">🇧🇷 Mercado Pago</div>
                 <span className="block text-[10px] font-normal opacity-80 mt-0.5">Cartão, PIX ou Boleto</span>
-                <span className="block text-[10px] font-medium text-warning mt-1">⚠ Teste exige cartão</span>
+                <span className="block text-[10px] font-medium text-warning mt-1">⚠ Sem teste grátis</span>
               </button>
             </div>
           </div>
@@ -215,14 +215,14 @@ const Assinatura = () => {
           {provider === "stripe" && (
             <div className="mb-3 p-2.5 rounded-lg bg-success/5 border border-success/20 text-[11px] text-foreground/80 leading-relaxed">
               <strong className="text-success">Stripe:</strong> aceita apenas <strong>cartão de crédito</strong> por enquanto (PIX em breve). 
-              O <strong>teste de 1 dia é grátis e não exige cartão</strong>.
+              Inclui <strong>teste grátis de 1 dia sem precisar de cartão</strong>.
             </div>
           )}
           {provider === "mercadopago" && (
             <div className="mb-3 p-2.5 rounded-lg bg-warning/5 border border-warning/20 text-[11px] text-foreground/80 leading-relaxed">
               <strong className="text-warning">Mercado Pago:</strong> aceita cartão, PIX e boleto. 
-              Para o <strong>teste grátis de 1 dia, é obrigatório vincular um cartão de crédito</strong> (não é cobrado, mas o MP exige a autorização). 
-              Se prefere testar sem cartão, use o <strong>Stripe</strong>.
+              <strong> Não há teste grátis aqui</strong> — o pagamento da assinatura trimestral (R$ 89,90) é cobrado imediatamente. 
+              Se quer testar antes de pagar, use o <strong>Stripe</strong>.
             </div>
           )}
 
@@ -255,40 +255,40 @@ const Assinatura = () => {
             {loading ? "Redirecionando..." : `Assinar R$ 89,90 via ${provider === "stripe" ? "Stripe" : "Mercado Pago"}`}
           </button>
 
-          {/* Trial Section */}
-          <div className="mt-3 space-y-2">
-            {!user && (showTrialEmail || trialEmail) && (
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="email"
-                  value={trialEmail}
-                  onChange={e => setTrialEmail(e.target.value)}
-                  placeholder="Seu email para o teste grátis"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
-                />
-              </div>
-            )}
-            <button
-              onClick={() => {
-                if (!user && !trialEmail && !showTrialEmail) {
-                  setShowTrialEmail(true);
-                  return;
-                }
-                handleTrialCheckout();
-              }}
-              disabled={trialLoading}
-              className="w-full py-3 rounded-xl border border-primary/30 bg-primary/5 text-primary font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/10 transition-colors disabled:opacity-50"
-            >
-              {trialLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
-              {trialLoading ? "Verificando..." : `Testar Grátis por 1 Dia (${provider === "stripe" ? "Stripe" : "Mercado Pago"})`}
-            </button>
-            <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
-              {provider === "stripe"
-                ? "✓ Sem cartão de crédito • Cancela automaticamente após 24h"
-                : "⚠ Exige cartão de crédito (não é cobrado) • Cancela em 24h"}
-            </p>
-          </div>
+          {/* Trial Section — exclusivo Stripe */}
+          {provider === "stripe" && (
+            <div className="mt-3 space-y-2">
+              {!user && (showTrialEmail || trialEmail) && (
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="email"
+                    value={trialEmail}
+                    onChange={e => setTrialEmail(e.target.value)}
+                    placeholder="Seu email para o teste grátis"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+                  />
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  if (!user && !trialEmail && !showTrialEmail) {
+                    setShowTrialEmail(true);
+                    return;
+                  }
+                  handleTrialCheckout();
+                }}
+                disabled={trialLoading}
+                className="w-full py-3 rounded-xl border border-primary/30 bg-primary/5 text-primary font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/10 transition-colors disabled:opacity-50"
+              >
+                {trialLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
+                {trialLoading ? "Verificando..." : "Testar Grátis por 1 Dia (Stripe)"}
+              </button>
+              <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+                ✓ Sem cartão de crédito • Cancela automaticamente após 24h
+              </p>
+            </div>
+          )}
 
           <div className="flex items-center justify-center gap-4 mt-4 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Pagamento seguro</span>
