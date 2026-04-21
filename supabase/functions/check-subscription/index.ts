@@ -12,38 +12,34 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
-// Verifica assinaturas ativas no Mercado Pago para uma lista de emails
+// Verifica pagamentos aprovados no Mercado Pago nos últimos 90 dias para uma lista de emails
+const MP_ACCESS_DAYS = 90;
 async function checkMercadoPago(accessToken: string, emails: string[]) {
+  const since = new Date();
+  since.setDate(since.getDate() - MP_ACCESS_DAYS);
   for (const email of emails) {
     try {
-      const url = `https://api.mercadopago.com/preapproval/search?payer_email=${encodeURIComponent(email)}&limit=20`;
+      const url = `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=30&payer.email=${encodeURIComponent(email)}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
       if (!res.ok) continue;
       const data = await res.json();
       const results = (data?.results || []) as any[];
-      const active = results.find((r) => r?.status === "authorized");
-      if (active) {
-        // end_date do auto_recurring define até quando vale
-        const endDate = active?.auto_recurring?.end_date || active?.next_payment_date || null;
-        // Detecta se ainda é trial: se diferença entre start_date e end_date <= 2 dias
-        let isTrial = false;
-        let trialEndsAt: string | null = null;
-        try {
-          const sd = active?.auto_recurring?.start_date ? new Date(active.auto_recurring.start_date) : null;
-          const ed = endDate ? new Date(endDate) : null;
-          if (sd && ed) {
-            const diffDays = (ed.getTime() - sd.getTime()) / (1000 * 60 * 60 * 24);
-            if (diffDays <= 2) {
-              isTrial = true;
-              trialEndsAt = ed.toISOString();
-            }
-          }
-        } catch {}
+      // Pagamento aprovado mais recente dentro da janela de 90 dias
+      const approved = results.find((p) => {
+        if (p?.status !== "approved") return false;
+        const created = p?.date_approved || p?.date_created;
+        if (!created) return false;
+        return new Date(created) >= since;
+      });
+      if (approved) {
+        const paidAt = new Date(approved.date_approved || approved.date_created);
+        const endDate = new Date(paidAt);
+        endDate.setDate(endDate.getDate() + MP_ACCESS_DAYS);
         return {
           subscribed: true,
-          subscription_end: endDate ? new Date(endDate).toISOString() : null,
-          is_trial: isTrial,
-          trial_ends_at: trialEndsAt,
+          subscription_end: endDate.toISOString(),
+          is_trial: false,
+          trial_ends_at: null,
           provider: "mercadopago",
         };
       }
