@@ -215,14 +215,14 @@ const Assinatura = () => {
           {provider === "stripe" && (
             <div className="mb-3 p-2.5 rounded-lg bg-success/5 border border-success/20 text-[11px] text-foreground/80 leading-relaxed">
               <strong className="text-success">Stripe:</strong> aceita apenas <strong>cartão de crédito</strong> por enquanto (PIX em breve). 
-              O <strong>teste de 1 dia é grátis e não exige cartão</strong>.
+              Inclui <strong>teste grátis de 1 dia sem precisar de cartão</strong>.
             </div>
           )}
           {provider === "mercadopago" && (
             <div className="mb-3 p-2.5 rounded-lg bg-warning/5 border border-warning/20 text-[11px] text-foreground/80 leading-relaxed">
               <strong className="text-warning">Mercado Pago:</strong> aceita cartão, PIX e boleto. 
-              Para o <strong>teste grátis de 1 dia, é obrigatório vincular um cartão de crédito</strong> (não é cobrado, mas o MP exige a autorização). 
-              Se prefere testar sem cartão, use o <strong>Stripe</strong>.
+              <strong> Não há teste grátis aqui</strong> — o pagamento da assinatura trimestral (R$ 89,90) é cobrado imediatamente. 
+              Se quer testar antes de pagar, use o <strong>Stripe</strong>.
             </div>
           )}
 
