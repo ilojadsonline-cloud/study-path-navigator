@@ -1054,7 +1054,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       const isTimeout = lastFetchError?.name === "AbortError";
       console.error(`[GERAR] Todas as tentativas falharam:`, String(lastFetchError));
       return new Response(JSON.stringify({
-        status: "erro", mensagem: isTimeout ? "DeepSeek demorou demais para responder." : `Erro de conexão: ${lastFetchError?.message}`,
+        status: "erro", mensagem: isTimeout ? "A IA demorou demais para responder." : `Erro de conexão: ${lastFetchError?.message}`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isTimeout ? "TIMEOUT" : "FETCH_ERROR", descricao: String(lastFetchError) }] },
         error: String(lastFetchError), timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1062,29 +1062,31 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
 
     if (aiStatus === 429) {
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "Rate limit do DeepSeek.", paused: true,
+        status: "erro", mensagem: "Rate limit da IA.", paused: true,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "RATE_LIMIT", descricao: "Aguarde 1 minuto" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (aiStatus === 402) {
-      let creditMessage = "Créditos insuficientes no DeepSeek.";
+      let creditMessage = useLovable
+        ? "Créditos insuficientes no Lovable AI. Adicione créditos em Settings → Workspace."
+        : "Créditos insuficientes no DeepSeek.";
       try {
         const parsed = JSON.parse(aiResponseText);
         creditMessage = parsed?.error?.message || creditMessage;
       } catch { /* ignore */ }
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "DeepSeek sem saldo/limite disponível.", paused: true,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "DEEPSEEK_402", descricao: creditMessage }] },
+        status: "erro", mensagem: "Provedor de IA sem saldo/limite disponível.", paused: true,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "AI_402", descricao: creditMessage }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (!aiStatus || aiStatus < 200 || aiStatus >= 300) {
-      console.error(`[GERAR] DeepSeek error: ${aiStatus} ${aiResponseText.substring(0, 300)}`);
+      console.error(`[GERAR] AI error: ${aiStatus} ${aiResponseText.substring(0, 300)}`);
       return new Response(JSON.stringify({
-        status: "erro", mensagem: `Erro DeepSeek (${aiStatus ?? "desconhecido"})`,
+        status: "erro", mensagem: `Erro da IA (${aiStatus ?? "desconhecido"})`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "API_ERROR", descricao: aiResponseText.substring(0, 200) }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
