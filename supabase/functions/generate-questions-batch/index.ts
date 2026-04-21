@@ -674,7 +674,9 @@ serve(async (req) => {
     // Fallback to DeepSeek only if LOVABLE_API_KEY is not configured.
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
-    const useLovable = !!LOVABLE_API_KEY;
+    // Forçado a usar DeepSeek conforme solicitado pelo admin (qualidade > velocidade).
+    // Lovable AI fica como fallback caso DEEPSEEK_API_KEY não esteja configurada.
+    const useLovable = !DEEPSEEK_API_KEY && !!LOVABLE_API_KEY;
     if (!LOVABLE_API_KEY && !DEEPSEEK_API_KEY) {
       return new Response(JSON.stringify({
         status: "erro", mensagem: "Nenhuma API key de IA configurada.",
