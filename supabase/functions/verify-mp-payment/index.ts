@@ -10,19 +10,32 @@ const logStep = (step: string, details?: any) => {
   console.log(`[VERIFY-MP] ${step}${detailsStr}`);
 };
 
-// Verifica se um email tem preapproval autorizado/ativo no Mercado Pago
-async function checkPreapprovalActive(accessToken: string, email: string) {
-  const searchUrl = `https://api.mercadopago.com/preapproval/search?payer_email=${encodeURIComponent(email)}&limit=20`;
-  const res = await fetch(searchUrl, {
+const ACCESS_DAYS = 90;
+
+// Busca pagamentos aprovados nos últimos 90 dias para o email
+async function findApprovedPaymentByEmail(accessToken: string, email: string) {
+  // Busca pagamentos do payer pelo email — ordenados pelos mais recentes
+  const since = new Date();
+  since.setDate(since.getDate() - ACCESS_DAYS);
+  const url = `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=30&payer.email=${encodeURIComponent(email)}`;
+  const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) return { active: false, results: [] as any[] };
+  if (!res.ok) {
+    logStep("Falha ao buscar pagamentos", { status: res.status });
+    return null;
+  }
   const data = await res.json();
   const results = (data?.results || []) as any[];
-  // status válidos para acesso: authorized
-  // pending = ainda não autorizou; cancelled/paused = sem acesso
-  const activeOne = results.find((r) => r?.status === "authorized");
-  return { active: !!activeOne, sub: activeOne, results };
+  // Pagamento aprovado mais recente dentro da janela de 90 dias
+  const approved = results.find((p) => {
+    if (p?.status !== "approved") return false;
+    const created = p?.date_approved || p?.date_created;
+    if (!created) return false;
+    const createdDate = new Date(created);
+    return createdDate >= since;
+  });
+  return approved || null;
 }
 
 serve(async (req) => {
@@ -35,69 +48,62 @@ serve(async (req) => {
     if (!accessToken) throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado");
 
     const body = await req.json();
-    const { preapproval_id, recovery_email } = body || {};
+    const { payment_id, preference_id, recovery_email, collection_id, status: queryStatus } = body || {};
 
-    if (!preapproval_id && !recovery_email) {
-      return new Response(JSON.stringify({ error: "preapproval_id ou recovery_email é obrigatório" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
-    }
-
-    // Modo 1: por preapproval_id direto (retorno do checkout MP)
-    if (preapproval_id) {
-      logStep("Verificando preapproval direto", { preapproval_id });
-      const res = await fetch(`https://api.mercadopago.com/preapproval/${preapproval_id}`, {
+    // Modo 1: payment_id ou collection_id direto (vem do back_url do MP após aprovação)
+    const directPaymentId = payment_id || collection_id;
+    if (directPaymentId) {
+      logStep("Verificando payment direto", { directPaymentId, queryStatus });
+      const res = await fetch(`https://api.mercadopago.com/v1/payments/${directPaymentId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!res.ok) {
-        logStep("Preapproval não encontrado");
         return new Response(JSON.stringify({ paid: false, reason: "not_found" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
         });
       }
       const data = await res.json();
-      const paid = data?.status === "authorized";
-      logStep("Resultado", { status: data?.status, email: data?.payer_email });
+      const paid = data?.status === "approved";
+      logStep("Payment status", { id: data?.id, status: data?.status, email: data?.payer?.email });
       return new Response(
         JSON.stringify({
           paid,
-          customer_email: data?.payer_email || null,
+          customer_email: data?.payer?.email || null,
           status: data?.status,
+          amount: data?.transaction_amount,
         }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
       );
     }
 
-    // Modo 2: recuperação por email
+    // Modo 2: recuperação por email — busca último pagamento aprovado nos últimos 90 dias
     if (recovery_email) {
       const email = String(recovery_email).trim().toLowerCase();
       logStep("Recuperação por email", { email });
-      const { active, sub } = await checkPreapprovalActive(accessToken, email);
-      if (active) {
+      const approved = await findApprovedPaymentByEmail(accessToken, email);
+      if (approved) {
         return new Response(
           JSON.stringify({
             paid: true,
-            customer_email: sub?.payer_email || email,
+            customer_email: approved?.payer?.email || email,
             recovered: true,
+            payment_id: approved?.id,
+            paid_at: approved?.date_approved,
           }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          },
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
         );
       }
-      return new Response(JSON.stringify({ paid: false, reason: "no_active_subscription" }), {
+      return new Response(JSON.stringify({ paid: false, reason: "no_approved_payment" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
 
-    throw new Error("Requisição inválida");
+    return new Response(JSON.stringify({ error: "payment_id, collection_id ou recovery_email é obrigatório" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 400,
+    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: msg });
