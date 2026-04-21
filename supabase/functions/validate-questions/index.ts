@@ -1712,7 +1712,7 @@ Responda APENAS JSON no formato:
               method: "POST",
               headers: { "Content-Type": "application/json", Authorization: `Bearer ${aiKey}` },
               body: JSON.stringify({
-                model: "deepseek-chat",
+                model: aiModel,
                 messages: [
                   { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, null) },
                   { role: "user", content: retryPrompt },
