@@ -12,6 +12,48 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
+// Verifica assinaturas ativas no Mercado Pago para uma lista de emails
+async function checkMercadoPago(accessToken: string, emails: string[]) {
+  for (const email of emails) {
+    try {
+      const url = `https://api.mercadopago.com/preapproval/search?payer_email=${encodeURIComponent(email)}&limit=20`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const results = (data?.results || []) as any[];
+      const active = results.find((r) => r?.status === "authorized");
+      if (active) {
+        // end_date do auto_recurring define até quando vale
+        const endDate = active?.auto_recurring?.end_date || active?.next_payment_date || null;
+        // Detecta se ainda é trial: se diferença entre start_date e end_date <= 2 dias
+        let isTrial = false;
+        let trialEndsAt: string | null = null;
+        try {
+          const sd = active?.auto_recurring?.start_date ? new Date(active.auto_recurring.start_date) : null;
+          const ed = endDate ? new Date(endDate) : null;
+          if (sd && ed) {
+            const diffDays = (ed.getTime() - sd.getTime()) / (1000 * 60 * 60 * 24);
+            if (diffDays <= 2) {
+              isTrial = true;
+              trialEndsAt = ed.toISOString();
+            }
+          }
+        } catch {}
+        return {
+          subscribed: true,
+          subscription_end: endDate ? new Date(endDate).toISOString() : null,
+          is_trial: isTrial,
+          trial_ends_at: trialEndsAt,
+          provider: "mercadopago",
+        };
+      }
+    } catch (e) {
+      console.error("[CHECK-SUBSCRIPTION] MP search error", email, e);
+    }
+  }
+  return { subscribed: false };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -111,7 +153,17 @@ serve(async (req) => {
     if (!activeSub) {
       // Check canceled subs for logging
       const hasCanceled = subscriptions.data.some((s) => s.status === "canceled");
-      logStep(hasCanceled ? "Only canceled subscriptions found" : "No subscriptions found");
+      logStep(hasCanceled ? "Only canceled subscriptions found, tentando MP" : "No subscriptions found, tentando MP");
+      // Fallback Mercado Pago
+      if (mpToken) {
+        const mpResult = await checkMercadoPago(mpToken, emailsToSearch);
+        if (mpResult.subscribed) {
+          return new Response(JSON.stringify(mpResult), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+      }
       return new Response(JSON.stringify({ subscribed: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
