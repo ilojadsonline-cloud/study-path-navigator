@@ -670,11 +670,15 @@ serve(async (req) => {
     const blocks = parseArticleBlocks(leiSeca);
     const availableArticles = blocks.map(b => `Art. ${b.artNum}`).join(", ");
 
+    // ── AI Provider: Lovable AI Gateway (much faster than DeepSeek) ──
+    // Fallback to DeepSeek only if LOVABLE_API_KEY is not configured.
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
-    if (!DEEPSEEK_API_KEY) {
+    const useLovable = !!LOVABLE_API_KEY;
+    if (!LOVABLE_API_KEY && !DEEPSEEK_API_KEY) {
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "DEEPSEEK_API_KEY não configurada.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Variável DEEPSEEK_API_KEY ausente" }] },
+        status: "erro", mensagem: "Nenhuma API key de IA configurada.",
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Configure LOVABLE_API_KEY ou DEEPSEEK_API_KEY" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -853,13 +857,25 @@ TÉCNICAS DE ELEVAÇÃO DE COMPLEXIDADE (use obrigatoriamente):
 
 PRINCÍPIOS FUNDAMENTAIS:
 1. CRIATIVIDADE COM PRECISÃO: Explore ângulos inéditos do dispositivo legal — consequências implícitas, condições cumulativas, ressalvas pouco percebidas, interações com outros artigos.
-2. HIERARQUIA MILITAR — REGRA INVIOLÁVEL:
-   - RESPEITE ABSOLUTAMENTE a cadeia de comando, os círculos hierárquicos e as competências de cada posto/graduação conforme definidos no texto legal.
-   - Se a lei define círculos hierárquicos (ex: Oficiais Superiores, Oficiais Intermediários, Oficiais Subalternos, Subtenentes, Sargentos, Cabos, Soldados), USE EXATAMENTE essas categorias.
-   - CADA POSTO/GRADUAÇÃO tem atribuições e competências específicas na lei. Um Soldado NÃO pode exercer função de Oficial. Um Tenente NÃO tem competência de Coronel. VERIFIQUE no texto legal QUEM tem competência para cada ato antes de montar o cenário.
-   - Ao criar cenários fictícios, VERIFIQUE se o posto/graduação do personagem é compatível com a função, o ato administrativo ou disciplinar descrito. Ex: se a lei diz que "o Comandante-Geral" aplica determinada sanção, NÃO atribua essa competência a um Capitão ou Tenente.
-   - ARMADILHAS VÁLIDAS: Trocar a competência entre postos/graduações é uma excelente armadilha para alternativas incorretas, MAS a alternativa correta DEVE respeitar fielmente a hierarquia da lei.
-   - Se o texto legal menciona "círculos hierárquicos" ou "círculos de convivência", use-os como base para cenários e distratores.
+2. HIERARQUIA MILITAR DA PMTO — REGRA INVIOLÁVEL E CHECAGEM OBRIGATÓRIA:
+   ESTRUTURA HIERÁRQUICA DE REFERÊNCIA (PMTO — confira no texto legal antes de usar):
+   • OFICIAIS SUPERIORES: Coronel (Cel), Tenente-Coronel (Ten Cel), Major (Maj)
+   • OFICIAIS INTERMEDIÁRIOS: Capitão (Cap)
+   • OFICIAIS SUBALTERNOS: 1º Tenente (1º Ten), 2º Tenente (2º Ten)
+   • PRAÇAS ESPECIAIS: Aspirante-a-Oficial, Cadete, Aluno-Oficial
+   • PRAÇAS: Subtenente (ST), 1º Sargento, 2º Sargento, 3º Sargento, Cabo, Soldado
+   COMPETÊNCIAS POR POSTO/GRADUAÇÃO (verifique SEMPRE no texto legal):
+   • COMANDANTE-GERAL DA PMTO: Coronel — competência exclusiva para promoções, demissões, exclusões, exonerações em alto nível, aplicação das sanções mais graves.
+   • COMANDANTES DE BATALHÃO/UNIDADE: geralmente Tenente-Coronel ou Major.
+   • COMANDANTES DE COMPANHIA: geralmente Capitão.
+   • COMANDANTES DE PELOTÃO: geralmente Tenente.
+   • COMANDANTES DE GRUPO/FRAÇÃO: Sargentos.
+   PROTOCOLO OBRIGATÓRIO ANTES DE FINALIZAR CADA QUESTÃO:
+   PASSO A — Identifique no texto legal QUEM tem competência para o ato descrito (promoção, punição, exclusão, autorização, instauração de IPM, designação de encarregado, aplicação de pena disciplinar, etc.).
+   PASSO B — Verifique se o posto/graduação do personagem do enunciado é COMPATÍVEL com a função/ato. Um Soldado NUNCA pode aplicar punição que a lei reserva ao Comandante-Geral. Um 2º Tenente NUNCA pode exercer competência privativa do Coronel. Um Cabo NUNCA pode presidir IPM (a lei reserva isso a Oficial).
+   PASSO C — Confira nas ALTERNATIVAS se há menções de postos/funções incompatíveis. A alternativa CORRETA deve ser 100% fiel à hierarquia legal. As INCORRETAS podem (e devem) usar trocas de competência entre postos como armadilha — mas marcadas como incorretas.
+   PASSO D — Confira no COMENTÁRIO se a explicação respeita a estrutura hierárquica e cita corretamente a autoridade competente.
+   ATENÇÃO ESPECIAL: NUNCA misture nomenclatura de outras forças (Aviador, Almirante, Marechal, Brigadeiro) — PMTO usa apenas a nomenclatura militar estadual.
 3. FIDELIDADE AO TEXTO LEGAL: A alternativa correta DEVE estar fundamentada LITERALMENTE no texto da lei. NUNCA invente regras que não existem no texto.
 4. PROIBIÇÃO DE DECOREBA: NUNCA cite números de artigos no enunciado. O candidato demonstra COMPREENSÃO, não memorização.
 5. CADA QUESTÃO É ÚNICA: Varie estilo, estrutura, tipo de raciocínio e padrão de enunciado em CADA questão.
@@ -952,54 +968,60 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
 {"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}]}`;
 
     // API call with retry logic
-    // Supabase Edge Function hard limit = 150s. We budget:
-    //   attempt 1: up to 70s + 3s backoff
-    //   attempt 2: up to 65s
-    //   leaving ~12s for parsing/validation/insert.
+    // Lovable AI Gateway with google/gemini-2.5-flash is dramatically faster
+    // than DeepSeek (typically 8-25s vs 50-90s for the same prompt).
     const MAX_API_RETRIES = 2;
-    const DEEPSEEK_TIMEOUT_PRIMARY_MS = batchSize === 1 ? 50000 : 58000;
-    const DEEPSEEK_TIMEOUT_RETRY_MS = batchSize === 1 ? 42000 : 50000;
+    const PRIMARY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 35000 : 50000) : (batchSize === 1 ? 50000 : 58000);
+    const RETRY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 30000 : 42000) : (batchSize === 1 ? 42000 : 50000);
     let aiStatus: number | null = null;
     let aiResponseText = "";
     let lastFetchError: any = null;
 
-    // Tighter output budget — DeepSeek latency scales with max_tokens.
-    // Empirically 1 question ≈ 700-900 tokens including a rich comentário.
-    const maxTokens = batchSize === 1 ? 1500 : 2600;
+    // Output token budget — Gemini Flash handles slightly larger budgets faster
+    const maxTokens = batchSize === 1 ? 1800 : 3000;
+
+    const apiUrl = useLovable
+      ? "https://ai.gateway.lovable.dev/v1/chat/completions"
+      : "https://api.deepseek.com/chat/completions";
+    const apiModel = useLovable ? "google/gemini-2.5-flash" : "deepseek-chat";
+    const apiKey = useLovable ? LOVABLE_API_KEY! : DEEPSEEK_API_KEY!;
+
+    console.log(`[GERAR] Provider: ${useLovable ? "Lovable AI (gemini-2.5-flash)" : "DeepSeek"}, batch=${batchSize}, maxTokens=${maxTokens}`);
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
-      const perAttemptTimeout = attempt === 0 ? DEEPSEEK_TIMEOUT_PRIMARY_MS : DEEPSEEK_TIMEOUT_RETRY_MS;
+      const perAttemptTimeout = attempt === 0 ? PRIMARY_TIMEOUT_MS : RETRY_TIMEOUT_MS;
       const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
 
       try {
-        const response = await fetch("https://api.deepseek.com/chat/completions", {
+        const requestBody: Record<string, unknown> = {
+          model: apiModel,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt },
+          ],
+          max_tokens: maxTokens,
+          temperature: 0.2,
+          stream: false,
+          response_format: { type: "json_object" },
+        };
+        if (!useLovable) requestBody.top_p = 0.9;
+
+        const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+            Authorization: `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({
-            model: "deepseek-chat",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: prompt },
-            ],
-            response_format: { type: "json_object" },
-            max_tokens: maxTokens,
-            temperature: 0.2,
-            top_p: 0.9,
-            stream: false,
-          }),
+          body: JSON.stringify(requestBody),
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
         aiStatus = response.status;
-        console.log(`[GERAR] DeepSeek status: ${aiStatus}, attempt ${attempt + 1}`);
+        console.log(`[GERAR] AI status: ${aiStatus}, attempt ${attempt + 1}`);
         aiResponseText = await response.text();
 
         if (aiStatus === 429 && attempt < MAX_API_RETRIES - 1) {
-          // Short backoff to stay within edge function budget.
           const retryDelay = 2500;
           console.log(`[GERAR] Rate limit 429, retry em ${retryDelay}ms`);
           await new Promise(r => setTimeout(r, retryDelay));
@@ -1020,8 +1042,6 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         const isTimeout = fetchErr.name === "AbortError";
 
         if (attempt < MAX_API_RETRIES - 1) {
-          // On timeout: retry IMMEDIATELY with no backoff to preserve budget.
-          // On generic fetch error: short fixed backoff.
           const retryDelay = isTimeout ? 0 : 1500;
           console.log(`[GERAR] ${isTimeout ? "Timeout" : "Fetch error"}, retry em ${retryDelay}ms: ${String(fetchErr)}`);
           if (retryDelay > 0) await new Promise(r => setTimeout(r, retryDelay));
@@ -1034,7 +1054,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       const isTimeout = lastFetchError?.name === "AbortError";
       console.error(`[GERAR] Todas as tentativas falharam:`, String(lastFetchError));
       return new Response(JSON.stringify({
-        status: "erro", mensagem: isTimeout ? "DeepSeek demorou demais para responder." : `Erro de conexão: ${lastFetchError?.message}`,
+        status: "erro", mensagem: isTimeout ? "A IA demorou demais para responder." : `Erro de conexão: ${lastFetchError?.message}`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isTimeout ? "TIMEOUT" : "FETCH_ERROR", descricao: String(lastFetchError) }] },
         error: String(lastFetchError), timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1042,29 +1062,31 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
 
     if (aiStatus === 429) {
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "Rate limit do DeepSeek.", paused: true,
+        status: "erro", mensagem: "Rate limit da IA.", paused: true,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "RATE_LIMIT", descricao: "Aguarde 1 minuto" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (aiStatus === 402) {
-      let creditMessage = "Créditos insuficientes no DeepSeek.";
+      let creditMessage = useLovable
+        ? "Créditos insuficientes no Lovable AI. Adicione créditos em Settings → Workspace."
+        : "Créditos insuficientes no DeepSeek.";
       try {
         const parsed = JSON.parse(aiResponseText);
         creditMessage = parsed?.error?.message || creditMessage;
       } catch { /* ignore */ }
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "DeepSeek sem saldo/limite disponível.", paused: true,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "DEEPSEEK_402", descricao: creditMessage }] },
+        status: "erro", mensagem: "Provedor de IA sem saldo/limite disponível.", paused: true,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "AI_402", descricao: creditMessage }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (!aiStatus || aiStatus < 200 || aiStatus >= 300) {
-      console.error(`[GERAR] DeepSeek error: ${aiStatus} ${aiResponseText.substring(0, 300)}`);
+      console.error(`[GERAR] AI error: ${aiStatus} ${aiResponseText.substring(0, 300)}`);
       return new Response(JSON.stringify({
-        status: "erro", mensagem: `Erro DeepSeek (${aiStatus ?? "desconhecido"})`,
+        status: "erro", mensagem: `Erro da IA (${aiStatus ?? "desconhecido"})`,
         detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "API_ERROR", descricao: aiResponseText.substring(0, 200) }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
