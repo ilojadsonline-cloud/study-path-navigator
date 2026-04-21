@@ -1708,9 +1708,9 @@ Responda APENAS JSON no formato:
           try {
             const retryController = new AbortController();
             const retryTimeout = setTimeout(() => retryController.abort(), 55000);
-            const retryResp = await fetch("https://api.deepseek.com/chat/completions", {
+            const retryResp = await fetch(aiUrl, {
               method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${aiKey}` },
               body: JSON.stringify({
                 model: "deepseek-chat",
                 messages: [
