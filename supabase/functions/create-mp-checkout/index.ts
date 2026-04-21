@@ -27,7 +27,8 @@ serve(async (req) => {
       body = await req.json();
     } catch {}
 
-    const isTrial = body?.trial === true;
+    // Trial foi descontinuado no Mercado Pago. Sempre cobra a assinatura trimestral.
+    const isTrial = false;
     const payerEmail = (body?.email || "").trim().toLowerCase();
 
     if (!payerEmail) {
