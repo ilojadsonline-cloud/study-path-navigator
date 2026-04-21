@@ -857,13 +857,25 @@ TÉCNICAS DE ELEVAÇÃO DE COMPLEXIDADE (use obrigatoriamente):
 
 PRINCÍPIOS FUNDAMENTAIS:
 1. CRIATIVIDADE COM PRECISÃO: Explore ângulos inéditos do dispositivo legal — consequências implícitas, condições cumulativas, ressalvas pouco percebidas, interações com outros artigos.
-2. HIERARQUIA MILITAR — REGRA INVIOLÁVEL:
-   - RESPEITE ABSOLUTAMENTE a cadeia de comando, os círculos hierárquicos e as competências de cada posto/graduação conforme definidos no texto legal.
-   - Se a lei define círculos hierárquicos (ex: Oficiais Superiores, Oficiais Intermediários, Oficiais Subalternos, Subtenentes, Sargentos, Cabos, Soldados), USE EXATAMENTE essas categorias.
-   - CADA POSTO/GRADUAÇÃO tem atribuições e competências específicas na lei. Um Soldado NÃO pode exercer função de Oficial. Um Tenente NÃO tem competência de Coronel. VERIFIQUE no texto legal QUEM tem competência para cada ato antes de montar o cenário.
-   - Ao criar cenários fictícios, VERIFIQUE se o posto/graduação do personagem é compatível com a função, o ato administrativo ou disciplinar descrito. Ex: se a lei diz que "o Comandante-Geral" aplica determinada sanção, NÃO atribua essa competência a um Capitão ou Tenente.
-   - ARMADILHAS VÁLIDAS: Trocar a competência entre postos/graduações é uma excelente armadilha para alternativas incorretas, MAS a alternativa correta DEVE respeitar fielmente a hierarquia da lei.
-   - Se o texto legal menciona "círculos hierárquicos" ou "círculos de convivência", use-os como base para cenários e distratores.
+2. HIERARQUIA MILITAR DA PMTO — REGRA INVIOLÁVEL E CHECAGEM OBRIGATÓRIA:
+   ESTRUTURA HIERÁRQUICA DE REFERÊNCIA (PMTO — confira no texto legal antes de usar):
+   • OFICIAIS SUPERIORES: Coronel (Cel), Tenente-Coronel (Ten Cel), Major (Maj)
+   • OFICIAIS INTERMEDIÁRIOS: Capitão (Cap)
+   • OFICIAIS SUBALTERNOS: 1º Tenente (1º Ten), 2º Tenente (2º Ten)
+   • PRAÇAS ESPECIAIS: Aspirante-a-Oficial, Cadete, Aluno-Oficial
+   • PRAÇAS: Subtenente (ST), 1º Sargento, 2º Sargento, 3º Sargento, Cabo, Soldado
+   COMPETÊNCIAS POR POSTO/GRADUAÇÃO (verifique SEMPRE no texto legal):
+   • COMANDANTE-GERAL DA PMTO: Coronel — competência exclusiva para promoções, demissões, exclusões, exonerações em alto nível, aplicação das sanções mais graves.
+   • COMANDANTES DE BATALHÃO/UNIDADE: geralmente Tenente-Coronel ou Major.
+   • COMANDANTES DE COMPANHIA: geralmente Capitão.
+   • COMANDANTES DE PELOTÃO: geralmente Tenente.
+   • COMANDANTES DE GRUPO/FRAÇÃO: Sargentos.
+   PROTOCOLO OBRIGATÓRIO ANTES DE FINALIZAR CADA QUESTÃO:
+   PASSO A — Identifique no texto legal QUEM tem competência para o ato descrito (promoção, punição, exclusão, autorização, instauração de IPM, designação de encarregado, aplicação de pena disciplinar, etc.).
+   PASSO B — Verifique se o posto/graduação do personagem do enunciado é COMPATÍVEL com a função/ato. Um Soldado NUNCA pode aplicar punição que a lei reserva ao Comandante-Geral. Um 2º Tenente NUNCA pode exercer competência privativa do Coronel. Um Cabo NUNCA pode presidir IPM (a lei reserva isso a Oficial).
+   PASSO C — Confira nas ALTERNATIVAS se há menções de postos/funções incompatíveis. A alternativa CORRETA deve ser 100% fiel à hierarquia legal. As INCORRETAS podem (e devem) usar trocas de competência entre postos como armadilha — mas marcadas como incorretas.
+   PASSO D — Confira no COMENTÁRIO se a explicação respeita a estrutura hierárquica e cita corretamente a autoridade competente.
+   ATENÇÃO ESPECIAL: NUNCA misture nomenclatura de outras forças (Aviador, Almirante, Marechal, Brigadeiro) — PMTO usa apenas a nomenclatura militar estadual.
 3. FIDELIDADE AO TEXTO LEGAL: A alternativa correta DEVE estar fundamentada LITERALMENTE no texto da lei. NUNCA invente regras que não existem no texto.
 4. PROIBIÇÃO DE DECOREBA: NUNCA cite números de artigos no enunciado. O candidato demonstra COMPREENSÃO, não memorização.
 5. CADA QUESTÃO É ÚNICA: Varie estilo, estrutura, tipo de raciocínio e padrão de enunciado em CADA questão.
