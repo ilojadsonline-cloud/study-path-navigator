@@ -255,40 +255,40 @@ const Assinatura = () => {
             {loading ? "Redirecionando..." : `Assinar R$ 89,90 via ${provider === "stripe" ? "Stripe" : "Mercado Pago"}`}
           </button>
 
-          {/* Trial Section */}
-          <div className="mt-3 space-y-2">
-            {!user && (showTrialEmail || trialEmail) && (
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="email"
-                  value={trialEmail}
-                  onChange={e => setTrialEmail(e.target.value)}
-                  placeholder="Seu email para o teste grátis"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
-                />
-              </div>
-            )}
-            <button
-              onClick={() => {
-                if (!user && !trialEmail && !showTrialEmail) {
-                  setShowTrialEmail(true);
-                  return;
-                }
-                handleTrialCheckout();
-              }}
-              disabled={trialLoading}
-              className="w-full py-3 rounded-xl border border-primary/30 bg-primary/5 text-primary font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/10 transition-colors disabled:opacity-50"
-            >
-              {trialLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
-              {trialLoading ? "Verificando..." : `Testar Grátis por 1 Dia (${provider === "stripe" ? "Stripe" : "Mercado Pago"})`}
-            </button>
-            <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
-              {provider === "stripe"
-                ? "✓ Sem cartão de crédito • Cancela automaticamente após 24h"
-                : "⚠ Exige cartão de crédito (não é cobrado) • Cancela em 24h"}
-            </p>
-          </div>
+          {/* Trial Section — exclusivo Stripe */}
+          {provider === "stripe" && (
+            <div className="mt-3 space-y-2">
+              {!user && (showTrialEmail || trialEmail) && (
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="email"
+                    value={trialEmail}
+                    onChange={e => setTrialEmail(e.target.value)}
+                    placeholder="Seu email para o teste grátis"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+                  />
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  if (!user && !trialEmail && !showTrialEmail) {
+                    setShowTrialEmail(true);
+                    return;
+                  }
+                  handleTrialCheckout();
+                }}
+                disabled={trialLoading}
+                className="w-full py-3 rounded-xl border border-primary/30 bg-primary/5 text-primary font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/10 transition-colors disabled:opacity-50"
+              >
+                {trialLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
+                {trialLoading ? "Verificando..." : "Testar Grátis por 1 Dia (Stripe)"}
+              </button>
+              <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+                ✓ Sem cartão de crédito • Cancela automaticamente após 24h
+              </p>
+            </div>
+          )}
 
           <div className="flex items-center justify-center gap-4 mt-4 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Pagamento seguro</span>
