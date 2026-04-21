@@ -670,11 +670,15 @@ serve(async (req) => {
     const blocks = parseArticleBlocks(leiSeca);
     const availableArticles = blocks.map(b => `Art. ${b.artNum}`).join(", ");
 
+    // ── AI Provider: Lovable AI Gateway (much faster than DeepSeek) ──
+    // Fallback to DeepSeek only if LOVABLE_API_KEY is not configured.
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
-    if (!DEEPSEEK_API_KEY) {
+    const useLovable = !!LOVABLE_API_KEY;
+    if (!LOVABLE_API_KEY && !DEEPSEEK_API_KEY) {
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "DEEPSEEK_API_KEY não configurada.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Variável DEEPSEEK_API_KEY ausente" }] },
+        status: "erro", mensagem: "Nenhuma API key de IA configurada.",
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Configure LOVABLE_API_KEY ou DEEPSEEK_API_KEY" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
