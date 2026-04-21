@@ -193,7 +193,7 @@ const Assinatura = () => {
               >
                 <div className="flex items-center gap-1.5">💳 Stripe</div>
                 <span className="block text-[10px] font-normal opacity-80 mt-0.5">Cartão de crédito internacional</span>
-                <span className="block text-[10px] font-medium text-success mt-1">✓ Teste sem cartão</span>
+                <span className="block text-[10px] font-medium text-success mt-1">✓ Inclui teste grátis</span>
               </button>
               <button
                 type="button"
@@ -206,7 +206,7 @@ const Assinatura = () => {
               >
                 <div className="flex items-center gap-1.5">🇧🇷 Mercado Pago</div>
                 <span className="block text-[10px] font-normal opacity-80 mt-0.5">Cartão, PIX ou Boleto</span>
-                <span className="block text-[10px] font-medium text-warning mt-1">⚠ Teste exige cartão</span>
+                <span className="block text-[10px] font-medium text-warning mt-1">⚠ Sem teste grátis</span>
               </button>
             </div>
           </div>
