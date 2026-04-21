@@ -1637,14 +1637,15 @@ Responda APENAS JSON (sem markdown):
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 60000);
 
-        const aiResponse = await fetch("https://api.deepseek.com/chat/completions", {
+        if (!aiKey) throw new Error("Nenhuma API key de IA configurada");
+        const aiResponse = await fetch(aiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+            Authorization: `Bearer ${aiKey}`,
           },
           body: JSON.stringify({
-            model: "deepseek-chat",
+            model: aiModel,
             messages: [
               { role: "system", content: buildSystemPromptMaxSecurity(availableArticles, deterministicCitation) },
               { role: "user", content: prompt },
