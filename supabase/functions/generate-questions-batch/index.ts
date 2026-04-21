@@ -968,54 +968,60 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
 {"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}]}`;
 
     // API call with retry logic
-    // Supabase Edge Function hard limit = 150s. We budget:
-    //   attempt 1: up to 70s + 3s backoff
-    //   attempt 2: up to 65s
-    //   leaving ~12s for parsing/validation/insert.
+    // Lovable AI Gateway with google/gemini-2.5-flash is dramatically faster
+    // than DeepSeek (typically 8-25s vs 50-90s for the same prompt).
     const MAX_API_RETRIES = 2;
-    const DEEPSEEK_TIMEOUT_PRIMARY_MS = batchSize === 1 ? 50000 : 58000;
-    const DEEPSEEK_TIMEOUT_RETRY_MS = batchSize === 1 ? 42000 : 50000;
+    const PRIMARY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 35000 : 50000) : (batchSize === 1 ? 50000 : 58000);
+    const RETRY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 30000 : 42000) : (batchSize === 1 ? 42000 : 50000);
     let aiStatus: number | null = null;
     let aiResponseText = "";
     let lastFetchError: any = null;
 
-    // Tighter output budget — DeepSeek latency scales with max_tokens.
-    // Empirically 1 question ≈ 700-900 tokens including a rich comentário.
-    const maxTokens = batchSize === 1 ? 1500 : 2600;
+    // Output token budget — Gemini Flash handles slightly larger budgets faster
+    const maxTokens = batchSize === 1 ? 1800 : 3000;
+
+    const apiUrl = useLovable
+      ? "https://ai.gateway.lovable.dev/v1/chat/completions"
+      : "https://api.deepseek.com/chat/completions";
+    const apiModel = useLovable ? "google/gemini-2.5-flash" : "deepseek-chat";
+    const apiKey = useLovable ? LOVABLE_API_KEY! : DEEPSEEK_API_KEY!;
+
+    console.log(`[GERAR] Provider: ${useLovable ? "Lovable AI (gemini-2.5-flash)" : "DeepSeek"}, batch=${batchSize}, maxTokens=${maxTokens}`);
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
-      const perAttemptTimeout = attempt === 0 ? DEEPSEEK_TIMEOUT_PRIMARY_MS : DEEPSEEK_TIMEOUT_RETRY_MS;
+      const perAttemptTimeout = attempt === 0 ? PRIMARY_TIMEOUT_MS : RETRY_TIMEOUT_MS;
       const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
 
       try {
-        const response = await fetch("https://api.deepseek.com/chat/completions", {
+        const requestBody: Record<string, unknown> = {
+          model: apiModel,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt },
+          ],
+          max_tokens: maxTokens,
+          temperature: 0.2,
+          stream: false,
+          response_format: { type: "json_object" },
+        };
+        if (!useLovable) requestBody.top_p = 0.9;
+
+        const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+            Authorization: `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({
-            model: "deepseek-chat",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: prompt },
-            ],
-            response_format: { type: "json_object" },
-            max_tokens: maxTokens,
-            temperature: 0.2,
-            top_p: 0.9,
-            stream: false,
-          }),
+          body: JSON.stringify(requestBody),
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
         aiStatus = response.status;
-        console.log(`[GERAR] DeepSeek status: ${aiStatus}, attempt ${attempt + 1}`);
+        console.log(`[GERAR] AI status: ${aiStatus}, attempt ${attempt + 1}`);
         aiResponseText = await response.text();
 
         if (aiStatus === 429 && attempt < MAX_API_RETRIES - 1) {
-          // Short backoff to stay within edge function budget.
           const retryDelay = 2500;
           console.log(`[GERAR] Rate limit 429, retry em ${retryDelay}ms`);
           await new Promise(r => setTimeout(r, retryDelay));
@@ -1036,8 +1042,6 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         const isTimeout = fetchErr.name === "AbortError";
 
         if (attempt < MAX_API_RETRIES - 1) {
-          // On timeout: retry IMMEDIATELY with no backoff to preserve budget.
-          // On generic fetch error: short fixed backoff.
           const retryDelay = isTimeout ? 0 : 1500;
           console.log(`[GERAR] ${isTimeout ? "Timeout" : "Fetch error"}, retry em ${retryDelay}ms: ${String(fetchErr)}`);
           if (retryDelay > 0) await new Promise(r => setTimeout(r, retryDelay));
