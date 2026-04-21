@@ -26,17 +26,18 @@ const Cadastro = () => {
 
   const [stripeEmail, setStripeEmail] = useState("");
   const sessionId = searchParams.get("session_id");
-  const mpPreapprovalId = searchParams.get("preapproval_id");
-  const mpStatus = searchParams.get("mp_status");
+  // Mercado Pago Preference retorna: payment_id, collection_id, status, preference_id
+  const mpPaymentId = searchParams.get("payment_id") || searchParams.get("collection_id");
+  const mpStatus = searchParams.get("mp_status") || searchParams.get("status") || searchParams.get("collection_status");
 
   useEffect(() => {
     const verifyPayment = async () => {
-      // Mercado Pago — usuário voltou do checkout MP
-      if (mpPreapprovalId || mpStatus === "success") {
+      // Mercado Pago — usuário voltou do checkout MP (Preference: Pix/Cartão/Boleto)
+      if (mpPaymentId || mpStatus === "success" || mpStatus === "approved") {
         try {
-          if (mpPreapprovalId) {
+          if (mpPaymentId) {
             const { data, error } = await supabase.functions.invoke("verify-mp-payment", {
-              body: { preapproval_id: mpPreapprovalId },
+              body: { payment_id: mpPaymentId, status: mpStatus },
             });
             if (error) throw error;
             if (data?.paid) {
@@ -80,7 +81,7 @@ const Cadastro = () => {
     };
 
     verifyPayment();
-  }, [sessionId, mpPreapprovalId, mpStatus]);
+  }, [sessionId, mpPaymentId, mpStatus]);
 
   const handleRecoverPayment = async () => {
     if (!recoveryEmail.trim()) {
