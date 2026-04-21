@@ -72,47 +72,59 @@ serve(async (req) => {
       }
     }
 
-    // Calcular datas
+    // ---- Estratégia ----
+    // PAID: assinatura recorrente trimestral (R$ 89,90 a cada 3 meses) com end_date em 90 dias = cobra 1x e auto-cancela.
+    // TRIAL: usa free_trial nativo do MP (1 dia grátis) + recorrência mensal R$ 89,90, mas com end_date em 1 dia
+    //        para que NÃO chegue a cobrar — o usuário só autoriza o método de pagamento, e a assinatura expira antes da 1ª cobrança.
+
     const now = new Date();
     const startDate = new Date(now.getTime() + 5 * 60 * 1000); // 5 min de buffer
-    // 90 dias trimestral; trial cobra após 1 dia o valor cheio (não temos "free trial" nativo no preapproval básico)
-    // Estratégia: trial = preapproval com primeira cobrança em 1 dia e end_date = start+1day (auto-cancela depois)
-    //             paid  = preapproval com cobrança imediata e end_date = start+90days (auto-cancela ao fim)
     const endDate = new Date(startDate);
-    if (isTrial) {
-      endDate.setDate(endDate.getDate() + 1);
-    } else {
-      endDate.setDate(endDate.getDate() + 90);
-    }
 
     const reason = isTrial
-      ? "Método CHOA 2026 — Teste grátis (1 dia)"
-      : "Método CHOA 2026 — Assinatura Trimestral (90 dias)";
+      ? "Método CHOA 2026 — Teste grátis de 1 dia"
+      : "Método CHOA 2026 — Assinatura Trimestral";
 
-    const transactionAmount = isTrial ? 0.5 : PLAN_AMOUNT;
-    // MP exige valor > 0 mesmo para "trial". Vamos usar valor cheio mas com end_date curto (1 dia) e cancelar antes de cobrar novamente.
-    // Para trial real sem cobrança, usamos transaction_amount mínimo permitido pelo MP (R$ 0,50) APENAS na 1ª cobrança? Não — preapproval cobra o valor único.
-    // Solução real: trial = R$ 0,00 não é aceito. Cobramos valor simbólico R$ 0,50 OU usamos modelo "authorized_payment" sem cobrar.
-    // Mais simples: para trial, criamos preapproval com auto_recurring sem cobrança imediata e end_date 1 dia. Usuário autoriza método, cancelamos antes de qualquer cobrança.
-    // MP suporta isso via "preapproval" sem "card_token_id" — usuário só autoriza, sem cobrança. Vamos usar transaction_amount: PLAN_AMOUNT mas frequency: 1 month e end_date em 1 dia (não chega a cobrar).
+    let autoRecurring: any;
+
+    if (isTrial) {
+      // Trial: end_date = start + 1 dia (assinatura expira antes da 1ª cobrança real)
+      endDate.setDate(endDate.getDate() + 1);
+      autoRecurring = {
+        frequency: 1,
+        frequency_type: "months",
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+        transaction_amount: PLAN_AMOUNT,
+        currency_id: "BRL",
+        free_trial: {
+          frequency: 1,
+          frequency_type: "days",
+        },
+      };
+    } else {
+      // Pago: cobra agora R$ 89,90 e expira em 90 dias (não renova)
+      endDate.setDate(endDate.getDate() + 90);
+      autoRecurring = {
+        frequency: PLAN_FREQUENCY_MONTHS,
+        frequency_type: "months",
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+        transaction_amount: PLAN_AMOUNT,
+        currency_id: "BRL",
+      };
+    }
 
     const preapprovalBody: any = {
       reason,
       payer_email: payerEmail,
       back_url: `${origin}/cadastro?mp_status=success`,
       external_reference: `choa-${isTrial ? "trial" : "paid"}-${Date.now()}`,
-      auto_recurring: {
-        frequency: isTrial ? 1 : PLAN_FREQUENCY_MONTHS,
-        frequency_type: "months",
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
-        transaction_amount: PLAN_AMOUNT,
-        currency_id: "BRL",
-      },
+      auto_recurring: autoRecurring,
       status: "pending",
     };
 
-    logStep("Criando preapproval", { isTrial, email: payerEmail, end: endDate.toISOString() });
+    logStep("Criando preapproval", { isTrial, email: payerEmail, body: preapprovalBody });
 
     const mpRes = await fetch("https://api.mercadopago.com/preapproval", {
       method: "POST",
@@ -128,7 +140,10 @@ serve(async (req) => {
     if (!mpRes.ok) {
       logStep("Erro MP", { status: mpRes.status, data: mpData });
       return new Response(
-        JSON.stringify({ error: mpData?.message || "Falha ao criar assinatura no Mercado Pago", details: mpData }),
+        JSON.stringify({
+          error: mpData?.message || "Falha ao criar assinatura no Mercado Pago",
+          details: mpData,
+        }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 500,
@@ -140,10 +155,15 @@ serve(async (req) => {
     const preapprovalId = mpData?.id;
 
     if (!initPoint) {
+      logStep("Sem init_point", { mpData });
       throw new Error("init_point não retornado pelo Mercado Pago");
     }
 
-    logStep("Preapproval criado", { preapprovalId, initPoint });
+    logStep("Preapproval criado", {
+      preapprovalId,
+      initPoint,
+      payer_email_returned: mpData?.payer_email,
+    });
 
     return new Response(
       JSON.stringify({ url: initPoint, preapproval_id: preapprovalId }),
