@@ -26,9 +26,35 @@ const Cadastro = () => {
 
   const [stripeEmail, setStripeEmail] = useState("");
   const sessionId = searchParams.get("session_id");
+  const mpPreapprovalId = searchParams.get("preapproval_id");
+  const mpStatus = searchParams.get("mp_status");
 
   useEffect(() => {
     const verifyPayment = async () => {
+      // Mercado Pago — usuário voltou do checkout MP
+      if (mpPreapprovalId || mpStatus === "success") {
+        try {
+          if (mpPreapprovalId) {
+            const { data, error } = await supabase.functions.invoke("verify-mp-payment", {
+              body: { preapproval_id: mpPreapprovalId },
+            });
+            if (error) throw error;
+            if (data?.paid) {
+              setPaymentVerified(true);
+              if (data.customer_email) {
+                setStripeEmail(data.customer_email);
+                setEmail(data.customer_email);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Erro ao verificar pagamento MP:", err);
+        }
+        setVerifyingPayment(false);
+        return;
+      }
+
+      // Stripe
       if (!sessionId) {
         setVerifyingPayment(false);
         return;
@@ -54,7 +80,7 @@ const Cadastro = () => {
     };
 
     verifyPayment();
-  }, [sessionId]);
+  }, [sessionId, mpPreapprovalId, mpStatus]);
 
   const handleRecoverPayment = async () => {
     if (!recoveryEmail.trim()) {
@@ -63,17 +89,33 @@ const Cadastro = () => {
     }
     setRecoveringPayment(true);
     try {
-      const { data, error } = await supabase.functions.invoke("verify-payment", {
+      let found = false;
+      // Tenta Stripe primeiro
+      const { data: stripeData } = await supabase.functions.invoke("verify-payment", {
         body: { recovery_email: recoveryEmail.trim() },
       });
-      if (error) throw error;
-      if (data?.paid) {
+      if (stripeData?.paid) {
         setPaymentVerified(true);
-        setStripeEmail(data.customer_email || recoveryEmail.trim());
-        setEmail(data.customer_email || recoveryEmail.trim());
-        toast({ title: "Pagamento encontrado!", description: "Seu pagamento foi localizado. Complete seu cadastro." });
-      } else {
-        toast({ title: "Pagamento não encontrado", description: "Nenhuma assinatura ativa foi encontrada para este email. Verifique o email ou efetue o pagamento.", variant: "destructive" });
+        setStripeEmail(stripeData.customer_email || recoveryEmail.trim());
+        setEmail(stripeData.customer_email || recoveryEmail.trim());
+        toast({ title: "Pagamento encontrado!", description: "Pagamento Stripe localizado. Complete seu cadastro." });
+        found = true;
+      }
+      // Se não encontrou no Stripe, tenta Mercado Pago
+      if (!found) {
+        const { data: mpData } = await supabase.functions.invoke("verify-mp-payment", {
+          body: { recovery_email: recoveryEmail.trim() },
+        });
+        if (mpData?.paid) {
+          setPaymentVerified(true);
+          setStripeEmail(mpData.customer_email || recoveryEmail.trim());
+          setEmail(mpData.customer_email || recoveryEmail.trim());
+          toast({ title: "Pagamento encontrado!", description: "Pagamento Mercado Pago localizado. Complete seu cadastro." });
+          found = true;
+        }
+      }
+      if (!found) {
+        toast({ title: "Pagamento não encontrado", description: "Nenhuma assinatura ativa para este email em Stripe ou Mercado Pago.", variant: "destructive" });
       }
     } catch (err: any) {
       toast({ title: "Erro ao buscar pagamento", description: err.message, variant: "destructive" });

@@ -6,11 +6,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
+type Provider = "stripe" | "mercadopago";
+
 const Assinatura = () => {
   const [loading, setLoading] = useState(false);
   const [trialLoading, setTrialLoading] = useState(false);
   const [trialEmail, setTrialEmail] = useState("");
   const [showTrialEmail, setShowTrialEmail] = useState(false);
+  const [provider, setProvider] = useState<Provider>("stripe");
+  const [mpEmail, setMpEmail] = useState("");
+  const [showMpEmail, setShowMpEmail] = useState(false);
   const { toast } = useToast();
   const { user, subscribed, subscriptionEnd, checkSubscription, signOut, isTrial, trialEndsAt } = useAuth();
   const [searchParams] = useSearchParams();
@@ -31,12 +36,41 @@ const Assinatura = () => {
   const handleCheckout = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { trial: false },
-      });
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
+      if (provider === "stripe") {
+        const { data, error } = await supabase.functions.invoke("create-checkout", {
+          body: { trial: false },
+        });
+        if (error) throw error;
+        if (data?.url) {
+          window.location.href = data.url;
+        }
+      } else {
+        // Mercado Pago precisa do email
+        const emailToUse = user?.email || mpEmail.trim();
+        if (!emailToUse) {
+          setShowMpEmail(true);
+          toast({ title: "Informe seu email", description: "Digite o email para continuar com Mercado Pago.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(emailToUse)) {
+          toast({ title: "Email inválido", description: "Verifique o email informado.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+        const { data, error } = await supabase.functions.invoke("create-mp-checkout", {
+          body: { trial: false, email: emailToUse },
+        });
+        if (error) throw error;
+        if (data?.error) {
+          toast({ title: "Erro", description: data.error, variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+        if (data?.url) {
+          window.location.href = data.url;
+        }
       }
     } catch (err: any) {
       toast({ title: "Erro ao iniciar pagamento", description: err.message, variant: "destructive" });
@@ -58,7 +92,8 @@ const Assinatura = () => {
     }
     setTrialLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
+      const fnName = provider === "stripe" ? "create-checkout" : "create-mp-checkout";
+      const { data, error } = await supabase.functions.invoke(fnName, {
         body: { trial: true, email: emailToUse },
       });
       if (error) throw error;
@@ -127,7 +162,7 @@ const Assinatura = () => {
             </p>
           </div>
 
-          <div className="space-y-3 mb-8">
+          <div className="space-y-3 mb-6">
             {[
               "Acesso completo ao banco de questões",
               "Gerador de simulados",
@@ -143,13 +178,64 @@ const Assinatura = () => {
             ))}
           </div>
 
+          {/* Provider selector */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-muted-foreground mb-2 text-center">Escolha o método de pagamento</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setProvider("stripe")}
+                className={`py-2.5 px-3 rounded-xl border text-sm font-semibold transition-all ${
+                  provider === "stripe"
+                    ? "border-gold bg-gold/10 text-gold"
+                    : "border-border/50 bg-secondary text-muted-foreground hover:border-border"
+                }`}
+              >
+                💳 Stripe
+                <span className="block text-[10px] font-normal opacity-80">Cartão internacional</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setProvider("mercadopago")}
+                className={`py-2.5 px-3 rounded-xl border text-sm font-semibold transition-all ${
+                  provider === "mercadopago"
+                    ? "border-gold bg-gold/10 text-gold"
+                    : "border-border/50 bg-secondary text-muted-foreground hover:border-border"
+                }`}
+              >
+                🇧🇷 Mercado Pago
+                <span className="block text-[10px] font-normal opacity-80">PIX, Boleto, Cartão</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Email input para Mercado Pago (quando não logado) */}
+          {provider === "mercadopago" && !user && (showMpEmail || mpEmail) && (
+            <div className="relative mb-3">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="email"
+                value={mpEmail}
+                onChange={e => setMpEmail(e.target.value)}
+                placeholder="Seu email para o pagamento"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+              />
+            </div>
+          )}
+
           <button
-            onClick={handleCheckout}
+            onClick={() => {
+              if (provider === "mercadopago" && !user && !mpEmail && !showMpEmail) {
+                setShowMpEmail(true);
+                return;
+              }
+              handleCheckout();
+            }}
             disabled={loading}
             className="w-full py-4 rounded-xl gradient-gold text-gold-foreground font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity glow-gold disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-            {loading ? "Redirecionando..." : "Assinar Agora"}
+            {loading ? "Redirecionando..." : `Assinar via ${provider === "stripe" ? "Stripe" : "Mercado Pago"}`}
           </button>
 
           {/* Trial Section */}
@@ -178,10 +264,12 @@ const Assinatura = () => {
               className="w-full py-3 rounded-xl border border-primary/30 bg-primary/5 text-primary font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/10 transition-colors disabled:opacity-50"
             >
               {trialLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
-              {trialLoading ? "Verificando..." : "Testar Grátis por 1 Dia"}
+              {trialLoading ? "Verificando..." : `Testar Grátis por 1 Dia (${provider === "stripe" ? "Stripe" : "Mercado Pago"})`}
             </button>
             <p className="text-[10px] text-muted-foreground text-center">
-              Sem cartão de crédito • Cancela automaticamente após 24h
+              {provider === "stripe"
+                ? "Sem cartão de crédito • Cancela automaticamente após 24h"
+                : "Autorize o pagamento • Cancela automaticamente após 24h"}
             </p>
           </div>
 
