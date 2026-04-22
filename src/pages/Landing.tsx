@@ -3,6 +3,7 @@ import {
   Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy,
   Star, Zap, CheckCircle2, Clock, BarChart3, Lock, Users, Target,
   ChevronRight, Eye, Gift, Lightbulb, TrendingUp, Brain, AlertTriangle,
+  CreditCard, QrCode, Receipt,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
