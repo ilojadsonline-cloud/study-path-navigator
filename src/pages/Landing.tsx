@@ -665,7 +665,79 @@ const Landing = () => {
                   Testar Grátis por 1 Dia
                 </Link>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-2">Teste grátis sem cartão • Cancela automaticamente após 24h</p>
+              <p className="text-[11px] text-muted-foreground mt-3">
+                💳 <strong className="text-foreground">Stripe</strong>: cartão de crédito + 1 dia grátis para testar.{" "}
+                <span className="text-foreground">Mercado Pago</span>: Pix, Boleto ou cartão (pagamento único, sem renovação automática).
+              </p>
+            </div>
+          </motion.div>
+        </section>
+
+        {/* Formas de pagamento */}
+        <section className="max-w-4xl mx-auto px-4 pb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="glass-card rounded-2xl p-6 md:p-8"
+          >
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-3">
+                <Lock className="w-3.5 h-3.5" />
+                Pagamento 100% seguro
+              </div>
+              <h3 className="text-xl md:text-2xl font-black mb-2">
+                Pague do <span className="text-gradient-primary">jeito que preferir</span>
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-xl mx-auto">
+                Escolha entre <strong className="text-foreground">Stripe</strong> (cartão internacional, com teste grátis de 1 dia)
+                ou <strong className="text-foreground">Mercado Pago</strong> (Pix, Boleto ou cartão brasileiro).
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/40 border border-border/30">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+                  <QrCode className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Pix</p>
+                  <p className="text-[11px] text-muted-foreground">Aprovação imediata</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/40 border border-border/30">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Cartão de Crédito</p>
+                  <p className="text-[11px] text-muted-foreground">Visa, Master, Elo, Amex</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/40 border border-border/30">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Boleto</p>
+                  <p className="text-[11px] text-muted-foreground">Compensação em até 2 dias</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3 mt-4">
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-success/5 border border-success/20">
+                <Gift className="w-4 h-4 text-success shrink-0 mt-0.5" />
+                <p className="text-xs text-foreground">
+                  <strong>Teste grátis 1 dia</strong> disponível no Stripe (cartão internacional).
+                </p>
+              </div>
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <Clock className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <p className="text-xs text-foreground">
+                  <strong>90 dias de acesso</strong> liberado após confirmação do pagamento.
+                </p>
+              </div>
             </div>
           </motion.div>
         </section>
