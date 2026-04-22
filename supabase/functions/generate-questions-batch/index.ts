@@ -699,8 +699,6 @@ serve(async (req) => {
     if (existingQ) {
       existingQ.forEach((eq) => {
         existingFingerprints.add(buildFingerprint(eq.enunciado));
-        // Also add prefix fingerprint for prefix dedup
-        existingFingerprints.add(normalize(eq.enunciado).substring(0, 50));
         const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
         const correctText = eq[correctKey] || "";
         existingSemanticFPs.add(buildSemanticFingerprint(eq.comentario || "", correctText));
@@ -715,6 +713,13 @@ serve(async (req) => {
         if (assunto) assuntoCoverage.set(assunto, (assuntoCoverage.get(assunto) || 0) + 1);
       });
     }
+
+    // Extract recent question OPENINGS (first 8 words) so we can ask the AI to vary phrasing.
+    const recentOpenings = (existingQ || [])
+      .slice(0, 40)
+      .map((eq) => normalizeWhitespace(eq.enunciado).split(/\s+/).slice(0, 8).join(" "))
+      .filter(Boolean);
+    const openingsToAvoid = [...new Set(recentOpenings)].slice(0, 12);
 
     // Score and rank articles by coverage (prioritize under-explored)
     const scoredBlocks = blocks
