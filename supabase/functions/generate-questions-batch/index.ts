@@ -699,8 +699,6 @@ serve(async (req) => {
     if (existingQ) {
       existingQ.forEach((eq) => {
         existingFingerprints.add(buildFingerprint(eq.enunciado));
-        // Also add prefix fingerprint for prefix dedup
-        existingFingerprints.add(normalize(eq.enunciado).substring(0, 50));
         const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
         const correctText = eq[correctKey] || "";
         existingSemanticFPs.add(buildSemanticFingerprint(eq.comentario || "", correctText));
@@ -715,6 +713,13 @@ serve(async (req) => {
         if (assunto) assuntoCoverage.set(assunto, (assuntoCoverage.get(assunto) || 0) + 1);
       });
     }
+
+    // Extract recent question OPENINGS (first 8 words) so we can ask the AI to vary phrasing.
+    const recentOpenings = (existingQ || [])
+      .slice(0, 40)
+      .map((eq) => normalizeWhitespace(eq.enunciado).split(/\s+/).slice(0, 8).join(" "))
+      .filter(Boolean);
+    const openingsToAvoid = [...new Set(recentOpenings)].slice(0, 12);
 
     // Score and rank articles by coverage (prioritize under-explored)
     const scoredBlocks = blocks
@@ -814,6 +819,10 @@ serve(async (req) => {
 
     const coverageGuidanceBlock = mostCoveredArticles
       ? `\nARTIGOS JÁ MUITO EXPLORADOS (EVITE): ${mostCoveredArticles}`
+      : "";
+
+    const openingsAvoidBlock = openingsToAvoid.length > 0
+      ? `\nABERTURAS DE ENUNCIADO JÁ MUITO USADAS (NÃO COMECE NENHUMA QUESTÃO COM PALAVRAS PARECIDAS):\n${openingsToAvoid.map((o, i) => `${i + 1}) "${o}..."`).join("\n")}\n\nUse aberturas variadas: "Constitui hipótese de...", "É vedado ao militar...", "A respeito de...", "No que se refere a...", "Em relação ao instituto da...", "Sobre as competências de...", "Caso um [posto] [verbo]...", "Determinado militar...", "Suponha que...", etc.`
       : "";
 
     const approachInstructions = approachAssignments
@@ -923,6 +932,7 @@ ${targetArticlesBlock}
 TEXTO LEGAL COMPLETO PARA CONSULTA (use para garantir coerência sistêmica):
 ${legalContextTruncated}
 ${coverageGuidanceBlock}
+${openingsAvoidBlock}
 
 ASSUNTOS MENOS EXPLORADOS (priorize): ${leastCoveredAssuntos}
 
@@ -1003,11 +1013,11 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
             { role: "user", content: prompt },
           ],
           max_tokens: maxTokens,
-          temperature: 0.2,
+          temperature: 0.45,
           stream: false,
           response_format: { type: "json_object" },
         };
-        if (!useLovable) requestBody.top_p = 0.9;
+        if (!useLovable) requestBody.top_p = 0.92;
 
         const response = await fetch(apiUrl, {
           method: "POST",
@@ -1185,19 +1195,12 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: alternativa é apenas número de artigo`); continue;
       }
 
-      // ── Prefix dedup (first 50 normalized chars) ──
-      const prefixFP = normalize(q.enunciado).substring(0, 50);
-      if (existingFingerprints.has(prefixFP) || batchFingerprints.has(prefixFP)) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: prefixo duplicado`); continue;
-      }
-
-      // ── Fingerprint dedup ──
+      // ── Fingerprint dedup (80 normalized chars, no spaces) ──
       const fp = buildFingerprint(q.enunciado);
       if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) {
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata textual`); continue;
       }
       batchFingerprints.add(fp);
-      batchFingerprints.add(prefixFP);
 
       // ── Semantic dedup ──
       const correctAltKey = ALT_KEYS[q.gabarito];
@@ -1290,13 +1293,14 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── Literal proof check (whole law) — threshold raised to 0.6 ──
+      // ── Literal proof check (whole law) — threshold 0.5 (was 0.6 — too strict for paraphrased correct alts) ──
+      // The article-specific proof + ambiguity detection below are the real anti-hallucination guards.
       const lawNorm = normalize(leiSeca);
       const literalProofScore = computeAltLiteralSupport(correctAltText, lawNorm);
-      if (literalProofScore < 0.6) {
+      if (literalProofScore < 0.5) {
         discarded++;
         questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (${literalProofScore.toFixed(2)})` });
-        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.6`);
+        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.5`);
         continue;
       }
 
@@ -1321,7 +1325,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
 
       // ── Article-specific proof: correct alt must match cited article ──
       const articleSpecificScore = computeArticleSpecificProof(correctAltText, q.comentario, blocks);
-      if (articleSpecificScore < 0.15 && literalProofScore < 0.6) {
+      if (articleSpecificScore < 0.15 && literalProofScore < 0.5) {
         discarded++;
         questoesRevisaoManual.push({ motivo: `Alternativa correta não encontrada no artigo citado (articleScore=${articleSpecificScore.toFixed(2)}, literalScore=${literalProofScore.toFixed(2)})` });
         console.log(`[GERAR] Q${idx+1} descartada: alt correta não bate com artigo citado (${articleSpecificScore.toFixed(2)}) e prova literal fraca (${literalProofScore.toFixed(2)})`);
