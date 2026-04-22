@@ -932,6 +932,7 @@ ${targetArticlesBlock}
 TEXTO LEGAL COMPLETO PARA CONSULTA (use para garantir coerência sistêmica):
 ${legalContextTruncated}
 ${coverageGuidanceBlock}
+${openingsAvoidBlock}
 
 ASSUNTOS MENOS EXPLORADOS (priorize): ${leastCoveredAssuntos}
 
@@ -1012,11 +1013,11 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
             { role: "user", content: prompt },
           ],
           max_tokens: maxTokens,
-          temperature: 0.2,
+          temperature: 0.45,
           stream: false,
           response_format: { type: "json_object" },
         };
-        if (!useLovable) requestBody.top_p = 0.9;
+        if (!useLovable) requestBody.top_p = 0.92;
 
         const response = await fetch(apiUrl, {
           method: "POST",
