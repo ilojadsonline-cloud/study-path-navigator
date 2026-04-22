@@ -821,6 +821,10 @@ serve(async (req) => {
       ? `\nARTIGOS JÁ MUITO EXPLORADOS (EVITE): ${mostCoveredArticles}`
       : "";
 
+    const openingsAvoidBlock = openingsToAvoid.length > 0
+      ? `\nABERTURAS DE ENUNCIADO JÁ MUITO USADAS (NÃO COMECE NENHUMA QUESTÃO COM PALAVRAS PARECIDAS):\n${openingsToAvoid.map((o, i) => `${i + 1}) "${o}..."`).join("\n")}\n\nUse aberturas variadas: "Constitui hipótese de...", "É vedado ao militar...", "A respeito de...", "No que se refere a...", "Em relação ao instituto da...", "Sobre as competências de...", "Caso um [posto] [verbo]...", "Determinado militar...", "Suponha que...", etc.`
+      : "";
+
     const approachInstructions = approachAssignments
       .map((a, i) => {
         const num = i + 1;
