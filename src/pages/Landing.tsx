@@ -212,7 +212,7 @@ const Landing = () => {
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">Teste grátis sem cartão de crédito • Cancela automaticamente após 24h</p>
+            <p className="text-xs text-muted-foreground mt-3">Teste grátis de 1 dia via Stripe • Pix, Boleto e Cartão disponíveis no Mercado Pago</p>
           </motion.div>
         </section>
 
