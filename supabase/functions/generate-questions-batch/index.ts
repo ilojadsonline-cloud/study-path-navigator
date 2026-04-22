@@ -1190,19 +1190,12 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: alternativa é apenas número de artigo`); continue;
       }
 
-      // ── Prefix dedup (first 50 normalized chars) ──
-      const prefixFP = normalize(q.enunciado).substring(0, 50);
-      if (existingFingerprints.has(prefixFP) || batchFingerprints.has(prefixFP)) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: prefixo duplicado`); continue;
-      }
-
-      // ── Fingerprint dedup ──
+      // ── Fingerprint dedup (80 normalized chars, no spaces) ──
       const fp = buildFingerprint(q.enunciado);
       if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) {
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata textual`); continue;
       }
       batchFingerprints.add(fp);
-      batchFingerprints.add(prefixFP);
 
       // ── Semantic dedup ──
       const correctAltKey = ALT_KEYS[q.gabarito];
@@ -1295,13 +1288,14 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── Literal proof check (whole law) — threshold raised to 0.6 ──
+      // ── Literal proof check (whole law) — threshold 0.5 (was 0.6 — too strict for paraphrased correct alts) ──
+      // The article-specific proof + ambiguity detection below are the real anti-hallucination guards.
       const lawNorm = normalize(leiSeca);
       const literalProofScore = computeAltLiteralSupport(correctAltText, lawNorm);
-      if (literalProofScore < 0.6) {
+      if (literalProofScore < 0.5) {
         discarded++;
         questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (${literalProofScore.toFixed(2)})` });
-        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.6`);
+        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.5`);
         continue;
       }
 
