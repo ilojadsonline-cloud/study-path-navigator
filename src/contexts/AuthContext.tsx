@@ -18,6 +18,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isTrial: boolean;
   trialEndsAt: string | null;
+  trialExpired: boolean;
   checkSubscription: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -33,6 +34,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   isTrial: false,
   trialEndsAt: null,
+  trialExpired: false,
   checkSubscription: async () => {},
   signOut: async () => {},
 });
@@ -93,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isTrial, setIsTrial] = useState(false);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
+  const [trialExpired, setTrialExpired] = useState(false);
 
   const checkInFlightRef = useRef<Promise<void> | null>(null);
   const lastCheckedUserRef = useRef<string | null>(null);
@@ -187,8 +190,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const end = data?.subscription_end ?? null;
         const trial = data?.is_trial ?? false;
         const trialEnd = data?.trial_ends_at ?? null;
+        const expired = data?.trial_expired === true;
 
         applySubState(sub, end, trial, trialEnd);
+        setTrialExpired(expired && !sub);
         setCachedSubscription(currentUserId, sub, end, trial, trialEnd);
       } catch (err) {
         if (isAuthSessionError(err)) {
@@ -369,6 +374,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin,
         isTrial,
         trialEndsAt,
+        trialExpired,
         checkSubscription,
         signOut,
       }}
