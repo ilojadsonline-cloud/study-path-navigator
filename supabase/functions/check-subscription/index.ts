@@ -118,13 +118,13 @@ serve(async (req) => {
 
     const normalizedEmails = [...new Set(emailsToSearch.map((email) => email.toLowerCase()))];
     const accountCreatedAtMs = user.created_at ? new Date(user.created_at).getTime() : 0;
-    const accountOlderThan24h = !!accountCreatedAtMs && accountCreatedAtMs <= Date.now() - 24 * 60 * 60 * 1000;
+    const now = Date.now();
 
-    const getLocalTrialStatus = async (): Promise<{ used: boolean; expired: boolean }> => {
+    const getLocalTrialStatus = async (): Promise<{ used: boolean; expired: boolean; trialEndsAt: string | null }> => {
       try {
         let query = supabaseClient
           .from("trial_usage")
-          .select("trial_ends_at, converted_to_paid")
+          .select("trial_started_at, trial_ends_at, converted_to_paid")
           .in("email", normalizedEmails)
           .order("trial_started_at", { ascending: false })
           .limit(1);
@@ -134,7 +134,7 @@ serve(async (req) => {
         if ((!data || data.length === 0) && profileData?.cpf) {
           const byCpf = await supabaseClient
             .from("trial_usage")
-            .select("trial_ends_at, converted_to_paid")
+            .select("trial_started_at, trial_ends_at, converted_to_paid")
             .eq("cpf", profileData.cpf)
             .order("trial_started_at", { ascending: false })
             .limit(1);
@@ -142,13 +142,25 @@ serve(async (req) => {
         }
 
         const record = data?.[0];
-        if (!record) return { used: false, expired: accountOlderThan24h };
+        if (!record) {
+          const inferredExpired = !!accountCreatedAtMs && accountCreatedAtMs + 24 * 60 * 60 * 1000 <= now;
+          return { used: inferredExpired, expired: inferredExpired, trialEndsAt: inferredExpired ? new Date(accountCreatedAtMs + 24 * 60 * 60 * 1000).toISOString() : null };
+        }
 
-        const trialEndMs = record.trial_ends_at ? new Date(record.trial_ends_at).getTime() : 0;
-        const expired = (!record.converted_to_paid && !!trialEndMs && trialEndMs <= Date.now()) || (!record.converted_to_paid && !trialEndMs && accountOlderThan24h);
-        return { used: true, expired };
+        const trialStartMs = record.trial_started_at ? new Date(record.trial_started_at).getTime() : accountCreatedAtMs;
+        const fallbackTrialEndMs = trialStartMs ? trialStartMs + 24 * 60 * 60 * 1000 : 0;
+        const storedTrialEndMs = record.trial_ends_at ? new Date(record.trial_ends_at).getTime() : 0;
+        const effectiveTrialEndMs = storedTrialEndMs || fallbackTrialEndMs;
+        const expired = !record.converted_to_paid && !!effectiveTrialEndMs && effectiveTrialEndMs <= now;
+
+        return {
+          used: true,
+          expired,
+          trialEndsAt: effectiveTrialEndMs ? new Date(effectiveTrialEndMs).toISOString() : null,
+        };
       } catch {
-        return { used: false, expired: accountOlderThan24h };
+        const inferredExpired = !!accountCreatedAtMs && accountCreatedAtMs + 24 * 60 * 60 * 1000 <= now;
+        return { used: inferredExpired, expired: inferredExpired, trialEndsAt: inferredExpired ? new Date(accountCreatedAtMs + 24 * 60 * 60 * 1000).toISOString() : null };
       }
     };
 
@@ -165,7 +177,7 @@ serve(async (req) => {
         }
       }
       const localTrial = await getLocalTrialStatus();
-      return new Response(JSON.stringify({ subscribed: false, trial_expired: localTrial.expired }), {
+      return new Response(JSON.stringify({ subscribed: false, is_trial: localTrial.used && !localTrial.expired, trial_ends_at: localTrial.trialEndsAt, trial_expired: localTrial.expired }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
@@ -202,6 +214,8 @@ serve(async (req) => {
       const localTrial = await getLocalTrialStatus();
       return new Response(JSON.stringify({
         subscribed: false,
+        is_trial: localTrial.used && !localTrial.expired,
+        trial_ends_at: localTrial.trialEndsAt,
         trial_expired: localTrial.expired || hasExpiredTrialStripe,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
