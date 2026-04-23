@@ -14,6 +14,8 @@ const logStep = (step: string, details?: any) => {
 
 // Verifica pagamentos aprovados no Mercado Pago nos últimos 90 dias para uma lista de emails
 const MP_ACCESS_DAYS = 90;
+const STRIPE_TRIAL_PRICE_ID = "price_1TKl85ARWUFKTz2dRD3UZO8a";
+
 async function checkMercadoPago(accessToken: string, emails: string[]) {
   const since = new Date();
   since.setDate(since.getDate() - MP_ACCESS_DAYS);
@@ -86,7 +88,7 @@ serve(async (req) => {
 
     const { data: profileData } = await supabaseClient
       .from("profiles")
-      .select("email")
+      .select("email, cpf")
       .eq("user_id", user.id)
       .single();
 
@@ -114,16 +116,37 @@ serve(async (req) => {
       }
     }
 
-    // Helper: verifica se este email já usou trial (anti-fraude)
-    const checkTrialUsed = async (): Promise<boolean> => {
+    const normalizedEmails = [...new Set(emailsToSearch.map((email) => email.toLowerCase()))];
+
+    const getLocalTrialStatus = async (): Promise<{ used: boolean; expired: boolean }> => {
       try {
-        const { data } = await supabaseClient.rpc("has_used_trial", {
-          p_email: user.email,
-          p_cpf: null,
-        });
-        return data === true;
+        let query = supabaseClient
+          .from("trial_usage")
+          .select("trial_ends_at, converted_to_paid")
+          .in("email", normalizedEmails)
+          .order("trial_started_at", { ascending: false })
+          .limit(1);
+
+        let { data } = await query;
+
+        if ((!data || data.length === 0) && profileData?.cpf) {
+          const byCpf = await supabaseClient
+            .from("trial_usage")
+            .select("trial_ends_at, converted_to_paid")
+            .eq("cpf", profileData.cpf)
+            .order("trial_started_at", { ascending: false })
+            .limit(1);
+          data = byCpf.data;
+        }
+
+        const record = data?.[0];
+        if (!record) return { used: false, expired: false };
+
+        const trialEndMs = record.trial_ends_at ? new Date(record.trial_ends_at).getTime() : 0;
+        const expired = !record.converted_to_paid && !!trialEndMs && trialEndMs <= Date.now();
+        return { used: true, expired };
       } catch {
-        return false;
+        return { used: false, expired: false };
       }
     };
 
@@ -139,8 +162,8 @@ serve(async (req) => {
           });
         }
       }
-      const trialUsed = await checkTrialUsed();
-      return new Response(JSON.stringify({ subscribed: false, trial_expired: trialUsed }), {
+      const localTrial = await getLocalTrialStatus();
+      return new Response(JSON.stringify({ subscribed: false, trial_expired: localTrial.expired }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
@@ -160,8 +183,11 @@ serve(async (req) => {
     );
 
     if (!activeSub) {
-      const hasCanceled = subscriptions.data.some((s) => s.status === "canceled" || s.status === "incomplete_expired");
-      logStep(hasCanceled ? "Only canceled subscriptions found, tentando MP" : "No subscriptions found, tentando MP");
+      const hasExpiredTrialStripe = subscriptions.data.some((s) =>
+        (s.status === "canceled" || s.status === "incomplete_expired") &&
+        s.items.data.some((item) => item.price?.id === STRIPE_TRIAL_PRICE_ID)
+      );
+      logStep(hasExpiredTrialStripe ? "Expired trial subscription found, tentando MP" : "No active subscriptions found, tentando MP");
       if (mpToken) {
         const mpResult = await checkMercadoPago(mpToken, emailsToSearch);
         if (mpResult.subscribed) {
@@ -171,10 +197,10 @@ serve(async (req) => {
           });
         }
       }
-      const trialUsed = await checkTrialUsed();
+      const localTrial = await getLocalTrialStatus();
       return new Response(JSON.stringify({
         subscribed: false,
-        trial_expired: trialUsed || hasCanceled,
+        trial_expired: localTrial.expired || hasExpiredTrialStripe,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
