@@ -114,9 +114,21 @@ serve(async (req) => {
       }
     }
 
+    // Helper: verifica se este email já usou trial (anti-fraude)
+    const checkTrialUsed = async (): Promise<boolean> => {
+      try {
+        const { data } = await supabaseClient.rpc("has_used_trial", {
+          p_email: user.email,
+          p_cpf: null,
+        });
+        return data === true;
+      } catch {
+        return false;
+      }
+    };
+
     if (!stripeCustomer) {
       logStep("No Stripe customer found, tentando Mercado Pago");
-      // Fallback: tentar Mercado Pago
       if (mpToken) {
         const mpResult = await checkMercadoPago(mpToken, emailsToSearch);
         if (mpResult.subscribed) {
@@ -127,7 +139,8 @@ serve(async (req) => {
           });
         }
       }
-      return new Response(JSON.stringify({ subscribed: false }), {
+      const trialUsed = await checkTrialUsed();
+      return new Response(JSON.stringify({ subscribed: false, trial_expired: trialUsed }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
@@ -147,10 +160,8 @@ serve(async (req) => {
     );
 
     if (!activeSub) {
-      // Check canceled subs for logging
-      const hasCanceled = subscriptions.data.some((s) => s.status === "canceled");
+      const hasCanceled = subscriptions.data.some((s) => s.status === "canceled" || s.status === "incomplete_expired");
       logStep(hasCanceled ? "Only canceled subscriptions found, tentando MP" : "No subscriptions found, tentando MP");
-      // Fallback Mercado Pago
       if (mpToken) {
         const mpResult = await checkMercadoPago(mpToken, emailsToSearch);
         if (mpResult.subscribed) {
@@ -160,7 +171,11 @@ serve(async (req) => {
           });
         }
       }
-      return new Response(JSON.stringify({ subscribed: false }), {
+      const trialUsed = await checkTrialUsed();
+      return new Response(JSON.stringify({
+        subscribed: false,
+        trial_expired: trialUsed || hasCanceled,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
