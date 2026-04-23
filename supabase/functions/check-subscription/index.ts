@@ -221,6 +221,20 @@ serve(async (req) => {
       endDate: subscriptionEnd,
     });
 
+    // Registra/atualiza trial_usage para anti-fraude futuro
+    try {
+      await supabaseClient.from("trial_usage").upsert({
+        email: user.email.toLowerCase(),
+        user_id: user.id,
+        provider: "stripe",
+        stripe_customer_id: customerId,
+        trial_ends_at: trialEndsAt,
+        converted_to_paid: activeSub.status === "active",
+      }, { onConflict: "email" });
+    } catch (e) {
+      logStep("trial_usage upsert warning", { error: String(e) });
+    }
+
     return new Response(JSON.stringify({
       subscribed: true,
       subscription_end: subscriptionEnd,
