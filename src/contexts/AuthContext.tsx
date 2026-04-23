@@ -119,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
     setIsTrial(false);
     setTrialEndsAt(null);
+    setTrialExpired(false);
     clearCachedSubscription();
   }, []);
 
@@ -165,35 +166,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         currentUserId = currentSession?.user?.id ?? null;
 
-          if (!currentSession?.access_token || !currentUserId) {
-            const cached = user ? getCachedSubscription(user.id) : null;
-            if (cached && cached.subscribed) {
-              applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
-            }
-            return;
+        if (!currentSession?.access_token || !currentUserId) {
+          const cached = user ? getCachedSubscription(user.id) : null;
+          if (cached?.subscribed) {
+            applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
           }
+          return;
+        }
 
         const cached = getCachedSubscription(currentUserId);
         const { data, error } = await supabase.functions.invoke("check-subscription");
 
-          if (error) {
-            if (isAuthSessionError(error)) {
-              if (cached?.subscribed) {
-                applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
-              }
-              return;
-            }
-
-            console.error("Error checking subscription:", error);
-
+        if (error) {
+          if (isAuthSessionError(error)) {
             if (cached?.subscribed) {
               applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
-              return;
             }
-
-            applySubState(false, null);
             return;
           }
+
+          console.error("Error checking subscription:", error);
+
+          if (cached?.subscribed) {
+            applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
+            return;
+          }
+
+          applySubState(false, null);
+          return;
+        }
 
         const sub = data?.subscribed ?? false;
         const end = data?.subscription_end ?? null;

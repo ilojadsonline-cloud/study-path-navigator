@@ -117,6 +117,8 @@ serve(async (req) => {
     }
 
     const normalizedEmails = [...new Set(emailsToSearch.map((email) => email.toLowerCase()))];
+    const accountCreatedAtMs = user.created_at ? new Date(user.created_at).getTime() : 0;
+    const accountOlderThan24h = !!accountCreatedAtMs && accountCreatedAtMs <= Date.now() - 24 * 60 * 60 * 1000;
 
     const getLocalTrialStatus = async (): Promise<{ used: boolean; expired: boolean }> => {
       try {
@@ -140,13 +142,13 @@ serve(async (req) => {
         }
 
         const record = data?.[0];
-        if (!record) return { used: false, expired: false };
+        if (!record) return { used: false, expired: accountOlderThan24h };
 
         const trialEndMs = record.trial_ends_at ? new Date(record.trial_ends_at).getTime() : 0;
-        const expired = !record.converted_to_paid && !!trialEndMs && trialEndMs <= Date.now();
+        const expired = (!record.converted_to_paid && !!trialEndMs && trialEndMs <= Date.now()) || (!record.converted_to_paid && !trialEndMs && accountOlderThan24h);
         return { used: true, expired };
       } catch {
-        return { used: false, expired: false };
+        return { used: false, expired: accountOlderThan24h };
       }
     };
 
