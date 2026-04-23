@@ -481,6 +481,45 @@ export type Database = {
         }
         Relationships: []
       }
+      trial_usage: {
+        Row: {
+          converted_to_paid: boolean
+          cpf: string | null
+          created_at: string
+          email: string
+          id: string
+          provider: string
+          stripe_customer_id: string | null
+          trial_ends_at: string | null
+          trial_started_at: string
+          user_id: string | null
+        }
+        Insert: {
+          converted_to_paid?: boolean
+          cpf?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          provider?: string
+          stripe_customer_id?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          converted_to_paid?: boolean
+          cpf?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          provider?: string
+          stripe_customer_id?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -506,6 +545,14 @@ export type Database = {
     Functions: {
       check_cpf_exists: { Args: { p_cpf: string }; Returns: boolean }
       get_email_by_cpf: { Args: { p_cpf: string }; Returns: string }
+      get_my_trial_status: {
+        Args: never
+        Returns: {
+          converted_to_paid: boolean
+          has_trial: boolean
+          trial_ends_at: string
+        }[]
+      }
       get_top10_ranking: {
         Args: never
         Returns: {
@@ -521,6 +568,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      has_used_trial: {
+        Args: { p_cpf?: string; p_email: string }
         Returns: boolean
       }
     }
