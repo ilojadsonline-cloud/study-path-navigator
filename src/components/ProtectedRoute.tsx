@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading, subscribed, subscriptionLoading } = useAuth();
+  const { session, loading, subscribed, subscriptionLoading, trialExpired, signOut } = useAuth();
 
   if (loading || subscriptionLoading) {
     return (
@@ -15,6 +15,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (trialExpired) {
+    void signOut();
+    return <Navigate to="/assinatura" replace />;
   }
 
   if (!subscribed) {
