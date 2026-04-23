@@ -197,6 +197,13 @@ const Cadastro = () => {
         email: profileEmail,
       });
 
+      if (!profileError) {
+        await supabase.from("trial_usage").update({
+          cpf: cleanedCpf,
+          user_id: authData.user.id,
+        } as never).eq("email", profileEmail.toLowerCase());
+      }
+
       if (profileError) {
         toast({ title: "Erro ao criar perfil", description: profileError.message, variant: "destructive" });
         setLoading(false);

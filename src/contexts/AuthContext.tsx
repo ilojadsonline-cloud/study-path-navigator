@@ -57,7 +57,14 @@ function getCachedSubscription(userId: string) {
   return null;
 }
 
-function setCachedSubscription(userId: string, subscribed: boolean, subscriptionEnd: string | null, isTrial: boolean = false, trialEndsAt: string | null = null) {
+function setCachedSubscription(
+  userId: string,
+  subscribed: boolean,
+  subscriptionEnd: string | null,
+  isTrial: boolean = false,
+  trialEndsAt: string | null = null,
+  trialExpired: boolean = false,
+) {
   try {
     localStorage.setItem(
       SUBSCRIPTION_CACHE_KEY,
@@ -67,6 +74,7 @@ function setCachedSubscription(userId: string, subscribed: boolean, subscription
         subscriptionEnd,
         isTrial,
         trialEndsAt,
+        trialExpired,
         timestamp: Date.now(),
       }),
     );
@@ -134,11 +142,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut();
   }, [signOut]);
 
-  const applySubState = useCallback((sub: boolean, end: string | null, trial: boolean = false, trialEnd: string | null = null) => {
+  const applySubState = useCallback((sub: boolean, end: string | null, trial: boolean = false, trialEnd: string | null = null, expired: boolean = false) => {
     setSubscribed(sub);
     setSubscriptionEnd(end);
     setIsTrial(trial);
     setTrialEndsAt(trialEnd);
+    setTrialExpired(expired && !sub);
   }, []);
 
   const checkSubscription = useCallback(async () => {
@@ -156,35 +165,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         currentUserId = currentSession?.user?.id ?? null;
 
-        if (!currentSession?.access_token || !currentUserId) {
-          const cached = user ? getCachedSubscription(user.id) : null;
-          if (cached) {
-            applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
-          }
-          return;
-        }
-
-        const cached = getCachedSubscription(currentUserId);
-        const { data, error } = await supabase.functions.invoke("check-subscription");
-
-        if (error) {
-          if (isAuthSessionError(error)) {
-            if (cached) {
-              applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
+          if (!currentSession?.access_token || !currentUserId) {
+            const cached = user ? getCachedSubscription(user.id) : null;
+            if (cached && cached.subscribed) {
+              applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
             }
             return;
           }
 
-          console.error("Error checking subscription:", error);
+        const cached = getCachedSubscription(currentUserId);
+        const { data, error } = await supabase.functions.invoke("check-subscription");
 
-          if (cached) {
-            applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
+          if (error) {
+            if (isAuthSessionError(error)) {
+              if (cached?.subscribed) {
+                applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
+              }
+              return;
+            }
+
+            console.error("Error checking subscription:", error);
+
+            if (cached?.subscribed) {
+              applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
+              return;
+            }
+
+            applySubState(false, null);
             return;
           }
-
-          applySubState(false, null);
-          return;
-        }
 
         const sub = data?.subscribed ?? false;
         const end = data?.subscription_end ?? null;
@@ -192,15 +201,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const trialEnd = data?.trial_ends_at ?? null;
         const expired = data?.trial_expired === true;
 
-        applySubState(sub, end, trial, trialEnd);
-        setTrialExpired(expired && !sub);
-        setCachedSubscription(currentUserId, sub, end, trial, trialEnd);
+        applySubState(sub, end, trial, trialEnd, expired);
+        setCachedSubscription(currentUserId, sub, end, trial, trialEnd, expired);
       } catch (err) {
         if (isAuthSessionError(err)) {
           if (currentUserId) {
             const cached = getCachedSubscription(currentUserId);
-            if (cached) {
-              applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
+            if (cached?.subscribed) {
+              applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
             }
           }
           return;
@@ -210,8 +218,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (currentUserId) {
           const cached = getCachedSubscription(currentUserId);
-          if (cached) {
-            applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
+          if (cached?.subscribed) {
+            applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
             return;
           }
         }
@@ -239,13 +247,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (event === "SIGNED_IN") {
           if (cached?.subscribed) {
-            applySubState(true, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
+            applySubState(true, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
             setSubscriptionLoading(false);
           } else {
             setSubscriptionLoading(true);
           }
-        } else if (cached) {
-          applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
+        } else if (cached?.subscribed) {
+          applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
           setSubscriptionLoading(false);
         }
 
@@ -274,8 +282,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void fetchProfile(session.user.id);
         const cached = getCachedSubscription(session.user.id);
 
-        if (cached) {
-          applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null);
+        if (cached?.subscribed) {
+          applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
           setSubscriptionLoading(false);
         } else {
           setSubscriptionLoading(true);
@@ -318,7 +326,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSubscribed(true);
           setSubscriptionEnd(null);
           setSubscriptionLoading(false);
-          setCachedSubscription(user.id, true, null);
+          setTrialExpired(false);
+          setCachedSubscription(user.id, true, null, false, null, false);
           return;
         }
 
