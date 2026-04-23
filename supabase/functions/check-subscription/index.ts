@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { resolveTrialWindow } from "./trial-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -88,7 +89,7 @@ serve(async (req) => {
 
     const { data: profileData } = await supabaseClient
       .from("profiles")
-      .select("email, cpf")
+      .select("email, cpf, created_at")
       .eq("user_id", user.id)
       .single();
 
@@ -117,8 +118,9 @@ serve(async (req) => {
     }
 
     const normalizedEmails = [...new Set(emailsToSearch.map((email) => email.toLowerCase()))];
-    const accountCreatedAtMs = user.created_at ? new Date(user.created_at).getTime() : 0;
     const now = Date.now();
+    const authCreatedAt = user.created_at ?? null;
+    const profileCreatedAt = profileData?.created_at ?? null;
 
     const getLocalTrialStatus = async (): Promise<{ used: boolean; expired: boolean; trialEndsAt: string | null }> => {
       try {
@@ -142,25 +144,27 @@ serve(async (req) => {
         }
 
         const record = data?.[0];
-        if (!record) {
-          const inferredExpired = !!accountCreatedAtMs && accountCreatedAtMs + 24 * 60 * 60 * 1000 <= now;
-          return { used: inferredExpired, expired: inferredExpired, trialEndsAt: inferredExpired ? new Date(accountCreatedAtMs + 24 * 60 * 60 * 1000).toISOString() : null };
-        }
-
-        const trialStartMs = record.trial_started_at ? new Date(record.trial_started_at).getTime() : accountCreatedAtMs;
-        const fallbackTrialEndMs = trialStartMs ? trialStartMs + 24 * 60 * 60 * 1000 : 0;
-        const storedTrialEndMs = record.trial_ends_at ? new Date(record.trial_ends_at).getTime() : 0;
-        const effectiveTrialEndMs = storedTrialEndMs || fallbackTrialEndMs;
-        const expired = !record.converted_to_paid && !!effectiveTrialEndMs && effectiveTrialEndMs <= now;
+        const trialStatus = resolveTrialWindow({
+          authCreatedAt,
+          profileCreatedAt,
+          trialStartedAt: record?.trial_started_at ?? null,
+          trialEndsAt: record?.trial_ends_at ?? null,
+          convertedToPaid: record?.converted_to_paid ?? false,
+          nowMs: now,
+        });
 
         return {
-          used: true,
-          expired,
-          trialEndsAt: effectiveTrialEndMs ? new Date(effectiveTrialEndMs).toISOString() : null,
+          used: trialStatus.used,
+          expired: trialStatus.expired,
+          trialEndsAt: trialStatus.trialEndsAt,
         };
       } catch {
-        const inferredExpired = !!accountCreatedAtMs && accountCreatedAtMs + 24 * 60 * 60 * 1000 <= now;
-        return { used: inferredExpired, expired: inferredExpired, trialEndsAt: inferredExpired ? new Date(accountCreatedAtMs + 24 * 60 * 60 * 1000).toISOString() : null };
+        const trialStatus = resolveTrialWindow({ authCreatedAt, profileCreatedAt, nowMs: now });
+        return {
+          used: trialStatus.used,
+          expired: trialStatus.expired,
+          trialEndsAt: trialStatus.trialEndsAt,
+        };
       }
     };
 
@@ -255,6 +259,34 @@ serve(async (req) => {
       }
     }
 
+    const trialWindow = resolveTrialWindow({
+      authCreatedAt,
+      profileCreatedAt,
+      trialStartedAt: isTrial ? trialEndsAt : null,
+      trialEndsAt,
+      convertedToPaid: activeSub.status === "active",
+      nowMs: now,
+    });
+
+    if (isTrial && trialWindow.expired) {
+      logStep("Trialing subscription outside 24h window; blocking access", {
+        userId: user.id,
+        accessStartedAt: trialWindow.accessStartedAt,
+        trialEndsAt: trialWindow.trialEndsAt,
+        stripeTrialEndsAt: trialEndsAt,
+      });
+
+      return new Response(JSON.stringify({
+        subscribed: false,
+        is_trial: false,
+        trial_ends_at: trialWindow.trialEndsAt,
+        trial_expired: true,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     logStep("Subscription found", {
       subscriptionId: activeSub.id,
       status: activeSub.status,
@@ -281,7 +313,7 @@ serve(async (req) => {
       subscribed: true,
       subscription_end: subscriptionEnd,
       is_trial: isTrial,
-      trial_ends_at: trialEndsAt,
+      trial_ends_at: isTrial ? (trialWindow.trialEndsAt ?? trialEndsAt) : trialEndsAt,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
