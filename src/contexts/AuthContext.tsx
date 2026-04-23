@@ -87,6 +87,10 @@ function clearCachedSubscription() {
   } catch {}
 }
 
+function hasUsablePaidCache(cached: any) {
+  return Boolean(cached?.subscribed && cached?.isTrial !== true && cached?.trialExpired !== true);
+}
+
 function isAuthSessionError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? "");
   return /auth session missing|session not found|refresh token|jwt|authorization/i.test(message);
@@ -168,7 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (!currentSession?.access_token || !currentUserId) {
           const cached = user ? getCachedSubscription(user.id) : null;
-          if (cached?.subscribed) {
+          if (hasUsablePaidCache(cached)) {
             applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
           }
           return;
@@ -179,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (error) {
           if (isAuthSessionError(error)) {
-            if (cached?.subscribed) {
+            if (hasUsablePaidCache(cached)) {
               applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
             }
             return;
@@ -187,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           console.error("Error checking subscription:", error);
 
-          if (cached?.subscribed) {
+          if (hasUsablePaidCache(cached)) {
             applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
             return;
           }
@@ -208,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isAuthSessionError(err)) {
           if (currentUserId) {
             const cached = getCachedSubscription(currentUserId);
-            if (cached?.subscribed) {
+            if (hasUsablePaidCache(cached)) {
               applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
             }
           }
@@ -219,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (currentUserId) {
           const cached = getCachedSubscription(currentUserId);
-          if (cached?.subscribed) {
+          if (hasUsablePaidCache(cached)) {
             applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
             return;
           }
@@ -247,13 +251,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const cached = getCachedSubscription(session.user.id);
 
         if (event === "SIGNED_IN") {
-          if (cached?.subscribed) {
+          if (hasUsablePaidCache(cached)) {
             applySubState(true, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
             setSubscriptionLoading(false);
           } else {
             setSubscriptionLoading(true);
           }
-        } else if (cached?.subscribed) {
+        } else if (hasUsablePaidCache(cached)) {
           applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
           setSubscriptionLoading(false);
         }
@@ -283,7 +287,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void fetchProfile(session.user.id);
         const cached = getCachedSubscription(session.user.id);
 
-        if (cached?.subscribed) {
+        if (hasUsablePaidCache(cached)) {
           applySubState(cached.subscribed, cached.subscriptionEnd, cached.isTrial ?? false, cached.trialEndsAt ?? null, cached.trialExpired ?? false);
           setSubscriptionLoading(false);
         } else {
