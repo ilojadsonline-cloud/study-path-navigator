@@ -16,6 +16,8 @@ A função `check-subscription` usa o helper compartilhado `supabase/functions/c
 ## Efeitos
 - Quando um trialing do Stripe está fora da janela, a função responde `subscribed: false`, `is_trial: false`, `trial_expired: true` e o frontend faz `signOut()` + redirect para `/assinatura`.
 - Contas antigas sem `trial_usage` entram no mesmo cálculo via `auth.users.created_at` e `profiles.created_at`.
+- Quando o trial expira **e não há pagamento ativo no Stripe ou no Mercado Pago**, o `check-subscription` chama `auth.admin.updateUserById(..., { ban_duration: "876000h" })` para inativar o login do auth — nenhum dado do usuário é apagado. Ao detectar pagamento ativo (Stripe `active`/`trialing` ou Mercado Pago aprovado), aplica `ban_duration: "none"` e o acesso é reativado automaticamente.
+- O login (`signInWithPassword`) detecta `User is banned` e redireciona para `/assinatura?trial_expired=1`, exibindo o aviso de teste expirado.
 
 ## Por que existe
 Bloqueia usuários que recriam contas/iniciam novo trial no Stripe usando o mesmo email/CPF para burlar o teste grátis de 24h.
