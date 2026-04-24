@@ -35,14 +35,41 @@ function getAlternativas(q: Questao) {
 }
 
 const PAGE_SIZE = 20;
+const STORAGE_KEY = "choa_questoes_state_v2";
+
+type QuestaoMapped = Questao & { alternativas: string[]; gabaritoShuffled: number };
+
+interface PersistedState {
+  filterKey: string;
+  orderIds: number[];
+  currentPage: number;
+  selectedAnswer: Record<number, number>;
+  revealed: Record<number, boolean>;
+}
+
+function loadPersistedState(): PersistedState | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as PersistedState;
+  } catch {
+    return null;
+  }
+}
+
+function savePersistedState(state: PersistedState) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {}
+}
 
 const Questoes = () => {
   const [searchParams] = useSearchParams();
   const initialDisciplina = searchParams.get("disciplina") || "Todos";
   const { user } = useAuth();
 
-  const [allQuestoes, setAllQuestoes] = useState<(Questao & { alternativas: string[]; gabaritoShuffled: number })[]>([]);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [allQuestoes, setAllQuestoes] = useState<QuestaoMapped[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<Record<number, number>>({});
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
@@ -61,28 +88,29 @@ const Questoes = () => {
   const [shownNewToast, setShownNewToast] = useState(false);
 
   const lastFilterKeyRef = useRef<string>("");
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const initialPersistedRef = useRef<PersistedState | null>(loadPersistedState());
+  const topRef = useRef<HTMLDivElement | null>(null);
 
   const dificuldades = ["Todos", "Fácil", "Médio", "Difícil"];
   const statusOptions = ["Não resolvidas", "Todas", "Resolvidas", "Apenas Erradas"];
 
-  // Infinite scroll observer
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && visibleCount < allQuestoes.length) {
-          setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, allQuestoes.length));
-        }
-      },
-      { rootMargin: "400px" }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [visibleCount, allQuestoes.length]);
+  const filterKey = `${filterDisciplina}|${filterDificuldade}|${filterStatus}`;
+  const totalPages = Math.max(1, Math.ceil(allQuestoes.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIdx = (safePage - 1) * PAGE_SIZE;
+  const questoes = allQuestoes.slice(startIdx, startIdx + PAGE_SIZE);
 
-  const questoes = allQuestoes.slice(0, visibleCount);
+  // Persist state whenever it changes (keeps progress even after remounts).
+  useEffect(() => {
+    if (loading || allQuestoes.length === 0) return;
+    savePersistedState({
+      filterKey,
+      orderIds: allQuestoes.map((q) => q.id),
+      currentPage: safePage,
+      selectedAnswer,
+      revealed,
+    });
+  }, [filterKey, allQuestoes, safePage, selectedAnswer, revealed, loading]);
 
   const handleReport = (questaoId: number) => {
     setReportQuestaoId(questaoId);
@@ -117,7 +145,6 @@ const Questoes = () => {
     };
     const fetchAnswered = async () => {
       if (!user) return;
-      // Paginate to bypass 1000-row limit
       const allAnswers: Array<{ questao_id: number; correta: boolean }> = [];
       let from = 0;
       const batchSize = 1000;
@@ -148,15 +175,16 @@ const Questoes = () => {
 
   useEffect(() => {
     fetchQuestoes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterDisciplina, filterDificuldade, filterStatus]);
 
   const fetchQuestoes = async () => {
-    const filterKey = `${filterDisciplina}|${filterDificuldade}|${filterStatus}`;
-    if (filterKey === lastFilterKeyRef.current && allQuestoes.length > 0) return;
-    lastFilterKeyRef.current = filterKey;
+    const key = `${filterDisciplina}|${filterDificuldade}|${filterStatus}`;
+    if (key === lastFilterKeyRef.current && allQuestoes.length > 0) return;
+    lastFilterKeyRef.current = key;
 
     setLoading(true);
-    
+
     // Paginate to bypass the 1000-row Supabase limit
     let allData: Questao[] = [];
     let from = 0;
@@ -184,20 +212,81 @@ const Questoes = () => {
     setAllAnsweredInDisciplina(
       filterStatus === "Não resolvidas" && filtered.length === 0 && totalBeforeStatusFilter > 0
     );
-    // Shuffle once per filter change (Fisher-Yates)
-    for (let i = filtered.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+
+    // Try to restore previous order/page/answers for the same filterKey
+    const persisted = initialPersistedRef.current;
+    initialPersistedRef.current = null; // use only on first mount
+
+    let orderedSource = filtered;
+    let restoredPage = 1;
+    let restoredSelected: Record<number, number> = {};
+    let restoredRevealed: Record<number, boolean> = {};
+
+    if (persisted && persisted.filterKey === key && persisted.orderIds?.length) {
+      const byId = new Map(filtered.map((q) => [q.id, q] as const));
+      const ordered: Questao[] = [];
+      for (const id of persisted.orderIds) {
+        const q = byId.get(id);
+        if (q) {
+          ordered.push(q);
+          byId.delete(id);
+        }
+      }
+      // Append any new questions that weren't in the saved order (shuffled).
+      const extras = [...byId.values()];
+      for (let i = extras.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [extras[i], extras[j]] = [extras[j], extras[i]];
+      }
+      orderedSource = [...ordered, ...extras];
+      restoredPage = persisted.currentPage || 1;
+      restoredSelected = persisted.selectedAnswer || {};
+      restoredRevealed = persisted.revealed || {};
+    } else {
+      // Fisher-Yates shuffle on fresh filter change
+      for (let i = orderedSource.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [orderedSource[i], orderedSource[j]] = [orderedSource[j], orderedSource[i]];
+      }
     }
-    const mapped = filtered.map(q => {
+
+    const mapped: QuestaoMapped[] = orderedSource.map((q) => {
       const { alternativas, gabarito } = getAlternativas(q);
       return { ...q, alternativas, gabaritoShuffled: gabarito };
     });
+
     setAllQuestoes(mapped);
-    setVisibleCount(PAGE_SIZE);
+    setCurrentPage(restoredPage);
+    setSelectedAnswer(restoredSelected);
+    setRevealed(restoredRevealed);
     setLoading(false);
-    setSelectedAnswer({});
-    setRevealed({});
+  };
+
+  const goToPage = (p: number) => {
+    const target = Math.max(1, Math.min(p, totalPages));
+    setCurrentPage(target);
+    // Smooth scroll to top of list
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: topRef.current?.offsetTop ?? 0, behavior: "smooth" });
+    }
+  };
+
+  const renderPageNumbers = () => {
+    // Compact page navigation: always show first, last, current +/- 1
+    const pages: (number | "...")[] = [];
+    const add = (n: number | "...") => {
+      if (pages[pages.length - 1] !== n) pages.push(n);
+    };
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || Math.abs(i - safePage) <= 1) {
+        add(i);
+      } else if (i === 2 && safePage > 3) {
+        add("...");
+      } else if (i === totalPages - 1 && safePage < totalPages - 2) {
+        add("...");
+      }
+    }
+    return pages;
   };
 
   const handleAnswer = (questaoId: number, altIndex: number) => {
@@ -243,9 +332,9 @@ const Questoes = () => {
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
               <span className="text-gradient-primary">Banco de Questões</span>
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            <p ref={topRef} className="text-xs sm:text-sm text-muted-foreground mt-1">
               {allQuestoes.length} questões disponíveis
-              {visibleCount < allQuestoes.length && ` · Mostrando ${visibleCount}`}
+              {totalPages > 1 && ` · Página ${safePage} de ${totalPages}`}
             </p>
           </div>
           <button
@@ -417,12 +506,46 @@ const Questoes = () => {
               </motion.div>
             ))}
 
-            {/* Infinite scroll sentinel */}
-            {visibleCount < allQuestoes.length && (
-              <div ref={sentinelRef} className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <span className="ml-2 text-sm text-muted-foreground">Carregando mais questões...</span>
-              </div>
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+              <nav
+                aria-label="Paginação de questões"
+                className="flex flex-wrap items-center justify-center gap-2 pt-4"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(safePage - 1)}
+                  disabled={safePage <= 1}
+                >
+                  Anterior
+                </Button>
+                {renderPageNumbers().map((p, i) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground text-sm">
+                      …
+                    </span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === safePage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => goToPage(p)}
+                      className={p === safePage ? "gradient-primary text-primary-foreground" : ""}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(safePage + 1)}
+                  disabled={safePage >= totalPages}
+                >
+                  Próxima
+                </Button>
+              </nav>
             )}
           </div>
         )}

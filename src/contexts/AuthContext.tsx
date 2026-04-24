@@ -244,6 +244,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignore transient events that fire when the tab regains focus or tokens
+      // auto-refresh. Re-running profile fetch / subscription checks here causes
+      // the protected routes to unmount and the user loses on-screen progress.
+      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        setSession(session);
+        setUser(session?.user ?? null);
+        return;
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
 
@@ -364,13 +373,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Re-check subscription every 10 minutes (not 60s) to avoid mid-session disruptions
+  // Re-check subscription every 30 minutes in background.
+  // Never toggles subscriptionLoading so ProtectedRoute does not unmount
+  // the current page and lose in-progress work (e.g. questions/simulado state).
   useEffect(() => {
     if (!user || isAdmin) return;
 
     const interval = setInterval(() => {
       void checkSubscription();
-    }, 10 * 60_000);
+    }, 30 * 60_000);
 
     return () => clearInterval(interval);
   }, [user, isAdmin, checkSubscription]);
