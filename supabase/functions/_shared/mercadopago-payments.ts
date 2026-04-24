@@ -6,6 +6,29 @@ export const MP_ACCESS_DAYS = 90;
 const SEARCH_LIMIT = 100;
 const MAX_SEARCH_PAGES = 10;
 
+// Valor mínimo (BRL) que caracteriza pagamento real do plano trimestral.
+// Pagamentos abaixo disso (ex.: autorização de R$ 0 ou R$ 4,99 do Mercado Pago)
+// NÃO devem liberar acesso de 90 dias.
+const MP_MIN_PAID_AMOUNT = 50;
+
+function getPaymentAmount(payment: any): number {
+  const candidates = [
+    payment?.transaction_amount,
+    payment?.transaction_details?.total_paid_amount,
+    payment?.transaction_details?.net_received_amount,
+  ];
+  for (const value of candidates) {
+    const num = typeof value === "number" ? value : Number(value);
+    if (Number.isFinite(num) && num > 0) return num;
+  }
+  return 0;
+}
+
+function isQualifyingApprovedPayment(payment: any): boolean {
+  if (payment?.status !== "approved") return false;
+  return getPaymentAmount(payment) >= MP_MIN_PAID_AMOUNT;
+}
+
 function normalizeEmail(value?: string | null): string | null {
   if (!value) return null;
   const normalized = value.trim().toLowerCase();
