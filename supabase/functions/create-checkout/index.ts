@@ -84,6 +84,8 @@ serve(async (req) => {
         });
       }
 
+      const normalizedEmail = emailToCheck.toLowerCase();
+
       // 1) Camada permanente: trial_usage por email OU CPF
       const { data: hasUsed, error: rpcErr } = await adminClient.rpc("has_used_trial", {
         p_email: emailToCheck,
@@ -92,7 +94,7 @@ serve(async (req) => {
       if (rpcErr) console.error("[create-checkout] has_used_trial error:", rpcErr);
       if (hasUsed === true) {
         return new Response(JSON.stringify({
-          error: "Este CPF ou email já utilizou o teste grátis. Assine o plano definitivo para continuar.",
+          error: "Este CPF ou email já utilizou o teste grátis. Para continuar, assine o plano trimestral pagando R$ 89,90.",
           trial_used: true,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -100,14 +102,41 @@ serve(async (req) => {
         });
       }
 
-      // 2) Camada Stripe: qualquer assinatura prévia (incluindo canceladas)
+      // 2) Camada profiles: se email já tem conta criada, trial é considerado consumido
+      const { data: existingProfile } = await adminClient
+        .from("profiles")
+        .select("user_id, email, cpf")
+        .or(`email.eq.${normalizedEmail},email.eq.${emailToCheck}${resolvedCpf ? `,cpf.eq.${resolvedCpf}` : ""}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingProfile) {
+        // Marca trial_usage para próximas tentativas
+        await adminClient.from("trial_usage").upsert({
+          email: normalizedEmail,
+          cpf: resolvedCpf ?? existingProfile.cpf ?? null,
+          user_id: existingProfile.user_id ?? null,
+          provider: "stripe",
+          converted_to_paid: false,
+        }, { onConflict: "email" });
+
+        return new Response(JSON.stringify({
+          error: "Este email/CPF já possui cadastro. Para voltar a acessar, assine o plano trimestral pagando R$ 89,90.",
+          trial_used: true,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        });
+      }
+
+      // 3) Camada Stripe: qualquer assinatura prévia (incluindo canceladas/trial expirado)
       const existingCustomers = await stripe.customers.list({ email: emailToCheck, limit: 5 });
       for (const cust of existingCustomers.data) {
-        const subs = await stripe.subscriptions.list({ customer: cust.id, limit: 10 });
+        const subs = await stripe.subscriptions.list({ customer: cust.id, limit: 10, status: "all" });
         if (subs.data.length > 0) {
           // Registra retroativamente para futuras verificações
           await adminClient.from("trial_usage").upsert({
-            email: emailToCheck.toLowerCase(),
+            email: normalizedEmail,
             cpf: resolvedCpf ?? null,
             user_id: userId ?? null,
             provider: "stripe",
@@ -116,12 +145,45 @@ serve(async (req) => {
           }, { onConflict: "email" });
 
           return new Response(JSON.stringify({
-            error: "Este email já utilizou o teste grátis. Assine o plano definitivo para continuar.",
+            error: "Este email já utilizou o teste grátis no Stripe. Para continuar, assine o plano trimestral pagando R$ 89,90.",
             trial_used: true,
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 400,
           });
+        }
+      }
+
+      // 4) Camada Mercado Pago: qualquer pagamento aprovado já feito por este email
+      const mpToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
+      if (mpToken) {
+        try {
+          const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=10&payer.email=${encodeURIComponent(emailToCheck)}`, {
+            headers: { Authorization: `Bearer ${mpToken}` },
+          });
+          if (mpRes.ok) {
+            const mpJson = await mpRes.json();
+            const hasMpPayment = (mpJson.results || []).some((p: any) => p.status === "approved" || p.status === "in_process" || p.status === "pending");
+            if (hasMpPayment) {
+              await adminClient.from("trial_usage").upsert({
+                email: normalizedEmail,
+                cpf: resolvedCpf ?? null,
+                user_id: userId ?? null,
+                provider: "mercadopago",
+                converted_to_paid: true,
+              }, { onConflict: "email" });
+
+              return new Response(JSON.stringify({
+                error: "Este email já possui pagamento no Mercado Pago. Faça login para acessar.",
+                trial_used: true,
+              }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+                status: 400,
+              });
+            }
+          }
+        } catch (e) {
+          console.error("[create-checkout] mp lookup error:", e);
         }
       }
     }
