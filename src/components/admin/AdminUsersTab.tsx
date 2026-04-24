@@ -15,6 +15,7 @@ import {
 interface EnrichedUser {
   user_id: string; nome: string; cpf: string; email: string | null; created_at: string;
   is_admin: boolean; is_blocked: boolean; subscribed: boolean; subscription_end: string | null;
+  trial_expired?: boolean;
 }
 
 interface EditUserData { user_id: string; nome: string; email: string; cpf: string; }
