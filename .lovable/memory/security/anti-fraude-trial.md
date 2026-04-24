@@ -21,3 +21,7 @@ A função `check-subscription` usa o helper compartilhado `supabase/functions/c
 
 ## Por que existe
 Bloqueia usuários que recriam contas/iniciam novo trial no Stripe usando o mesmo email/CPF para burlar o teste grátis de 24h.
+
+**Validação MP (R$50 mínimo)**: `_shared/mercadopago-payments.ts` aceita só `approved` com `transaction_amount >= 50` (`MP_MIN_PAID_AMOUNT`). Autorizações R$0 ou cobranças R$4,99 do MP NÃO liberam 90 dias. Coberto em `mercadopago-payments.test.ts`.
+
+**Sync de ban no admin**: `admin-manage-users` action `list_users` bane proativamente usuários fora da janela 24h sem assinatura ativa (Stripe/MP) e desbane quem reativou. UI mostra "Teste expirado".

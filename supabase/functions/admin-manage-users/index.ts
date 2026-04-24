@@ -266,6 +266,34 @@ serve(async (req) => {
         }
       }
 
+      // ── Sincroniza ban: usuários sem assinatura e fora da janela 24h ficam bloqueados.
+      // Quem tem assinatura ativa (Stripe ou MP) é desbloqueado proativamente.
+      const now = Date.now();
+      const TRIAL_MS = 24 * 60 * 60 * 1000;
+      await Promise.all(
+        enrichedUsers.map(async (u) => {
+          if (u.is_admin) return; // admin nunca é bloqueado
+          const createdMs = u.created_at ? new Date(u.created_at).getTime() : 0;
+          const trialExpired = createdMs > 0 && now - createdMs > TRIAL_MS;
+
+          try {
+            if (u.subscribed && u.is_blocked) {
+              await supabaseAdmin.auth.admin.updateUserById(u.user_id, { ban_duration: "none" } as any);
+              u.is_blocked = false;
+            } else if (!u.subscribed && trialExpired && !u.is_blocked) {
+              await supabaseAdmin.auth.admin.updateUserById(u.user_id, { ban_duration: "876000h" } as any);
+              u.is_blocked = true;
+              u.trial_expired = true;
+            } else if (!u.subscribed && trialExpired) {
+              u.trial_expired = true;
+            }
+          } catch (err) {
+            logStep("ban sync warning", { user_id: u.user_id, err: err instanceof Error ? err.message : String(err) });
+          }
+        })
+      );
+      logStep("Ban sync done");
+
       logStep("Returning users", { count: enrichedUsers.length });
       return new Response(JSON.stringify({ success: true, users: enrichedUsers }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
