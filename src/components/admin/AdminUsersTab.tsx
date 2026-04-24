@@ -235,6 +235,8 @@ export function AdminUsersTab() {
                             {daysLeft}d restantes
                           </span>
                         </div>
+                      ) : u.trial_expired ? (
+                        <Badge variant="destructive" className="text-[10px]">Teste expirado</Badge>
                       ) : (
                         <span className="text-xs text-muted-foreground">Sem assinatura</span>
                       )}
