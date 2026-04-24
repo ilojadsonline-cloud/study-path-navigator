@@ -244,6 +244,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignore transient events that fire when the tab regains focus or tokens
+      // auto-refresh. Re-running profile fetch / subscription checks here causes
+      // the protected routes to unmount and the user loses on-screen progress.
+      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        setSession(session);
+        setUser(session?.user ?? null);
+        return;
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
 
