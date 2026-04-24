@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { getMercadoPagoSubscriptionsByEmail } from "../_shared/mercadopago-payments.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -240,6 +241,29 @@ serve(async (req) => {
           );
         }
         logStep("Stripe data loaded");
+      }
+
+      const mpToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
+      if (mpToken) {
+        try {
+          const emailUsers = enrichedUsers.filter((u) => u.email).map((u) => String(u.email).toLowerCase());
+          const mpSubscriptions = await getMercadoPagoSubscriptionsByEmail(mpToken, emailUsers);
+
+          for (const user of enrichedUsers) {
+            const email = user.email ? String(user.email).toLowerCase() : null;
+            if (!email || user.subscribed) continue;
+
+            const mpSubscription = mpSubscriptions.get(email);
+            if (!mpSubscription) continue;
+
+            user.subscribed = true;
+            user.subscription_end = mpSubscription.subscription_end;
+          }
+
+          logStep("Mercado Pago data loaded", { count: mpSubscriptions.size });
+        } catch (error) {
+          logStep("Mercado Pago lookup warning", { message: error instanceof Error ? error.message : String(error) });
+        }
       }
 
       logStep("Returning users", { count: enrichedUsers.length });
