@@ -158,7 +158,7 @@ export async function findApprovedMercadoPagoPayment(
   const payments = await fetchRecentMercadoPagoPayments(accessToken, nowMs);
 
   for (const payment of payments) {
-    if (payment?.status !== "approved") continue;
+    if (!isQualifyingApprovedPayment(payment)) continue;
 
     const paidAtMs = parsePaymentDateMs(payment);
     if (!paidAtMs || paidAtMs < sinceMs) continue;
@@ -189,7 +189,7 @@ export async function getMercadoPagoSubscriptionsByEmail(
   const payments = await fetchRecentMercadoPagoPayments(accessToken, nowMs);
 
   for (const payment of payments) {
-    if (payment?.status !== "approved") continue;
+    if (!isQualifyingApprovedPayment(payment)) continue;
 
     const paidAtMs = parsePaymentDateMs(payment);
     if (!paidAtMs || paidAtMs < sinceMs) continue;
