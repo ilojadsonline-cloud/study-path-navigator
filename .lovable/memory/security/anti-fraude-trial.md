@@ -25,3 +25,12 @@ Bloqueia usuários que recriam contas/iniciam novo trial no Stripe usando o mesm
 **Validação MP (R$50 mínimo)**: `_shared/mercadopago-payments.ts` aceita só `approved` com `transaction_amount >= 50` (`MP_MIN_PAID_AMOUNT`). Autorizações R$0 ou cobranças R$4,99 do MP NÃO liberam 90 dias. Coberto em `mercadopago-payments.test.ts`.
 
 **Sync de ban no admin**: `admin-manage-users` action `list_users` bane proativamente usuários fora da janela 24h sem assinatura ativa (Stripe/MP) e desbane quem reativou. UI mostra "Teste expirado".
+
+## Bloqueio em `create-checkout` (4 camadas) — trial sempre que tentado
+Quando `body.trial === true`, valida em ordem antes de criar checkout:
+1. **`trial_usage` (RPC `has_used_trial`)** — bloqueia por email OU CPF.
+2. **`profiles`** — se email/CPF já tem cadastro (mesmo expirado), trial = consumido. Marca `trial_usage` retroativamente.
+3. **Stripe** — busca customers; qualquer subscription (`status: "all"`) bloqueia. Marca `trial_usage`.
+4. **Mercado Pago** — busca pagamentos por `payer.email`; approved/in_process/pending bloqueia. Marca `trial_usage`.
+
+Mensagem padrão: "Para continuar, assine o plano trimestral pagando R$ 89,90."
