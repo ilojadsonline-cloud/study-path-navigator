@@ -332,9 +332,9 @@ const Questoes = () => {
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
               <span className="text-gradient-primary">Banco de Questões</span>
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            <p ref={topRef} className="text-xs sm:text-sm text-muted-foreground mt-1">
               {allQuestoes.length} questões disponíveis
-              {visibleCount < allQuestoes.length && ` · Mostrando ${visibleCount}`}
+              {totalPages > 1 && ` · Página ${safePage} de ${totalPages}`}
             </p>
           </div>
           <button
@@ -506,12 +506,46 @@ const Questoes = () => {
               </motion.div>
             ))}
 
-            {/* Infinite scroll sentinel */}
-            {visibleCount < allQuestoes.length && (
-              <div ref={sentinelRef} className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <span className="ml-2 text-sm text-muted-foreground">Carregando mais questões...</span>
-              </div>
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+              <nav
+                aria-label="Paginação de questões"
+                className="flex flex-wrap items-center justify-center gap-2 pt-4"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(safePage - 1)}
+                  disabled={safePage <= 1}
+                >
+                  Anterior
+                </Button>
+                {renderPageNumbers().map((p, i) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground text-sm">
+                      …
+                    </span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === safePage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => goToPage(p)}
+                      className={p === safePage ? "gradient-primary text-primary-foreground" : ""}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(safePage + 1)}
+                  disabled={safePage >= totalPages}
+                >
+                  Próxima
+                </Button>
+              </nav>
             )}
           </div>
         )}
