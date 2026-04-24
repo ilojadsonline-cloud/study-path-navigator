@@ -373,13 +373,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Re-check subscription every 10 minutes (not 60s) to avoid mid-session disruptions
+  // Re-check subscription every 30 minutes in background.
+  // Never toggles subscriptionLoading so ProtectedRoute does not unmount
+  // the current page and lose in-progress work (e.g. questions/simulado state).
   useEffect(() => {
     if (!user || isAdmin) return;
 
     const interval = setInterval(() => {
       void checkSubscription();
-    }, 10 * 60_000);
+    }, 30 * 60_000);
 
     return () => clearInterval(interval);
   }, [user, isAdmin, checkSubscription]);
