@@ -15,15 +15,18 @@ function normalizeEmail(value?: string | null): string | null {
 function coerceEmailCandidate(value?: string | null): string | null {
   const normalized = normalizeEmail(value);
   if (!normalized) return null;
-  if (FULL_EMAIL_REGEX.test(normalized)) return normalized;
+  let embeddedEmail: string | null = null;
 
   for (let index = 0; index < normalized.length; index += 1) {
     const char = normalized[index];
     if (char !== "-" && char !== "_" && char !== ":" && char !== "/") continue;
 
     const suffix = normalized.slice(index + 1);
-    if (FULL_EMAIL_REGEX.test(suffix)) return suffix;
+    if (FULL_EMAIL_REGEX.test(suffix)) embeddedEmail = suffix;
   }
+
+  if (embeddedEmail) return embeddedEmail;
+  if (FULL_EMAIL_REGEX.test(normalized)) return normalized;
 
   return null;
 }
