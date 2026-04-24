@@ -1,4 +1,5 @@
 const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const FULL_EMAIL_REGEX = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
 
 export const MP_ACCESS_DAYS = 90;
 
@@ -9,6 +10,22 @@ function normalizeEmail(value?: string | null): string | null {
   if (!value) return null;
   const normalized = value.trim().toLowerCase();
   return normalized && normalized.includes("@") ? normalized : null;
+}
+
+function coerceEmailCandidate(value?: string | null): string | null {
+  const normalized = normalizeEmail(value);
+  if (!normalized) return null;
+  if (FULL_EMAIL_REGEX.test(normalized)) return normalized;
+
+  for (let index = 0; index < normalized.length; index += 1) {
+    const char = normalized[index];
+    if (char !== "-" && char !== "_" && char !== ":" && char !== "/") continue;
+
+    const suffix = normalized.slice(index + 1);
+    if (FULL_EMAIL_REGEX.test(suffix)) return suffix;
+  }
+
+  return null;
 }
 
 function parsePaymentDateMs(payment: any): number | null {
@@ -23,7 +40,7 @@ function extractEmailsFromExternalReference(value?: string | null): string[] {
   return Array.from(
     new Set(
       (value.match(EMAIL_REGEX) || [])
-        .map((email) => normalizeEmail(email))
+        .map((email) => coerceEmailCandidate(email))
         .filter((email): email is string => Boolean(email))
     )
   );
@@ -65,8 +82,9 @@ export function extractMercadoPagoPaymentEmails(payment: any): string[] {
     new Set(
       [
         normalizeEmail(payment?.metadata?.email),
+        coerceEmailCandidate(payment?.metadata?.email),
         ...extractEmailsFromExternalReference(payment?.external_reference),
-        normalizeEmail(payment?.payer?.email),
+        coerceEmailCandidate(payment?.payer?.email),
       ].filter((email): email is string => Boolean(email))
     )
   );
