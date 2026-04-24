@@ -16,6 +16,31 @@ const logStep = (step: string, details?: any) => {
 
 const STRIPE_TRIAL_PRICE_ID = "price_1TKl85ARWUFKTz2dRD3UZO8a";
 
+// "Inativa" o login do auth quando o trial expira sem pagamento.
+// Mantemos o registro: nenhum dado é deletado, apenas o login é bloqueado.
+async function banAuthUser(adminClient: ReturnType<typeof createClient>, userId: string) {
+  try {
+    await adminClient.auth.admin.updateUserById(userId, {
+      ban_duration: "876000h",
+      app_metadata: { trial_blocked: true, trial_blocked_at: new Date().toISOString() } as any,
+    } as any);
+  } catch (error) {
+    console.error("[CHECK-SUBSCRIPTION] failed to ban user", { userId, error });
+  }
+}
+
+// Reativa o login quando uma assinatura ativa (Stripe ou Mercado Pago) for confirmada.
+async function unbanAuthUser(adminClient: ReturnType<typeof createClient>, userId: string) {
+  try {
+    await adminClient.auth.admin.updateUserById(userId, {
+      ban_duration: "none",
+      app_metadata: { trial_blocked: false } as any,
+    } as any);
+  } catch (error) {
+    console.error("[CHECK-SUBSCRIPTION] failed to unban user", { userId, error });
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -140,6 +165,7 @@ serve(async (req) => {
           : { subscribed: false };
         if (mpResult.subscribed) {
           logStep("MP subscription found", { end: mpResult.subscription_end });
+          await unbanAuthUser(supabaseClient, user.id);
           return new Response(JSON.stringify(mpResult), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
@@ -147,6 +173,9 @@ serve(async (req) => {
         }
       }
       const localTrial = await getLocalTrialStatus();
+      if (localTrial.expired) {
+        await banAuthUser(supabaseClient, user.id);
+      }
       return new Response(JSON.stringify({ subscribed: false, is_trial: localTrial.used && !localTrial.expired, trial_ends_at: localTrial.trialEndsAt, trial_expired: localTrial.expired }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -178,6 +207,7 @@ serve(async (req) => {
           ? { subscribed: true, subscription_end: mpPayment.subscription_end, is_trial: false, trial_ends_at: null, provider: "mercadopago" }
           : { subscribed: false };
         if (mpResult.subscribed) {
+          await unbanAuthUser(supabaseClient, user.id);
           return new Response(JSON.stringify(mpResult), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
@@ -185,11 +215,15 @@ serve(async (req) => {
         }
       }
       const localTrial = await getLocalTrialStatus();
+      const shouldBlock = localTrial.expired || hasExpiredTrialStripe;
+      if (shouldBlock) {
+        await banAuthUser(supabaseClient, user.id);
+      }
       return new Response(JSON.stringify({
         subscribed: false,
         is_trial: localTrial.used && !localTrial.expired,
         trial_ends_at: localTrial.trialEndsAt,
-        trial_expired: localTrial.expired || hasExpiredTrialStripe,
+        trial_expired: shouldBlock,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -245,6 +279,8 @@ serve(async (req) => {
         stripeTrialEndsAt: trialEndsAt,
       });
 
+      await banAuthUser(supabaseClient, user.id);
+
       return new Response(JSON.stringify({
         subscribed: false,
         is_trial: false,
@@ -277,6 +313,9 @@ serve(async (req) => {
     } catch (e) {
       logStep("trial_usage upsert warning", { error: String(e) });
     }
+
+    // Garante que assinantes ativos (Stripe ou MP) não fiquem com auth banido por execuções anteriores
+    await unbanAuthUser(supabaseClient, user.id);
 
     return new Response(JSON.stringify({
       subscribed: true,

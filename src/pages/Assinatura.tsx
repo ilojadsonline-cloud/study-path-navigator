@@ -21,6 +21,7 @@ const Assinatura = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const paymentStatus = searchParams.get("payment");
+  const trialExpiredParam = searchParams.get("trial_expired") === "1";
 
   useEffect(() => {
     if (paymentStatus === "success" && user) {
@@ -31,7 +32,7 @@ const Assinatura = () => {
     }
   }, [paymentStatus, user, checkSubscription, toast]);
 
-  const isExpired = user && !subscribed;
+  const isExpired = trialExpiredParam || (user && !subscribed);
 
   const handleCheckout = async () => {
     setLoading(true);

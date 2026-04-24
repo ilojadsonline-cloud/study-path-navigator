@@ -60,7 +60,22 @@ const Login = () => {
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      toast({ title: "Erro ao entrar", description: "Email/CPF ou senha incorretos.", variant: "destructive" });
+      const message = (error.message || "").toLowerCase();
+      if (message.includes("banned") || message.includes("user is banned") || message.includes("disabled")) {
+        toast({
+          title: "Acesso bloqueado",
+          description:
+            "Seu período de teste de 24h terminou. Assine o plano para reativar o acesso — seus dados continuam preservados.",
+          variant: "destructive",
+        });
+        navigate("/assinatura?trial_expired=1", { replace: true });
+      } else {
+        toast({
+          title: "Erro ao entrar",
+          description: "Email/CPF ou senha incorretos.",
+          variant: "destructive",
+        });
+      }
       setLoading(false);
     }
     // Navigation will happen via useEffect when session updates
