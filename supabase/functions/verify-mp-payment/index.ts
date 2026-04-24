@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { findApprovedMercadoPagoPayment } from "../_shared/mercadopago-payments.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,34 +10,6 @@ const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[VERIFY-MP] ${step}${detailsStr}`);
 };
-
-const ACCESS_DAYS = 90;
-
-// Busca pagamentos aprovados nos últimos 90 dias para o email
-async function findApprovedPaymentByEmail(accessToken: string, email: string) {
-  // Busca pagamentos do payer pelo email — ordenados pelos mais recentes
-  const since = new Date();
-  since.setDate(since.getDate() - ACCESS_DAYS);
-  const url = `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=30&payer.email=${encodeURIComponent(email)}`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) {
-    logStep("Falha ao buscar pagamentos", { status: res.status });
-    return null;
-  }
-  const data = await res.json();
-  const results = (data?.results || []) as any[];
-  // Pagamento aprovado mais recente dentro da janela de 90 dias
-  const approved = results.find((p) => {
-    if (p?.status !== "approved") return false;
-    const created = p?.date_approved || p?.date_created;
-    if (!created) return false;
-    const createdDate = new Date(created);
-    return createdDate >= since;
-  });
-  return approved || null;
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -81,15 +54,15 @@ serve(async (req) => {
     if (recovery_email) {
       const email = String(recovery_email).trim().toLowerCase();
       logStep("Recuperação por email", { email });
-      const approved = await findApprovedPaymentByEmail(accessToken, email);
+      const approved = await findApprovedMercadoPagoPayment(accessToken, [email]);
       if (approved) {
         return new Response(
           JSON.stringify({
             paid: true,
-            customer_email: approved?.payer?.email || email,
+            customer_email: approved.customer_email || email,
             recovered: true,
-            payment_id: approved?.id,
-            paid_at: approved?.date_approved,
+            payment_id: approved.payment_id,
+            paid_at: approved.paid_at,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
         );

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { resolveTrialWindow } from "./trial-access.ts";
+import { findApprovedMercadoPagoPayment } from "../_shared/mercadopago-payments.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,45 +14,7 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
-// Verifica pagamentos aprovados no Mercado Pago nos últimos 90 dias para uma lista de emails
-const MP_ACCESS_DAYS = 90;
 const STRIPE_TRIAL_PRICE_ID = "price_1TKl85ARWUFKTz2dRD3UZO8a";
-
-async function checkMercadoPago(accessToken: string, emails: string[]) {
-  const since = new Date();
-  since.setDate(since.getDate() - MP_ACCESS_DAYS);
-  for (const email of emails) {
-    try {
-      const url = `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=30&payer.email=${encodeURIComponent(email)}`;
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const results = (data?.results || []) as any[];
-      // Pagamento aprovado mais recente dentro da janela de 90 dias
-      const approved = results.find((p) => {
-        if (p?.status !== "approved") return false;
-        const created = p?.date_approved || p?.date_created;
-        if (!created) return false;
-        return new Date(created) >= since;
-      });
-      if (approved) {
-        const paidAt = new Date(approved.date_approved || approved.date_created);
-        const endDate = new Date(paidAt);
-        endDate.setDate(endDate.getDate() + MP_ACCESS_DAYS);
-        return {
-          subscribed: true,
-          subscription_end: endDate.toISOString(),
-          is_trial: false,
-          trial_ends_at: null,
-          provider: "mercadopago",
-        };
-      }
-    } catch (e) {
-      console.error("[CHECK-SUBSCRIPTION] MP search error", email, e);
-    }
-  }
-  return { subscribed: false };
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -171,7 +134,10 @@ serve(async (req) => {
     if (!stripeCustomer) {
       logStep("No Stripe customer found, tentando Mercado Pago");
       if (mpToken) {
-        const mpResult = await checkMercadoPago(mpToken, emailsToSearch);
+        const mpPayment = await findApprovedMercadoPagoPayment(mpToken, emailsToSearch, now);
+        const mpResult = mpPayment
+          ? { subscribed: true, subscription_end: mpPayment.subscription_end, is_trial: false, trial_ends_at: null, provider: "mercadopago" }
+          : { subscribed: false };
         if (mpResult.subscribed) {
           logStep("MP subscription found", { end: mpResult.subscription_end });
           return new Response(JSON.stringify(mpResult), {
@@ -207,7 +173,10 @@ serve(async (req) => {
       );
       logStep(hasExpiredTrialStripe ? "Expired trial subscription found, tentando MP" : "No active subscriptions found, tentando MP");
       if (mpToken) {
-        const mpResult = await checkMercadoPago(mpToken, emailsToSearch);
+        const mpPayment = await findApprovedMercadoPagoPayment(mpToken, emailsToSearch, now);
+        const mpResult = mpPayment
+          ? { subscribed: true, subscription_end: mpPayment.subscription_end, is_trial: false, trial_ends_at: null, provider: "mercadopago" }
+          : { subscribed: false };
         if (mpResult.subscribed) {
           return new Response(JSON.stringify(mpResult), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
