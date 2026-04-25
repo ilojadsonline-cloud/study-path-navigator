@@ -86,6 +86,7 @@ const Questoes = () => {
   const [reportMotivo, setReportMotivo] = useState("");
   const [reportSending, setReportSending] = useState(false);
   const [shownNewToast, setShownNewToast] = useState(false);
+  const [answeredLoaded, setAnsweredLoaded] = useState(false);
 
   const lastFilterKeyRef = useRef<string>("");
   const initialPersistedRef = useRef<PersistedState | null>(loadPersistedState());
@@ -144,7 +145,10 @@ const Questoes = () => {
       }
     };
     const fetchAnswered = async () => {
-      if (!user) return;
+      if (!user) {
+        setAnsweredLoaded(true);
+        return;
+      }
       const allAnswers: Array<{ questao_id: number; correta: boolean }> = [];
       let from = 0;
       const batchSize = 1000;
@@ -161,6 +165,7 @@ const Questoes = () => {
       }
       setAnsweredIds(new Set(allAnswers.map(d => d.questao_id)));
       setWrongIds(new Set(allAnswers.filter(d => !d.correta).map(d => d.questao_id)));
+      setAnsweredLoaded(true);
     };
     fetchDisciplinas();
     fetchAnswered();
@@ -174,9 +179,10 @@ const Questoes = () => {
   }, [user]);
 
   useEffect(() => {
+    if (!answeredLoaded) return;
     fetchQuestoes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterDisciplina, filterDificuldade, filterStatus]);
+  }, [filterDisciplina, filterDificuldade, filterStatus, answeredLoaded]);
 
   const fetchQuestoes = async () => {
     const key = `${filterDisciplina}|${filterDificuldade}|${filterStatus}`;
