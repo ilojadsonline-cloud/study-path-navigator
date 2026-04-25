@@ -257,10 +257,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // auto-refresh. Supabase can emit SIGNED_IN again for an existing session;
       // re-running profile/subscription checks there remounts protected pages.
       if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || (event === "SIGNED_IN" && isSameSignedInUser)) {
-        setSession(session);
-        if (!isSameSignedInUser) {
-          setUser(session?.user ?? null);
-        }
         return;
       }
 
