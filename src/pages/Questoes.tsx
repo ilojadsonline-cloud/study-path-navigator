@@ -86,6 +86,7 @@ const Questoes = () => {
   const [reportMotivo, setReportMotivo] = useState("");
   const [reportSending, setReportSending] = useState(false);
   const [shownNewToast, setShownNewToast] = useState(false);
+  const [answeredLoaded, setAnsweredLoaded] = useState(false);
 
   const lastFilterKeyRef = useRef<string>("");
   const initialPersistedRef = useRef<PersistedState | null>(loadPersistedState());
