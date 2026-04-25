@@ -179,9 +179,10 @@ const Questoes = () => {
   }, [user]);
 
   useEffect(() => {
+    if (!answeredLoaded) return;
     fetchQuestoes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterDisciplina, filterDificuldade, filterStatus]);
+  }, [filterDisciplina, filterDificuldade, filterStatus, answeredLoaded]);
 
   const fetchQuestoes = async () => {
     const key = `${filterDisciplina}|${filterDificuldade}|${filterStatus}`;
