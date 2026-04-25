@@ -192,9 +192,8 @@ serve(async (req) => {
           batch.map(async (p) => {
             try {
               const { data: authData } = await supabaseAdmin.auth.admin.getUserById(p.user_id);
-              const banned = authData?.user?.banned_until
-                ? new Date(authData.user.banned_until) > new Date()
-                : false;
+              const bannedUntil = (authData?.user as any)?.banned_until as string | undefined;
+              const banned = bannedUntil ? new Date(bannedUntil) > new Date() : false;
               return { ...p, is_admin: adminSet.has(p.user_id), is_blocked: banned, subscribed: false, subscription_end: null };
             } catch {
               return { ...p, is_admin: adminSet.has(p.user_id), is_blocked: false, subscribed: false, subscription_end: null };
