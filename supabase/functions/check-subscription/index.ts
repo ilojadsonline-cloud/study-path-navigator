@@ -18,7 +18,7 @@ const STRIPE_TRIAL_PRICE_ID = "price_1TKl85ARWUFKTz2dRD3UZO8a";
 
 // "Inativa" o login do auth quando o trial expira sem pagamento.
 // Mantemos o registro: nenhum dado é deletado, apenas o login é bloqueado.
-async function banAuthUser(adminClient: ReturnType<typeof createClient>, userId: string) {
+async function banAuthUser(adminClient: any, userId: string) {
   try {
     await adminClient.auth.admin.updateUserById(userId, {
       ban_duration: "876000h",
@@ -30,7 +30,7 @@ async function banAuthUser(adminClient: ReturnType<typeof createClient>, userId:
 }
 
 // Reativa o login quando uma assinatura ativa (Stripe ou Mercado Pago) for confirmada.
-async function unbanAuthUser(adminClient: ReturnType<typeof createClient>, userId: string) {
+async function unbanAuthUser(adminClient: any, userId: string) {
   try {
     await adminClient.auth.admin.updateUserById(userId, {
       ban_duration: "none",
