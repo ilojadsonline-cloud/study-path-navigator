@@ -111,9 +111,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkInFlightRef = useRef<Promise<void> | null>(null);
   const lastCheckedUserRef = useRef<string | null>(null);
+  const authUserIdRef = useRef<string | null>(null);
 
   const resetAuthState = useCallback(() => {
     lastCheckedUserRef.current = null;
+    authUserIdRef.current = null;
     setSession(null);
     setUser(null);
     setProfile(null);
@@ -244,14 +246,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      // Ignore transient events that fire when the tab regains focus or tokens
-      // auto-refresh. Re-running profile fetch / subscription checks here causes
-      // the protected routes to unmount and the user loses on-screen progress.
-      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
-        setSession(session);
-        setUser(session?.user ?? null);
+      const incomingUserId = session?.user?.id ?? null;
+      const isSameSignedInUser = Boolean(incomingUserId && incomingUserId === authUserIdRef.current);
+
+      if (!incomingUserId && authUserIdRef.current && event !== "SIGNED_OUT") {
         return;
       }
+
+      // Ignore transient events that fire when the tab regains focus or tokens
+      // auto-refresh. Supabase can emit SIGNED_IN again for an existing session;
+      // re-running profile/subscription checks there remounts protected pages.
+      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || (event === "SIGNED_IN" && isSameSignedInUser)) {
+        return;
+      }
+
+      authUserIdRef.current = incomingUserId;
 
       setSession(session);
       setUser(session?.user ?? null);
@@ -289,6 +298,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      authUserIdRef.current = session?.user?.id ?? null;
       setSession(session);
       setUser(session?.user ?? null);
 
