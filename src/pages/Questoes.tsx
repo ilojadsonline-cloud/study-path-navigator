@@ -145,7 +145,10 @@ const Questoes = () => {
       }
     };
     const fetchAnswered = async () => {
-      if (!user) return;
+      if (!user) {
+        setAnsweredLoaded(true);
+        return;
+      }
       const allAnswers: Array<{ questao_id: number; correta: boolean }> = [];
       let from = 0;
       const batchSize = 1000;
@@ -162,6 +165,7 @@ const Questoes = () => {
       }
       setAnsweredIds(new Set(allAnswers.map(d => d.questao_id)));
       setWrongIds(new Set(allAnswers.filter(d => !d.correta).map(d => d.questao_id)));
+      setAnsweredLoaded(true);
     };
     fetchDisciplinas();
     fetchAnswered();
