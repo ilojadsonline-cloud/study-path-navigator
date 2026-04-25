@@ -249,12 +249,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const incomingUserId = session?.user?.id ?? null;
       const isSameSignedInUser = Boolean(incomingUserId && incomingUserId === authUserIdRef.current);
 
+      if (!incomingUserId && authUserIdRef.current && event !== "SIGNED_OUT") {
+        return;
+      }
+
       // Ignore transient events that fire when the tab regains focus or tokens
       // auto-refresh. Supabase can emit SIGNED_IN again for an existing session;
       // re-running profile/subscription checks there remounts protected pages.
       if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || (event === "SIGNED_IN" && isSameSignedInUser)) {
         setSession(session);
-        setUser(session?.user ?? null);
+        if (!isSameSignedInUser) {
+          setUser(session?.user ?? null);
+        }
         return;
       }
 
