@@ -192,13 +192,13 @@ serve(async (req) => {
 
     // Find an active or trialing subscription
     const activeSub = subscriptions.data.find(
-      (s) => s.status === "active" || s.status === "trialing"
+      (s: any) => s.status === "active" || s.status === "trialing"
     );
 
     if (!activeSub) {
-      const hasExpiredTrialStripe = subscriptions.data.some((s) =>
+      const hasExpiredTrialStripe = subscriptions.data.some((s: any) =>
         (s.status === "canceled" || s.status === "incomplete_expired") &&
-        s.items.data.some((item) => item.price?.id === STRIPE_TRIAL_PRICE_ID)
+        s.items.data.some((item: any) => item.price?.id === STRIPE_TRIAL_PRICE_ID)
       );
       logStep(hasExpiredTrialStripe ? "Expired trial subscription found, tentando MP" : "No active subscriptions found, tentando MP");
       if (mpToken) {
