@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { resolveTrialWindow } from "./trial-access.ts";
 import { findApprovedMercadoPagoPayment } from "../_shared/mercadopago-payments.ts";
 
@@ -18,7 +18,7 @@ const STRIPE_TRIAL_PRICE_ID = "price_1TKl85ARWUFKTz2dRD3UZO8a";
 
 // "Inativa" o login do auth quando o trial expira sem pagamento.
 // Mantemos o registro: nenhum dado é deletado, apenas o login é bloqueado.
-async function banAuthUser(adminClient: ReturnType<typeof createClient>, userId: string) {
+async function banAuthUser(adminClient: any, userId: string) {
   try {
     await adminClient.auth.admin.updateUserById(userId, {
       ban_duration: "876000h",
@@ -30,7 +30,7 @@ async function banAuthUser(adminClient: ReturnType<typeof createClient>, userId:
 }
 
 // Reativa o login quando uma assinatura ativa (Stripe ou Mercado Pago) for confirmada.
-async function unbanAuthUser(adminClient: ReturnType<typeof createClient>, userId: string) {
+async function unbanAuthUser(adminClient: any, userId: string) {
   try {
     await adminClient.auth.admin.updateUserById(userId, {
       ban_duration: "none",
@@ -192,13 +192,13 @@ serve(async (req) => {
 
     // Find an active or trialing subscription
     const activeSub = subscriptions.data.find(
-      (s) => s.status === "active" || s.status === "trialing"
+      (s: any) => s.status === "active" || s.status === "trialing"
     );
 
     if (!activeSub) {
-      const hasExpiredTrialStripe = subscriptions.data.some((s) =>
+      const hasExpiredTrialStripe = subscriptions.data.some((s: any) =>
         (s.status === "canceled" || s.status === "incomplete_expired") &&
-        s.items.data.some((item) => item.price?.id === STRIPE_TRIAL_PRICE_ID)
+        s.items.data.some((item: any) => item.price?.id === STRIPE_TRIAL_PRICE_ID)
       );
       logStep(hasExpiredTrialStripe ? "Expired trial subscription found, tentando MP" : "No active subscriptions found, tentando MP");
       if (mpToken) {

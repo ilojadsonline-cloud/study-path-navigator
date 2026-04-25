@@ -141,7 +141,7 @@ serve(async (req) => {
             user_id: userId ?? null,
             provider: "stripe",
             stripe_customer_id: cust.id,
-            converted_to_paid: subs.data.some((s) => s.status === "active"),
+            converted_to_paid: subs.data.some((s: any) => s.status === "active"),
           }, { onConflict: "email" });
 
           return new Response(JSON.stringify({
