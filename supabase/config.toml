@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.verify-mp-payment]
 verify_jwt = false
+
+[functions.reactivate-access]
+verify_jwt = false
