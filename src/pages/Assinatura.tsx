@@ -166,6 +166,38 @@ const Assinatura = () => {
           )}
         </div>
 
+        {isExpired && (
+          <div className="glass-card rounded-2xl p-5 mb-4 border-primary/30">
+            <div className="flex items-start gap-3 mb-3">
+              <Check className="w-5 h-5 text-success shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-sm">Já paguei — reativar acesso</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Se você já assinou (Stripe ou Mercado Pago), informe o email do pagamento para liberar o acesso.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="email"
+                placeholder="email@usado.no.pagamento"
+                value={reactEmail}
+                onChange={(e) => setReactEmail(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                disabled={reactLoading}
+              />
+              <button
+                onClick={handleReactivate}
+                disabled={reactLoading}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {reactLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Reativar acesso
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="glass-card rounded-2xl p-8 relative overflow-hidden glow-gold border-gold/20">
           <div className="absolute top-0 right-0 w-40 h-40 bg-gold/5 rounded-full -translate-y-16 translate-x-16" />
 
