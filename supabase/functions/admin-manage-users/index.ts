@@ -13,6 +13,46 @@ const logStep = (step: string, details?: any) => {
   console.log(`[ADMIN-USERS] ${step}${detailsStr}`);
 };
 
+const STRIPE_MIN_PAID_CENTS = 5000;
+const ACCESS_WINDOW_DAYS = 90;
+
+function getStripeSubscriptionEnd(subscription: any): string | null {
+  const endTimestamp = subscription.current_period_end ?? subscription.items?.data?.[0]?.current_period_end;
+  if (!endTimestamp) return null;
+  const ms = typeof endTimestamp === "number" && endTimestamp < 1e12 ? endTimestamp * 1000 : Number(endTimestamp);
+  const date = new Date(ms);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+async function getStripePaidAccess(stripe: any, email: string): Promise<{ subscribed: boolean; subscription_end: string | null }> {
+  const variants = Array.from(new Set([email, email.toLowerCase()].filter(Boolean)));
+  const sinceSec = Math.floor((Date.now() - ACCESS_WINDOW_DAYS * 24 * 60 * 60 * 1000) / 1000);
+
+  for (const variant of variants) {
+    const customers = await stripe.customers.list({ email: variant, limit: 5 });
+    for (const customer of customers.data) {
+      const subs = await stripe.subscriptions.list({ customer: customer.id, status: "all", limit: 10 });
+      const activeSub = subs.data.find((s: any) => s.status === "active" || s.status === "trialing");
+      if (activeSub) {
+        return { subscribed: true, subscription_end: getStripeSubscriptionEnd(activeSub) };
+      }
+
+      const paymentIntents = await stripe.paymentIntents.list({ customer: customer.id, limit: 20 });
+      const paidIntent = paymentIntents.data.find(
+        (pi: any) => pi.status === "succeeded" && pi.amount >= STRIPE_MIN_PAID_CENTS && pi.created >= sinceSec,
+      );
+      if (paidIntent) {
+        return {
+          subscribed: true,
+          subscription_end: new Date((paidIntent.created + ACCESS_WINDOW_DAYS * 24 * 60 * 60) * 1000).toISOString(),
+        };
+      }
+    }
+  }
+
+  return { subscribed: false, subscription_end: null };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -205,7 +245,7 @@ serve(async (req) => {
 
       logStep("Auth data loaded");
 
-      // Check Stripe subscriptions in parallel (batch of 5 to avoid rate limits)
+      // Check Stripe paid access in parallel (batch of 5 to avoid rate limits)
       const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
       if (stripeKey) {
         const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
@@ -218,19 +258,9 @@ serve(async (req) => {
           await Promise.all(
             batch.map(async (u) => {
               try {
-                const customers = await stripe.customers.list({ email: u.email, limit: 1 });
-                if (customers.data.length === 0) return;
-                const subs = await stripe.subscriptions.list({ customer: customers.data[0].id, status: "active", limit: 1 });
-                if (subs.data.length > 0) {
-                  const sub = subs.data[0];
-                  let endTimestamp = sub.current_period_end;
-                  if (endTimestamp === undefined && sub.items?.data?.[0]) {
-                    endTimestamp = (sub.items.data[0] as any).current_period_end;
-                  }
-                  if (endTimestamp) {
-                    const ms = typeof endTimestamp === "number" && endTimestamp < 1e12 ? endTimestamp * 1000 : Number(endTimestamp);
-                    u.subscription_end = new Date(ms).toISOString();
-                  }
+                const access = await getStripePaidAccess(stripe, u.email);
+                if (access.subscribed) {
+                  u.subscription_end = access.subscription_end;
                   u.subscribed = true;
                 }
               } catch {
