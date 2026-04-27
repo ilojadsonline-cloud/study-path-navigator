@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 interface EnrichedUser {
-  user_id: string; nome: string; cpf: string; email: string | null; created_at: string;
+  user_id: string; nome: string; cpf: string; email: string | null; telefone: string | null; created_at: string;
   is_admin: boolean; is_blocked: boolean; subscribed: boolean; subscription_end: string | null;
   trial_expired?: boolean;
 }
