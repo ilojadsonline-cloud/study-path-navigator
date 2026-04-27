@@ -207,7 +207,7 @@ serve(async (req) => {
       const { search } = params;
       logStep("Loading users", { search });
       
-      let query = supabaseAdmin.from("profiles").select("user_id, nome, cpf, email, created_at").order("created_at", { ascending: false });
+      let query = supabaseAdmin.from("profiles").select("user_id, nome, cpf, email, telefone, created_at").order("created_at", { ascending: false });
       if (search) query = query.or(`nome.ilike.%${search}%,cpf.ilike.%${search}%,email.ilike.%${search}%`);
       const { data: profiles, error: profilesErr } = await query.limit(100);
       if (profilesErr) throw new Error(profilesErr.message);
