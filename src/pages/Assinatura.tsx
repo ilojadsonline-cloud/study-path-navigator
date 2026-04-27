@@ -16,12 +16,38 @@ const Assinatura = () => {
   const [provider, setProvider] = useState<Provider>("stripe");
   const [mpEmail, setMpEmail] = useState("");
   const [showMpEmail, setShowMpEmail] = useState(false);
+  const [reactEmail, setReactEmail] = useState("");
+  const [reactLoading, setReactLoading] = useState(false);
   const { toast } = useToast();
   const { user, subscribed, subscriptionEnd, checkSubscription, signOut, isTrial, trialEndsAt } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const paymentStatus = searchParams.get("payment");
   const trialExpiredParam = searchParams.get("trial_expired") === "1";
+
+  const handleReactivate = async () => {
+    const email = reactEmail.trim().toLowerCase();
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!re.test(email)) {
+      toast({ title: "Email inválido", description: "Informe o mesmo email usado no pagamento.", variant: "destructive" });
+      return;
+    }
+    setReactLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("reactivate-access", { body: { email } });
+      if (error) throw error;
+      if (data?.reactivated) {
+        toast({ title: "Acesso reativado!", description: data.message || "Pagamento confirmado. Faça login normalmente." });
+        navigate("/login", { replace: true });
+      } else {
+        toast({ title: "Pagamento não localizado", description: data?.message || "Não encontramos pagamento ativo neste email.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao reativar", description: err.message, variant: "destructive" });
+    }
+    setReactLoading(false);
+  };
+
 
   useEffect(() => {
     if (paymentStatus === "success" && user) {
