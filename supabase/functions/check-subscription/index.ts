@@ -200,7 +200,40 @@ serve(async (req) => {
         (s.status === "canceled" || s.status === "incomplete_expired") &&
         s.items.data.some((item: any) => item.price?.id === STRIPE_TRIAL_PRICE_ID)
       );
-      logStep(hasExpiredTrialStripe ? "Expired trial subscription found, tentando MP" : "No active subscriptions found, tentando MP");
+      logStep(hasExpiredTrialStripe ? "Expired trial subscription found, checando PIs" : "No active subscriptions found, checando PIs");
+
+      // Fallback: PaymentIntent succeeded ≥ R$50 nos últimos 90d (ex.: pagou novamente após cancelamento)
+      try {
+        const sinceSec = Math.floor((now - 90 * 24 * 60 * 60 * 1000) / 1000);
+        const pis = await stripe.paymentIntents.list({ customer: customerId, limit: 20 });
+        const paidPi = pis.data.find(
+          (pi: any) => pi.status === "succeeded" && pi.amount >= 5000 && pi.created >= sinceSec,
+        );
+        if (paidPi) {
+          const subEnd = new Date((paidPi.created + 90 * 24 * 60 * 60) * 1000).toISOString();
+          logStep("Stripe PI paid found, granting access", { piId: paidPi.id, end: subEnd });
+          await unbanAuthUser(supabaseClient, user.id);
+          try {
+            await supabaseClient.from("trial_usage").upsert({
+              email: user.email.toLowerCase(),
+              user_id: user.id,
+              provider: "stripe",
+              stripe_customer_id: customerId,
+              converted_to_paid: true,
+            }, { onConflict: "email" });
+          } catch (_) {}
+          return new Response(JSON.stringify({
+            subscribed: true,
+            subscription_end: subEnd,
+            is_trial: false,
+            trial_ends_at: null,
+            provider: "stripe",
+          }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+        }
+      } catch (e) {
+        logStep("PI lookup warning", { error: String(e) });
+      }
+
       if (mpToken) {
         const mpPayment = await findApprovedMercadoPagoPayment(mpToken, emailsToSearch, now);
         const mpResult = mpPayment
