@@ -245,7 +245,7 @@ serve(async (req) => {
 
       logStep("Auth data loaded");
 
-      // Check Stripe subscriptions in parallel (batch of 5 to avoid rate limits)
+      // Check Stripe paid access in parallel (batch of 5 to avoid rate limits)
       const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
       if (stripeKey) {
         const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
@@ -258,19 +258,9 @@ serve(async (req) => {
           await Promise.all(
             batch.map(async (u) => {
               try {
-                const customers = await stripe.customers.list({ email: u.email, limit: 1 });
-                if (customers.data.length === 0) return;
-                const subs = await stripe.subscriptions.list({ customer: customers.data[0].id, status: "active", limit: 1 });
-                if (subs.data.length > 0) {
-                  const sub = subs.data[0];
-                  let endTimestamp = sub.current_period_end;
-                  if (endTimestamp === undefined && sub.items?.data?.[0]) {
-                    endTimestamp = (sub.items.data[0] as any).current_period_end;
-                  }
-                  if (endTimestamp) {
-                    const ms = typeof endTimestamp === "number" && endTimestamp < 1e12 ? endTimestamp * 1000 : Number(endTimestamp);
-                    u.subscription_end = new Date(ms).toISOString();
-                  }
+                const access = await getStripePaidAccess(stripe, u.email);
+                if (access.subscribed) {
+                  u.subscription_end = access.subscription_end;
                   u.subscribed = true;
                 }
               } catch {
