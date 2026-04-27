@@ -145,8 +145,13 @@ const Cadastro = () => {
       return;
     }
 
-    if (!nome || !email || !cpf || !password || !confirmPassword) {
+    if (!nome || !email || !cpf || !telefone || !password || !confirmPassword) {
       toast({ title: "Preencha todos os campos", variant: "destructive" });
+      return;
+    }
+    const telefoneDigits = telefone.replace(/\D/g, "");
+    if (telefoneDigits.length < 10 || telefoneDigits.length > 11) {
+      toast({ title: "WhatsApp inválido", description: "Informe DDD + número (10 ou 11 dígitos).", variant: "destructive" });
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
