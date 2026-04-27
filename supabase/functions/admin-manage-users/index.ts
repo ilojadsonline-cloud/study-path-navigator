@@ -13,6 +13,46 @@ const logStep = (step: string, details?: any) => {
   console.log(`[ADMIN-USERS] ${step}${detailsStr}`);
 };
 
+const STRIPE_MIN_PAID_CENTS = 5000;
+const ACCESS_WINDOW_DAYS = 90;
+
+function getStripeSubscriptionEnd(subscription: any): string | null {
+  const endTimestamp = subscription.current_period_end ?? subscription.items?.data?.[0]?.current_period_end;
+  if (!endTimestamp) return null;
+  const ms = typeof endTimestamp === "number" && endTimestamp < 1e12 ? endTimestamp * 1000 : Number(endTimestamp);
+  const date = new Date(ms);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+async function getStripePaidAccess(stripe: any, email: string): Promise<{ subscribed: boolean; subscription_end: string | null }> {
+  const variants = Array.from(new Set([email, email.toLowerCase()].filter(Boolean)));
+  const sinceSec = Math.floor((Date.now() - ACCESS_WINDOW_DAYS * 24 * 60 * 60 * 1000) / 1000);
+
+  for (const variant of variants) {
+    const customers = await stripe.customers.list({ email: variant, limit: 5 });
+    for (const customer of customers.data) {
+      const subs = await stripe.subscriptions.list({ customer: customer.id, status: "all", limit: 10 });
+      const activeSub = subs.data.find((s: any) => s.status === "active" || s.status === "trialing");
+      if (activeSub) {
+        return { subscribed: true, subscription_end: getStripeSubscriptionEnd(activeSub) };
+      }
+
+      const paymentIntents = await stripe.paymentIntents.list({ customer: customer.id, limit: 20 });
+      const paidIntent = paymentIntents.data.find(
+        (pi: any) => pi.status === "succeeded" && pi.amount >= STRIPE_MIN_PAID_CENTS && pi.created >= sinceSec,
+      );
+      if (paidIntent) {
+        return {
+          subscribed: true,
+          subscription_end: new Date((paidIntent.created + ACCESS_WINDOW_DAYS * 24 * 60 * 60) * 1000).toISOString(),
+        };
+      }
+    }
+  }
+
+  return { subscribed: false, subscription_end: null };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
