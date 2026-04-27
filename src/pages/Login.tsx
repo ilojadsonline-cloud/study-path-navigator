@@ -62,6 +62,21 @@ const Login = () => {
     if (error) {
       const message = (error.message || "").toLowerCase();
       if (message.includes("banned") || message.includes("user is banned") || message.includes("disabled")) {
+        // Tenta reativar automaticamente caso o usuário já tenha pago
+        try {
+          const { data: react } = await supabase.functions.invoke("reactivate-access", { body: { email } });
+          if (react?.reactivated) {
+            toast({
+              title: "Acesso reativado!",
+              description: "Confirmamos seu pagamento. Entrando...",
+            });
+            const retry = await supabase.auth.signInWithPassword({ email, password });
+            if (!retry.error) {
+              setLoading(false);
+              return; // useEffect cuida do redirect
+            }
+          }
+        } catch (_) {}
         toast({
           title: "Acesso bloqueado",
           description:
