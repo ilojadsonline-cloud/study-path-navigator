@@ -170,12 +170,22 @@ export function AdminAuditoriaTab() {
     toast.info("Cancelando...");
   }
 
+  // Remove a auditoria da lista atual se ela não pertence mais ao filtro ativo
+  function removeFromListIfNeeded(auditId: number, newStatus: string) {
+    if (filterStatus === "all" || filterStatus === newStatus) {
+      setAudits(prev => prev.map(x => x.id === auditId ? { ...x, status: newStatus } : x));
+    } else {
+      setAudits(prev => prev.filter(x => x.id !== auditId));
+    }
+  }
+
   // Aplica a sugestão da IA tal como veio
   async function applyAISuggestion(a: AuditRow) {
     if (!a.proposed_patch) {
       await supabase.from("question_audits").update({ status: "approved" }).eq("id", a.id);
       toast.success("Auditoria marcada como aprovada");
-      loadAudits();
+      removeFromListIfNeeded(a.id, "approved");
+      setDetail(null); setQuestao(null); setForm(null);
       return;
     }
     const { data: q } = await supabase.from("questoes").select("*").eq("id", a.questao_id).single();
@@ -187,13 +197,21 @@ export function AdminAuditoriaTab() {
         audit_id: a.id,
       } as any);
     }
-    await supabase.from("questoes").update(a.proposed_patch).eq("id", a.questao_id);
+    // Sanitiza patch (gabarito 0-4)
+    const patch: any = { ...(a.proposed_patch as any) };
+    if ("gabarito" in patch) {
+      const g = Number(patch.gabarito);
+      if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+    }
+    const { error: upErr } = await supabase.from("questoes").update(patch).eq("id", a.questao_id);
+    if (upErr) { toast.error("Falha ao atualizar questão: " + upErr.message); return; }
     await supabase.from("question_audits").update({
       status: "auto_fixed",
-      applied_patch: a.proposed_patch,
+      applied_patch: patch,
     }).eq("id", a.id);
-    toast.success("Sugestão da IA aplicada à questão");
-    loadAudits();
+    toast.success(`Questão #${a.questao_id} corrigida pela IA`);
+    removeFromListIfNeeded(a.id, "auto_fixed");
+    setDetail(null); setQuestao(null); setForm(null);
   }
 
   // Aplica TODAS as sugestões pendentes (manual_review + auto_fixed sem aplicar) em lote
@@ -240,6 +258,12 @@ export function AdminAuditoriaTab() {
             applied_patch: patch,
           }).eq("id", a.id);
           applied++;
+          // Remove imediatamente da lista visível se filtro não for "auto_fixed" nem "all"
+          if (filterStatus !== "auto_fixed" && filterStatus !== "all") {
+            setAudits(prev => prev.filter(x => x.id !== a.id));
+          } else {
+            setAudits(prev => prev.map(x => x.id === a.id ? { ...x, status: "auto_fixed" } : x));
+          }
         } catch (e: any) {
           failed++;
           console.error("bulk apply falhou", a.id, e?.message);
@@ -247,7 +271,6 @@ export function AdminAuditoriaTab() {
         setBulkProgress(p => ({ ...p, done: p.done + 1 }));
       }
       toast.success(`Concluído: ${applied} aplicadas, ${failed} falharam`);
-      loadAudits();
     } catch (e: any) {
       toast.error("Falha no lote: " + (e?.message ?? e));
     } finally {
@@ -258,7 +281,8 @@ export function AdminAuditoriaTab() {
   async function dismissAudit(a: AuditRow) {
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Auditoria descartada (questão mantida como está)");
-    loadAudits();
+    removeFromListIfNeeded(a.id, "rejected");
+    setDetail(null); setQuestao(null); setForm(null);
   }
 
   async function revertAudit(a: AuditRow) {
@@ -275,19 +299,20 @@ export function AdminAuditoriaTab() {
     await supabase.from("questoes").update(rest).eq("id", a.questao_id);
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Questão revertida ao estado anterior");
-    loadAudits();
+    removeFromListIfNeeded(a.id, "rejected");
+    setDetail(null); setQuestao(null); setForm(null);
   }
 
   async function deleteQuestao(a: AuditRow) {
-    if (!confirm(`Excluir definitivamente a questão #${a.questao_id}? Essa ação não pode ser desfeita.`)) return;
+    if (!confirm(`Excluir definitivamente a questão #${a.questao_id} do banco? Essa ação não pode ser desfeita.`)) return;
     const { error } = await supabase.from("questoes").delete().eq("id", a.questao_id);
     if (error) return toast.error(error.message);
     await supabase.from("question_audits").update({ status: "rejected", ai_summary: "Questão excluída pelo admin" }).eq("id", a.id);
-    toast.success("Questão excluída");
+    toast.success(`Questão #${a.questao_id} excluída do banco`);
     setDetail(null);
     setQuestao(null);
     setForm(null);
-    loadAudits();
+    setAudits(prev => prev.filter(x => x.id !== a.id));
   }
 
   async function openDetail(a: AuditRow) {
@@ -345,11 +370,12 @@ export function AdminAuditoriaTab() {
         status: "approved",
         applied_patch: patch,
       }).eq("id", detail.id);
-      toast.success("Questão corrigida e auditoria aprovada");
+      toast.success(`Questão #${detail.questao_id} corrigida e auditoria aprovada`);
+      const auditId = detail.id;
       setDetail(null);
       setForm(null);
       setQuestao(null);
-      loadAudits();
+      removeFromListIfNeeded(auditId, "approved");
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao salvar");
     } finally {
@@ -491,7 +517,7 @@ export function AdminAuditoriaTab() {
                       <Badge variant={a.status === "auto_fixed" ? "default" : a.status === "manual_review" ? "destructive" : "outline"}>
                         {STATUS_LABEL[a.status] ?? a.status}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">Questão #{a.questao_id}</span>
+                      <span className="text-xs font-mono text-muted-foreground" title="ID original da questão no banco">ID banco: #{a.questao_id}</span>
                       {a.confidence != null && (
                         <span className="text-xs text-muted-foreground">confiança: {(a.confidence * 100).toFixed(0)}%</span>
                       )}
@@ -519,7 +545,7 @@ export function AdminAuditoriaTab() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Pencil className="w-4 h-4" />
-              Corrigir Questão #{detail?.questao_id}
+              Corrigir questão — ID original no banco: <span className="font-mono">#{detail?.questao_id}</span>
             </DialogTitle>
           </DialogHeader>
 
