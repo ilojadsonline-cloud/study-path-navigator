@@ -1581,6 +1581,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
     // - confidence ≥ 0.9 + risco low + patch → aplica patch e mantém
     // - caso contrário → mantém como está
     let autoCorrigidas = 0;
+    try {
     if (validQuestions.length > 0) {
       console.log(`[AUDIT-XGEN] Iniciando auditoria cruzada de ${validQuestions.length} questões (sequencial p/ estabilidade)...`);
 
