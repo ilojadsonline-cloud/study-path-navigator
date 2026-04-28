@@ -370,6 +370,133 @@ function findSimilarQuestion(
   return null;
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// SEMANTIC SIGNATURES — Bloco 1: anti-repetição forte usando DeepSeek
+// ──────────────────────────────────────────────────────────────────────────
+
+type SemanticSignature = {
+  artigo: string;          // "Art. 12" — dispositivo principal cobrado
+  conceito: string[];      // 3-5 termos-chave do raciocínio (lower-case, sem stopwords)
+  pegadinha: string;       // categoria curta da armadilha (ex: "troca-posto", "inversao-competencia", "prazo-trocado")
+  sujeito: string;         // entidade/cargo/posto principal envolvido (ex: "tenente-coronel", "comandante-geral")
+};
+
+const EMPTY_SIGNATURE: SemanticSignature = { artigo: "", conceito: [], pegadinha: "", sujeito: "" };
+
+function extractMainArticle(comentario: string): string {
+  const arts = extractAllCitedArticles(comentario);
+  return arts.length > 0 ? `Art. ${arts[0]}` : "";
+}
+
+function normSigToken(s: string): string {
+  return normalize(String(s ?? "")).replace(/\s+/g, "-");
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 && b.size === 0) return 0;
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter++;
+  const union = new Set([...a, ...b]).size;
+  return union > 0 ? inter / union : 0;
+}
+
+/** Compara duas assinaturas com pesos: artigo=0.4, conceito=0.4, pegadinha=0.15, sujeito=0.05 */
+function compareSignatures(a: SemanticSignature | null, b: SemanticSignature | null): number {
+  if (!a || !b) return 0;
+  const artA = normSigToken(a.artigo);
+  const artB = normSigToken(b.artigo);
+  const artScore = artA && artB && artA === artB ? 1 : 0;
+
+  const conceitoScore = jaccard(
+    new Set((a.conceito || []).map(normSigToken).filter(Boolean)),
+    new Set((b.conceito || []).map(normSigToken).filter(Boolean)),
+  );
+
+  const pegA = normSigToken(a.pegadinha);
+  const pegB = normSigToken(b.pegadinha);
+  const pegScore = pegA && pegB && pegA === pegB ? 1 : 0;
+
+  const sujA = normSigToken(a.sujeito);
+  const sujB = normSigToken(b.sujeito);
+  const sujScore = sujA && sujB && sujA === sujB ? 1 : 0;
+
+  return artScore * 0.4 + conceitoScore * 0.4 + pegScore * 0.15 + sujScore * 0.05;
+}
+
+/** Chama DeepSeek (ou Lovable AI) para extrair a assinatura semântica de UMA questão. */
+async function buildSemanticSignature(
+  q: { enunciado: string; alt_correta: string; comentario: string },
+  apiUrl: string,
+  apiModel: string,
+  apiKey: string,
+): Promise<SemanticSignature> {
+  const sigPrompt = `Você é um analista jurídico. Extraia a "assinatura semântica" da questão abaixo em JSON estrito.
+
+QUESTÃO:
+Enunciado: ${q.enunciado}
+Alternativa correta: ${q.alt_correta}
+Comentário: ${q.comentario.substring(0, 1500)}
+
+Retorne EXATAMENTE este JSON (sem markdown, sem prosa):
+{"artigo":"Art. N","conceito":["termo1","termo2","termo3","termo4"],"pegadinha":"categoria-curta-em-kebab-case","sujeito":"entidade-ou-cargo-principal-em-kebab-case"}
+
+Regras:
+- "artigo": o dispositivo legal CENTRAL cobrado (use "Art. N" sem inciso). Se não houver, use "".
+- "conceito": 3 a 5 substantivos/verbos-chave do raciocínio cobrado, em minúsculas, sem stopwords, sem números de artigo. Exemplos: ["promocao","merecimento","interstício","oficial-superior"].
+- "pegadinha": categoria curta da armadilha cobrada. Exemplos: "troca-de-posto", "inversao-competencia", "prazo-trocado", "sujeito-errado", "inclusao-indevida", "exclusao-indevida", "literalidade-direta".
+- "sujeito": entidade ou cargo/posto principal envolvido. Exemplos: "comandante-geral", "tenente-coronel", "cpo", "comissao-promocao".`;
+
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 25_000);
+    const resp = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: apiModel,
+        messages: [{ role: "user", content: sigPrompt }],
+        max_tokens: 300,
+        temperature: 0.0,
+        response_format: { type: "json_object" },
+      }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(tid);
+    if (!resp.ok) {
+      console.warn(`[SIG] HTTP ${resp.status} — usando fallback`);
+      return fallbackSignature(q);
+    }
+    const json = await resp.json();
+    let content = json?.choices?.[0]?.message?.content || "";
+    content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+    const match = content.match(/\{[\s\S]*\}/);
+    if (!match) return fallbackSignature(q);
+    const parsed = JSON.parse(match[0]);
+    return {
+      artigo: String(parsed.artigo ?? "").trim() || extractMainArticle(q.comentario),
+      conceito: Array.isArray(parsed.conceito) ? parsed.conceito.map((c: any) => String(c).trim()).filter(Boolean).slice(0, 6) : [],
+      pegadinha: String(parsed.pegadinha ?? "").trim(),
+      sujeito: String(parsed.sujeito ?? "").trim(),
+    };
+  } catch (err) {
+    console.warn(`[SIG] erro: ${String(err)} — usando fallback`);
+    return fallbackSignature(q);
+  }
+}
+
+/** Fallback determinístico se a IA falhar: extrai do comentário e da alternativa correta. */
+function fallbackSignature(q: { enunciado: string; alt_correta: string; comentario: string }): SemanticSignature {
+  const artigo = extractMainArticle(q.comentario);
+  const stop = new Set(["para","com","sem","pelo","pela","pelos","pelas","sobre","entre","esta","este","essa","esse","aquele","aquela","como","quando","onde","quem","qual","quais","ainda","mais","menos","nao","sim","apenas","tambem","todos","todas","cada","outra","outras","outro","outros","seus","suas","seu","sua","dele","dela","deles","delas","artigo","artigos","lei","leis","decreto","regulamento","conforme","segundo","previsto","previstos","previstas","disposto","dispostos","incluso","inclusos","inclusas"]);
+  const tokens = normalize(q.alt_correta + " " + q.enunciado)
+    .split(" ")
+    .filter(w => w.length > 4 && !stop.has(w));
+  const freq = new Map<string, number>();
+  for (const t of tokens) freq.set(t, (freq.get(t) || 0) + 1);
+  const conceito = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([w]) => w);
+  return { artigo, conceito, pegadinha: "", sujeito: "" };
+}
+
 const DISCIPLINES = [
   {
     disciplina: "Lei nº 2.578/2012",
