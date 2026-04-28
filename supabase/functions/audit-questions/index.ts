@@ -117,24 +117,35 @@ Audite com rigor de banca examinadora. Verifique:
 3. Existe MAIS de uma alternativa correta? Existe NENHUMA correta?
 4. Distratores são plausíveis ou são óbvios demais / absurdos?
 5. Há afirmação extra-legal, inventada, ou que contraria o texto legal?
-6. Comentário está coerente com o gabarito e cita base legal?
+6. Comentário está coerente com o gabarito e cita base legal explicitamente (artigo/inciso/parágrafo)?
 7. Alternativas duplicadas, vazias ou triviais?
+
+REGRA DE REESCRITA TOTAL:
+- Se a questão tiver QUALQUER problema de média/alta gravidade (gabarito errado, ambiguidade, mais de uma correta, distrator absurdo, comentário fraco/genérico, contradição com a lei), você DEVE reescrever a questão por completo no proposed_patch: enunciado novo + as 5 alternativas (alt_a..alt_e) + gabarito + comentário.
+- O novo enunciado deve ser claro, específico, sem pegadinhas baratas e ancorado no texto legal de referência.
+- As 5 alternativas devem ter tamanhos parecidos, ser plausíveis, sem duplicatas e sem "todas as anteriores"/"nenhuma das anteriores".
+- O COMENTÁRIO é o mais importante: escreva como um PROFESSOR experiente conversando com o aluno. Estrutura:
+  • 1 parágrafo curto contextualizando o instituto/tema.
+  • Citação literal ou parafraseada do dispositivo legal aplicável (Art. X, inciso Y, §Z).
+  • Justificativa da alternativa correta amarrada à lei.
+  • Quando útil, explicação rápida de por que as principais distratoras estão erradas.
+  • Mínimo de 600 caracteres. Tom didático, sem jargão desnecessário, em português do Brasil.
 
 Retorne JSON ESTRITO:
 {
-  "confidence": 0.0-1.0,           // sua confiança na auditoria (alta = tem certeza do diagnóstico)
-  "risk_level": "low" | "medium" | "high",  // risco de aplicar correção automática (low = mudança segura tipo trocar gabarito óbvio; high = exige humano)
+  "confidence": 0.0-1.0,           // sua confiança no diagnóstico
+  "risk_level": "low" | "medium" | "high",  // risco de aplicar correção automática (low = mudança segura; high = exige humano)
   "issues": [
     { "type": "gabarito_errado|ambiguidade|distrator_fraco|extra_legal|comentario_incoerente|alt_duplicada|outros", "severity": "low|medium|high", "description": "..." }
   ],
-  "proposed_patch": {              // null se não há correção segura. Inclua APENAS campos que devem mudar.
-    "gabarito"?: 0-4,
-    "comentario"?: "...",
+  "proposed_patch": {              // null APENAS se a questão estiver impecável. Caso precise de qualquer ajuste relevante, devolva enunciado, alt_a..alt_e, gabarito e comentário JUNTOS.
+    "enunciado"?: "...",
     "alt_a"?: "...", "alt_b"?: "...", "alt_c"?: "...", "alt_d"?: "...", "alt_e"?: "...",
-    "enunciado"?: "..."
+    "gabarito"?: 0-4,
+    "comentario"?: "..."
   },
   "needs_human_review": true|false,
-  "ai_summary": "1-2 frases resumindo o diagnóstico"
+  "ai_summary": "1-2 frases resumindo o diagnóstico e o que foi reescrito"
 }
 
 Se a questão estiver perfeita: confidence alta, issues=[], proposed_patch=null, needs_human_review=false.`;
