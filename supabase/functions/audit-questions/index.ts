@@ -113,23 +113,23 @@ ${q.comentario}
 
 Audite com rigor de banca examinadora. Verifique:
 1. Gabarito está correto à luz do texto legal? (mais grave)
-2. Enunciado tem ambiguidade, erro de português crítico, ou pega-pegadinha mal feita?
+2. Enunciado tem ambiguidade, erro de português crítico, ou pegadinha mal feita?
 3. Existe MAIS de uma alternativa correta? Existe NENHUMA correta?
-4. Distratores são plausíveis ou são óbvios demais / absurdos?
+4. Distratores são plausíveis (erro típico do estudante) ou são óbvios/absurdos demais?
 5. Há afirmação extra-legal, inventada, ou que contraria o texto legal?
-6. Comentário está coerente com o gabarito e cita base legal explicitamente (artigo/inciso/parágrafo)?
-7. Alternativas duplicadas, vazias ou triviais?
+6. Comentário está coerente com o gabarito, é direto e cita base legal explícita (Art./inciso/§)?
+7. Alternativas duplicadas, vazias, triviais ou de tamanhos muito desiguais?
+8. A questão está fácil demais para uma banca de elite (PMTO/FGV/CESPE)?
 
-REGRA DE REESCRITA TOTAL:
-- Se a questão tiver QUALQUER problema de média/alta gravidade (gabarito errado, ambiguidade, mais de uma correta, distrator absurdo, comentário fraco/genérico, contradição com a lei), você DEVE reescrever a questão por completo no proposed_patch: enunciado novo + as 5 alternativas (alt_a..alt_e) + gabarito + comentário.
-- O novo enunciado deve ser claro, específico, sem pegadinhas baratas e ancorado no texto legal de referência.
-- As 5 alternativas devem ter tamanhos parecidos, ser plausíveis, sem duplicatas e sem "todas as anteriores"/"nenhuma das anteriores".
-- O COMENTÁRIO é o mais importante: escreva como um PROFESSOR experiente conversando com o aluno. Estrutura:
-  • 1 parágrafo curto contextualizando o instituto/tema.
-  • Citação literal ou parafraseada do dispositivo legal aplicável (Art. X, inciso Y, §Z).
-  • Justificativa da alternativa correta amarrada à lei.
-  • Quando útil, explicação rápida de por que as principais distratoras estão erradas.
-  • Mínimo de 600 caracteres. Tom didático, sem jargão desnecessário, em português do Brasil.
+REGRA DE REESCRITA TOTAL (use sempre que houver problema de média/alta gravidade OU dificuldade baixa demais):
+- Reescreva a questão por completo no proposed_patch: enunciado novo + alt_a..alt_e + gabarito + comentário.
+- ENUNCIADO: claro, específico, ancorado no texto legal, com nível de dificuldade ELEVADO (exija raciocínio, exceção da regra, prazo exato, autoridade competente, hierarquia entre dispositivos). Evite perguntas literais "qual o artigo X". Prefira casos concretos curtos ou comparação entre institutos.
+- ALTERNATIVAS (5): tamanhos parecidos, plausíveis, sem duplicatas, sem "todas/nenhuma das anteriores". Cada distratora deve corresponder a um ERRO TÍPICO do estudante: troca de prazo, troca de autoridade competente, confusão entre institutos parecidos, inversão regra/exceção, dispositivo revogado, ou aplicação errada do princípio. Nada de distrator obviamente falso.
+- COMENTÁRIO (PROFESSOR ORIENTADOR): entre 300 e 700 caracteres, tom de professor falando com o aluno. Estrutura enxuta:
+  • 1 frase contextualizando o instituto/dispositivo.
+  • Citação direta do dispositivo (Art. X, inciso Y, §Z) e por que a correta é correta.
+  • Quando útil, 1 frase curta apontando a "pegadinha" da distratora mais perigosa.
+  • Sem repetir a alternativa inteira, sem enrolação, em português do Brasil.
 
 Retorne JSON ESTRITO:
 {
