@@ -812,9 +812,9 @@ serve(async (req) => {
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch existing questions for dedup
+    // Fetch existing questions for dedup (now also brings semantic signature + main article)
     const { data: existingQ } = await supabase
-      .from("questoes").select("id, enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito, assunto")
+      .from("questoes").select("id, enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito, assunto, assinatura_semantica, artigo_principal")
       .eq("disciplina", disc.disciplina).order("id", { ascending: false }).limit(1000);
 
     const existingFingerprints = new Set<string>();
@@ -822,9 +822,11 @@ serve(async (req) => {
     const existingForSimilarity: Array<{ id: number; enunciado: string }> = [];
     const articleCoverage = new Map<string, number>();
     const assuntoCoverage = new Map<string, number>();
+    // Bloco 1: índice de assinaturas semânticas existentes (por artigo) para comparação rápida
+    const existingByArticle = new Map<string, Array<{ id: number; assunto: string; signature: SemanticSignature; enunciado: string }>>();
 
     if (existingQ) {
-      existingQ.forEach((eq) => {
+      existingQ.forEach((eq: any) => {
         existingFingerprints.add(buildFingerprint(eq.enunciado));
         const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
         const correctText = eq[correctKey] || "";
@@ -832,12 +834,31 @@ serve(async (req) => {
         existingForSimilarity.push({ id: eq.id, enunciado: eq.enunciado });
 
         const arts = extractAllCitedArticles(eq.comentario || "");
-        arts.forEach((a) => {
+        arts.forEach((a: string) => {
           articleCoverage.set(a, (articleCoverage.get(a) || 0) + 1);
         });
-        
+
         const assunto = eq.assunto || "";
         if (assunto) assuntoCoverage.set(assunto, (assuntoCoverage.get(assunto) || 0) + 1);
+
+        // Bloco 1: indexa por artigo usando assinatura armazenada ou fallback determinístico
+        const storedSig = eq.assinatura_semantica && typeof eq.assinatura_semantica === "object" ? eq.assinatura_semantica as any : null;
+        const sig: SemanticSignature = storedSig
+          ? {
+              artigo: String(storedSig.artigo ?? "") || (eq.artigo_principal || extractMainArticle(eq.comentario || "")),
+              conceito: Array.isArray(storedSig.conceito) ? storedSig.conceito : [],
+              pegadinha: String(storedSig.pegadinha ?? ""),
+              sujeito: String(storedSig.sujeito ?? ""),
+            }
+          : {
+              artigo: eq.artigo_principal || extractMainArticle(eq.comentario || ""),
+              conceito: fallbackSignature({ enunciado: eq.enunciado, alt_correta: correctText, comentario: eq.comentario || "" }).conceito,
+              pegadinha: "",
+              sujeito: "",
+            };
+        const artKey = normSigToken(sig.artigo) || "__sem_artigo__";
+        if (!existingByArticle.has(artKey)) existingByArticle.set(artKey, []);
+        existingByArticle.get(artKey)!.push({ id: eq.id, assunto: eq.assunto || "", signature: sig, enunciado: eq.enunciado });
       });
     }
 
