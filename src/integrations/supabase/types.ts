@@ -717,6 +717,12 @@ export type Database = {
         Args: { p_cpf?: string; p_email: string }
         Returns: boolean
       }
+      list_disciplinas: {
+        Args: never
+        Returns: {
+          disciplina: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
