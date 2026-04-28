@@ -766,8 +766,8 @@ serve(async (req) => {
   try {
     const { disciplina_index, batch_size } = await req.json();
     const requestedBatchSize = Number(batch_size) || 2;
-    // Hard cap at 2 to stay within Supabase/DeepSeek execution budget.
-    const batchSize = Math.max(1, Math.min(2, requestedBatchSize));
+    // Mínimo 2 questões por lote (resiliência: se uma falha, sobra outra). Cap em 2 pelo budget de tempo.
+    const batchSize = Math.max(2, Math.min(2, requestedBatchSize));
     const discIndex = disciplina_index ?? 0;
 
     if (discIndex < 0 || discIndex >= DISCIPLINES.length) {
