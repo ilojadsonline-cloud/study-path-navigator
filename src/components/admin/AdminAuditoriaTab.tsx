@@ -88,6 +88,8 @@ export function AdminAuditoriaTab() {
   const [form, setForm] = useState<QuestaoForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [disciplinas, setDisciplinas] = useState<string[]>([]);
+  const [bulkApplying, setBulkApplying] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
   const stopRef = useRef(false);
 
   async function loadDisciplinas() {
