@@ -517,7 +517,7 @@ export function AdminAuditoriaTab() {
                       <Badge variant={a.status === "auto_fixed" ? "default" : a.status === "manual_review" ? "destructive" : "outline"}>
                         {STATUS_LABEL[a.status] ?? a.status}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">Questão #{a.questao_id}</span>
+                      <span className="text-xs font-mono text-muted-foreground" title="ID original da questão no banco">ID banco: #{a.questao_id}</span>
                       {a.confidence != null && (
                         <span className="text-xs text-muted-foreground">confiança: {(a.confidence * 100).toFixed(0)}%</span>
                       )}
