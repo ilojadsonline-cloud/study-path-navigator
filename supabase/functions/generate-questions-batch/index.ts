@@ -370,6 +370,133 @@ function findSimilarQuestion(
   return null;
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// SEMANTIC SIGNATURES — Bloco 1: anti-repetição forte usando DeepSeek
+// ──────────────────────────────────────────────────────────────────────────
+
+type SemanticSignature = {
+  artigo: string;          // "Art. 12" — dispositivo principal cobrado
+  conceito: string[];      // 3-5 termos-chave do raciocínio (lower-case, sem stopwords)
+  pegadinha: string;       // categoria curta da armadilha (ex: "troca-posto", "inversao-competencia", "prazo-trocado")
+  sujeito: string;         // entidade/cargo/posto principal envolvido (ex: "tenente-coronel", "comandante-geral")
+};
+
+const EMPTY_SIGNATURE: SemanticSignature = { artigo: "", conceito: [], pegadinha: "", sujeito: "" };
+
+function extractMainArticle(comentario: string): string {
+  const arts = extractAllCitedArticles(comentario);
+  return arts.length > 0 ? `Art. ${arts[0]}` : "";
+}
+
+function normSigToken(s: string): string {
+  return normalize(String(s ?? "")).replace(/\s+/g, "-");
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 && b.size === 0) return 0;
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter++;
+  const union = new Set([...a, ...b]).size;
+  return union > 0 ? inter / union : 0;
+}
+
+/** Compara duas assinaturas com pesos: artigo=0.4, conceito=0.4, pegadinha=0.15, sujeito=0.05 */
+function compareSignatures(a: SemanticSignature | null, b: SemanticSignature | null): number {
+  if (!a || !b) return 0;
+  const artA = normSigToken(a.artigo);
+  const artB = normSigToken(b.artigo);
+  const artScore = artA && artB && artA === artB ? 1 : 0;
+
+  const conceitoScore = jaccard(
+    new Set((a.conceito || []).map(normSigToken).filter(Boolean)),
+    new Set((b.conceito || []).map(normSigToken).filter(Boolean)),
+  );
+
+  const pegA = normSigToken(a.pegadinha);
+  const pegB = normSigToken(b.pegadinha);
+  const pegScore = pegA && pegB && pegA === pegB ? 1 : 0;
+
+  const sujA = normSigToken(a.sujeito);
+  const sujB = normSigToken(b.sujeito);
+  const sujScore = sujA && sujB && sujA === sujB ? 1 : 0;
+
+  return artScore * 0.4 + conceitoScore * 0.4 + pegScore * 0.15 + sujScore * 0.05;
+}
+
+/** Chama DeepSeek (ou Lovable AI) para extrair a assinatura semântica de UMA questão. */
+async function buildSemanticSignature(
+  q: { enunciado: string; alt_correta: string; comentario: string },
+  apiUrl: string,
+  apiModel: string,
+  apiKey: string,
+): Promise<SemanticSignature> {
+  const sigPrompt = `Você é um analista jurídico. Extraia a "assinatura semântica" da questão abaixo em JSON estrito.
+
+QUESTÃO:
+Enunciado: ${q.enunciado}
+Alternativa correta: ${q.alt_correta}
+Comentário: ${q.comentario.substring(0, 1500)}
+
+Retorne EXATAMENTE este JSON (sem markdown, sem prosa):
+{"artigo":"Art. N","conceito":["termo1","termo2","termo3","termo4"],"pegadinha":"categoria-curta-em-kebab-case","sujeito":"entidade-ou-cargo-principal-em-kebab-case"}
+
+Regras:
+- "artigo": o dispositivo legal CENTRAL cobrado (use "Art. N" sem inciso). Se não houver, use "".
+- "conceito": 3 a 5 substantivos/verbos-chave do raciocínio cobrado, em minúsculas, sem stopwords, sem números de artigo. Exemplos: ["promocao","merecimento","interstício","oficial-superior"].
+- "pegadinha": categoria curta da armadilha cobrada. Exemplos: "troca-de-posto", "inversao-competencia", "prazo-trocado", "sujeito-errado", "inclusao-indevida", "exclusao-indevida", "literalidade-direta".
+- "sujeito": entidade ou cargo/posto principal envolvido. Exemplos: "comandante-geral", "tenente-coronel", "cpo", "comissao-promocao".`;
+
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 25_000);
+    const resp = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: apiModel,
+        messages: [{ role: "user", content: sigPrompt }],
+        max_tokens: 300,
+        temperature: 0.0,
+        response_format: { type: "json_object" },
+      }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(tid);
+    if (!resp.ok) {
+      console.warn(`[SIG] HTTP ${resp.status} — usando fallback`);
+      return fallbackSignature(q);
+    }
+    const json = await resp.json();
+    let content = json?.choices?.[0]?.message?.content || "";
+    content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+    const match = content.match(/\{[\s\S]*\}/);
+    if (!match) return fallbackSignature(q);
+    const parsed = JSON.parse(match[0]);
+    return {
+      artigo: String(parsed.artigo ?? "").trim() || extractMainArticle(q.comentario),
+      conceito: Array.isArray(parsed.conceito) ? parsed.conceito.map((c: any) => String(c).trim()).filter(Boolean).slice(0, 6) : [],
+      pegadinha: String(parsed.pegadinha ?? "").trim(),
+      sujeito: String(parsed.sujeito ?? "").trim(),
+    };
+  } catch (err) {
+    console.warn(`[SIG] erro: ${String(err)} — usando fallback`);
+    return fallbackSignature(q);
+  }
+}
+
+/** Fallback determinístico se a IA falhar: extrai do comentário e da alternativa correta. */
+function fallbackSignature(q: { enunciado: string; alt_correta: string; comentario: string }): SemanticSignature {
+  const artigo = extractMainArticle(q.comentario);
+  const stop = new Set(["para","com","sem","pelo","pela","pelos","pelas","sobre","entre","esta","este","essa","esse","aquele","aquela","como","quando","onde","quem","qual","quais","ainda","mais","menos","nao","sim","apenas","tambem","todos","todas","cada","outra","outras","outro","outros","seus","suas","seu","sua","dele","dela","deles","delas","artigo","artigos","lei","leis","decreto","regulamento","conforme","segundo","previsto","previstos","previstas","disposto","dispostos","incluso","inclusos","inclusas"]);
+  const tokens = normalize(q.alt_correta + " " + q.enunciado)
+    .split(" ")
+    .filter(w => w.length > 4 && !stop.has(w));
+  const freq = new Map<string, number>();
+  for (const t of tokens) freq.set(t, (freq.get(t) || 0) + 1);
+  const conceito = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([w]) => w);
+  return { artigo, conceito, pegadinha: "", sujeito: "" };
+}
+
 const DISCIPLINES = [
   {
     disciplina: "Lei nº 2.578/2012",
@@ -685,9 +812,9 @@ serve(async (req) => {
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch existing questions for dedup
+    // Fetch existing questions for dedup (now also brings semantic signature + main article)
     const { data: existingQ } = await supabase
-      .from("questoes").select("id, enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito, assunto")
+      .from("questoes").select("id, enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito, assunto, assinatura_semantica, artigo_principal")
       .eq("disciplina", disc.disciplina).order("id", { ascending: false }).limit(1000);
 
     const existingFingerprints = new Set<string>();
@@ -695,9 +822,11 @@ serve(async (req) => {
     const existingForSimilarity: Array<{ id: number; enunciado: string }> = [];
     const articleCoverage = new Map<string, number>();
     const assuntoCoverage = new Map<string, number>();
+    // Bloco 1: índice de assinaturas semânticas existentes (por artigo) para comparação rápida
+    const existingByArticle = new Map<string, Array<{ id: number; assunto: string; signature: SemanticSignature; enunciado: string }>>();
 
     if (existingQ) {
-      existingQ.forEach((eq) => {
+      existingQ.forEach((eq: any) => {
         existingFingerprints.add(buildFingerprint(eq.enunciado));
         const correctKey = ALT_KEYS[Math.min(Math.max(eq.gabarito || 0, 0), 4)];
         const correctText = eq[correctKey] || "";
@@ -705,12 +834,31 @@ serve(async (req) => {
         existingForSimilarity.push({ id: eq.id, enunciado: eq.enunciado });
 
         const arts = extractAllCitedArticles(eq.comentario || "");
-        arts.forEach((a) => {
+        arts.forEach((a: string) => {
           articleCoverage.set(a, (articleCoverage.get(a) || 0) + 1);
         });
-        
+
         const assunto = eq.assunto || "";
         if (assunto) assuntoCoverage.set(assunto, (assuntoCoverage.get(assunto) || 0) + 1);
+
+        // Bloco 1: indexa por artigo usando assinatura armazenada ou fallback determinístico
+        const storedSig = eq.assinatura_semantica && typeof eq.assinatura_semantica === "object" ? eq.assinatura_semantica as any : null;
+        const sig: SemanticSignature = storedSig
+          ? {
+              artigo: String(storedSig.artigo ?? "") || (eq.artigo_principal || extractMainArticle(eq.comentario || "")),
+              conceito: Array.isArray(storedSig.conceito) ? storedSig.conceito : [],
+              pegadinha: String(storedSig.pegadinha ?? ""),
+              sujeito: String(storedSig.sujeito ?? ""),
+            }
+          : {
+              artigo: eq.artigo_principal || extractMainArticle(eq.comentario || ""),
+              conceito: fallbackSignature({ enunciado: eq.enunciado, alt_correta: correctText, comentario: eq.comentario || "" }).conceito,
+              pegadinha: "",
+              sujeito: "",
+            };
+        const artKey = normSigToken(sig.artigo) || "__sem_artigo__";
+        if (!existingByArticle.has(artKey)) existingByArticle.set(artKey, []);
+        existingByArticle.get(artKey)!.push({ id: eq.id, assunto: eq.assunto || "", signature: sig, enunciado: eq.enunciado });
       });
     }
 
@@ -1367,9 +1515,54 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         }
       }
 
+      // ── Bloco 1: Dedup semântica forte (DeepSeek signature + Jaccard ponderada) ──
+      // Constrói assinatura via IA (com fallback determinístico) e compara com questões
+      // do mesmo artigo. Limiares: ≥0.80 descarta; 0.60–0.80 descarta com flag de reescrita; <0.60 aceita.
+      const newSig = await buildSemanticSignature(
+        { enunciado: q.enunciado, alt_correta: correctAltText, comentario: q.comentario },
+        apiUrl, apiModel, apiKey,
+      );
+      const artigoPrincipal = newSig.artigo || extractMainArticle(q.comentario);
+      const artKey = normSigToken(artigoPrincipal) || "__sem_artigo__";
+      const candidates = [
+        ...(existingByArticle.get(artKey) || []),
+        ...(existingByArticle.get("__sem_artigo__") || []), // também compara contra os sem artigo
+      ];
+
+      let highestSim = 0;
+      let highestId: number | null = null;
+      for (const cand of candidates) {
+        // pré-filtro barato: se assunto difere muito, comparar mesmo assim só se artigo bate exatamente
+        const sim = compareSignatures(newSig, cand.signature);
+        if (sim > highestSim) { highestSim = sim; highestId = cand.id; }
+        if (sim >= 0.80) break; // já basta para descartar
+      }
+
+      if (highestSim >= 0.80) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Duplicidade semântica forte (sim=${highestSim.toFixed(2)}) com Q#${highestId}` });
+        console.log(`[GERAR] Q${idx+1} descartada: dup semântica ${highestSim.toFixed(2)} vs #${highestId}`);
+        continue;
+      }
+      if (highestSim >= 0.60) {
+        // zona cinza: descarta deste lote mas marca para reescrita futura com novo enfoque
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Similaridade média (${highestSim.toFixed(2)}) com Q#${highestId} — reescrever com novo ângulo` });
+        console.log(`[GERAR] Q${idx+1} descartada: sim média ${highestSim.toFixed(2)} vs #${highestId} (reescrever)`);
+        continue;
+      }
+
+      // Persiste assinatura + artigo principal junto com a questão
+      q.assinatura_semantica = newSig;
+      q.artigo_principal = artigoPrincipal || null;
+
+      // Adiciona ao índice em memória para que próximas questões DESTE lote já comparem contra esta
+      if (!existingByArticle.has(artKey)) existingByArticle.set(artKey, []);
+      existingByArticle.get(artKey)!.push({ id: -1 - idx, assunto: q.assunto, signature: newSig, enunciado: q.enunciado });
+
       const approvedArts = extractAllCitedArticles(q.comentario);
       validQuestions.push(q);
-      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} (literal: ${literalProofScore.toFixed(2)})`);
+      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} | sig.artigo=${newSig.artigo} sig.peg=${newSig.pegadinha} maxSim=${highestSim.toFixed(2)}`);
     }
 
     // Insert valid questions

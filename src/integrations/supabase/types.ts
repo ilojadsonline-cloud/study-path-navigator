@@ -315,6 +315,8 @@ export type Database = {
           alt_c: string
           alt_d: string
           alt_e: string
+          artigo_principal: string | null
+          assinatura_semantica: Json | null
           assunto: string
           comentario: string
           created_at: string
@@ -330,6 +332,8 @@ export type Database = {
           alt_c: string
           alt_d: string
           alt_e: string
+          artigo_principal?: string | null
+          assinatura_semantica?: Json | null
           assunto: string
           comentario: string
           created_at?: string
@@ -345,6 +349,8 @@ export type Database = {
           alt_c?: string
           alt_d?: string
           alt_e?: string
+          artigo_principal?: string | null
+          assinatura_semantica?: Json | null
           assunto?: string
           comentario?: string
           created_at?: string
