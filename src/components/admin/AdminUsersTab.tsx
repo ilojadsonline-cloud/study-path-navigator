@@ -206,7 +206,7 @@ export function AdminUsersTab() {
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
               ) : users.map((u) => {
                 const daysLeft = getDaysRemaining(u.subscription_end);
                 return (
