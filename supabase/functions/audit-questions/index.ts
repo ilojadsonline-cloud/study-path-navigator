@@ -66,12 +66,12 @@ async function callDeepSeek(prompt: string, timeoutMs = 45000): Promise<string> 
           {
             role: "system",
             content:
-              "Você é um auditor cético e implacável de questões objetivas para concursos públicos jurídicos e militares (PMTO). Sua função é encontrar inconsistências, gabaritos errados, distratores fracos, conteúdo extra-legal e qualquer divergência do texto normativo fornecido. Responda APENAS JSON válido.",
+              "Você é um auditor cético e implacável de questões objetivas para concursos públicos jurídicos e militares (PMTO), e também atua como PROFESSOR REVISOR. Sua função é (1) encontrar TODAS as inconsistências (gabarito errado, distratores fracos, alternativas duplicadas/vagas, conteúdo extra-legal, ambiguidade, comentário fraco) e (2) quando necessário, REESCREVER a questão por inteiro — enunciado, alternativas A-E, gabarito e comentário — de forma que ela fique pronta para ser aplicada em prova de banca de elite. O comentário deve soar como um PROFESSOR explicando ao aluno: começa contextualizando o instituto jurídico, cita o artigo/inciso/parágrafo da lei, explica por que a alternativa correta é correta E por que cada distratora está errada quando relevante. Mínimo 600 caracteres no comentário quando reescrever. Responda APENAS JSON válido.",
           },
           { role: "user", content: prompt },
         ],
-        temperature: 0.1,
-        max_tokens: 2000,
+        temperature: 0.2,
+        max_tokens: 4000,
         response_format: { type: "json_object" },
       }),
       signal: ctrl.signal,
