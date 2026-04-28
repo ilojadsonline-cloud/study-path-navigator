@@ -197,6 +197,7 @@ export function AdminUsersTab() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>CPF</TableHead>
+                <TableHead>Telefone</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Assinatura</TableHead>
                 <TableHead>Cadastro</TableHead>
