@@ -170,12 +170,22 @@ export function AdminAuditoriaTab() {
     toast.info("Cancelando...");
   }
 
+  // Remove a auditoria da lista atual se ela não pertence mais ao filtro ativo
+  function removeFromListIfNeeded(auditId: number, newStatus: string) {
+    if (filterStatus === "all" || filterStatus === newStatus) {
+      setAudits(prev => prev.map(x => x.id === auditId ? { ...x, status: newStatus } : x));
+    } else {
+      setAudits(prev => prev.filter(x => x.id !== auditId));
+    }
+  }
+
   // Aplica a sugestão da IA tal como veio
   async function applyAISuggestion(a: AuditRow) {
     if (!a.proposed_patch) {
       await supabase.from("question_audits").update({ status: "approved" }).eq("id", a.id);
       toast.success("Auditoria marcada como aprovada");
-      loadAudits();
+      removeFromListIfNeeded(a.id, "approved");
+      setDetail(null); setQuestao(null); setForm(null);
       return;
     }
     const { data: q } = await supabase.from("questoes").select("*").eq("id", a.questao_id).single();
@@ -187,13 +197,21 @@ export function AdminAuditoriaTab() {
         audit_id: a.id,
       } as any);
     }
-    await supabase.from("questoes").update(a.proposed_patch).eq("id", a.questao_id);
+    // Sanitiza patch (gabarito 0-4)
+    const patch: any = { ...(a.proposed_patch as any) };
+    if ("gabarito" in patch) {
+      const g = Number(patch.gabarito);
+      if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+    }
+    const { error: upErr } = await supabase.from("questoes").update(patch).eq("id", a.questao_id);
+    if (upErr) { toast.error("Falha ao atualizar questão: " + upErr.message); return; }
     await supabase.from("question_audits").update({
       status: "auto_fixed",
-      applied_patch: a.proposed_patch,
+      applied_patch: patch,
     }).eq("id", a.id);
-    toast.success("Sugestão da IA aplicada à questão");
-    loadAudits();
+    toast.success(`Questão #${a.questao_id} corrigida pela IA`);
+    removeFromListIfNeeded(a.id, "auto_fixed");
+    setDetail(null); setQuestao(null); setForm(null);
   }
 
   // Aplica TODAS as sugestões pendentes (manual_review + auto_fixed sem aplicar) em lote
