@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_jobs: {
+        Row: {
+          auto_fixed: number
+          created_at: string
+          errors: number
+          flagged: number
+          id: string
+          last_error: string | null
+          processed: number
+          scope: Json
+          status: string
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_fixed?: number
+          created_at?: string
+          errors?: number
+          flagged?: number
+          id?: string
+          last_error?: string | null
+          processed?: number
+          scope?: Json
+          status?: string
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_fixed?: number
+          created_at?: string
+          errors?: number
+          flagged?: number
+          id?: string
+          last_error?: string | null
+          processed?: number
+          scope?: Json
+          status?: string
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cronogramas: {
         Row: {
           atividades: Json
@@ -226,6 +271,57 @@ export type Database = {
         }
         Relationships: []
       }
+      question_audits: {
+        Row: {
+          ai_summary: string | null
+          applied_patch: Json | null
+          audited_by_ai: boolean
+          confidence: number | null
+          created_at: string
+          id: number
+          issues: Json
+          proposed_patch: Json | null
+          questao_id: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          risk_level: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          applied_patch?: Json | null
+          audited_by_ai?: boolean
+          confidence?: number | null
+          created_at?: string
+          id?: number
+          issues?: Json
+          proposed_patch?: Json | null
+          questao_id: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_level?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_summary?: string | null
+          applied_patch?: Json | null
+          audited_by_ai?: boolean
+          confidence?: number | null
+          created_at?: string
+          id?: number
+          issues?: Json
+          proposed_patch?: Json | null
+          questao_id?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_level?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       question_reports: {
         Row: {
           admin_notes: string | null
@@ -304,6 +400,47 @@ export type Database = {
             columns: ["questao_id"]
             isOneToOne: true
             referencedRelation: "questoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_versions: {
+        Row: {
+          audit_id: number | null
+          change_reason: string | null
+          changed_by: string | null
+          created_at: string
+          id: number
+          questao_id: number
+          snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          audit_id?: number | null
+          change_reason?: string | null
+          changed_by?: string | null
+          created_at?: string
+          id?: number
+          questao_id: number
+          snapshot: Json
+          version_number?: number
+        }
+        Update: {
+          audit_id?: number | null
+          change_reason?: string | null
+          changed_by?: string | null
+          created_at?: string
+          id?: number
+          questao_id?: number
+          snapshot?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_versions_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "question_audits"
             referencedColumns: ["id"]
           },
         ]
