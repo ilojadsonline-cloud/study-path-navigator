@@ -219,6 +219,7 @@ export function AdminUsersTab() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">{u.email || "—"}</TableCell>
                     <TableCell className="text-muted-foreground text-xs font-mono">{u.cpf}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{u.telefone || "—"}</TableCell>
                     <TableCell>
                       {u.is_blocked ? (
                         <Badge variant="destructive" className="text-[10px]">Bloqueado</Badge>
