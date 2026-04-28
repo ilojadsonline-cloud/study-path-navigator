@@ -276,7 +276,8 @@ export function AdminAuditoriaTab() {
   async function dismissAudit(a: AuditRow) {
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Auditoria descartada (questão mantida como está)");
-    loadAudits();
+    removeFromListIfNeeded(a.id, "rejected");
+    setDetail(null); setQuestao(null); setForm(null);
   }
 
   async function revertAudit(a: AuditRow) {
@@ -293,19 +294,20 @@ export function AdminAuditoriaTab() {
     await supabase.from("questoes").update(rest).eq("id", a.questao_id);
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Questão revertida ao estado anterior");
-    loadAudits();
+    removeFromListIfNeeded(a.id, "rejected");
+    setDetail(null); setQuestao(null); setForm(null);
   }
 
   async function deleteQuestao(a: AuditRow) {
-    if (!confirm(`Excluir definitivamente a questão #${a.questao_id}? Essa ação não pode ser desfeita.`)) return;
+    if (!confirm(`Excluir definitivamente a questão #${a.questao_id} do banco? Essa ação não pode ser desfeita.`)) return;
     const { error } = await supabase.from("questoes").delete().eq("id", a.questao_id);
     if (error) return toast.error(error.message);
     await supabase.from("question_audits").update({ status: "rejected", ai_summary: "Questão excluída pelo admin" }).eq("id", a.id);
-    toast.success("Questão excluída");
+    toast.success(`Questão #${a.questao_id} excluída do banco`);
     setDetail(null);
     setQuestao(null);
     setForm(null);
-    loadAudits();
+    setAudits(prev => prev.filter(x => x.id !== a.id));
   }
 
   async function openDetail(a: AuditRow) {
