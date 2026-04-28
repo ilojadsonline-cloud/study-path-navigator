@@ -1515,9 +1515,54 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         }
       }
 
+      // ── Bloco 1: Dedup semântica forte (DeepSeek signature + Jaccard ponderada) ──
+      // Constrói assinatura via IA (com fallback determinístico) e compara com questões
+      // do mesmo artigo. Limiares: ≥0.80 descarta; 0.60–0.80 descarta com flag de reescrita; <0.60 aceita.
+      const newSig = await buildSemanticSignature(
+        { enunciado: q.enunciado, alt_correta: correctAltText, comentario: q.comentario },
+        apiUrl, apiModel, apiKey,
+      );
+      const artigoPrincipal = newSig.artigo || extractMainArticle(q.comentario);
+      const artKey = normSigToken(artigoPrincipal) || "__sem_artigo__";
+      const candidates = [
+        ...(existingByArticle.get(artKey) || []),
+        ...(existingByArticle.get("__sem_artigo__") || []), // também compara contra os sem artigo
+      ];
+
+      let highestSim = 0;
+      let highestId: number | null = null;
+      for (const cand of candidates) {
+        // pré-filtro barato: se assunto difere muito, comparar mesmo assim só se artigo bate exatamente
+        const sim = compareSignatures(newSig, cand.signature);
+        if (sim > highestSim) { highestSim = sim; highestId = cand.id; }
+        if (sim >= 0.80) break; // já basta para descartar
+      }
+
+      if (highestSim >= 0.80) {
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Duplicidade semântica forte (sim=${highestSim.toFixed(2)}) com Q#${highestId}` });
+        console.log(`[GERAR] Q${idx+1} descartada: dup semântica ${highestSim.toFixed(2)} vs #${highestId}`);
+        continue;
+      }
+      if (highestSim >= 0.60) {
+        // zona cinza: descarta deste lote mas marca para reescrita futura com novo enfoque
+        discarded++;
+        questoesRevisaoManual.push({ motivo: `Similaridade média (${highestSim.toFixed(2)}) com Q#${highestId} — reescrever com novo ângulo` });
+        console.log(`[GERAR] Q${idx+1} descartada: sim média ${highestSim.toFixed(2)} vs #${highestId} (reescrever)`);
+        continue;
+      }
+
+      // Persiste assinatura + artigo principal junto com a questão
+      q.assinatura_semantica = newSig;
+      q.artigo_principal = artigoPrincipal || null;
+
+      // Adiciona ao índice em memória para que próximas questões DESTE lote já comparem contra esta
+      if (!existingByArticle.has(artKey)) existingByArticle.set(artKey, []);
+      existingByArticle.get(artKey)!.push({ id: -1 - idx, assunto: q.assunto, signature: newSig, enunciado: q.enunciado });
+
       const approvedArts = extractAllCitedArticles(q.comentario);
       validQuestions.push(q);
-      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} (literal: ${literalProofScore.toFixed(2)})`);
+      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} | sig.artigo=${newSig.artigo} sig.peg=${newSig.pegadinha} maxSim=${highestSim.toFixed(2)}`);
     }
 
     // Insert valid questions
