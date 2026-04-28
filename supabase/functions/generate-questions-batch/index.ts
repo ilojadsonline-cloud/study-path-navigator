@@ -1575,6 +1575,122 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} | sig.artigo=${newSig.artigo} sig.peg=${newSig.pegadinha} maxSim=${highestSim.toFixed(2)}`);
     }
 
+    // ===== AUDITORIA CRUZADA PÓS-GERAÇÃO =====
+    // Para cada questão aprovada na dedup, roda mini-auditoria cética em paralelo.
+    // - issue high → descarta + revisão manual
+    // - confidence ≥ 0.9 + risco low + patch → aplica patch e mantém
+    // - caso contrário → mantém como está
+    let autoCorrigidas = 0;
+    if (validQuestions.length > 0) {
+      console.log(`[AUDIT-XGEN] Iniciando auditoria cruzada de ${validQuestions.length} questões...`);
+      const auditPromises = validQuestions.map(async (q, i) => {
+        const altsTxt = ["A","B","C","D","E"].map(l => `${l}) ${q[`alt_${l.toLowerCase()}`]}`).join("\n");
+        const correta = ["A","B","C","D","E"][q.gabarito] ?? "?";
+        const lawSnippet = String(leiSeca || "").slice(0, 7000);
+        const auditPrompt = `Você audita questões objetivas de concurso jurídico-militar (PMTO). Seja CÉTICO.
+
+TEXTO LEGAL DE REFERÊNCIA:
+"""${lawSnippet}"""
+
+QUESTÃO:
+${q.enunciado}
+
+${altsTxt}
+
+Gabarito declarado: ${correta}
+Comentário: ${q.comentario}
+
+Verifique:
+1. Gabarito está correto pela letra do texto legal?
+2. Existe outra alternativa também correta? Ou nenhuma correta?
+3. Algum distrator é absurdo / óbvio demais / vazio?
+4. Comentário cita base legal coerente com o gabarito?
+5. Há afirmação extra-legal/inventada?
+
+Responda APENAS JSON:
+{
+  "confidence": 0.0-1.0,
+  "risk_level": "low" | "medium" | "high",
+  "issues": [{"type":"...","severity":"low|medium|high","description":"..."}],
+  "proposed_patch": null | {"gabarito"?:0-4,"comentario"?:"...","alt_a"?:"...","alt_b"?:"...","alt_c"?:"...","alt_d"?:"...","alt_e"?:"..."},
+  "ai_summary": "1 frase"
+}`;
+
+        try {
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), 18000);
+          const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Deno.env.get("DEEPSEEK_API_KEY")}` },
+            body: JSON.stringify({
+              model: "deepseek-chat",
+              messages: [
+                { role: "system", content: "Você é um auditor cético de questões. Responda apenas JSON válido." },
+                { role: "user", content: auditPrompt },
+              ],
+              temperature: 0.1, max_tokens: 1200,
+              response_format: { type: "json_object" },
+            }),
+            signal: ctrl.signal,
+          });
+          clearTimeout(t);
+          if (!res.ok) return { idx: i, ok: true }; // fail-open: não bloqueia em erro do auditor
+          const data = await res.json();
+          let raw = String(data?.choices?.[0]?.message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+          let parsed: any = null;
+          try { parsed = JSON.parse(raw); } catch {
+            const m = raw.match(/\{[\s\S]*\}/);
+            if (m) try { parsed = JSON.parse(m[0]); } catch {}
+          }
+          if (!parsed) return { idx: i, ok: true };
+
+          const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
+          const risk = ["low","medium","high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
+          const issues = Array.isArray(parsed.issues) ? parsed.issues : [];
+          const hasHigh = issues.some((it: any) => String(it?.severity).toLowerCase() === "high");
+          let patch = parsed.proposed_patch && typeof parsed.proposed_patch === "object" ? parsed.proposed_patch : null;
+          if (patch) {
+            const allowed = ["gabarito","comentario","alt_a","alt_b","alt_c","alt_d","alt_e"];
+            const clean: any = {};
+            for (const k of allowed) if (k in patch) clean[k] = patch[k];
+            if ("gabarito" in clean) {
+              const g = Number(clean.gabarito);
+              if (!Number.isInteger(g) || g < 0 || g > 4) delete clean.gabarito;
+            }
+            patch = Object.keys(clean).length ? clean : null;
+          }
+          return {
+            idx: i, ok: !hasHigh,
+            patch: (conf >= 0.9 && risk === "low" && patch) ? patch : null,
+            summary: String(parsed.ai_summary ?? ""),
+            issues, conf, risk,
+          };
+        } catch {
+          return { idx: i, ok: true }; // fail-open em timeout
+        }
+      });
+
+      const auditResults = await Promise.all(auditPromises);
+      const finalQuestions: any[] = [];
+      for (const r of auditResults) {
+        const q = validQuestions[r.idx];
+        if (!r.ok) {
+          discarded++;
+          questoesRevisaoManual.push({ motivo: `Auditor IA detectou issue grave: ${r.summary || "ver issues"}` });
+          console.log(`[AUDIT-XGEN] Q${r.idx+1} DESCARTADA por auditor cruzado: ${r.summary}`);
+          continue;
+        }
+        if (r.patch) {
+          Object.assign(q, r.patch);
+          autoCorrigidas++;
+          console.log(`[AUDIT-XGEN] Q${r.idx+1} AUTO-CORRIGIDA: ${Object.keys(r.patch).join(",")}`);
+        }
+        finalQuestions.push(q);
+      }
+      validQuestions.length = 0;
+      validQuestions.push(...finalQuestions);
+    }
+
     // Insert valid questions
     let insertedCount = 0;
     if (validQuestions.length > 0) {
