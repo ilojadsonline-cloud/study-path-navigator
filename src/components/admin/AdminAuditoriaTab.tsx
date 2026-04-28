@@ -301,19 +301,28 @@ export function AdminAuditoriaTab() {
       <Card className="glass-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-primary" />
-            Auditoria de questões pela IA
+            <ShieldCheck className="w-5 h-5 text-primary" />
+            Validação Avançada de Questões (IA)
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            A IA revisa cada questão buscando erros (gabarito errado, alternativa duplicada, comentário fraco). 
-            Você pode aplicar a sugestão dela, editar manualmente ou excluir a questão.
+            Aprimoramento da validação tradicional: a IA revisa cada questão buscando erros de gabarito,
+            alternativas duplicadas, comentário fraco ou divergência com a lei. Você pode aplicar a sugestão dela,
+            editar manualmente ou excluir a questão.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <p className="text-sm text-muted-foreground mb-2">Disciplinas a auditar (vazio = todas):</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-muted-foreground">Disciplinas a auditar (vazio = todas):</p>
+              <Button size="sm" variant="ghost" onClick={loadDisciplinas} className="h-6 text-xs">
+                <RefreshCw className="w-3 h-3 mr-1" /> Atualizar
+              </Button>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {DISCIPLINAS.map(d => (
+              {disciplinas.length === 0 && (
+                <span className="text-xs text-muted-foreground italic">Carregando disciplinas...</span>
+              )}
+              {disciplinas.map(d => (
                 <Badge
                   key={d}
                   variant={selDisc.includes(d) ? "default" : "outline"}
