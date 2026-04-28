@@ -196,6 +196,65 @@ export function AdminAuditoriaTab() {
     loadAudits();
   }
 
+  // Aplica TODAS as sugestões pendentes (manual_review + auto_fixed sem aplicar) em lote
+  async function applyAllAISuggestions() {
+    if (!confirm("Aplicar TODAS as sugestões pendentes da IA às questões? Cada questão original será salva como snapshot e pode ser revertida individualmente.")) return;
+    setBulkApplying(true);
+    try {
+      const { data: pending, error } = await supabase
+        .from("question_audits")
+        .select("*")
+        .in("status", ["manual_review", "pending"])
+        .not("proposed_patch", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      if (error) throw error;
+      const list = (pending ?? []) as AuditRow[];
+      setBulkProgress({ done: 0, total: list.length });
+      if (list.length === 0) {
+        toast.info("Não há sugestões pendentes da IA para aplicar.");
+        return;
+      }
+      let applied = 0, failed = 0;
+      for (const a of list) {
+        try {
+          const { data: q } = await supabase.from("questoes").select("*").eq("id", a.questao_id).single();
+          if (q) {
+            await supabase.from("question_versions").insert({
+              questao_id: a.questao_id,
+              snapshot: q,
+              change_reason: "bulk_apply_ai_suggestion",
+              audit_id: a.id,
+            } as any);
+          }
+          // Sanitiza patch (gabarito 0-4)
+          const patch: any = { ...(a.proposed_patch as any) };
+          if ("gabarito" in patch) {
+            const g = Number(patch.gabarito);
+            if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+          }
+          const { error: upErr } = await supabase.from("questoes").update(patch).eq("id", a.questao_id);
+          if (upErr) throw upErr;
+          await supabase.from("question_audits").update({
+            status: "auto_fixed",
+            applied_patch: patch,
+          }).eq("id", a.id);
+          applied++;
+        } catch (e: any) {
+          failed++;
+          console.error("bulk apply falhou", a.id, e?.message);
+        }
+        setBulkProgress(p => ({ ...p, done: p.done + 1 }));
+      }
+      toast.success(`Concluído: ${applied} aplicadas, ${failed} falharam`);
+      loadAudits();
+    } catch (e: any) {
+      toast.error("Falha no lote: " + (e?.message ?? e));
+    } finally {
+      setBulkApplying(false);
+    }
+  }
+
   async function dismissAudit(a: AuditRow) {
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Auditoria descartada (questão mantida como está)");
