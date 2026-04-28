@@ -1582,12 +1582,13 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
     // - caso contrário → mantém como está
     let autoCorrigidas = 0;
     if (validQuestions.length > 0) {
-      console.log(`[AUDIT-XGEN] Iniciando auditoria cruzada de ${validQuestions.length} questões...`);
-      const auditPromises = validQuestions.map(async (q, i) => {
+      console.log(`[AUDIT-XGEN] Iniciando auditoria cruzada de ${validQuestions.length} questões (sequencial p/ estabilidade)...`);
+
+      const buildAuditPrompt = (q: any) => {
         const altsTxt = ["A","B","C","D","E"].map(l => `${l}) ${q[`alt_${l.toLowerCase()}`]}`).join("\n");
         const correta = ["A","B","C","D","E"][q.gabarito] ?? "?";
         const lawSnippet = String(leiSeca || "").slice(0, 7000);
-        const auditPrompt = `Você audita questões objetivas de concurso jurídico-militar (PMTO). Seja CÉTICO.
+        return `Você audita questões objetivas de concurso jurídico-militar (PMTO). Seja CÉTICO.
 
 TEXTO LEGAL DE REFERÊNCIA:
 """${lawSnippet}"""
@@ -1615,10 +1616,12 @@ Responda APENAS JSON:
   "proposed_patch": null | {"gabarito"?:0-4,"comentario"?:"...","alt_a"?:"...","alt_b"?:"...","alt_c"?:"...","alt_d"?:"...","alt_e"?:"..."},
   "ai_summary": "1 frase"
 }`;
+      };
 
+      const callAuditor = async (prompt: string, timeoutMs: number): Promise<any | null> => {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), timeoutMs);
         try {
-          const ctrl = new AbortController();
-          const t = setTimeout(() => ctrl.abort(), 18000);
           const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Deno.env.get("DEEPSEEK_API_KEY")}` },
@@ -1626,51 +1629,75 @@ Responda APENAS JSON:
               model: "deepseek-chat",
               messages: [
                 { role: "system", content: "Você é um auditor cético de questões. Responda apenas JSON válido." },
-                { role: "user", content: auditPrompt },
+                { role: "user", content: prompt },
               ],
               temperature: 0.1, max_tokens: 1200,
               response_format: { type: "json_object" },
             }),
             signal: ctrl.signal,
           });
-          clearTimeout(t);
-          if (!res.ok) return { idx: i, ok: true }; // fail-open: não bloqueia em erro do auditor
+          if (!res.ok) return null;
           const data = await res.json();
           let raw = String(data?.choices?.[0]?.message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-          let parsed: any = null;
-          try { parsed = JSON.parse(raw); } catch {
+          try { return JSON.parse(raw); } catch {
             const m = raw.match(/\{[\s\S]*\}/);
-            if (m) try { parsed = JSON.parse(m[0]); } catch {}
+            if (m) { try { return JSON.parse(m[0]); } catch {} }
           }
-          if (!parsed) return { idx: i, ok: true };
-
-          const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
-          const risk = ["low","medium","high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
-          const issues = Array.isArray(parsed.issues) ? parsed.issues : [];
-          const hasHigh = issues.some((it: any) => String(it?.severity).toLowerCase() === "high");
-          let patch = parsed.proposed_patch && typeof parsed.proposed_patch === "object" ? parsed.proposed_patch : null;
-          if (patch) {
-            const allowed = ["gabarito","comentario","alt_a","alt_b","alt_c","alt_d","alt_e"];
-            const clean: any = {};
-            for (const k of allowed) if (k in patch) clean[k] = patch[k];
-            if ("gabarito" in clean) {
-              const g = Number(clean.gabarito);
-              if (!Number.isInteger(g) || g < 0 || g > 4) delete clean.gabarito;
-            }
-            patch = Object.keys(clean).length ? clean : null;
-          }
-          return {
-            idx: i, ok: !hasHigh,
-            patch: (conf >= 0.9 && risk === "low" && patch) ? patch : null,
-            summary: String(parsed.ai_summary ?? ""),
-            issues, conf, risk,
-          };
+          return null;
         } catch {
-          return { idx: i, ok: true }; // fail-open em timeout
+          return null;
+        } finally {
+          clearTimeout(t);
         }
-      });
+      };
 
-      const auditResults = await Promise.all(auditPromises);
+      const auditOne = async (q: any, i: number) => {
+        const prompt = buildAuditPrompt(q);
+        // 1ª tentativa: 15s. Se falhar, retry rápido de 12s.
+        let parsed = await callAuditor(prompt, 15000);
+        if (!parsed) {
+          await new Promise(r => setTimeout(r, 400));
+          parsed = await callAuditor(prompt, 12000);
+        }
+        if (!parsed) {
+          console.log(`[AUDIT-XGEN] Q${i+1} sem resposta do auditor após retry — fail-open, mantém`);
+          return { idx: i, ok: true, patch: null, summary: "auditor indisponível", issues: [], conf: 0, risk: "medium" };
+        }
+
+        const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
+        const risk = ["low","medium","high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
+        const issues = Array.isArray(parsed.issues) ? parsed.issues : [];
+        const hasHigh = issues.some((it: any) => String(it?.severity).toLowerCase() === "high");
+        let patch: any = parsed.proposed_patch && typeof parsed.proposed_patch === "object" ? parsed.proposed_patch : null;
+        if (patch) {
+          const allowed = ["gabarito","comentario","alt_a","alt_b","alt_c","alt_d","alt_e"];
+          const clean: any = {};
+          for (const k of allowed) if (k in patch) clean[k] = patch[k];
+          if ("gabarito" in clean) {
+            const g = Number(clean.gabarito);
+            if (!Number.isInteger(g) || g < 0 || g > 4) delete clean.gabarito;
+          }
+          patch = Object.keys(clean).length ? clean : null;
+        }
+        return {
+          idx: i, ok: !hasHigh,
+          patch: (conf >= 0.9 && risk === "low" && patch) ? patch : null,
+          summary: String(parsed.ai_summary ?? ""),
+          issues, conf, risk,
+        };
+      };
+
+      // Processa SEQUENCIALMENTE (max 2 questões → ~30s, dentro do budget) para não saturar a API
+      const auditResults: any[] = [];
+      for (let i = 0; i < validQuestions.length; i++) {
+        try {
+          auditResults.push(await auditOne(validQuestions[i], i));
+        } catch (e) {
+          console.log(`[AUDIT-XGEN] Erro inesperado Q${i+1}: ${e instanceof Error ? e.message : String(e)} — fail-open`);
+          auditResults.push({ idx: i, ok: true, patch: null, summary: "erro absorvido", issues: [], conf: 0, risk: "medium" });
+        }
+      }
+
       const finalQuestions: any[] = [];
       for (const r of auditResults) {
         const q = validQuestions[r.idx];
