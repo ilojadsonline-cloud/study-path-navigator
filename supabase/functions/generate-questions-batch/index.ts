@@ -1713,7 +1713,7 @@ Responda APENAS JSON:
       detalhes: {
         total_processado: rawQuestions.length,
         questoes_criadas: insertedCount,
-        questoes_corrigidas: 0,
+        questoes_corrigidas: autoCorrigidas,
         questoes_revisao_manual: questoesRevisaoManual,
         erros_encontrados: errosEncontrados,
       },
