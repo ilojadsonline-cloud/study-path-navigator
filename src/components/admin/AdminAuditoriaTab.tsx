@@ -365,11 +365,12 @@ export function AdminAuditoriaTab() {
         status: "approved",
         applied_patch: patch,
       }).eq("id", detail.id);
-      toast.success("Questão corrigida e auditoria aprovada");
+      toast.success(`Questão #${detail.questao_id} corrigida e auditoria aprovada`);
+      const auditId = detail.id;
       setDetail(null);
       setForm(null);
       setQuestao(null);
-      loadAudits();
+      removeFromListIfNeeded(auditId, "approved");
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao salvar");
     } finally {
