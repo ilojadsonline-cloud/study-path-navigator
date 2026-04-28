@@ -87,7 +87,17 @@ export function AdminAuditoriaTab() {
   const [questao, setQuestao] = useState<any>(null);
   const [form, setForm] = useState<QuestaoForm | null>(null);
   const [saving, setSaving] = useState(false);
+  const [disciplinas, setDisciplinas] = useState<string[]>([]);
   const stopRef = useRef(false);
+
+  async function loadDisciplinas() {
+    const { data, error } = await supabase.rpc("list_disciplinas");
+    if (error) {
+      toast.error("Erro ao carregar disciplinas: " + error.message);
+      return;
+    }
+    setDisciplinas((data ?? []).map((r: any) => r.disciplina).filter(Boolean));
+  }
 
   async function loadAudits() {
     setLoading(true);
@@ -99,6 +109,7 @@ export function AdminAuditoriaTab() {
     setLoading(false);
   }
 
+  useEffect(() => { loadDisciplinas(); }, []);
   useEffect(() => { loadAudits(); }, [filterStatus]);
 
   async function startJob() {
