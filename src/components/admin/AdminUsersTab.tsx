@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 interface EnrichedUser {
-  user_id: string; nome: string; cpf: string; email: string | null; created_at: string;
+  user_id: string; nome: string; cpf: string; email: string | null; telefone: string | null; created_at: string;
   is_admin: boolean; is_blocked: boolean; subscribed: boolean; subscription_end: string | null;
   trial_expired?: boolean;
 }
@@ -197,6 +197,7 @@ export function AdminUsersTab() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>CPF</TableHead>
+                <TableHead>Telefone</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Assinatura</TableHead>
                 <TableHead>Cadastro</TableHead>
@@ -205,7 +206,7 @@ export function AdminUsersTab() {
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
               ) : users.map((u) => {
                 const daysLeft = getDaysRemaining(u.subscription_end);
                 return (
@@ -218,6 +219,7 @@ export function AdminUsersTab() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">{u.email || "—"}</TableCell>
                     <TableCell className="text-muted-foreground text-xs font-mono">{u.cpf}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{u.telefone || "—"}</TableCell>
                     <TableCell>
                       {u.is_blocked ? (
                         <Badge variant="destructive" className="text-[10px]">Bloqueado</Badge>
