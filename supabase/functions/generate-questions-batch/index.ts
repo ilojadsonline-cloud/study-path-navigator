@@ -1718,6 +1718,10 @@ Responda APENAS JSON:
       validQuestions.length = 0;
       validQuestions.push(...finalQuestions);
     }
+    } catch (auditErr) {
+      // Falha catastrófica do auditor cruzado: NÃO bloqueia INSERT — apenas loga
+      console.error(`[AUDIT-XGEN] Falha catastrófica absorvida: ${auditErr instanceof Error ? auditErr.message : String(auditErr)} — prosseguindo com INSERT sem auto-correção`);
+    }
 
     // Insert valid questions
     let insertedCount = 0;
