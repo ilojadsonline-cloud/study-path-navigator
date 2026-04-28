@@ -312,7 +312,7 @@ serve(async (req) => {
       const scope = {
         disciplinas: Array.isArray(body.disciplinas) ? body.disciplinas : null,
         only_unaudited: body.only_unaudited !== false,
-        limit: Math.min(Number(body.limit ?? 200), 1000),
+        limit: Math.min(Number(body.limit ?? 200), 100000),
       };
 
       // Conta total elegível
