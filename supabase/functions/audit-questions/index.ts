@@ -361,20 +361,48 @@ serve(async (req) => {
       });
     }
 
-    // IDs já auditados (para only_unaudited)
+    // IDs já auditados (paginado para superar limite default de 1000 do PostgREST)
     let excludeIds = new Set<number>();
     if (job.scope?.only_unaudited) {
-      const { data: audited } = await supabase
-        .from("question_audits").select("questao_id").limit(50000);
-      excludeIds = new Set((audited ?? []).map((r: any) => r.questao_id));
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error: pErr } = await supabase
+          .from("question_audits")
+          .select("questao_id")
+          .order("questao_id", { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (pErr || !page || page.length === 0) break;
+        for (const r of page as any[]) excludeIds.add(r.questao_id);
+        if (page.length < PAGE) break;
+        from += PAGE;
+        if (from >= 200000) break; // safety
+      }
     }
 
-    let qBuilder = supabase.from("questoes").select("*").order("id", { ascending: true });
-    if (job.scope?.disciplinas?.length) qBuilder = qBuilder.in("disciplina", job.scope.disciplinas);
-    qBuilder = qBuilder.range(0, Math.max(0, MAX_PER_INVOCATION * 4 - 1));
-
-    const { data: candidates } = await qBuilder;
-    const pending = (candidates ?? []).filter((q: any) => !excludeIds.has(q.id)).slice(0, MAX_PER_INVOCATION);
+    // Paginação por cursor: avança até encontrar MAX_PER_INVOCATION questões não auditadas
+    const pending: any[] = [];
+    let cursor = 0;
+    const PAGE_Q = 500;
+    while (pending.length < MAX_PER_INVOCATION) {
+      let qBuilder = supabase
+        .from("questoes")
+        .select("*")
+        .order("id", { ascending: true })
+        .gt("id", cursor)
+        .limit(PAGE_Q);
+      if (job.scope?.disciplinas?.length) qBuilder = qBuilder.in("disciplina", job.scope.disciplinas);
+      const { data: candidates, error: cErr } = await qBuilder;
+      if (cErr || !candidates || candidates.length === 0) break;
+      for (const q of candidates as any[]) {
+        if (!excludeIds.has(q.id)) {
+          pending.push(q);
+          if (pending.length >= MAX_PER_INVOCATION) break;
+        }
+      }
+      cursor = (candidates[candidates.length - 1] as any).id;
+      if (candidates.length < PAGE_Q) break;
+    }
 
     if (pending.length === 0) {
       await supabase.from("audit_jobs").update({ status: "done" }).eq("id", jobId);
