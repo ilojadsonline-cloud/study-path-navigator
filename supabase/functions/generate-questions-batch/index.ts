@@ -1014,6 +1014,16 @@ TÉCNICAS DE ELEVAÇÃO DE COMPLEXIDADE (use obrigatoriamente):
 5. CONTEXTUALIZAÇÃO MILITAR REALISTA: Cenários devem envolver situações operacionais verossímeis com postos, graduações e cargos FIÉIS à hierarquia da lei. Use nomes fictícios para personagens.
 6. INTERSEÇÃO DE DISPOSITIVOS: Sempre que possível, elabore questões que exijam conhecimento de MAIS DE UM dispositivo legal para chegar à resposta correta.
 
+QUALIDADE DOS DISTRATORES (CHECAGEM OBRIGATÓRIA — auditar antes de finalizar):
+Para CADA alternativa incorreta, ela DEVE atender TODOS estes critérios:
+(a) Ser GRAMATICALMENTE PARALELA à correta (mesma estrutura, mesmo tamanho aproximado — diferença máxima de 30%).
+(b) Conter um ELEMENTO DE VERDADE parcial (parte é correta, parte é errada) — NUNCA ser absurda, óbvia ou facilmente eliminável.
+(c) Ter um ERRO ESPECÍFICO E SUTIL: troca de prazo, troca de autoridade competente, inversão "vedado/permitido", "exclusivo/concorrente", troca de número de membros, inclusão de hipótese inexistente, exclusão de hipótese existente, troca de quórum, troca de fase processual, generalização indevida de exceção, ou aplicação de regra geral onde a lei prevê exceção.
+(d) NÃO ser meramente uma negação trivial da correta ("é vedado" vs "é permitido" sem outro elemento).
+(e) NÃO repetir a mesma armadilha de outra alternativa da mesma questão — cada distrator usa um tipo DIFERENTE de erro.
+(f) Distribuição do gabarito: VARIE o índice correto entre A, B, C, D e E ao longo do lote (não concentre tudo em uma letra).
+DISTRATORES PROIBIDOS: alternativas vazias, "todas as anteriores", "nenhuma das anteriores", afirmações claramente absurdas, ou alternativas que ninguém escolheria.
+
 PRINCÍPIOS FUNDAMENTAIS:
 1. CRIATIVIDADE COM PRECISÃO: Explore ângulos inéditos do dispositivo legal — consequências implícitas, condições cumulativas, ressalvas pouco percebidas, interações com outros artigos.
 2. HIERARQUIA MILITAR DA PMTO — REGRA INVIOLÁVEL E CHECAGEM OBRIGATÓRIA:
