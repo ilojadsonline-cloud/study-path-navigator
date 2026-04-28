@@ -545,7 +545,7 @@ export function AdminAuditoriaTab() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Pencil className="w-4 h-4" />
-              Corrigir Questão #{detail?.questao_id}
+              Corrigir questão — ID original no banco: <span className="font-mono">#{detail?.questao_id}</span>
             </DialogTitle>
           </DialogHeader>
 
