@@ -11,15 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Undo2, Save, Pencil, Trash2, X } from "lucide-react";
-
-const DISCIPLINAS = [
-  "Português",
-  "Direito Constitucional",
-  "Direito Administrativo",
-  "Direito Penal Militar",
-  "Legislação Institucional PMTO",
-];
+import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Undo2, Save, Pencil, Trash2, X, ShieldCheck } from "lucide-react";
 
 // Filtros amigáveis em português
 const STATUS_FILTERS: { key: string; label: string }[] = [
@@ -95,7 +87,17 @@ export function AdminAuditoriaTab() {
   const [questao, setQuestao] = useState<any>(null);
   const [form, setForm] = useState<QuestaoForm | null>(null);
   const [saving, setSaving] = useState(false);
+  const [disciplinas, setDisciplinas] = useState<string[]>([]);
   const stopRef = useRef(false);
+
+  async function loadDisciplinas() {
+    const { data, error } = await supabase.rpc("list_disciplinas");
+    if (error) {
+      toast.error("Erro ao carregar disciplinas: " + error.message);
+      return;
+    }
+    setDisciplinas((data ?? []).map((r: any) => r.disciplina).filter(Boolean));
+  }
 
   async function loadAudits() {
     setLoading(true);
@@ -107,6 +109,7 @@ export function AdminAuditoriaTab() {
     setLoading(false);
   }
 
+  useEffect(() => { loadDisciplinas(); }, []);
   useEffect(() => { loadAudits(); }, [filterStatus]);
 
   async function startJob() {
@@ -298,19 +301,28 @@ export function AdminAuditoriaTab() {
       <Card className="glass-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-primary" />
-            Auditoria de questões pela IA
+            <ShieldCheck className="w-5 h-5 text-primary" />
+            Validação Avançada de Questões (IA)
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            A IA revisa cada questão buscando erros (gabarito errado, alternativa duplicada, comentário fraco). 
-            Você pode aplicar a sugestão dela, editar manualmente ou excluir a questão.
+            Aprimoramento da validação tradicional: a IA revisa cada questão buscando erros de gabarito,
+            alternativas duplicadas, comentário fraco ou divergência com a lei. Você pode aplicar a sugestão dela,
+            editar manualmente ou excluir a questão.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <p className="text-sm text-muted-foreground mb-2">Disciplinas a auditar (vazio = todas):</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-muted-foreground">Disciplinas a auditar (vazio = todas):</p>
+              <Button size="sm" variant="ghost" onClick={loadDisciplinas} className="h-6 text-xs">
+                <RefreshCw className="w-3 h-3 mr-1" /> Atualizar
+              </Button>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {DISCIPLINAS.map(d => (
+              {disciplinas.length === 0 && (
+                <span className="text-xs text-muted-foreground italic">Carregando disciplinas...</span>
+              )}
+              {disciplinas.map(d => (
                 <Badge
                   key={d}
                   variant={selDisc.includes(d) ? "default" : "outline"}
