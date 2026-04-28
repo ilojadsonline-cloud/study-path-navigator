@@ -258,6 +258,12 @@ export function AdminAuditoriaTab() {
             applied_patch: patch,
           }).eq("id", a.id);
           applied++;
+          // Remove imediatamente da lista visível se filtro não for "auto_fixed" nem "all"
+          if (filterStatus !== "auto_fixed" && filterStatus !== "all") {
+            setAudits(prev => prev.filter(x => x.id !== a.id));
+          } else {
+            setAudits(prev => prev.map(x => x.id === a.id ? { ...x, status: "auto_fixed" } : x));
+          }
         } catch (e: any) {
           failed++;
           console.error("bulk apply falhou", a.id, e?.message);
@@ -265,7 +271,6 @@ export function AdminAuditoriaTab() {
         setBulkProgress(p => ({ ...p, done: p.done + 1 }));
       }
       toast.success(`Concluído: ${applied} aplicadas, ${failed} falharam`);
-      loadAudits();
     } catch (e: any) {
       toast.error("Falha no lote: " + (e?.message ?? e));
     } finally {
