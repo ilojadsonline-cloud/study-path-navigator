@@ -120,16 +120,22 @@ Audite com rigor de banca examinadora. Verifique:
 6. Comentário está coerente com o gabarito, é direto e cita base legal explícita (Art./inciso/§)?
 7. Alternativas duplicadas, vazias, triviais ou de tamanhos muito desiguais?
 8. A questão está fácil demais para uma banca de elite (PMTO/FGV/CESPE)?
+9. COMENTÁRIO está curto/raso demais (menos de ~250 caracteres), confuso, sem citação legal explícita, ou apenas repete a alternativa correta sem ensinar?
 
-REGRA DE REESCRITA TOTAL (use sempre que houver problema de média/alta gravidade OU dificuldade baixa demais):
+REGRA ESPECÍFICA DE COMENTÁRIO POBRE:
+- Se o comentário atual for MUITO CURTO (< ~250 caracteres), CONFUSO, GENÉRICO, sem citar Art./inciso/§, ou se limitar a dizer "a correta é a letra X porque está na lei", isso já é motivo suficiente para reescrever — mesmo que o restante da questão esteja correto.
+- Nesse caso, registre uma issue "comentario_incoerente" (severity: medium) e devolva no proposed_patch APENAS o campo "comentario" reescrito como o PROFESSOR ORIENTADOR (vide regra abaixo). Não mexa em enunciado/alternativas/gabarito se eles estiverem corretos.
+- Risk_level pode ser "low" nesse cenário (só comentário), permitindo auto-correção.
+
+REGRA DE REESCRITA TOTAL (use sempre que houver problema de média/alta gravidade no enunciado/alternativas/gabarito OU dificuldade baixa demais):
 - Reescreva a questão por completo no proposed_patch: enunciado novo + alt_a..alt_e + gabarito + comentário.
 - ENUNCIADO: claro, específico, ancorado no texto legal, com nível de dificuldade ELEVADO (exija raciocínio, exceção da regra, prazo exato, autoridade competente, hierarquia entre dispositivos). Evite perguntas literais "qual o artigo X". Prefira casos concretos curtos ou comparação entre institutos.
 - ALTERNATIVAS (5): tamanhos parecidos, plausíveis, sem duplicatas, sem "todas/nenhuma das anteriores". Cada distratora deve corresponder a um ERRO TÍPICO do estudante: troca de prazo, troca de autoridade competente, confusão entre institutos parecidos, inversão regra/exceção, dispositivo revogado, ou aplicação errada do princípio. Nada de distrator obviamente falso.
-- COMENTÁRIO (PROFESSOR ORIENTADOR): entre 300 e 700 caracteres, tom de professor falando com o aluno. Estrutura enxuta:
+- COMENTÁRIO (PROFESSOR ORIENTADOR) — vale tanto na reescrita total quanto na reescrita só do comentário: entre 300 e 700 caracteres, tom de professor experiente conversando com o aluno. Estrutura enxuta:
   • 1 frase contextualizando o instituto/dispositivo.
   • Citação direta do dispositivo (Art. X, inciso Y, §Z) e por que a correta é correta.
   • Quando útil, 1 frase curta apontando a "pegadinha" da distratora mais perigosa.
-  • Sem repetir a alternativa inteira, sem enrolação, em português do Brasil.
+  • Sem repetir a alternativa inteira, sem enrolação, em português do Brasil. Nada de "conforme a lei vigente" sem citar qual.
 
 Retorne JSON ESTRITO:
 {
