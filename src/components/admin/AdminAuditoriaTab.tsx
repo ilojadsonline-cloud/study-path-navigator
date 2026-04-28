@@ -6,11 +6,12 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Undo2 } from "lucide-react";
+import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Undo2, Save, Pencil, Trash2, X } from "lucide-react";
 
 const DISCIPLINAS = [
   "Português",
@@ -19,6 +20,25 @@ const DISCIPLINAS = [
   "Direito Penal Militar",
   "Legislação Institucional PMTO",
 ];
+
+// Filtros amigáveis em português
+const STATUS_FILTERS: { key: string; label: string }[] = [
+  { key: "manual_review", label: "Precisa revisão manual" },
+  { key: "auto_fixed", label: "Corrigidas automaticamente" },
+  { key: "approved", label: "Aprovadas" },
+  { key: "rejected", label: "Rejeitadas" },
+  { key: "error", label: "Erros" },
+  { key: "all", label: "Todas" },
+];
+
+const STATUS_LABEL: Record<string, string> = {
+  manual_review: "Precisa revisão",
+  auto_fixed: "Corrigida pela IA",
+  approved: "Aprovada",
+  rejected: "Rejeitada",
+  error: "Erro",
+  pending: "Pendente",
+};
 
 type AuditJob = {
   id: string;
@@ -46,6 +66,22 @@ type AuditRow = {
   created_at: string;
 };
 
+type QuestaoForm = {
+  enunciado: string;
+  alt_a: string;
+  alt_b: string;
+  alt_c: string;
+  alt_d: string;
+  alt_e: string;
+  gabarito: number;
+  comentario: string;
+  disciplina: string;
+  assunto: string;
+  dificuldade: string;
+};
+
+const LETRAS = ["A", "B", "C", "D", "E"];
+
 export function AdminAuditoriaTab() {
   const [selDisc, setSelDisc] = useState<string[]>([]);
   const [onlyUnaudited, setOnlyUnaudited] = useState(true);
@@ -57,6 +93,8 @@ export function AdminAuditoriaTab() {
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<AuditRow | null>(null);
   const [questao, setQuestao] = useState<any>(null);
+  const [form, setForm] = useState<QuestaoForm | null>(null);
+  const [saving, setSaving] = useState(false);
   const stopRef = useRef(false);
 
   async function loadAudits() {
@@ -127,20 +165,20 @@ export function AdminAuditoriaTab() {
     toast.info("Cancelando...");
   }
 
-  async function approveAudit(a: AuditRow) {
+  // Aplica a sugestão da IA tal como veio
+  async function applyAISuggestion(a: AuditRow) {
     if (!a.proposed_patch) {
       await supabase.from("question_audits").update({ status: "approved" }).eq("id", a.id);
-      toast.success("Marcada como aprovada");
+      toast.success("Auditoria marcada como aprovada");
       loadAudits();
       return;
     }
-    // Snapshot
     const { data: q } = await supabase.from("questoes").select("*").eq("id", a.questao_id).single();
     if (q) {
       await supabase.from("question_versions").insert({
         questao_id: a.questao_id,
         snapshot: q,
-        change_reason: "manual_apply_audit",
+        change_reason: "apply_ai_suggestion",
         audit_id: a.id,
       } as any);
     }
@@ -149,13 +187,13 @@ export function AdminAuditoriaTab() {
       status: "auto_fixed",
       applied_patch: a.proposed_patch,
     }).eq("id", a.id);
-    toast.success("Correção aplicada");
+    toast.success("Sugestão da IA aplicada à questão");
     loadAudits();
   }
 
-  async function rejectAudit(a: AuditRow) {
+  async function dismissAudit(a: AuditRow) {
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
-    toast.success("Auditoria rejeitada");
+    toast.success("Auditoria descartada (questão mantida como está)");
     loadAudits();
   }
 
@@ -172,14 +210,87 @@ export function AdminAuditoriaTab() {
     const { id, created_at, ...rest } = snap;
     await supabase.from("questoes").update(rest).eq("id", a.questao_id);
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
-    toast.success("Questão revertida ao snapshot");
+    toast.success("Questão revertida ao estado anterior");
+    loadAudits();
+  }
+
+  async function deleteQuestao(a: AuditRow) {
+    if (!confirm(`Excluir definitivamente a questão #${a.questao_id}? Essa ação não pode ser desfeita.`)) return;
+    const { error } = await supabase.from("questoes").delete().eq("id", a.questao_id);
+    if (error) return toast.error(error.message);
+    await supabase.from("question_audits").update({ status: "rejected", ai_summary: "Questão excluída pelo admin" }).eq("id", a.id);
+    toast.success("Questão excluída");
+    setDetail(null);
+    setQuestao(null);
+    setForm(null);
     loadAudits();
   }
 
   async function openDetail(a: AuditRow) {
     setDetail(a);
+    setForm(null);
+    setQuestao(null);
     const { data } = await supabase.from("questoes").select("*").eq("id", a.questao_id).single();
-    setQuestao(data);
+    if (data) {
+      setQuestao(data);
+      // Pre-popula formulário com sugestão da IA mesclada (se houver)
+      const patch = a.proposed_patch ?? {};
+      setForm({
+        enunciado: patch.enunciado ?? data.enunciado ?? "",
+        alt_a: patch.alt_a ?? data.alt_a ?? "",
+        alt_b: patch.alt_b ?? data.alt_b ?? "",
+        alt_c: patch.alt_c ?? data.alt_c ?? "",
+        alt_d: patch.alt_d ?? data.alt_d ?? "",
+        alt_e: patch.alt_e ?? data.alt_e ?? "",
+        gabarito: typeof patch.gabarito === "number" ? patch.gabarito : data.gabarito ?? 0,
+        comentario: patch.comentario ?? data.comentario ?? "",
+        disciplina: data.disciplina ?? "",
+        assunto: data.assunto ?? "",
+        dificuldade: data.dificuldade ?? "Médio",
+      });
+    }
+  }
+
+  async function saveManualEdit() {
+    if (!detail || !form || !questao) return;
+    setSaving(true);
+    try {
+      // Snapshot do estado atual antes de sobrescrever
+      await supabase.from("question_versions").insert({
+        questao_id: detail.questao_id,
+        snapshot: questao,
+        change_reason: "manual_edit_in_audit",
+        audit_id: detail.id,
+      } as any);
+      const patch = {
+        enunciado: form.enunciado,
+        alt_a: form.alt_a,
+        alt_b: form.alt_b,
+        alt_c: form.alt_c,
+        alt_d: form.alt_d,
+        alt_e: form.alt_e,
+        gabarito: Math.max(0, Math.min(4, Number(form.gabarito) || 0)),
+        comentario: form.comentario,
+        disciplina: form.disciplina,
+        assunto: form.assunto,
+        dificuldade: form.dificuldade,
+      };
+      const { error } = await supabase.from("questoes").update(patch).eq("id", detail.questao_id);
+      if (error) throw error;
+      await supabase.from("question_audits").update({
+        status: "approved",
+        applied_patch: patch,
+      }).eq("id", detail.id);
+      toast.success("Questão corrigida e auditoria aprovada");
+      setDetail(null);
+      setForm(null);
+      setQuestao(null);
+      loadAudits();
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -188,12 +299,16 @@ export function AdminAuditoriaTab() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-primary" />
-            Auditoria Cética com IA
+            Auditoria de questões pela IA
           </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            A IA revisa cada questão buscando erros (gabarito errado, alternativa duplicada, comentário fraco). 
+            Você pode aplicar a sugestão dela, editar manualmente ou excluir a questão.
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <p className="text-sm text-muted-foreground mb-2">Disciplinas (vazio = todas):</p>
+            <p className="text-sm text-muted-foreground mb-2">Disciplinas a auditar (vazio = todas):</p>
             <div className="flex flex-wrap gap-2">
               {DISCIPLINAS.map(d => (
                 <Badge
@@ -210,10 +325,10 @@ export function AdminAuditoriaTab() {
           <div className="flex items-center gap-4 flex-wrap">
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={onlyUnaudited} onCheckedChange={(v) => setOnlyUnaudited(!!v)} />
-              Apenas não auditadas
+              Auditar apenas questões nunca revisadas
             </label>
             <label className="flex items-center gap-2 text-sm">
-              Limite:
+              Quantas questões:
               <Input type="number" value={limit} onChange={e => setLimit(Number(e.target.value))} className="w-24" />
             </label>
           </div>
@@ -224,7 +339,7 @@ export function AdminAuditoriaTab() {
               </Button>
             ) : (
               <Button onClick={cancel} variant="destructive" className="gap-2">
-                <Square className="w-4 h-4" />Cancelar
+                <Square className="w-4 h-4" />Parar auditoria
               </Button>
             )}
           </div>
@@ -237,8 +352,8 @@ export function AdminAuditoriaTab() {
               </div>
               <Progress value={job.total ? (job.processed / job.total) * 100 : 0} />
               <div className="flex gap-4 text-xs text-muted-foreground">
-                <span className="text-green-500">✓ Auto-corrigidas: {job.auto_fixed}</span>
-                <span className="text-yellow-500">⚠ Revisão manual: {job.flagged}</span>
+                <span className="text-green-500">✓ Corrigidas pela IA: {job.auto_fixed}</span>
+                <span className="text-yellow-500">⚠ Precisam revisão: {job.flagged}</span>
                 <span className="text-red-500">✗ Erros: {job.errors}</span>
               </div>
               {job.last_error && <p className="text-xs text-red-500">Último erro: {job.last_error}</p>}
@@ -250,122 +365,203 @@ export function AdminAuditoriaTab() {
       <Card className="glass-card">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Resultados de auditoria</span>
+            <span>Questões auditadas</span>
             <Button size="sm" variant="ghost" onClick={loadAudits} disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             </Button>
           </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Clique em uma questão para abrir, editar e corrigir manualmente.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 mb-4 flex-wrap">
-            {["manual_review", "auto_fixed", "approved", "rejected", "error", "all"].map(s => (
+            {STATUS_FILTERS.map(s => (
               <Badge
-                key={s}
-                variant={filterStatus === s ? "default" : "outline"}
+                key={s.key}
+                variant={filterStatus === s.key ? "default" : "outline"}
                 className="cursor-pointer"
-                onClick={() => setFilterStatus(s)}
-              >{s}</Badge>
+                onClick={() => setFilterStatus(s.key)}
+              >{s.label}</Badge>
             ))}
           </div>
           <ScrollArea className="h-[500px]">
             <div className="space-y-2">
               {audits.length === 0 && (
                 <p className="text-sm text-muted-foreground py-8 text-center">
-                  Nenhuma auditoria com este filtro.
+                  Nenhuma questão neste filtro.
                 </p>
               )}
               {audits.map(a => (
-                <div key={a.id} className="p-3 rounded-lg border border-border/40 bg-card/50 flex items-start justify-between gap-3">
+                <button
+                  key={a.id}
+                  onClick={() => openDetail(a)}
+                  className="w-full text-left p-3 rounded-lg border border-border/40 bg-card/50 hover:bg-card/80 hover:border-primary/40 transition flex items-start justify-between gap-3"
+                >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <Badge variant={a.status === "auto_fixed" ? "default" : a.status === "manual_review" ? "destructive" : "outline"}>
-                        {a.status}
+                        {STATUS_LABEL[a.status] ?? a.status}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">Q#{a.questao_id}</span>
+                      <span className="text-xs text-muted-foreground">Questão #{a.questao_id}</span>
                       {a.confidence != null && (
-                        <span className="text-xs text-muted-foreground">conf: {(a.confidence * 100).toFixed(0)}%</span>
+                        <span className="text-xs text-muted-foreground">confiança: {(a.confidence * 100).toFixed(0)}%</span>
                       )}
                       {a.risk_level && (
                         <span className="text-xs text-muted-foreground">risco: {a.risk_level}</span>
                       )}
                     </div>
-                    <p className="text-sm truncate">{a.ai_summary ?? "(sem resumo)"}</p>
+                    <p className="text-sm truncate">{a.ai_summary ?? "(sem resumo da IA)"}</p>
                     {a.issues?.length > 0 && (
                       <p className="text-xs text-yellow-500 mt-1">
-                        {a.issues.length} issue(s): {a.issues.map((i: any) => i.type).join(", ")}
+                        {a.issues.length} problema(s) encontrado(s): {a.issues.map((i: any) => i.type).join(", ")}
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-1 flex-shrink-0">
-                    <Button size="sm" variant="ghost" onClick={() => openDetail(a)}>
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    {a.status === "manual_review" && a.proposed_patch && (
-                      <Button size="sm" variant="default" onClick={() => approveAudit(a)}>
-                        <CheckCircle2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                    {a.status === "manual_review" && (
-                      <Button size="sm" variant="outline" onClick={() => rejectAudit(a)}>
-                        Rejeitar
-                      </Button>
-                    )}
-                    {a.status === "auto_fixed" && (
-                      <Button size="sm" variant="outline" onClick={() => revertAudit(a)}>
-                        <Undo2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                  <Eye className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+                </button>
               ))}
             </div>
           </ScrollArea>
         </CardContent>
       </Card>
 
-      <Dialog open={!!detail} onOpenChange={(o) => { if (!o) { setDetail(null); setQuestao(null); } }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <Dialog open={!!detail} onOpenChange={(o) => { if (!o) { setDetail(null); setQuestao(null); setForm(null); } }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Auditoria Q#{detail?.questao_id}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-4 h-4" />
+              Corrigir Questão #{detail?.questao_id}
+            </DialogTitle>
           </DialogHeader>
+
           {detail && (
             <div className="space-y-4 text-sm">
-              <div>
-                <strong>Resumo IA:</strong>
-                <p className="text-muted-foreground">{detail.ai_summary}</p>
-              </div>
-              <div>
-                <strong>Issues:</strong>
-                <pre className="text-xs bg-muted/30 p-2 rounded mt-1 overflow-x-auto">
-                  {JSON.stringify(detail.issues, null, 2)}
-                </pre>
-              </div>
-              {detail.proposed_patch && (
+              {/* Resumo da auditoria */}
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/40 space-y-2">
                 <div>
-                  <strong>Correção proposta:</strong>
-                  <pre className="text-xs bg-muted/30 p-2 rounded mt-1 overflow-x-auto">
-                    {JSON.stringify(detail.proposed_patch, null, 2)}
-                  </pre>
+                  <strong className="text-xs uppercase text-muted-foreground">O que a IA disse:</strong>
+                  <p className="mt-1">{detail.ai_summary ?? "(sem resumo)"}</p>
                 </div>
-              )}
-              {questao && (
-                <div>
-                  <strong>Questão atual:</strong>
-                  <div className="mt-1 p-2 bg-muted/30 rounded space-y-1 text-xs">
-                    <p><b>Disciplina:</b> {questao.disciplina} / {questao.assunto}</p>
-                    <p><b>Enunciado:</b> {questao.enunciado}</p>
-                    {["a","b","c","d","e"].map(l => (
-                      <p key={l}>
-                        <b>{l.toUpperCase()})</b> {questao[`alt_${l}`]}
-                        {questao.gabarito === ["a","b","c","d","e"].indexOf(l) && <span className="text-green-500 ml-2">✓</span>}
-                      </p>
+                {detail.issues?.length > 0 && (
+                  <div>
+                    <strong className="text-xs uppercase text-muted-foreground">Problemas detectados:</strong>
+                    <ul className="list-disc list-inside mt-1 space-y-0.5">
+                      {detail.issues.map((i: any, idx: number) => (
+                        <li key={idx} className="text-xs">
+                          <span className="font-mono">{i.type}</span>
+                          {i.severity && <Badge variant="outline" className="ml-1 text-[10px]">{i.severity}</Badge>}
+                          {i.description && <span className="text-muted-foreground"> — {i.description}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {detail.proposed_patch && (
+                  <p className="text-xs text-primary">
+                    💡 Os campos abaixo já foram preenchidos com a sugestão da IA. Revise e ajuste o que precisar.
+                  </p>
+                )}
+              </div>
+
+              {/* Formulário inline de edição */}
+              {form ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <Label className="text-xs">Disciplina</Label>
+                      <Input value={form.disciplina} onChange={e => setForm({ ...form, disciplina: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Assunto</Label>
+                      <Input value={form.assunto} onChange={e => setForm({ ...form, assunto: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Dificuldade</Label>
+                      <Input value={form.dificuldade} onChange={e => setForm({ ...form, dificuldade: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Enunciado</Label>
+                    <Textarea
+                      value={form.enunciado}
+                      onChange={e => setForm({ ...form, enunciado: e.target.value })}
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs">Alternativas (clique no círculo para marcar a correta)</Label>
+                    {(["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const).map((key, idx) => (
+                      <div key={key} className="flex items-start gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, gabarito: idx })}
+                          className={`mt-2 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold flex-shrink-0 transition ${
+                            form.gabarito === idx
+                              ? "bg-primary border-primary text-primary-foreground"
+                              : "border-border hover:border-primary/60"
+                          }`}
+                          title={form.gabarito === idx ? "Correta" : "Marcar como correta"}
+                        >
+                          {LETRAS[idx]}
+                        </button>
+                        <Textarea
+                          value={form[key]}
+                          onChange={e => setForm({ ...form, [key]: e.target.value })}
+                          rows={2}
+                          className="flex-1"
+                        />
+                      </div>
                     ))}
-                    <p className="pt-1"><b>Comentário:</b> {questao.comentario}</p>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Comentário do professor</Label>
+                    <Textarea
+                      value={form.comentario}
+                      onChange={e => setForm({ ...form, comentario: e.target.value })}
+                      rows={5}
+                    />
                   </div>
                 </div>
+              ) : (
+                <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin" /></div>
               )}
             </div>
           )}
+
+          <DialogFooter className="flex flex-wrap gap-2 sm:justify-between border-t border-border/40 pt-4">
+            <div className="flex gap-2 flex-wrap">
+              {detail && detail.status === "auto_fixed" && (
+                <Button variant="outline" size="sm" onClick={() => revertAudit(detail)} className="gap-1">
+                  <Undo2 className="w-4 h-4" /> Desfazer correção da IA
+                </Button>
+              )}
+              {detail && (
+                <Button variant="destructive" size="sm" onClick={() => deleteQuestao(detail)} className="gap-1">
+                  <Trash2 className="w-4 h-4" /> Excluir questão
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {detail && (
+                <Button variant="ghost" size="sm" onClick={() => dismissAudit(detail)} className="gap-1">
+                  <X className="w-4 h-4" /> Manter como está
+                </Button>
+              )}
+              {detail?.proposed_patch && (
+                <Button variant="outline" size="sm" onClick={() => applyAISuggestion(detail)} className="gap-1">
+                  <CheckCircle2 className="w-4 h-4" /> Aplicar sugestão da IA
+                </Button>
+              )}
+              <Button size="sm" onClick={saveManualEdit} disabled={saving || !form} className="gap-1">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Salvar minhas alterações
+              </Button>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
