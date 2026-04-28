@@ -15,7 +15,7 @@ import Questoes from "./pages/Questoes";
 import Simulados from "./pages/Simulados";
 import Assinatura from "./pages/Assinatura";
 import GerarQuestoes from "./pages/GerarQuestoes";
-import ValidarQuestoes from "./pages/ValidarQuestoes";
+
 import AdminPanel from "./pages/AdminPanel";
 import AdminTextosLegais from "./pages/AdminTextosLegais";
 import EsqueciSenha from "./pages/EsqueciSenha";
