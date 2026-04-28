@@ -77,7 +77,7 @@ const LETRAS = ["A", "B", "C", "D", "E"];
 export function AdminAuditoriaTab() {
   const [selDisc, setSelDisc] = useState<string[]>([]);
   const [onlyUnaudited, setOnlyUnaudited] = useState(true);
-  const [limit, setLimit] = useState(50);
+  const [limit, setLimit] = useState(5000);
   const [job, setJob] = useState<AuditJob | null>(null);
   const [running, setRunning] = useState(false);
   const [audits, setAudits] = useState<AuditRow[]>([]);
