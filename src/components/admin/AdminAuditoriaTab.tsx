@@ -437,14 +437,29 @@ export function AdminAuditoriaTab() {
 
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex items-center justify-between gap-2 flex-wrap">
             <span>Questões auditadas</span>
-            <Button size="sm" variant="ghost" onClick={loadAudits} disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={applyAllAISuggestions}
+                disabled={bulkApplying}
+                className="gap-1"
+                title="Aplica de uma vez todas as correções sugeridas pela IA nas questões pendentes"
+              >
+                {bulkApplying
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Aplicando {bulkProgress.done}/{bulkProgress.total}…</>
+                  : <><Wand2 className="w-4 h-4" /> Aplicar todas as sugestões da IA</>}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={loadAudits} disabled={loading}>
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              </Button>
+            </div>
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Clique em uma questão para abrir, editar e corrigir manualmente.
+            Clique em uma questão para abrir e revisar individualmente, ou use "Aplicar todas" para
+            aprovar em massa as correções sugeridas pela IA. Cada alteração gera snapshot reversível.
           </p>
         </CardHeader>
         <CardContent>
