@@ -45,8 +45,8 @@ export function AdminQuestoesTab() {
   }, []);
 
   const loadDisciplinas = async () => {
-    const { data } = await supabase.from("questoes").select("disciplina");
-    if (data) setDisciplinas([...new Set(data.map(d => d.disciplina))].sort());
+    const { data } = await supabase.rpc("list_disciplinas");
+    if (data) setDisciplinas((data as { disciplina: string }[]).map(d => d.disciplina));
   };
 
   const loadQuestoes = async (p = 0) => {
