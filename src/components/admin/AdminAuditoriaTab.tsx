@@ -389,6 +389,7 @@ export function AdminAuditoriaTab() {
       }).eq("id", detail.id);
       toast.success(`Questão #${detail.questao_id} corrigida e auditoria aprovada`);
       const auditId = detail.id;
+      await closeSiblingAudits(detail.questao_id, auditId);
       setDetail(null);
       setForm(null);
       setQuestao(null);
