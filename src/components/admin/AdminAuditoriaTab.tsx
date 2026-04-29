@@ -16,11 +16,15 @@ import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Und
 // Filtros amigáveis em português
 const STATUS_FILTERS: { key: string; label: string }[] = [
   { key: "open", label: "Pendentes" },
+  { key: "session", label: "Processo atual" },
+  { key: "auto_fixed", label: "Corrigidas pela IA" },
+  { key: "approved", label: "Aprovadas" },
   { key: "manual_review", label: "Precisa revisão manual" },
   { key: "error", label: "Erros" },
 ];
 
 const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
+const SESSION_AUDIT_STATUSES = ["auto_fixed", "approved", "manual_review", "pending", "error"];
 
 const STATUS_LABEL: Record<string, string> = {
   manual_review: "Precisa revisão",
@@ -90,6 +94,9 @@ export function AdminAuditoriaTab() {
   const [bulkApplying, setBulkApplying] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
   const stopRef = useRef(false);
+  const filterStatusRef = useRef(filterStatus);
+
+  useEffect(() => { filterStatusRef.current = filterStatus; }, [filterStatus]);
 
   async function loadDisciplinas() {
     const { data, error } = await supabase.rpc("list_disciplinas");
