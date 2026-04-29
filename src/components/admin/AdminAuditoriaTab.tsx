@@ -108,10 +108,12 @@ export function AdminAuditoriaTab() {
   }
 
   async function loadLatestRunningJob() {
+    const recentCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     const { data } = await supabase
       .from("audit_jobs")
       .select("*")
       .eq("status", "running")
+      .gte("updated_at", recentCutoff)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
