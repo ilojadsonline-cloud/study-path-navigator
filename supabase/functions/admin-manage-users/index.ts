@@ -16,6 +16,13 @@ const logStep = (step: string, details?: any) => {
 const STRIPE_MIN_PAID_CENTS = 5000;
 const ACCESS_WINDOW_DAYS = 90;
 
+type PaidAccess = {
+  subscribed: boolean;
+  subscription_end: string | null;
+  provider?: "stripe" | "mercadopago";
+  is_trial?: boolean;
+};
+
 function getStripeSubscriptionEnd(subscription: any): string | null {
   const endTimestamp = subscription.current_period_end ?? subscription.items?.data?.[0]?.current_period_end;
   if (!endTimestamp) return null;
@@ -24,7 +31,7 @@ function getStripeSubscriptionEnd(subscription: any): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-async function getStripePaidAccess(stripe: any, email: string): Promise<{ subscribed: boolean; subscription_end: string | null }> {
+async function getStripePaidAccess(stripe: any, email: string): Promise<PaidAccess> {
   const variants = Array.from(new Set([email, email.toLowerCase()].filter(Boolean)));
   const sinceSec = Math.floor((Date.now() - ACCESS_WINDOW_DAYS * 24 * 60 * 60 * 1000) / 1000);
 
@@ -34,7 +41,12 @@ async function getStripePaidAccess(stripe: any, email: string): Promise<{ subscr
       const subs = await stripe.subscriptions.list({ customer: customer.id, status: "all", limit: 10 });
       const activeSub = subs.data.find((s: any) => s.status === "active" || s.status === "trialing");
       if (activeSub) {
-        return { subscribed: true, subscription_end: getStripeSubscriptionEnd(activeSub) };
+        return {
+          subscribed: true,
+          subscription_end: getStripeSubscriptionEnd(activeSub),
+          provider: "stripe",
+          is_trial: activeSub.status === "trialing",
+        };
       }
 
       const paymentIntents = await stripe.paymentIntents.list({ customer: customer.id, limit: 20 });
@@ -45,6 +57,8 @@ async function getStripePaidAccess(stripe: any, email: string): Promise<{ subscr
         return {
           subscribed: true,
           subscription_end: new Date((paidIntent.created + ACCESS_WINDOW_DAYS * 24 * 60 * 60) * 1000).toISOString(),
+          provider: "stripe",
+          is_trial: false,
         };
       }
     }
@@ -245,7 +259,36 @@ serve(async (req) => {
 
       logStep("Auth data loaded");
 
-      // Check Stripe paid access in parallel (batch of 5 to avoid rate limits)
+      const mpToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
+      const mpSubscriptions = new Map<string, { subscription_end: string }>();
+      if (mpToken) {
+        try {
+          const emailUsers = enrichedUsers.filter((u) => u.email).map((u) => String(u.email).toLowerCase());
+          const foundMpSubscriptions = await getMercadoPagoSubscriptionsByEmail(mpToken, emailUsers);
+          for (const [email, subscription] of foundMpSubscriptions) {
+            mpSubscriptions.set(email, subscription);
+          }
+          logStep("Mercado Pago data loaded", { count: mpSubscriptions.size });
+        } catch (error) {
+          logStep("Mercado Pago lookup warning", { message: error instanceof Error ? error.message : String(error) });
+        }
+      }
+
+      for (const user of enrichedUsers) {
+        const email = user.email ? String(user.email).toLowerCase() : null;
+        if (!email) continue;
+
+        const mpSubscription = mpSubscriptions.get(email);
+        if (!mpSubscription) continue;
+
+        user.subscribed = true;
+        user.subscription_end = mpSubscription.subscription_end;
+        user.provider = "mercadopago";
+        user.is_trial = false;
+      }
+
+      // Check Stripe paid access in parallel (batch of 5 to avoid rate limits).
+      // Mercado Pago aprovado tem precedência sobre trial do Stripe e não pode ser sobrescrito.
       const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
       if (stripeKey) {
         const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
@@ -259,9 +302,11 @@ serve(async (req) => {
             batch.map(async (u) => {
               try {
                 const access = await getStripePaidAccess(stripe, u.email);
-                if (access.subscribed) {
+                if (access.subscribed && !(u.provider === "mercadopago" && access.is_trial)) {
                   u.subscription_end = access.subscription_end;
                   u.subscribed = true;
+                  u.provider = access.provider;
+                  u.is_trial = access.is_trial;
                 }
               } catch {
                 // ignore individual Stripe errors
@@ -270,29 +315,6 @@ serve(async (req) => {
           );
         }
         logStep("Stripe data loaded");
-      }
-
-      const mpToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
-      if (mpToken) {
-        try {
-          const emailUsers = enrichedUsers.filter((u) => u.email).map((u) => String(u.email).toLowerCase());
-          const mpSubscriptions = await getMercadoPagoSubscriptionsByEmail(mpToken, emailUsers);
-
-          for (const user of enrichedUsers) {
-            const email = user.email ? String(user.email).toLowerCase() : null;
-            if (!email || user.subscribed) continue;
-
-            const mpSubscription = mpSubscriptions.get(email);
-            if (!mpSubscription) continue;
-
-            user.subscribed = true;
-            user.subscription_end = mpSubscription.subscription_end;
-          }
-
-          logStep("Mercado Pago data loaded", { count: mpSubscriptions.size });
-        } catch (error) {
-          logStep("Mercado Pago lookup warning", { message: error instanceof Error ? error.message : String(error) });
-        }
       }
 
       // ── Sincroniza ban: usuários sem assinatura e fora da janela 24h ficam bloqueados.

@@ -15,7 +15,7 @@ import {
 interface EnrichedUser {
   user_id: string; nome: string; cpf: string; email: string | null; telefone: string | null; created_at: string;
   is_admin: boolean; is_blocked: boolean; subscribed: boolean; subscription_end: string | null;
-  trial_expired?: boolean;
+  trial_expired?: boolean; provider?: "stripe" | "mercadopago"; is_trial?: boolean;
 }
 
 interface EditUserData { user_id: string; nome: string; email: string; cpf: string; }
@@ -231,11 +231,20 @@ export function AdminUsersTab() {
                       {u.is_admin ? (
                         <Badge variant="secondary" className="text-[10px]">Admin</Badge>
                       ) : u.subscribed && daysLeft !== null ? (
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-primary" />
-                          <span className={`text-xs font-medium ${daysLeft <= 7 ? "text-destructive" : daysLeft <= 30 ? "text-warning" : "text-success"}`}>
-                            {daysLeft}d restantes
-                          </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-primary" />
+                            <span className={`text-xs font-medium ${daysLeft <= 7 ? "text-destructive" : daysLeft <= 30 ? "text-warning" : "text-success"}`}>
+                              {daysLeft}d restantes
+                            </span>
+                          </div>
+                          {u.provider === "mercadopago" ? (
+                            <Badge variant="secondary" className="text-[10px] bg-success/10 text-success">MP pago</Badge>
+                          ) : u.is_trial ? (
+                            <Badge variant="secondary" className="text-[10px]">Teste</Badge>
+                          ) : u.provider === "stripe" ? (
+                            <Badge variant="secondary" className="text-[10px]">Stripe</Badge>
+                          ) : null}
                         </div>
                       ) : u.trial_expired ? (
                         <Badge variant="destructive" className="text-[10px]">Teste expirado</Badge>
