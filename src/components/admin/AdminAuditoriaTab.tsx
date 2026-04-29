@@ -518,7 +518,7 @@ export function AdminAuditoriaTab() {
                   ? <><Loader2 className="w-4 h-4 animate-spin" /> Aplicando {bulkProgress.done}/{bulkProgress.total}…</>
                   : <><Wand2 className="w-4 h-4" /> Aplicar todas as sugestões da IA</>}
               </Button>
-              <Button size="sm" variant="ghost" onClick={loadAudits} disabled={loading}>
+              <Button size="sm" variant="ghost" onClick={() => loadAudits()} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
               </Button>
             </div>
