@@ -460,6 +460,7 @@ serve(async (req) => {
 
     const legalCache = new Map<string, string | null>();
     let processed = 0, autoFixed = 0, flagged = 0, errors = 0;
+    let lastBatchError: string | null = null;
 
     for (let i = 0; i < pending.length; i += PROCESS_CONCURRENCY) {
       const chunk = pending.slice(i, i + PROCESS_CONCURRENCY);
@@ -476,6 +477,7 @@ serve(async (req) => {
         } else {
           errors++;
           const msg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+          lastBatchError = msg;
           await supabase.from("audit_jobs").update({ last_error: msg }).eq("id", jobId);
         }
       }
@@ -499,7 +501,7 @@ serve(async (req) => {
       total: finalTotal,
       scope: nextScope,
       status: isDone ? "done" : "running",
-      last_error: errors ? (job.last_error ?? null) : null,
+      last_error: lastBatchError,
       updated_at: new Date().toISOString(),
     }).eq("id", jobId).select("*").single();
 
