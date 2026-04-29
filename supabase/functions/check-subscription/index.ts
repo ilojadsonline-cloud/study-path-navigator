@@ -283,6 +283,39 @@ serve(async (req) => {
 
     // Determine if this is a trial subscription
     const isTrial = activeSub.status === "trialing";
+
+    // PRIORIDADE: se for trialing no Stripe mas o usuário já pagou via Mercado Pago,
+    // o pagamento real do MP tem precedência sobre o trial.
+    if (isTrial && mpToken) {
+      try {
+        const mpPayment = await findApprovedMercadoPagoPayment(mpToken, emailsToSearch, now);
+        if (mpPayment) {
+          logStep("MP payment overrides Stripe trialing", {
+            paymentId: mpPayment.payment_id,
+            end: mpPayment.subscription_end,
+          });
+          await unbanAuthUser(supabaseClient, user.id);
+          try {
+            await supabaseClient.from("trial_usage").upsert({
+              email: user.email.toLowerCase(),
+              user_id: user.id,
+              provider: "mercadopago",
+              converted_to_paid: true,
+            }, { onConflict: "email" });
+          } catch (_) {}
+          return new Response(JSON.stringify({
+            subscribed: true,
+            subscription_end: mpPayment.subscription_end,
+            is_trial: false,
+            trial_ends_at: null,
+            provider: "mercadopago",
+          }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+        }
+      } catch (e) {
+        logStep("MP override check warning", { error: String(e) });
+      }
+    }
+
     let trialEndsAt: string | null = null;
 
     if (isTrial && activeSub.trial_end) {
