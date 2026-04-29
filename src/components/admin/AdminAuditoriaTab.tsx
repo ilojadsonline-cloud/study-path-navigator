@@ -107,12 +107,12 @@ export function AdminAuditoriaTab() {
     setDisciplinas((data ?? []).map((r: any) => r.disciplina).filter(Boolean));
   }
 
-  async function loadAudits() {
+  async function loadAudits(statusOverride = filterStatus, activeJob = job) {
     setLoading(true);
     let q = supabase.from("question_audits").select("*").order("created_at", { ascending: false }).limit(100);
-    if (filterStatus === "open") q = q.in("status", OPEN_AUDIT_STATUSES);
-    else if (filterStatus === "session") q = q.in("status", SESSION_AUDIT_STATUSES).gte("created_at", job?.created_at ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-    else q = q.eq("status", filterStatus);
+    if (statusOverride === "open") q = q.in("status", OPEN_AUDIT_STATUSES);
+    else if (statusOverride === "session") q = q.in("status", SESSION_AUDIT_STATUSES).gte("created_at", activeJob?.created_at ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    else q = q.eq("status", statusOverride);
     const { data, error } = await q;
     if (error) toast.error(error.message);
     else setAudits((data ?? []) as AuditRow[]);
@@ -137,6 +137,7 @@ export function AdminAuditoriaTab() {
       if (error) throw error;
       const j = data.job as AuditJob;
       setJob(j);
+      setFilterStatus("session");
       toast.success(`Auditoria iniciada (${j.total} questões)`);
       runLoop(j.id);
     } catch (e: any) {
@@ -154,18 +155,24 @@ export function AdminAuditoriaTab() {
         });
         if (error) throw error;
         consecutiveFailures = 0;
-        if (data?.job) setJob(data.job);
+        let currentJob = data?.job as AuditJob | undefined;
+        if (currentJob) setJob(currentJob);
         else {
           const status = await supabase.functions.invoke("audit-questions", {
             body: { action: "status", job_id: jobId },
           });
-          if (status.data?.job) setJob(status.data.job);
+          if (status.data?.job) {
+            currentJob = status.data.job as AuditJob;
+            setJob(currentJob);
+          }
         }
         if (["session", "auto_fixed", "approved", "manual_review", "error"].includes(filterStatusRef.current)) {
-          loadAudits();
+          loadAudits(filterStatusRef.current, currentJob ?? job);
         }
         if (data?.done) {
           toast.success("Auditoria concluída!");
+          filterStatusRef.current = "open";
+          setFilterStatus("open");
           break;
         }
       } catch (e: any) {
