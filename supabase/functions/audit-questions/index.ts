@@ -461,13 +461,15 @@ serve(async (req) => {
     const newAutoFixed = (job.auto_fixed ?? 0) + autoFixed;
     const newFlagged = (job.flagged ?? 0) + flagged;
     const newErrors = (job.errors ?? 0) + errors;
-    const isDone = newProcessed >= (job.total ?? 0);
+    const isDone = reachedEnd || newProcessed >= (job.total ?? 0);
+    const nextScope = { ...(job.scope ?? {}), cursor_id: nextCursor };
 
     await supabase.from("audit_jobs").update({
       processed: newProcessed,
       auto_fixed: newAutoFixed,
       flagged: newFlagged,
       errors: newErrors,
+      scope: nextScope,
       status: isDone ? "done" : "running",
     }).eq("id", jobId);
 
