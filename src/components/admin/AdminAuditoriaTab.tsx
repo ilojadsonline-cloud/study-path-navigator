@@ -111,6 +111,7 @@ export function AdminAuditoriaTab() {
     setLoading(true);
     let q = supabase.from("question_audits").select("*").order("created_at", { ascending: false }).limit(100);
     if (filterStatus === "open") q = q.in("status", OPEN_AUDIT_STATUSES);
+    else if (filterStatus === "session") q = q.in("status", SESSION_AUDIT_STATUSES).gte("created_at", job?.created_at ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
     else q = q.eq("status", filterStatus);
     const { data, error } = await q;
     if (error) toast.error(error.message);
@@ -119,7 +120,7 @@ export function AdminAuditoriaTab() {
   }
 
   useEffect(() => { loadDisciplinas(); }, []);
-  useEffect(() => { loadAudits(); }, [filterStatus]);
+  useEffect(() => { loadAudits(); }, [filterStatus, job?.id]);
 
   async function startJob() {
     stopRef.current = false;
@@ -153,10 +154,16 @@ export function AdminAuditoriaTab() {
         });
         if (error) throw error;
         consecutiveFailures = 0;
-        const status = await supabase.functions.invoke("audit-questions", {
-          body: { action: "status", job_id: jobId },
-        });
-        if (status.data?.job) setJob(status.data.job);
+        if (data?.job) setJob(data.job);
+        else {
+          const status = await supabase.functions.invoke("audit-questions", {
+            body: { action: "status", job_id: jobId },
+          });
+          if (status.data?.job) setJob(status.data.job);
+        }
+        if (["session", "auto_fixed", "approved", "manual_review", "error"].includes(filterStatusRef.current)) {
+          loadAudits();
+        }
         if (data?.done) {
           toast.success("Auditoria concluída!");
           break;
