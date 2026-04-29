@@ -13,7 +13,9 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const AUTO_FIX_CONFIDENCE = 0.9;
 const AUTO_FIX_RISK = "low";
-const MAX_PER_INVOCATION = 5; // limite por chamada (timeout 150s)
+const MAX_PER_INVOCATION = 2; // mantém cada chamada dentro do timeout de 150s
+const PAGE_Q = 250;
+const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
 
 type Questao = {
   id: number;
@@ -50,7 +52,7 @@ function safeJsonParse(s: string): any {
   return null;
 }
 
-async function callDeepSeek(prompt: string, timeoutMs = 45000): Promise<string> {
+async function callDeepSeek(prompt: string, timeoutMs = 55000): Promise<string> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
