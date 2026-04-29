@@ -276,7 +276,7 @@ export function AdminAuditoriaTab() {
   async function dismissAudit(a: AuditRow) {
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Auditoria descartada (questão mantida como está)");
-    removeFromListIfNeeded(a.id, "rejected");
+    removeFromListIfResolved(a.id, "rejected");
     setDetail(null); setQuestao(null); setForm(null);
   }
 
@@ -294,7 +294,7 @@ export function AdminAuditoriaTab() {
     await supabase.from("questoes").update(rest).eq("id", a.questao_id);
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Questão revertida ao estado anterior");
-    removeFromListIfNeeded(a.id, "rejected");
+    removeFromListIfResolved(a.id, "rejected");
     setDetail(null); setQuestao(null); setForm(null);
   }
 
@@ -370,7 +370,7 @@ export function AdminAuditoriaTab() {
       setDetail(null);
       setForm(null);
       setQuestao(null);
-      removeFromListIfNeeded(auditId, "approved");
+      removeFromListIfResolved(auditId, "approved");
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao salvar");
     } finally {
