@@ -15,13 +15,12 @@ import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Und
 
 // Filtros amigáveis em português
 const STATUS_FILTERS: { key: string; label: string }[] = [
+  { key: "open", label: "Pendentes" },
   { key: "manual_review", label: "Precisa revisão manual" },
-  { key: "auto_fixed", label: "Corrigidas automaticamente" },
-  { key: "approved", label: "Aprovadas" },
-  { key: "rejected", label: "Rejeitadas" },
   { key: "error", label: "Erros" },
-  { key: "all", label: "Todas" },
 ];
+
+const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
 
 const STATUS_LABEL: Record<string, string> = {
   manual_review: "Precisa revisão",
@@ -81,7 +80,7 @@ export function AdminAuditoriaTab() {
   const [job, setJob] = useState<AuditJob | null>(null);
   const [running, setRunning] = useState(false);
   const [audits, setAudits] = useState<AuditRow[]>([]);
-  const [filterStatus, setFilterStatus] = useState<string>("manual_review");
+  const [filterStatus, setFilterStatus] = useState<string>("open");
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<AuditRow | null>(null);
   const [questao, setQuestao] = useState<any>(null);
@@ -104,7 +103,8 @@ export function AdminAuditoriaTab() {
   async function loadAudits() {
     setLoading(true);
     let q = supabase.from("question_audits").select("*").order("created_at", { ascending: false }).limit(100);
-    if (filterStatus !== "all") q = q.eq("status", filterStatus);
+    if (filterStatus === "open") q = q.in("status", OPEN_AUDIT_STATUSES);
+    else q = q.eq("status", filterStatus);
     const { data, error } = await q;
     if (error) toast.error(error.message);
     else setAudits((data ?? []) as AuditRow[]);
