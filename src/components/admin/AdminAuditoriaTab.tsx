@@ -76,7 +76,7 @@ const LETRAS = ["A", "B", "C", "D", "E"];
 export function AdminAuditoriaTab() {
   const [selDisc, setSelDisc] = useState<string[]>([]);
   const [onlyUnaudited, setOnlyUnaudited] = useState(true);
-  const [limit, setLimit] = useState(5000);
+  const [limit, setLimit] = useState(100000);
   const [job, setJob] = useState<AuditJob | null>(null);
   const [running, setRunning] = useState(false);
   const [audits, setAudits] = useState<AuditRow[]>([]);
@@ -138,12 +138,14 @@ export function AdminAuditoriaTab() {
   }
 
   async function runLoop(jobId: string) {
+    let consecutiveFailures = 0;
     while (!stopRef.current) {
       try {
         const { data, error } = await supabase.functions.invoke("audit-questions", {
           body: { action: "run", job_id: jobId },
         });
         if (error) throw error;
+        consecutiveFailures = 0;
         const status = await supabase.functions.invoke("audit-questions", {
           body: { action: "status", job_id: jobId },
         });
@@ -153,8 +155,13 @@ export function AdminAuditoriaTab() {
           break;
         }
       } catch (e: any) {
-        toast.error(`Lote falhou: ${e.message}`);
-        break;
+        consecutiveFailures++;
+        if (consecutiveFailures >= 3) {
+          toast.error(`Auditoria pausada após falhas repetidas: ${e.message}`);
+          break;
+        }
+        toast.warning(`Lote falhou; tentando novamente (${consecutiveFailures}/3)…`);
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
     setRunning(false);
