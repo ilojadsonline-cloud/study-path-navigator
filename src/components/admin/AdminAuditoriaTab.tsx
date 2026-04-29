@@ -186,11 +186,22 @@ export function AdminAuditoriaTab() {
     else setAudits(prev => prev.filter(x => x.id !== auditId));
   }
 
+  async function closeSiblingAudits(questaoId: number, keepAuditId: number) {
+    await supabase
+      .from("question_audits")
+      .update({ status: "superseded" })
+      .eq("questao_id", questaoId)
+      .neq("id", keepAuditId)
+      .in("status", OPEN_AUDIT_STATUSES);
+    setAudits(prev => prev.filter(x => x.questao_id !== questaoId || x.id === keepAuditId));
+  }
+
   // Aplica a sugestão da IA tal como veio
   async function applyAISuggestion(a: AuditRow) {
     if (!a.proposed_patch) {
       await supabase.from("question_audits").update({ status: "approved" }).eq("id", a.id);
       toast.success("Auditoria marcada como aprovada");
+      await closeSiblingAudits(a.questao_id, a.id);
       removeFromListIfResolved(a.id, "approved");
       setDetail(null); setQuestao(null); setForm(null);
       return;
@@ -217,6 +228,7 @@ export function AdminAuditoriaTab() {
       applied_patch: patch,
     }).eq("id", a.id);
     toast.success(`Questão #${a.questao_id} corrigida pela IA`);
+    await closeSiblingAudits(a.questao_id, a.id);
     removeFromListIfResolved(a.id, "auto_fixed");
     setDetail(null); setQuestao(null); setForm(null);
   }
