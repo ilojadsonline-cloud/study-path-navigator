@@ -399,7 +399,9 @@ serve(async (req) => {
     let cursor = Number(job.scope?.cursor_id ?? 0);
     let nextCursor = cursor;
     let reachedEnd = false;
-    while (pending.length < MAX_PER_INVOCATION) {
+    const remaining = Math.max(0, (job.total ?? 0) - (job.processed ?? 0));
+    const batchTarget = Math.min(MAX_PER_INVOCATION, remaining || MAX_PER_INVOCATION);
+    while (pending.length < batchTarget) {
       let qBuilder = supabase
         .from("questoes")
         .select("*")
@@ -422,7 +424,7 @@ serve(async (req) => {
       for (const q of candidates as any[]) {
         if (!job.scope?.only_unaudited || !auditedIds.has(q.id)) {
           pending.push(q);
-          if (pending.length >= MAX_PER_INVOCATION) break;
+          if (pending.length >= batchTarget) break;
         }
       }
       cursor = (candidates[candidates.length - 1] as any).id;
