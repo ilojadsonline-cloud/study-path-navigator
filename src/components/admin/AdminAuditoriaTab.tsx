@@ -79,7 +79,7 @@ const LETRAS = ["A", "B", "C", "D", "E"];
 
 export function AdminAuditoriaTab() {
   const [selDisc, setSelDisc] = useState<string[]>([]);
-  const [onlyUnaudited, setOnlyUnaudited] = useState(true);
+  const [onlyUnaudited, setOnlyUnaudited] = useState(false);
   const [limit, setLimit] = useState(100000);
   const [job, setJob] = useState<AuditJob | null>(null);
   const [running, setRunning] = useState(false);
@@ -107,6 +107,17 @@ export function AdminAuditoriaTab() {
     setDisciplinas((data ?? []).map((r: any) => r.disciplina).filter(Boolean));
   }
 
+  async function loadLatestRunningJob() {
+    const { data } = await supabase
+      .from("audit_jobs")
+      .select("*")
+      .eq("status", "running")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) setJob(data as AuditJob);
+  }
+
   async function loadAudits(statusOverride = filterStatus, activeJob = job) {
     setLoading(true);
     let q = supabase.from("question_audits").select("*").order("created_at", { ascending: false }).limit(100);
@@ -119,7 +130,7 @@ export function AdminAuditoriaTab() {
     setLoading(false);
   }
 
-  useEffect(() => { loadDisciplinas(); }, []);
+  useEffect(() => { loadDisciplinas(); loadLatestRunningJob(); }, []);
   useEffect(() => { loadAudits(); }, [filterStatus, job?.id]);
 
   async function startJob() {
