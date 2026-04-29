@@ -243,6 +243,12 @@ async function processQuestion(
   if (noIssues) {
     finalStatus = "approved";
   } else if (canAutoFix) {
+      await supabase
+        .from("question_audits")
+        .update({ status: "superseded", updated_at: new Date().toISOString() })
+        .eq("questao_id", q.id)
+        .in("status", OPEN_AUDIT_STATUSES);
+
     // Snapshot antes
     const { data: audIns } = await supabase
       .from("question_audits")
@@ -271,6 +277,14 @@ async function processQuestion(
     return { status: "auto_fixed", auto_fixed: true, flagged: false };
   } else {
     finalStatus = "manual_review";
+  }
+
+  if (finalStatus === "approved" || finalStatus === "manual_review") {
+    await supabase
+      .from("question_audits")
+      .update({ status: "superseded", updated_at: new Date().toISOString() })
+      .eq("questao_id", q.id)
+      .in("status", OPEN_AUDIT_STATUSES);
   }
 
   await supabase.from("question_audits").insert({
