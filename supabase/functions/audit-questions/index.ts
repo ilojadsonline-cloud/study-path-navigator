@@ -13,7 +13,9 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const AUTO_FIX_CONFIDENCE = 0.9;
 const AUTO_FIX_RISK = "low";
-const MAX_PER_INVOCATION = 5; // limite por chamada (timeout 150s)
+const MAX_PER_INVOCATION = 2; // mantém cada chamada dentro do timeout de 150s
+const PAGE_Q = 250;
+const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
 
 type Questao = {
   id: number;
@@ -50,7 +52,7 @@ function safeJsonParse(s: string): any {
   return null;
 }
 
-async function callDeepSeek(prompt: string, timeoutMs = 45000): Promise<string> {
+async function callDeepSeek(prompt: string, timeoutMs = 55000): Promise<string> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -241,6 +243,12 @@ async function processQuestion(
   if (noIssues) {
     finalStatus = "approved";
   } else if (canAutoFix) {
+      await supabase
+        .from("question_audits")
+        .update({ status: "superseded", updated_at: new Date().toISOString() })
+        .eq("questao_id", q.id)
+        .in("status", OPEN_AUDIT_STATUSES);
+
     // Snapshot antes
     const { data: audIns } = await supabase
       .from("question_audits")
@@ -269,6 +277,14 @@ async function processQuestion(
     return { status: "auto_fixed", auto_fixed: true, flagged: false };
   } else {
     finalStatus = "manual_review";
+  }
+
+  if (finalStatus === "approved" || finalStatus === "manual_review") {
+    await supabase
+      .from("question_audits")
+      .update({ status: "superseded", updated_at: new Date().toISOString() })
+      .eq("questao_id", q.id)
+      .in("status", OPEN_AUDIT_STATUSES);
   }
 
   await supabase.from("question_audits").insert({
@@ -378,30 +394,14 @@ serve(async (req) => {
       });
     }
 
-    // IDs já auditados (paginado para superar limite default de 1000 do PostgREST)
-    let excludeIds = new Set<number>();
-    if (job.scope?.only_unaudited) {
-      const PAGE = 1000;
-      let from = 0;
-      while (true) {
-        const { data: page, error: pErr } = await supabase
-          .from("question_audits")
-          .select("questao_id")
-          .order("questao_id", { ascending: true })
-          .range(from, from + PAGE - 1);
-        if (pErr || !page || page.length === 0) break;
-        for (const r of page as any[]) excludeIds.add(r.questao_id);
-        if (page.length < PAGE) break;
-        from += PAGE;
-        if (from >= 200000) break; // safety
-      }
-    }
-
-    // Paginação por cursor: avança até encontrar MAX_PER_INVOCATION questões não auditadas
+    // Paginação por cursor persistido no job: evita recomeçar do ID 0 a cada chamada.
     const pending: any[] = [];
-    let cursor = 0;
-    const PAGE_Q = 500;
-    while (pending.length < MAX_PER_INVOCATION) {
+    let cursor = Number(job.scope?.cursor_id ?? 0);
+    let nextCursor = cursor;
+    let reachedEnd = false;
+    const remaining = Math.max(0, (job.total ?? 0) - (job.processed ?? 0));
+    const batchTarget = Math.min(MAX_PER_INVOCATION, remaining || MAX_PER_INVOCATION);
+    while (pending.length < batchTarget) {
       let qBuilder = supabase
         .from("questoes")
         .select("*")
@@ -411,18 +411,33 @@ serve(async (req) => {
       if (job.scope?.disciplinas?.length) qBuilder = qBuilder.in("disciplina", job.scope.disciplinas);
       const { data: candidates, error: cErr } = await qBuilder;
       if (cErr || !candidates || candidates.length === 0) break;
+      const candidateIds = (candidates as any[]).map((q) => q.id);
+      const auditedIds = new Set<number>();
+      if (job.scope?.only_unaudited && candidateIds.length) {
+        const { data: auditedPage } = await supabase
+          .from("question_audits")
+          .select("questao_id")
+          .in("questao_id", candidateIds)
+          .not("status", "eq", "superseded");
+        for (const r of auditedPage ?? []) auditedIds.add((r as any).questao_id);
+      }
       for (const q of candidates as any[]) {
-        if (!excludeIds.has(q.id)) {
+        if (!job.scope?.only_unaudited || !auditedIds.has(q.id)) {
           pending.push(q);
-          if (pending.length >= MAX_PER_INVOCATION) break;
+          if (pending.length >= batchTarget) break;
         }
       }
       cursor = (candidates[candidates.length - 1] as any).id;
-      if (candidates.length < PAGE_Q) break;
+      nextCursor = cursor;
+      if (candidates.length < PAGE_Q) {
+        reachedEnd = true;
+        break;
+      }
     }
 
     if (pending.length === 0) {
-      await supabase.from("audit_jobs").update({ status: "done" }).eq("id", jobId);
+      const finalScope = { ...(job.scope ?? {}), cursor_id: nextCursor };
+      await supabase.from("audit_jobs").update({ status: "done", scope: finalScope }).eq("id", jobId);
       return new Response(JSON.stringify({ done: true, job_id: jobId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -449,13 +464,15 @@ serve(async (req) => {
     const newAutoFixed = (job.auto_fixed ?? 0) + autoFixed;
     const newFlagged = (job.flagged ?? 0) + flagged;
     const newErrors = (job.errors ?? 0) + errors;
-    const isDone = newProcessed >= (job.total ?? 0);
+    const isDone = reachedEnd || newProcessed >= (job.total ?? 0);
+    const nextScope = { ...(job.scope ?? {}), cursor_id: nextCursor };
 
     await supabase.from("audit_jobs").update({
       processed: newProcessed,
       auto_fixed: newAutoFixed,
       flagged: newFlagged,
       errors: newErrors,
+      scope: nextScope,
       status: isDone ? "done" : "running",
     }).eq("id", jobId);
 

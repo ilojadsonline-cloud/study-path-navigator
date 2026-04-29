@@ -15,13 +15,12 @@ import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Und
 
 // Filtros amigáveis em português
 const STATUS_FILTERS: { key: string; label: string }[] = [
+  { key: "open", label: "Pendentes" },
   { key: "manual_review", label: "Precisa revisão manual" },
-  { key: "auto_fixed", label: "Corrigidas automaticamente" },
-  { key: "approved", label: "Aprovadas" },
-  { key: "rejected", label: "Rejeitadas" },
   { key: "error", label: "Erros" },
-  { key: "all", label: "Todas" },
 ];
+
+const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
 
 const STATUS_LABEL: Record<string, string> = {
   manual_review: "Precisa revisão",
@@ -77,11 +76,11 @@ const LETRAS = ["A", "B", "C", "D", "E"];
 export function AdminAuditoriaTab() {
   const [selDisc, setSelDisc] = useState<string[]>([]);
   const [onlyUnaudited, setOnlyUnaudited] = useState(true);
-  const [limit, setLimit] = useState(5000);
+  const [limit, setLimit] = useState(100000);
   const [job, setJob] = useState<AuditJob | null>(null);
   const [running, setRunning] = useState(false);
   const [audits, setAudits] = useState<AuditRow[]>([]);
-  const [filterStatus, setFilterStatus] = useState<string>("manual_review");
+  const [filterStatus, setFilterStatus] = useState<string>("open");
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<AuditRow | null>(null);
   const [questao, setQuestao] = useState<any>(null);
@@ -104,7 +103,8 @@ export function AdminAuditoriaTab() {
   async function loadAudits() {
     setLoading(true);
     let q = supabase.from("question_audits").select("*").order("created_at", { ascending: false }).limit(100);
-    if (filterStatus !== "all") q = q.eq("status", filterStatus);
+    if (filterStatus === "open") q = q.in("status", OPEN_AUDIT_STATUSES);
+    else q = q.eq("status", filterStatus);
     const { data, error } = await q;
     if (error) toast.error(error.message);
     else setAudits((data ?? []) as AuditRow[]);
@@ -138,12 +138,14 @@ export function AdminAuditoriaTab() {
   }
 
   async function runLoop(jobId: string) {
+    let consecutiveFailures = 0;
     while (!stopRef.current) {
       try {
         const { data, error } = await supabase.functions.invoke("audit-questions", {
           body: { action: "run", job_id: jobId },
         });
         if (error) throw error;
+        consecutiveFailures = 0;
         const status = await supabase.functions.invoke("audit-questions", {
           body: { action: "status", job_id: jobId },
         });
@@ -153,8 +155,13 @@ export function AdminAuditoriaTab() {
           break;
         }
       } catch (e: any) {
-        toast.error(`Lote falhou: ${e.message}`);
-        break;
+        consecutiveFailures++;
+        if (consecutiveFailures >= 3) {
+          toast.error(`Auditoria pausada após falhas repetidas: ${e.message}`);
+          break;
+        }
+        toast.warning(`Lote falhou; tentando novamente (${consecutiveFailures}/3)…`);
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
     setRunning(false);
@@ -170,13 +177,23 @@ export function AdminAuditoriaTab() {
     toast.info("Cancelando...");
   }
 
-  // Remove a auditoria da lista atual se ela não pertence mais ao filtro ativo
-  function removeFromListIfNeeded(auditId: number, newStatus: string) {
-    if (filterStatus === "all" || filterStatus === newStatus) {
-      setAudits(prev => prev.map(x => x.id === auditId ? { ...x, status: newStatus } : x));
-    } else {
-      setAudits(prev => prev.filter(x => x.id !== auditId));
-    }
+  // Remove da fila quando o admin já resolveu a pendência.
+  function removeFromListIfResolved(auditId: number, newStatus: string) {
+    const stillVisible =
+      (filterStatus === "open" && OPEN_AUDIT_STATUSES.includes(newStatus)) ||
+      filterStatus === newStatus;
+    if (stillVisible) setAudits(prev => prev.map(x => x.id === auditId ? { ...x, status: newStatus } : x));
+    else setAudits(prev => prev.filter(x => x.id !== auditId));
+  }
+
+  async function closeSiblingAudits(questaoId: number, keepAuditId: number) {
+    await supabase
+      .from("question_audits")
+      .update({ status: "superseded" })
+      .eq("questao_id", questaoId)
+      .neq("id", keepAuditId)
+      .in("status", OPEN_AUDIT_STATUSES);
+    setAudits(prev => prev.filter(x => x.questao_id !== questaoId || x.id === keepAuditId));
   }
 
   // Aplica a sugestão da IA tal como veio
@@ -184,7 +201,8 @@ export function AdminAuditoriaTab() {
     if (!a.proposed_patch) {
       await supabase.from("question_audits").update({ status: "approved" }).eq("id", a.id);
       toast.success("Auditoria marcada como aprovada");
-      removeFromListIfNeeded(a.id, "approved");
+      await closeSiblingAudits(a.questao_id, a.id);
+      removeFromListIfResolved(a.id, "approved");
       setDetail(null); setQuestao(null); setForm(null);
       return;
     }
@@ -210,7 +228,8 @@ export function AdminAuditoriaTab() {
       applied_patch: patch,
     }).eq("id", a.id);
     toast.success(`Questão #${a.questao_id} corrigida pela IA`);
-    removeFromListIfNeeded(a.id, "auto_fixed");
+    await closeSiblingAudits(a.questao_id, a.id);
+    removeFromListIfResolved(a.id, "auto_fixed");
     setDetail(null); setQuestao(null); setForm(null);
   }
 
@@ -257,13 +276,9 @@ export function AdminAuditoriaTab() {
             status: "auto_fixed",
             applied_patch: patch,
           }).eq("id", a.id);
+          await closeSiblingAudits(a.questao_id, a.id);
           applied++;
-          // Remove imediatamente da lista visível se filtro não for "auto_fixed" nem "all"
-          if (filterStatus !== "auto_fixed" && filterStatus !== "all") {
-            setAudits(prev => prev.filter(x => x.id !== a.id));
-          } else {
-            setAudits(prev => prev.map(x => x.id === a.id ? { ...x, status: "auto_fixed" } : x));
-          }
+          removeFromListIfResolved(a.id, "auto_fixed");
         } catch (e: any) {
           failed++;
           console.error("bulk apply falhou", a.id, e?.message);
@@ -281,7 +296,8 @@ export function AdminAuditoriaTab() {
   async function dismissAudit(a: AuditRow) {
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Auditoria descartada (questão mantida como está)");
-    removeFromListIfNeeded(a.id, "rejected");
+    await closeSiblingAudits(a.questao_id, a.id);
+    removeFromListIfResolved(a.id, "rejected");
     setDetail(null); setQuestao(null); setForm(null);
   }
 
@@ -299,7 +315,8 @@ export function AdminAuditoriaTab() {
     await supabase.from("questoes").update(rest).eq("id", a.questao_id);
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Questão revertida ao estado anterior");
-    removeFromListIfNeeded(a.id, "rejected");
+    await closeSiblingAudits(a.questao_id, a.id);
+    removeFromListIfResolved(a.id, "rejected");
     setDetail(null); setQuestao(null); setForm(null);
   }
 
@@ -309,6 +326,7 @@ export function AdminAuditoriaTab() {
     if (error) return toast.error(error.message);
     await supabase.from("question_audits").update({ status: "rejected", ai_summary: "Questão excluída pelo admin" }).eq("id", a.id);
     toast.success(`Questão #${a.questao_id} excluída do banco`);
+    await closeSiblingAudits(a.questao_id, a.id);
     setDetail(null);
     setQuestao(null);
     setForm(null);
@@ -372,10 +390,11 @@ export function AdminAuditoriaTab() {
       }).eq("id", detail.id);
       toast.success(`Questão #${detail.questao_id} corrigida e auditoria aprovada`);
       const auditId = detail.id;
+      await closeSiblingAudits(detail.questao_id, auditId);
       setDetail(null);
       setForm(null);
       setQuestao(null);
-      removeFromListIfNeeded(auditId, "approved");
+      removeFromListIfResolved(auditId, "approved");
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao salvar");
     } finally {
