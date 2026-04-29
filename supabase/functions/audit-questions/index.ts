@@ -436,7 +436,8 @@ serve(async (req) => {
     }
 
     if (pending.length === 0) {
-      await supabase.from("audit_jobs").update({ status: "done" }).eq("id", jobId);
+      const finalScope = { ...(job.scope ?? {}), cursor_id: nextCursor };
+      await supabase.from("audit_jobs").update({ status: "done", scope: finalScope }).eq("id", jobId);
       return new Response(JSON.stringify({ done: true, job_id: jobId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
