@@ -197,7 +197,15 @@ export function AdminAuditoriaTab() {
       }
     }
     setRunning(false);
-    loadAudits();
+    loadAudits(filterStatusRef.current, job);
+  }
+
+  async function resumeJob() {
+    if (!job || job.status !== "running") return;
+    stopRef.current = false;
+    setRunning(true);
+    setFilterStatus("session");
+    runLoop(job.id);
   }
 
   async function cancel() {
@@ -484,9 +492,16 @@ export function AdminAuditoriaTab() {
           </div>
           <div className="flex gap-2">
             {!running ? (
-              <Button onClick={startJob} className="gap-2">
-                <Play className="w-4 h-4" />Iniciar auditoria
-              </Button>
+              <>
+                {job?.status === "running" && (
+                  <Button onClick={resumeJob} variant="secondary" className="gap-2">
+                    <Play className="w-4 h-4" />Continuar auditoria
+                  </Button>
+                )}
+                <Button onClick={startJob} className="gap-2">
+                  <Play className="w-4 h-4" />Iniciar nova auditoria
+                </Button>
+              </>
             ) : (
               <Button onClick={cancel} variant="destructive" className="gap-2">
                 <Square className="w-4 h-4" />Parar auditoria
