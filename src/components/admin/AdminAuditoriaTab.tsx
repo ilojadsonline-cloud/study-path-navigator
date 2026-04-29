@@ -326,6 +326,7 @@ export function AdminAuditoriaTab() {
     if (error) return toast.error(error.message);
     await supabase.from("question_audits").update({ status: "rejected", ai_summary: "Questão excluída pelo admin" }).eq("id", a.id);
     toast.success(`Questão #${a.questao_id} excluída do banco`);
+    await closeSiblingAudits(a.questao_id, a.id);
     setDetail(null);
     setQuestao(null);
     setForm(null);
