@@ -394,29 +394,11 @@ serve(async (req) => {
       });
     }
 
-    // IDs já auditados (paginado para superar limite default de 1000 do PostgREST)
-    let excludeIds = new Set<number>();
-    if (job.scope?.only_unaudited) {
-      const PAGE = 1000;
-      let from = 0;
-      while (true) {
-        const { data: page, error: pErr } = await supabase
-          .from("question_audits")
-          .select("questao_id")
-          .order("questao_id", { ascending: true })
-          .range(from, from + PAGE - 1);
-        if (pErr || !page || page.length === 0) break;
-        for (const r of page as any[]) excludeIds.add(r.questao_id);
-        if (page.length < PAGE) break;
-        from += PAGE;
-        if (from >= 200000) break; // safety
-      }
-    }
-
-    // Paginação por cursor: avança até encontrar MAX_PER_INVOCATION questões não auditadas
+    // Paginação por cursor persistido no job: evita recomeçar do ID 0 a cada chamada.
     const pending: any[] = [];
-    let cursor = 0;
-    const PAGE_Q = 500;
+    let cursor = Number(job.scope?.cursor_id ?? 0);
+    let nextCursor = cursor;
+    let reachedEnd = false;
     while (pending.length < MAX_PER_INVOCATION) {
       let qBuilder = supabase
         .from("questoes")
@@ -427,14 +409,28 @@ serve(async (req) => {
       if (job.scope?.disciplinas?.length) qBuilder = qBuilder.in("disciplina", job.scope.disciplinas);
       const { data: candidates, error: cErr } = await qBuilder;
       if (cErr || !candidates || candidates.length === 0) break;
+      const candidateIds = (candidates as any[]).map((q) => q.id);
+      const auditedIds = new Set<number>();
+      if (job.scope?.only_unaudited && candidateIds.length) {
+        const { data: auditedPage } = await supabase
+          .from("question_audits")
+          .select("questao_id")
+          .in("questao_id", candidateIds)
+          .not("status", "eq", "superseded");
+        for (const r of auditedPage ?? []) auditedIds.add((r as any).questao_id);
+      }
       for (const q of candidates as any[]) {
-        if (!excludeIds.has(q.id)) {
+        if (!job.scope?.only_unaudited || !auditedIds.has(q.id)) {
           pending.push(q);
           if (pending.length >= MAX_PER_INVOCATION) break;
         }
       }
       cursor = (candidates[candidates.length - 1] as any).id;
-      if (candidates.length < PAGE_Q) break;
+      nextCursor = cursor;
+      if (candidates.length < PAGE_Q) {
+        reachedEnd = true;
+        break;
+      }
     }
 
     if (pending.length === 0) {
