@@ -16,11 +16,15 @@ import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Und
 // Filtros amigáveis em português
 const STATUS_FILTERS: { key: string; label: string }[] = [
   { key: "open", label: "Pendentes" },
+  { key: "session", label: "Processo atual" },
+  { key: "auto_fixed", label: "Corrigidas pela IA" },
+  { key: "approved", label: "Aprovadas" },
   { key: "manual_review", label: "Precisa revisão manual" },
   { key: "error", label: "Erros" },
 ];
 
 const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
+const SESSION_AUDIT_STATUSES = ["auto_fixed", "approved", "manual_review", "pending", "error"];
 
 const STATUS_LABEL: Record<string, string> = {
   manual_review: "Precisa revisão",
@@ -75,7 +79,7 @@ const LETRAS = ["A", "B", "C", "D", "E"];
 
 export function AdminAuditoriaTab() {
   const [selDisc, setSelDisc] = useState<string[]>([]);
-  const [onlyUnaudited, setOnlyUnaudited] = useState(true);
+  const [onlyUnaudited, setOnlyUnaudited] = useState(false);
   const [limit, setLimit] = useState(100000);
   const [job, setJob] = useState<AuditJob | null>(null);
   const [running, setRunning] = useState(false);
@@ -90,6 +94,9 @@ export function AdminAuditoriaTab() {
   const [bulkApplying, setBulkApplying] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
   const stopRef = useRef(false);
+  const filterStatusRef = useRef(filterStatus);
+
+  useEffect(() => { filterStatusRef.current = filterStatus; }, [filterStatus]);
 
   async function loadDisciplinas() {
     const { data, error } = await supabase.rpc("list_disciplinas");
@@ -100,19 +107,33 @@ export function AdminAuditoriaTab() {
     setDisciplinas((data ?? []).map((r: any) => r.disciplina).filter(Boolean));
   }
 
-  async function loadAudits() {
+  async function loadLatestRunningJob() {
+    const recentCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const { data } = await supabase
+      .from("audit_jobs")
+      .select("*")
+      .eq("status", "running")
+      .gte("updated_at", recentCutoff)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) setJob(data as AuditJob);
+  }
+
+  async function loadAudits(statusOverride = filterStatus, activeJob = job) {
     setLoading(true);
     let q = supabase.from("question_audits").select("*").order("created_at", { ascending: false }).limit(100);
-    if (filterStatus === "open") q = q.in("status", OPEN_AUDIT_STATUSES);
-    else q = q.eq("status", filterStatus);
+    if (statusOverride === "open") q = q.in("status", OPEN_AUDIT_STATUSES);
+    else if (statusOverride === "session") q = q.in("status", SESSION_AUDIT_STATUSES).gte("created_at", activeJob?.created_at ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    else q = q.eq("status", statusOverride);
     const { data, error } = await q;
     if (error) toast.error(error.message);
     else setAudits((data ?? []) as AuditRow[]);
     setLoading(false);
   }
 
-  useEffect(() => { loadDisciplinas(); }, []);
-  useEffect(() => { loadAudits(); }, [filterStatus]);
+  useEffect(() => { loadDisciplinas(); loadLatestRunningJob(); }, []);
+  useEffect(() => { loadAudits(); }, [filterStatus, job?.id]);
 
   async function startJob() {
     stopRef.current = false;
@@ -129,6 +150,7 @@ export function AdminAuditoriaTab() {
       if (error) throw error;
       const j = data.job as AuditJob;
       setJob(j);
+      setFilterStatus("session");
       toast.success(`Auditoria iniciada (${j.total} questões)`);
       runLoop(j.id);
     } catch (e: any) {
@@ -146,12 +168,24 @@ export function AdminAuditoriaTab() {
         });
         if (error) throw error;
         consecutiveFailures = 0;
-        const status = await supabase.functions.invoke("audit-questions", {
-          body: { action: "status", job_id: jobId },
-        });
-        if (status.data?.job) setJob(status.data.job);
+        let currentJob = data?.job as AuditJob | undefined;
+        if (currentJob) setJob(currentJob);
+        else {
+          const status = await supabase.functions.invoke("audit-questions", {
+            body: { action: "status", job_id: jobId },
+          });
+          if (status.data?.job) {
+            currentJob = status.data.job as AuditJob;
+            setJob(currentJob);
+          }
+        }
+        if (["session", "auto_fixed", "approved", "manual_review", "error"].includes(filterStatusRef.current)) {
+          loadAudits(filterStatusRef.current, currentJob ?? job);
+        }
         if (data?.done) {
           toast.success("Auditoria concluída!");
+          filterStatusRef.current = "open";
+          setFilterStatus("open");
           break;
         }
       } catch (e: any) {
@@ -165,7 +199,15 @@ export function AdminAuditoriaTab() {
       }
     }
     setRunning(false);
-    loadAudits();
+    loadAudits(filterStatusRef.current, job);
+  }
+
+  async function resumeJob() {
+    if (!job || job.status !== "running") return;
+    stopRef.current = false;
+    setRunning(true);
+    setFilterStatus("session");
+    runLoop(job.id);
   }
 
   async function cancel() {
@@ -452,9 +494,16 @@ export function AdminAuditoriaTab() {
           </div>
           <div className="flex gap-2">
             {!running ? (
-              <Button onClick={startJob} className="gap-2">
-                <Play className="w-4 h-4" />Iniciar auditoria
-              </Button>
+              <>
+                {job?.status === "running" && (
+                  <Button onClick={resumeJob} variant="secondary" className="gap-2">
+                    <Play className="w-4 h-4" />Continuar auditoria
+                  </Button>
+                )}
+                <Button onClick={startJob} className="gap-2">
+                  <Play className="w-4 h-4" />Iniciar nova auditoria
+                </Button>
+              </>
             ) : (
               <Button onClick={cancel} variant="destructive" className="gap-2">
                 <Square className="w-4 h-4" />Parar auditoria
@@ -497,7 +546,7 @@ export function AdminAuditoriaTab() {
                   ? <><Loader2 className="w-4 h-4 animate-spin" /> Aplicando {bulkProgress.done}/{bulkProgress.total}…</>
                   : <><Wand2 className="w-4 h-4" /> Aplicar todas as sugestões da IA</>}
               </Button>
-              <Button size="sm" variant="ghost" onClick={loadAudits} disabled={loading}>
+              <Button size="sm" variant="ghost" onClick={() => loadAudits()} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
               </Button>
             </div>

@@ -13,7 +13,8 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const AUTO_FIX_CONFIDENCE = 0.9;
 const AUTO_FIX_RISK = "low";
-const MAX_PER_INVOCATION = 2; // mantém cada chamada dentro do timeout de 150s
+const MAX_PER_INVOCATION = 4; // mais ritmo sem sacrificar qualidade
+const PROCESS_CONCURRENCY = 2; // 2 chamadas IA em paralelo, dentro do limite de 150s
 const PAGE_Q = 250;
 const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
 
@@ -421,14 +422,22 @@ serve(async (req) => {
           .not("status", "eq", "superseded");
         for (const r of auditedPage ?? []) auditedIds.add((r as any).questao_id);
       }
+      let consumedFullPage = true;
       for (const q of candidates as any[]) {
+        cursor = q.id;
+        nextCursor = cursor;
         if (!job.scope?.only_unaudited || !auditedIds.has(q.id)) {
           pending.push(q);
-          if (pending.length >= batchTarget) break;
+          if (pending.length >= batchTarget) {
+            consumedFullPage = q.id === (candidates[candidates.length - 1] as any).id;
+            break;
+          }
         }
       }
-      cursor = (candidates[candidates.length - 1] as any).id;
-      nextCursor = cursor;
+      if (pending.length >= batchTarget) {
+        if (consumedFullPage && candidates.length < PAGE_Q) reachedEnd = true;
+        break;
+      }
       if (candidates.length < PAGE_Q) {
         reachedEnd = true;
         break;
@@ -437,26 +446,40 @@ serve(async (req) => {
 
     if (pending.length === 0) {
       const finalScope = { ...(job.scope ?? {}), cursor_id: nextCursor };
-      await supabase.from("audit_jobs").update({ status: "done", scope: finalScope }).eq("id", jobId);
-      return new Response(JSON.stringify({ done: true, job_id: jobId }), {
+      const finalTotal = job.scope?.only_unaudited ? (job.processed ?? 0) : (job.total ?? 0);
+      const { data: doneJob } = await supabase.from("audit_jobs").update({
+        status: "done",
+        scope: finalScope,
+        total: finalTotal,
+        updated_at: new Date().toISOString(),
+      }).eq("id", jobId).select("*").single();
+      return new Response(JSON.stringify({ done: true, job_id: jobId, job: doneJob }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const legalCache = new Map<string, string | null>();
     let processed = 0, autoFixed = 0, flagged = 0, errors = 0;
+    let lastBatchError: string | null = null;
 
-    for (const q of pending) {
-      try {
-        const r = await processQuestion(supabase, q as Questao, legalCache);
-        processed++;
-        if (r.auto_fixed) autoFixed++;
-        if (r.flagged) flagged++;
-        if (r.status === "error") errors++;
-      } catch (e) {
-        errors++;
-        const msg = e instanceof Error ? e.message : String(e);
-        await supabase.from("audit_jobs").update({ last_error: msg }).eq("id", jobId);
+    for (let i = 0; i < pending.length; i += PROCESS_CONCURRENCY) {
+      const chunk = pending.slice(i, i + PROCESS_CONCURRENCY);
+      const results = await Promise.allSettled(
+        chunk.map((q) => processQuestion(supabase, q as Questao, legalCache)),
+      );
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          const r = result.value;
+          processed++;
+          if (r.auto_fixed) autoFixed++;
+          if (r.flagged) flagged++;
+          if (r.status === "error") errors++;
+        } else {
+          errors++;
+          const msg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+          lastBatchError = msg;
+          await supabase.from("audit_jobs").update({ last_error: msg }).eq("id", jobId);
+        }
       }
     }
 
@@ -465,16 +488,22 @@ serve(async (req) => {
     const newFlagged = (job.flagged ?? 0) + flagged;
     const newErrors = (job.errors ?? 0) + errors;
     const isDone = reachedEnd || newProcessed >= (job.total ?? 0);
+    const finalTotal = isDone && reachedEnd && job.scope?.only_unaudited && newProcessed < (job.total ?? 0)
+      ? newProcessed
+      : (job.total ?? 0);
     const nextScope = { ...(job.scope ?? {}), cursor_id: nextCursor };
 
-    await supabase.from("audit_jobs").update({
+    const { data: updatedJob } = await supabase.from("audit_jobs").update({
       processed: newProcessed,
       auto_fixed: newAutoFixed,
       flagged: newFlagged,
       errors: newErrors,
+      total: finalTotal,
       scope: nextScope,
       status: isDone ? "done" : "running",
-    }).eq("id", jobId);
+      last_error: lastBatchError,
+      updated_at: new Date().toISOString(),
+    }).eq("id", jobId).select("*").single();
 
     return new Response(JSON.stringify({
       processed_in_batch: processed,
@@ -484,6 +513,7 @@ serve(async (req) => {
       total_processed: newProcessed,
       done: isDone,
       job_id: jobId,
+      job: updatedJob,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err) {
