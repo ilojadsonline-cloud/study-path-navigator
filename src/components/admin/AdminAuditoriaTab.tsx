@@ -170,13 +170,13 @@ export function AdminAuditoriaTab() {
     toast.info("Cancelando...");
   }
 
-  // Remove a auditoria da lista atual se ela não pertence mais ao filtro ativo
-  function removeFromListIfNeeded(auditId: number, newStatus: string) {
-    if (filterStatus === "all" || filterStatus === newStatus) {
-      setAudits(prev => prev.map(x => x.id === auditId ? { ...x, status: newStatus } : x));
-    } else {
-      setAudits(prev => prev.filter(x => x.id !== auditId));
-    }
+  // Remove da fila quando o admin já resolveu a pendência.
+  function removeFromListIfResolved(auditId: number, newStatus: string) {
+    const stillVisible =
+      (filterStatus === "open" && OPEN_AUDIT_STATUSES.includes(newStatus)) ||
+      filterStatus === newStatus;
+    if (stillVisible) setAudits(prev => prev.map(x => x.id === auditId ? { ...x, status: newStatus } : x));
+    else setAudits(prev => prev.filter(x => x.id !== auditId));
   }
 
   // Aplica a sugestão da IA tal como veio
@@ -184,7 +184,7 @@ export function AdminAuditoriaTab() {
     if (!a.proposed_patch) {
       await supabase.from("question_audits").update({ status: "approved" }).eq("id", a.id);
       toast.success("Auditoria marcada como aprovada");
-      removeFromListIfNeeded(a.id, "approved");
+      removeFromListIfResolved(a.id, "approved");
       setDetail(null); setQuestao(null); setForm(null);
       return;
     }
@@ -210,7 +210,7 @@ export function AdminAuditoriaTab() {
       applied_patch: patch,
     }).eq("id", a.id);
     toast.success(`Questão #${a.questao_id} corrigida pela IA`);
-    removeFromListIfNeeded(a.id, "auto_fixed");
+    removeFromListIfResolved(a.id, "auto_fixed");
     setDetail(null); setQuestao(null); setForm(null);
   }
 
@@ -258,12 +258,7 @@ export function AdminAuditoriaTab() {
             applied_patch: patch,
           }).eq("id", a.id);
           applied++;
-          // Remove imediatamente da lista visível se filtro não for "auto_fixed" nem "all"
-          if (filterStatus !== "auto_fixed" && filterStatus !== "all") {
-            setAudits(prev => prev.filter(x => x.id !== a.id));
-          } else {
-            setAudits(prev => prev.map(x => x.id === a.id ? { ...x, status: "auto_fixed" } : x));
-          }
+          removeFromListIfResolved(a.id, "auto_fixed");
         } catch (e: any) {
           failed++;
           console.error("bulk apply falhou", a.id, e?.message);
