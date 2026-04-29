@@ -276,6 +276,7 @@ export function AdminAuditoriaTab() {
             status: "auto_fixed",
             applied_patch: patch,
           }).eq("id", a.id);
+          await closeSiblingAudits(a.questao_id, a.id);
           applied++;
           removeFromListIfResolved(a.id, "auto_fixed");
         } catch (e: any) {
@@ -295,6 +296,7 @@ export function AdminAuditoriaTab() {
   async function dismissAudit(a: AuditRow) {
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Auditoria descartada (questão mantida como está)");
+    await closeSiblingAudits(a.questao_id, a.id);
     removeFromListIfResolved(a.id, "rejected");
     setDetail(null); setQuestao(null); setForm(null);
   }
@@ -313,6 +315,7 @@ export function AdminAuditoriaTab() {
     await supabase.from("questoes").update(rest).eq("id", a.questao_id);
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Questão revertida ao estado anterior");
+    await closeSiblingAudits(a.questao_id, a.id);
     removeFromListIfResolved(a.id, "rejected");
     setDetail(null); setQuestao(null); setForm(null);
   }
