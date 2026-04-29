@@ -16,6 +16,13 @@ const logStep = (step: string, details?: any) => {
 const STRIPE_MIN_PAID_CENTS = 5000;
 const ACCESS_WINDOW_DAYS = 90;
 
+type PaidAccess = {
+  subscribed: boolean;
+  subscription_end: string | null;
+  provider?: "stripe" | "mercadopago";
+  is_trial?: boolean;
+};
+
 function getStripeSubscriptionEnd(subscription: any): string | null {
   const endTimestamp = subscription.current_period_end ?? subscription.items?.data?.[0]?.current_period_end;
   if (!endTimestamp) return null;
@@ -24,7 +31,7 @@ function getStripeSubscriptionEnd(subscription: any): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-async function getStripePaidAccess(stripe: any, email: string): Promise<{ subscribed: boolean; subscription_end: string | null }> {
+async function getStripePaidAccess(stripe: any, email: string): Promise<PaidAccess> {
   const variants = Array.from(new Set([email, email.toLowerCase()].filter(Boolean)));
   const sinceSec = Math.floor((Date.now() - ACCESS_WINDOW_DAYS * 24 * 60 * 60 * 1000) / 1000);
 
@@ -34,7 +41,12 @@ async function getStripePaidAccess(stripe: any, email: string): Promise<{ subscr
       const subs = await stripe.subscriptions.list({ customer: customer.id, status: "all", limit: 10 });
       const activeSub = subs.data.find((s: any) => s.status === "active" || s.status === "trialing");
       if (activeSub) {
-        return { subscribed: true, subscription_end: getStripeSubscriptionEnd(activeSub) };
+        return {
+          subscribed: true,
+          subscription_end: getStripeSubscriptionEnd(activeSub),
+          provider: "stripe",
+          is_trial: activeSub.status === "trialing",
+        };
       }
 
       const paymentIntents = await stripe.paymentIntents.list({ customer: customer.id, limit: 20 });
@@ -45,6 +57,8 @@ async function getStripePaidAccess(stripe: any, email: string): Promise<{ subscr
         return {
           subscribed: true,
           subscription_end: new Date((paidIntent.created + ACCESS_WINDOW_DAYS * 24 * 60 * 60) * 1000).toISOString(),
+          provider: "stripe",
+          is_trial: false,
         };
       }
     }
