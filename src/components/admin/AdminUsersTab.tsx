@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
 import {
   Users, Trash2, Search, Loader2, ShieldAlert, UserPlus, UserMinus, Ban, Pencil, Save, Clock, Crown, RefreshCw, KeyRound,
@@ -16,6 +16,7 @@ interface EnrichedUser {
   user_id: string; nome: string; cpf: string; email: string | null; telefone: string | null; created_at: string;
   is_admin: boolean; is_blocked: boolean; subscribed: boolean; subscription_end: string | null;
   trial_expired?: boolean; provider?: "stripe" | "mercadopago"; is_trial?: boolean;
+  _sub_loading?: boolean;
 }
 
 interface EditUserData { user_id: string; nome: string; email: string; cpf: string; }
@@ -39,22 +40,63 @@ export function AdminUsersTab() {
   const [resetPasswordUser, setResetPasswordUser] = useState<{ user_id: string; nome: string } | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [enrichingCount, setEnrichingCount] = useState(0);
 
-  useEffect(() => { loadUsers(); }, []);
+  const enrichAbort = useRef<AbortController | null>(null);
+
+  useEffect(() => { loadUsers(); return () => { enrichAbort.current?.abort(); }; }, []);
+
+  const enrichSubscriptions = useCallback(async (usersList: EnrichedUser[]) => {
+    enrichAbort.current?.abort();
+    const controller = new AbortController();
+    enrichAbort.current = controller;
+
+    // Process in batches of 15
+    const BATCH = 15;
+    const nonAdmins = usersList.filter(u => !u.is_admin);
+    
+    for (let i = 0; i < nonAdmins.length; i += BATCH) {
+      if (controller.signal.aborted) return;
+      const batch = nonAdmins.slice(i, i + BATCH);
+      const ids = batch.map(u => u.user_id);
+      setEnrichingCount(nonAdmins.length - i);
+
+      try {
+        const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+          body: { action: "enrich_subscriptions", user_ids: ids },
+        });
+        if (controller.signal.aborted) return;
+        if (error || data?.error) continue;
+
+        const subs = data?.subscriptions || {};
+        setUsers(prev => prev.map(u => {
+          const sub = subs[u.user_id];
+          if (!sub) return u;
+          return { ...u, subscribed: sub.subscribed, subscription_end: sub.subscription_end, provider: sub.provider, is_trial: sub.is_trial, trial_expired: sub.trial_expired, _sub_loading: false };
+        }));
+      } catch { /* ignore */ }
+    }
+    setEnrichingCount(0);
+  }, []);
 
   const loadUsers = async () => {
     setLoading(true);
+    enrichAbort.current?.abort();
     try {
       const { data, error } = await supabase.functions.invoke("admin-manage-users", {
         body: { action: "list_users", search: search || undefined },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setUsers(data?.users || []);
+      const list: EnrichedUser[] = (data?.users || []).map((u: any) => ({ ...u, _sub_loading: !u.is_admin }));
+      setUsers(list);
+      setLoading(false);
+      // Enrich subscriptions in background
+      enrichSubscriptions(list);
     } catch (err: any) {
       toast({ title: "Erro ao carregar usuários", description: err.message, variant: "destructive" });
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleAddUser = async () => {
@@ -174,9 +216,37 @@ export function AdminUsersTab() {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   };
 
+  const renderSubscriptionCell = (u: EnrichedUser) => {
+    if (u.is_admin) return <Badge variant="secondary" className="text-[10px]">Admin</Badge>;
+    if (u._sub_loading) return <Skeleton className="h-4 w-20" />;
+
+    const daysLeft = getDaysRemaining(u.subscription_end);
+    if (u.subscribed && daysLeft !== null) {
+      return (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1">
+            <Clock className="w-3 h-3 text-primary" />
+            <span className={`text-xs font-medium ${daysLeft <= 7 ? "text-destructive" : daysLeft <= 30 ? "text-warning" : "text-success"}`}>
+              {daysLeft}d restantes
+            </span>
+          </div>
+          {u.provider === "mercadopago" ? (
+            <Badge variant="secondary" className="text-[10px] bg-success/10 text-success">MP pago</Badge>
+          ) : u.is_trial ? (
+            <Badge variant="secondary" className="text-[10px]">Teste</Badge>
+          ) : u.provider === "stripe" ? (
+            <Badge variant="secondary" className="text-[10px]">Stripe</Badge>
+          ) : null}
+        </div>
+      );
+    }
+    if (u.trial_expired) return <Badge variant="destructive" className="text-[10px]">Teste expirado</Badge>;
+    return <span className="text-xs text-muted-foreground">Sem assinatura</span>;
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar por nome, CPF ou email..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && loadUsers()} className="pl-9" />
@@ -185,6 +255,12 @@ export function AdminUsersTab() {
         <Button onClick={() => setShowAddUser(true)} size="sm" className="gradient-primary text-primary-foreground font-bold">
           <UserPlus className="w-4 h-4 mr-1" /> Cadastrar
         </Button>
+        {enrichingCount > 0 && (
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Verificando assinaturas... ({enrichingCount})
+          </span>
+        )}
       </div>
 
       {loading ? (
@@ -207,81 +283,54 @@ export function AdminUsersTab() {
             <TableBody>
               {users.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
-              ) : users.map((u) => {
-                const daysLeft = getDaysRemaining(u.subscription_end);
-                return (
-                  <TableRow key={u.user_id} className={u.is_blocked ? "opacity-60" : ""}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-1.5">
-                        {u.nome}
-                        {u.is_admin && <Crown className="w-3.5 h-3.5 text-yellow-500" />}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{u.email || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs font-mono">{u.cpf}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{u.telefone || "—"}</TableCell>
-                    <TableCell>
-                      {u.is_blocked ? (
-                        <Badge variant="destructive" className="text-[10px]">Bloqueado</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-[10px] bg-success/10 text-success">Ativo</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {u.is_admin ? (
-                        <Badge variant="secondary" className="text-[10px]">Admin</Badge>
-                      ) : u.subscribed && daysLeft !== null ? (
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-primary" />
-                            <span className={`text-xs font-medium ${daysLeft <= 7 ? "text-destructive" : daysLeft <= 30 ? "text-warning" : "text-success"}`}>
-                              {daysLeft}d restantes
-                            </span>
-                          </div>
-                          {u.provider === "mercadopago" ? (
-                            <Badge variant="secondary" className="text-[10px] bg-success/10 text-success">MP pago</Badge>
-                          ) : u.is_trial ? (
-                            <Badge variant="secondary" className="text-[10px]">Teste</Badge>
-                          ) : u.provider === "stripe" ? (
-                            <Badge variant="secondary" className="text-[10px]">Stripe</Badge>
-                          ) : null}
-                        </div>
-                      ) : u.trial_expired ? (
-                        <Badge variant="destructive" className="text-[10px]">Teste expirado</Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Sem assinatura</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{new Date(u.created_at).toLocaleDateString("pt-BR")}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" className="h-7 w-7" title={u.is_admin ? "Remover admin" : "Tornar admin"}
-                          onClick={() => handleToggleAdmin(u.user_id)} disabled={actionLoading === u.user_id + "_admin"}>
-                          {actionLoading === u.user_id + "_admin" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
-                            <ShieldAlert className={`w-3.5 h-3.5 ${u.is_admin ? "text-warning" : "text-muted-foreground"}`} />}
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" title={u.is_blocked ? "Desbloquear" : "Bloquear"}
-                          onClick={() => handleToggleBlock(u.user_id, !u.is_blocked)} disabled={actionLoading === u.user_id + "_block"}>
-                          {actionLoading === u.user_id + "_block" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
-                            <Ban className={`w-3.5 h-3.5 ${u.is_blocked ? "text-destructive" : "text-muted-foreground"}`} />}
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" title="Alterar senha"
-                          onClick={() => setResetPasswordUser({ user_id: u.user_id, nome: u.nome })}>
-                          <KeyRound className="w-3.5 h-3.5 text-muted-foreground" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar cadastro"
-                          onClick={() => setEditUser({ user_id: u.user_id, nome: u.nome, email: u.email || "", cpf: u.cpf })}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" title="Excluir"
-                          onClick={() => setConfirmDeleteUser(u)}>
-                          <UserMinus className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              ) : users.map((u) => (
+                <TableRow key={u.user_id} className={u.is_blocked ? "opacity-60" : ""}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-1.5">
+                      {u.nome}
+                      {u.is_admin && <Crown className="w-3.5 h-3.5 text-yellow-500" />}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{u.email || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs font-mono">{u.cpf}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{u.telefone || "—"}</TableCell>
+                  <TableCell>
+                    {u.is_blocked ? (
+                      <Badge variant="destructive" className="text-[10px]">Bloqueado</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-[10px] bg-success/10 text-success">Ativo</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>{renderSubscriptionCell(u)}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{new Date(u.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" className="h-7 w-7" title={u.is_admin ? "Remover admin" : "Tornar admin"}
+                        onClick={() => handleToggleAdmin(u.user_id)} disabled={actionLoading === u.user_id + "_admin"}>
+                        {actionLoading === u.user_id + "_admin" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+                          <ShieldAlert className={`w-3.5 h-3.5 ${u.is_admin ? "text-warning" : "text-muted-foreground"}`} />}
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" title={u.is_blocked ? "Desbloquear" : "Bloquear"}
+                        onClick={() => handleToggleBlock(u.user_id, !u.is_blocked)} disabled={actionLoading === u.user_id + "_block"}>
+                        {actionLoading === u.user_id + "_block" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+                          <Ban className={`w-3.5 h-3.5 ${u.is_blocked ? "text-destructive" : "text-muted-foreground"}`} />}
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" title="Alterar senha"
+                        onClick={() => setResetPasswordUser({ user_id: u.user_id, nome: u.nome })}>
+                        <KeyRound className="w-3.5 h-3.5 text-muted-foreground" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar cadastro"
+                        onClick={() => setEditUser({ user_id: u.user_id, nome: u.nome, email: u.email || "", cpf: u.cpf })}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" title="Excluir"
+                        onClick={() => setConfirmDeleteUser(u)}>
+                        <UserMinus className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>
@@ -359,27 +408,16 @@ export function AdminUsersTab() {
       {/* Reset Password Dialog */}
       <Dialog open={!!resetPasswordUser} onOpenChange={() => { setResetPasswordUser(null); setNewPassword(""); }}>
         <DialogContent className="max-w-sm">
-          {resetPasswordUser && (
-            <>
-              <DialogHeader><DialogTitle>Alterar Senha</DialogTitle></DialogHeader>
-              <p className="text-sm text-muted-foreground">
-                Definir nova senha para <strong>{resetPasswordUser.nome}</strong>
-              </p>
-              <Input
-                type="password"
-                placeholder="Nova senha (mín. 6 caracteres)"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-              <DialogFooter>
-                <Button variant="outline" onClick={() => { setResetPasswordUser(null); setNewPassword(""); }}>Cancelar</Button>
-                <Button onClick={handleResetPassword} disabled={resettingPassword} className="gradient-primary text-primary-foreground font-bold">
-                  {resettingPassword ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <KeyRound className="w-4 h-4 mr-1" />}
-                  {resettingPassword ? "Alterando..." : "Alterar Senha"}
-                </Button>
-              </DialogFooter>
-            </>
-          )}
+          <DialogHeader><DialogTitle>Alterar Senha</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Nova senha para <strong>{resetPasswordUser?.nome}</strong>:</p>
+          <Input type="password" placeholder="Nova senha (mín. 6 caracteres)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResetPasswordUser(null); setNewPassword(""); }}>Cancelar</Button>
+            <Button onClick={handleResetPassword} disabled={resettingPassword}>
+              {resettingPassword ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <KeyRound className="w-4 h-4 mr-1" />}
+              {resettingPassword ? "Alterando..." : "Alterar Senha"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
