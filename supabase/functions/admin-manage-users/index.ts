@@ -67,6 +67,22 @@ async function getStripePaidAccess(stripe: any, email: string): Promise<PaidAcce
   return { subscribed: false, subscription_end: null };
 }
 
+async function verifyAdmin(supabaseAdmin: any, req: Request) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) throw new Error("Não autorizado");
+  const token = authHeader.replace("Bearer ", "");
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+  if (userError || !userData.user) throw new Error("Não autorizado");
+
+  const { data: roleData } = await supabaseAdmin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userData.user.id)
+    .eq("role", "admin");
+  if (!roleData || roleData.length === 0) throw new Error("Acesso negado: não é admin");
+  return userData.user;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -79,20 +95,7 @@ serve(async (req) => {
   );
 
   try {
-    // Verify caller is admin
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Não autorizado");
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-    if (userError || !userData.user) throw new Error("Não autorizado");
-
-    const { data: roleData } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userData.user.id)
-      .eq("role", "admin");
-    if (!roleData || roleData.length === 0) throw new Error("Acesso negado: não é admin");
-
+    const caller = await verifyAdmin(supabaseAdmin, req);
     const { action, ...params } = await req.json();
 
     // ── CREATE USER ──
@@ -125,7 +128,7 @@ serve(async (req) => {
     if (action === "delete") {
       const { user_id } = params;
       if (!user_id) throw new Error("user_id é obrigatório");
-      if (user_id === userData.user.id) throw new Error("Não é possível excluir a si mesmo");
+      if (user_id === caller.id) throw new Error("Não é possível excluir a si mesmo");
 
       await supabaseAdmin.from("respostas_usuario").delete().eq("user_id", user_id);
       await supabaseAdmin.from("simulados").delete().eq("user_id", user_id);
@@ -172,7 +175,7 @@ serve(async (req) => {
     if (action === "toggle_admin") {
       const { user_id } = params;
       if (!user_id) throw new Error("user_id é obrigatório");
-      if (user_id === userData.user.id) throw new Error("Não é possível alterar seu próprio papel");
+      if (user_id === caller.id) throw new Error("Não é possível alterar seu próprio papel");
 
       const { data: existingRole } = await supabaseAdmin
         .from("user_roles")
@@ -197,7 +200,7 @@ serve(async (req) => {
     if (action === "toggle_block") {
       const { user_id, block } = params;
       if (!user_id) throw new Error("user_id é obrigatório");
-      if (user_id === userData.user.id) throw new Error("Não é possível bloquear a si mesmo");
+      if (user_id === caller.id) throw new Error("Não é possível bloquear a si mesmo");
 
       if (block) {
         const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
@@ -216,34 +219,30 @@ serve(async (req) => {
       });
     }
 
-    // ── LIST USERS WITH DETAILS ──
+    // ── LIST USERS (FAST — DB only, no external API calls) ──
     if (action === "list_users") {
       const { search } = params;
-      logStep("Loading users", { search });
-      
+      logStep("Loading users (fast mode)", { search });
+
       let query = supabaseAdmin.from("profiles").select("user_id, nome, cpf, email, telefone, created_at").order("created_at", { ascending: false });
       if (search) query = query.or(`nome.ilike.%${search}%,cpf.ilike.%${search}%,email.ilike.%${search}%`);
       const { data: profiles, error: profilesErr } = await query.limit(100);
       if (profilesErr) throw new Error(profilesErr.message);
 
-      logStep("Profiles loaded", { count: profiles?.length });
-
-      // Get all admin roles
       const { data: allAdminRoles } = await supabaseAdmin
         .from("user_roles")
         .select("user_id")
         .eq("role", "admin");
-      const adminSet = new Set((allAdminRoles || []).map(r => r.user_id));
+      const adminSet = new Set((allAdminRoles || []).map((r: any) => r.user_id));
 
-      // Parallelize auth user lookups (batch of 10)
       const profilesList = profiles || [];
       const enrichedUsers: any[] = [];
-      
-      // Process auth lookups in parallel batches of 10
+
+      // Auth lookups in parallel batches of 10
       for (let i = 0; i < profilesList.length; i += 10) {
         const batch = profilesList.slice(i, i + 10);
         const results = await Promise.all(
-          batch.map(async (p) => {
+          batch.map(async (p: any) => {
             try {
               const { data: authData } = await supabaseAdmin.auth.admin.getUserById(p.user_id);
               const bannedUntil = (authData?.user as any)?.banned_until as string | undefined;
@@ -257,96 +256,121 @@ serve(async (req) => {
         enrichedUsers.push(...results);
       }
 
-      logStep("Auth data loaded");
+      logStep("Fast list done", { count: enrichedUsers.length });
+      return new Response(JSON.stringify({ success: true, users: enrichedUsers }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
+    // ── ENRICH SUBSCRIPTIONS (called lazily for a batch of user_ids) ──
+    if (action === "enrich_subscriptions") {
+      const { user_ids } = params;
+      if (!Array.isArray(user_ids) || user_ids.length === 0) throw new Error("user_ids é obrigatório");
+
+      // Cap batch size
+      const ids = user_ids.slice(0, 20);
+
+      // Get emails for these users
+      const { data: profiles } = await supabaseAdmin
+        .from("profiles")
+        .select("user_id, email, created_at")
+        .in("user_id", ids);
+
+      if (!profiles || profiles.length === 0) {
+        return new Response(JSON.stringify({ success: true, subscriptions: {} }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const subscriptions: Record<string, any> = {};
+      const now = Date.now();
+      const TRIAL_MS = 24 * 60 * 60 * 1000;
+
+      // Check MercadoPago
       const mpToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
-      const mpSubscriptions = new Map<string, { subscription_end: string }>();
+      const mpMap = new Map<string, { subscription_end: string }>();
       if (mpToken) {
         try {
-          const emailUsers = enrichedUsers.filter((u) => u.email).map((u) => String(u.email).toLowerCase());
-          const foundMpSubscriptions = await getMercadoPagoSubscriptionsByEmail(mpToken, emailUsers);
-          for (const [email, subscription] of foundMpSubscriptions) {
-            mpSubscriptions.set(email, subscription);
+          const emails = profiles.filter((p: any) => p.email).map((p: any) => String(p.email).toLowerCase());
+          const found = await getMercadoPagoSubscriptionsByEmail(mpToken, emails);
+          for (const [email, sub] of found) {
+            mpMap.set(email, sub);
           }
-          logStep("Mercado Pago data loaded", { count: mpSubscriptions.size });
-        } catch (error) {
-          logStep("Mercado Pago lookup warning", { message: error instanceof Error ? error.message : String(error) });
+        } catch (e) {
+          logStep("MP warning", { err: e instanceof Error ? e.message : String(e) });
         }
       }
 
-      for (const user of enrichedUsers) {
-        const email = user.email ? String(user.email).toLowerCase() : null;
-        if (!email) continue;
-
-        const mpSubscription = mpSubscriptions.get(email);
-        if (!mpSubscription) continue;
-
-        user.subscribed = true;
-        user.subscription_end = mpSubscription.subscription_end;
-        user.provider = "mercadopago";
-        user.is_trial = false;
+      for (const p of profiles) {
+        const email = p.email ? String(p.email).toLowerCase() : null;
+        if (email && mpMap.has(email)) {
+          const mp = mpMap.get(email)!;
+          subscriptions[p.user_id] = { subscribed: true, subscription_end: mp.subscription_end, provider: "mercadopago", is_trial: false };
+        }
       }
 
-      // Check Stripe paid access in parallel (batch of 5 to avoid rate limits).
-      // Mercado Pago aprovado tem precedência sobre trial do Stripe e não pode ser sobrescrito.
+      // Check Stripe
       const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
       if (stripeKey) {
         const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-        
-        // Collect all unique emails
-        const emailUsers = enrichedUsers.filter(u => u.email);
-        
-        for (let i = 0; i < emailUsers.length; i += 5) {
-          const batch = emailUsers.slice(i, i + 5);
+        const toCheck = profiles.filter((p: any) => p.email && !subscriptions[p.user_id]);
+
+        for (let i = 0; i < toCheck.length; i += 5) {
+          const batch = toCheck.slice(i, i + 5);
           await Promise.all(
-            batch.map(async (u) => {
+            batch.map(async (p: any) => {
               try {
-                const access = await getStripePaidAccess(stripe, u.email);
-                if (access.subscribed && !(u.provider === "mercadopago" && access.is_trial)) {
-                  u.subscription_end = access.subscription_end;
-                  u.subscribed = true;
-                  u.provider = access.provider;
-                  u.is_trial = access.is_trial;
+                const access = await getStripePaidAccess(stripe, p.email);
+                if (access.subscribed) {
+                  subscriptions[p.user_id] = {
+                    subscribed: true,
+                    subscription_end: access.subscription_end,
+                    provider: access.provider,
+                    is_trial: access.is_trial,
+                  };
                 }
-              } catch {
-                // ignore individual Stripe errors
-              }
+              } catch { /* ignore */ }
             })
           );
         }
-        logStep("Stripe data loaded");
       }
 
-      // ── Sincroniza ban: usuários sem assinatura e fora da janela 24h ficam bloqueados.
-      // Quem tem assinatura ativa (Stripe ou MP) é desbloqueado proativamente.
-      const now = Date.now();
-      const TRIAL_MS = 24 * 60 * 60 * 1000;
+      // Fill in trial_expired for users without subscription
+      for (const p of profiles) {
+        if (!subscriptions[p.user_id]) {
+          const createdMs = p.created_at ? new Date(p.created_at).getTime() : 0;
+          const trialExpired = createdMs > 0 && now - createdMs > TRIAL_MS;
+          subscriptions[p.user_id] = { subscribed: false, subscription_end: null, trial_expired: trialExpired };
+        }
+      }
+
+      // Ban sync for this batch
+      const { data: adminRoles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin").in("user_id", ids);
+      const adminSet = new Set((adminRoles || []).map((r: any) => r.user_id));
+
       await Promise.all(
-        enrichedUsers.map(async (u) => {
-          if (u.is_admin) return; // admin nunca é bloqueado
-          const createdMs = u.created_at ? new Date(u.created_at).getTime() : 0;
+        profiles.map(async (p: any) => {
+          if (adminSet.has(p.user_id)) return;
+          const sub = subscriptions[p.user_id];
+          const createdMs = p.created_at ? new Date(p.created_at).getTime() : 0;
           const trialExpired = createdMs > 0 && now - createdMs > TRIAL_MS;
 
           try {
-            if (u.subscribed && u.is_blocked) {
-              await supabaseAdmin.auth.admin.updateUserById(u.user_id, { ban_duration: "none" } as any);
-              u.is_blocked = false;
-            } else if (!u.subscribed && trialExpired && !u.is_blocked) {
-              await supabaseAdmin.auth.admin.updateUserById(u.user_id, { ban_duration: "876000h" } as any);
-              u.is_blocked = true;
-              u.trial_expired = true;
-            } else if (!u.subscribed && trialExpired) {
-              u.trial_expired = true;
+            const { data: authData } = await supabaseAdmin.auth.admin.getUserById(p.user_id);
+            const bannedUntil = (authData?.user as any)?.banned_until as string | undefined;
+            const isBanned = bannedUntil ? new Date(bannedUntil) > new Date() : false;
+
+            if (sub?.subscribed && isBanned) {
+              await supabaseAdmin.auth.admin.updateUserById(p.user_id, { ban_duration: "none" } as any);
+            } else if (!sub?.subscribed && trialExpired && !isBanned) {
+              await supabaseAdmin.auth.admin.updateUserById(p.user_id, { ban_duration: "876000h" } as any);
             }
-          } catch (err) {
-            logStep("ban sync warning", { user_id: u.user_id, err: err instanceof Error ? err.message : String(err) });
-          }
+          } catch { /* ignore */ }
         })
       );
-      logStep("Ban sync done");
 
-      logStep("Returning users", { count: enrichedUsers.length });
-      return new Response(JSON.stringify({ success: true, users: enrichedUsers }), {
+      logStep("Enrich done", { count: Object.keys(subscriptions).length });
+      return new Response(JSON.stringify({ success: true, subscriptions }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
