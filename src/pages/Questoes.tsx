@@ -138,10 +138,29 @@ const Questoes = () => {
 
   useEffect(() => {
     const fetchDisciplinas = async () => {
-      const { data } = await supabase.from("questoes").select("disciplina");
-      if (data) {
-        const unique = [...new Set(data.map(d => d.disciplina))].sort();
+      const { data, error } = await supabase.rpc("list_disciplinas");
+      if (!error && data) {
+        const unique = (data as { disciplina: string }[])
+          .map(d => d.disciplina)
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b, "pt-BR"));
         setAvailableDisciplinas(unique);
+      } else {
+        // Fallback: paginated fetch to bypass 1000-row limit
+        const all: string[] = [];
+        let from = 0;
+        const size = 1000;
+        while (true) {
+          const { data: rows } = await supabase
+            .from("questoes")
+            .select("disciplina")
+            .range(from, from + size - 1);
+          if (!rows || rows.length === 0) break;
+          all.push(...rows.map((r: any) => r.disciplina));
+          if (rows.length < size) break;
+          from += size;
+        }
+        setAvailableDisciplinas([...new Set(all)].filter(Boolean).sort((a, b) => a.localeCompare(b, "pt-BR")));
       }
     };
     const fetchAnswered = async () => {
