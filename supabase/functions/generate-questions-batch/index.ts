@@ -1069,6 +1069,10 @@ PROIBIÇÕES NO COMENTÁRIO:
 - O comentário deve ter no MÁXIMO 1500 caracteres.
 - PROIBIDO incluir informações externas, opiniões pessoais ou interpretações não derivadas do texto legal.
 
+QUESTÕES INTERPRETATIVAS SÃO PERMITIDAS E DESEJÁVEIS:
+- A alternativa correta NÃO precisa reproduzir o texto da lei "ipsis litteris". Pode parafrasear, aplicar a um caso concreto curto, comparar institutos OU combinar dispositivos de uma ou mais leis do banco — desde que o conteúdo seja FIEL ao que a norma efetivamente determina (sem inventar prazo, autoridade, requisito ou exceção).
+- Mantenha SEMPRE rastreabilidade: o comentário deve citar o(s) artigo(s) que sustenta(m) a interpretação.
+
 REGRA PARA NÚMEROS DE ARTIGOS:
 - Antes de citar "Art. X", LOCALIZE o trecho no texto legal e verifique em qual artigo ele realmente aparece.
 - O número do artigo NÃO é um detalhe menor: um artigo errado invalida toda a questão.
@@ -1451,14 +1455,17 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         continue;
       }
 
-      // ── Literal proof check (whole law) — threshold 0.5 (was 0.6 — too strict for paraphrased correct alts) ──
-      // The article-specific proof + ambiguity detection below are the real anti-hallucination guards.
+      // ── Ancoragem legal (aceita questões interpretativas) ──
+      // Questões que parafraseiam ou interpretam a norma são VÁLIDAS desde que haja
+      // alguma ancoragem (literal OU específica do artigo citado). Só descartamos
+      // quando AMBAS as ancoragens são fracas — evita alucinação sem podar interpretação.
       const lawNorm = normalize(leiSeca);
       const literalProofScore = computeAltLiteralSupport(correctAltText, lawNorm);
-      if (literalProofScore < 0.5) {
+      const articleSpecificScore = computeArticleSpecificProof(correctAltText, q.comentario, blocks);
+      if (literalProofScore < 0.25 && articleSpecificScore < 0.15) {
         discarded++;
-        questoesRevisaoManual.push({ motivo: `Prova literal insuficiente (${literalProofScore.toFixed(2)})` });
-        console.log(`[GERAR] Q${idx+1} descartada: prova literal ${literalProofScore.toFixed(2)} < 0.5`);
+        questoesRevisaoManual.push({ motivo: `Ancoragem legal insuficiente (literal=${literalProofScore.toFixed(2)}, artigo=${articleSpecificScore.toFixed(2)})` });
+        console.log(`[GERAR] Q${idx+1} descartada: sem ancoragem (literal ${literalProofScore.toFixed(2)} / artigo ${articleSpecificScore.toFixed(2)})`);
         continue;
       }
 
@@ -1467,8 +1474,6 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       if (literalArticle && commentCitedArticles.length > 0) {
         const literalArtNum = literalArticle.match(/\d+/)?.[0];
         if (literalArtNum && !commentCitedArticles.includes(literalArtNum)) {
-          // Comment cites a different article than where the correct alt actually appears
-          // Try auto-fix first
           q.comentario = reconcileCommentArticle(q.comentario, literalArticle);
           const fixedCited = extractAllCitedArticles(q.comentario);
           if (!fixedCited.includes(literalArtNum)) {
@@ -1479,15 +1484,6 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
           }
           console.log(`[GERAR] Q${idx+1} AUTO-FIX confronto: artigo corrigido para ${literalArticle}`);
         }
-      }
-
-      // ── Article-specific proof: correct alt must match cited article ──
-      const articleSpecificScore = computeArticleSpecificProof(correctAltText, q.comentario, blocks);
-      if (articleSpecificScore < 0.15 && literalProofScore < 0.5) {
-        discarded++;
-        questoesRevisaoManual.push({ motivo: `Alternativa correta não encontrada no artigo citado (articleScore=${articleSpecificScore.toFixed(2)}, literalScore=${literalProofScore.toFixed(2)})` });
-        console.log(`[GERAR] Q${idx+1} descartada: alt correta não bate com artigo citado (${articleSpecificScore.toFixed(2)}) e prova literal fraca (${literalProofScore.toFixed(2)})`);
-        continue;
       }
 
       // ── Ambiguity detection: reject if incorrect alts have high literal support ──
