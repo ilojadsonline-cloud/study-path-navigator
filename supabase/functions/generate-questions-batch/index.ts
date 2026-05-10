@@ -1069,6 +1069,10 @@ PROIBIÇÕES NO COMENTÁRIO:
 - O comentário deve ter no MÁXIMO 1500 caracteres.
 - PROIBIDO incluir informações externas, opiniões pessoais ou interpretações não derivadas do texto legal.
 
+QUESTÕES INTERPRETATIVAS SÃO PERMITIDAS E DESEJÁVEIS:
+- A alternativa correta NÃO precisa reproduzir o texto da lei "ipsis litteris". Pode parafrasear, aplicar a um caso concreto curto, comparar institutos OU combinar dispositivos de uma ou mais leis do banco — desde que o conteúdo seja FIEL ao que a norma efetivamente determina (sem inventar prazo, autoridade, requisito ou exceção).
+- Mantenha SEMPRE rastreabilidade: o comentário deve citar o(s) artigo(s) que sustenta(m) a interpretação.
+
 REGRA PARA NÚMEROS DE ARTIGOS:
 - Antes de citar "Art. X", LOCALIZE o trecho no texto legal e verifique em qual artigo ele realmente aparece.
 - O número do artigo NÃO é um detalhe menor: um artigo errado invalida toda a questão.
