@@ -118,26 +118,50 @@ Audite com rigor de banca examinadora. Verifique APENAS problemas REAIS de corre
 1. Gabarito está correto à luz do texto legal? (mais grave)
 2. Enunciado tem ambiguidade real, erro de português que prejudique o entendimento, ou pegadinha mal feita que induza a erro injusto?
 3. Existe MAIS de uma alternativa correta? Existe NENHUMA correta?
-4. Distratores absurdos/óbvios a ponto de denunciar a resposta (NÃO marque distrator apenas "fraco" se a questão funciona)?
+4. DISTRATORES ÓBVIOS — defeito sério, deve ser corrigido SEMPRE que presente. Marque issue "distrator_fraco" com severity MEDIUM (HIGH se 2+ alternativas forem facilmente descartáveis). São considerados óbvios:
+   • Distrator absurdo, sem qualquer relação com o tema (instituto inexistente, dado fantasioso).
+   • Distrator gritantemente falso ao senso comum jurídico (ex.: "ministro do STF é eleito por voto popular").
+   • Distrator visivelmente mais curto/longo que os demais — denuncia a resposta de cara.
+   • Distrator que repete trecho do enunciado quase literalmente.
+   • Palavras-âncora ("sempre", "nunca", "somente", "exclusivamente") em apenas 1 alternativa enquanto as demais são moderadas.
+   • Registro/estilo destoante (4 técnicas + 1 coloquial; 4 afirmativas + 1 interrogativa).
+   • "Todas as anteriores", "Nenhuma das anteriores", "Apenas a alternativa X está correta", "N.D.A.".
 5. Há afirmação extra-legal, inventada, ou que CONTRARIA o texto legal?
 6. Comentário CONTRADIZ o gabarito, está factualmente errado, ou cita dispositivo errado?
 7. Alternativas duplicadas, vazias ou idênticas em conteúdo?
 
 REGRA DE OURO — NÃO MEXER NO QUE ESTÁ CORRETO:
-- Se o gabarito está correto, as alternativas funcionam, o enunciado é claro e o comentário é coerente (mesmo que curto, simples ou sem floreio), a questão é APROVADA. Devolva confidence alta, issues=[], proposed_patch=null.
-- NÃO reescreva comentários apenas por serem curtos, simples, sem citar Art./§, ou por preferência estilística. Só sinalize "comentario_incoerente" quando ele estiver factualmente ERRADO ou CONTRADIZER o gabarito.
-- NÃO reescreva questões apenas por estarem "fáceis demais" ou por preferência de estilo de banca. Dificuldade baixa NÃO é defeito.
-- Em caso de dúvida sobre se há defeito real, APROVE a questão.
+- Se o gabarito está correto, as 5 alternativas são plausíveis (todas defensáveis para um aluno mediano), o enunciado é claro e o comentário é coerente (mesmo que curto, simples ou sem floreio), a questão é APROVADA. Devolva confidence alta, issues=[], proposed_patch=null.
+- NÃO reescreva comentários apenas por serem curtos/simples/sem citar Art./§. Só sinalize "comentario_incoerente" quando ele estiver factualmente ERRADO ou CONTRADIZER o gabarito.
+- NÃO reescreva questões apenas por estarem "fáceis demais". Dificuldade baixa NÃO é defeito.
+- Em caso de dúvida sobre defeito real, APROVE.
 
-REGRA DE REESCRITA (use APENAS quando houver defeito real de média/alta gravidade no enunciado/alternativas/gabarito/comentário):
-- Reescreva a questão por completo no proposed_patch: enunciado novo + alt_a..alt_e + gabarito + comentário.
-- ENUNCIADO: claro, específico, ancorado no texto legal, com nível de dificuldade ELEVADO (exija raciocínio, exceção da regra, prazo exato, autoridade competente, hierarquia entre dispositivos). Evite perguntas literais "qual o artigo X". Prefira casos concretos curtos ou comparação entre institutos.
-- ALTERNATIVAS (5): tamanhos parecidos, plausíveis, sem duplicatas, sem "todas/nenhuma das anteriores". Cada distratora deve corresponder a um ERRO TÍPICO do estudante: troca de prazo, troca de autoridade competente, confusão entre institutos parecidos, inversão regra/exceção, dispositivo revogado, ou aplicação errada do princípio. Nada de distrator obviamente falso.
-- COMENTÁRIO (PROFESSOR ORIENTADOR) — vale tanto na reescrita total quanto na reescrita só do comentário: entre 300 e 700 caracteres, tom de professor experiente conversando com o aluno. Estrutura enxuta:
-  • 1 frase contextualizando o instituto/dispositivo.
-  • Citação direta do dispositivo (Art. X, inciso Y, §Z) e por que a correta é correta.
-  • Quando útil, 1 frase curta apontando a "pegadinha" da distratora mais perigosa.
-  • Sem repetir a alternativa inteira, sem enrolação, em português do Brasil. Nada de "conforme a lei vigente" sem citar qual.
+REGRA DE REESCRITA (use APENAS quando houver defeito real de média/alta gravidade):
+- Se o ÚNICO defeito for distrator fraco/óbvio: reescreva APENAS as alternativas problemáticas (preserve as boas, preserve enunciado/gabarito/comentário se estiverem corretos). No proposed_patch devolva só os campos alt_X afetados (e o "gabarito" atualizado caso a posição da correta tenha mudado).
+- Se o defeito for de gabarito/enunciado/comentário: reescreva tudo (enunciado + alt_a..alt_e + gabarito + comentário).
+
+ALGORITMO DE ESCRITA DAS ALTERNATIVAS (siga à risca quando reescrever qualquer alt_X):
+1. PARIDADE FORMAL: as 5 alternativas devem ter comprimento parecido (variação ±25% em caracteres), mesmo registro técnico-jurídico, mesma estrutura sintática (todas começam por verbo OU todas por substantivo) e pontuação coerente.
+2. PARIDADE SEMÂNTICA: todas igualmente plausíveis para alguém que estudou mas não dominou o detalhe — nada absurdo, nada inventado.
+3. CADA DISTRATORA = UM ERRO TÍPICO REAL DO ESTUDANTE, escolhido entre:
+   (a) Troca de prazo (5 dias por 10 dias).
+   (b) Troca de autoridade/órgão competente (Delegado por Juiz; Ministro por Presidente).
+   (c) Inversão regra ↔ exceção.
+   (d) Confusão entre institutos parecidos (preventiva × temporária; dolo eventual × culpa consciente).
+   (e) Dispositivo revogado/alterado ou de outra lei próxima.
+   (f) Aplicação errada de princípio correto (princípio existe, mas não incide aqui).
+   Anote MENTALMENTE qual erro cada distratora explora antes de escrever — não exponha no JSON.
+4. PROIBIDO: "todas/nenhuma das anteriores", "apenas a alternativa X", "n.d.a.", duplicatas, alternativa que contradiga o enunciado, palavras-âncora isoladas em 1 só alternativa.
+5. POSIÇÃO DA CORRETA: distribua aleatoriamente entre A–E (não vicie em C/D). Ajuste "gabarito" (0–4) conforme a nova posição.
+6. SOM DE BANCA: linguagem objetiva, terceira pessoa, sem ironia, sem exemplos hipotéticos longos dentro da alternativa — o caso vai no enunciado.
+
+REGRAS DE ENUNCIADO (quando reescrever):
+- Claro, específico, ancorado no texto legal. Prefira casos concretos curtos ou comparação entre institutos. Evite "qual o artigo X" literal. Mantenha dificuldade compatível com a original (não infle artificialmente).
+
+REGRAS DE COMENTÁRIO (PROFESSOR ORIENTADOR) — quando reescrever comentário:
+- 300–700 caracteres, tom de professor conversando com o aluno.
+- Estrutura: 1 frase contextualizando o instituto; citação do dispositivo (Art. X, inciso Y, §Z) explicando por que a correta é correta; quando útil, 1 frase sobre a "pegadinha" da distratora mais perigosa.
+- Sem repetir a alternativa inteira, sem enrolação, em pt-BR. Nada de "conforme a lei vigente" sem citar qual.
 
 Retorne JSON ESTRITO:
 {
