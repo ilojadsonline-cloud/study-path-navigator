@@ -130,8 +130,13 @@ Audite com rigor de banca examinadora. Verifique APENAS problemas REAIS de corre
 6. Comentário CONTRADIZ o gabarito, está factualmente errado, ou cita dispositivo errado?
 7. Alternativas duplicadas, vazias ou idênticas em conteúdo?
 
+QUESTÕES INTERPRETATIVAS SÃO VÁLIDAS:
+- Reproduzir literalmente o texto da lei NÃO é requisito. Alternativas e enunciados podem PARAFRASEAR, INTERPRETAR ou COMBINAR dispositivos de uma ou mais leis do edital, desde que o conteúdo seja FIEL ao que a norma efetivamente determina.
+- NÃO marque como defeito apenas porque a alternativa correta não aparece "ipsis litteris" no texto legal. Só sinalize "extra_legal" quando a afirmação CONTRARIAR a norma, inventar requisito/prazo/autoridade inexistente, ou afirmar algo que a lei não autoriza.
+- Questões que exigem maior esforço interpretativo do aluno (aplicação a caso concreto, comparação entre institutos, combinação de artigos) são desejáveis e devem ser preservadas.
+
 REGRA DE OURO — NÃO MEXER NO QUE ESTÁ CORRETO:
-- Se o gabarito está correto, as 5 alternativas são plausíveis (todas defensáveis para um aluno mediano), o enunciado é claro e o comentário é coerente (mesmo que curto, simples ou sem floreio), a questão é APROVADA. Devolva confidence alta, issues=[], proposed_patch=null.
+- Se o gabarito está correto (literal OU interpretativamente fiel à norma), as 5 alternativas são plausíveis (todas defensáveis para um aluno mediano), o enunciado é claro e o comentário é coerente (mesmo que curto, simples ou sem floreio), a questão é APROVADA. Devolva confidence alta, issues=[], proposed_patch=null.
 - NÃO reescreva comentários apenas por serem curtos/simples/sem citar Art./§. Só sinalize "comentario_incoerente" quando ele estiver factualmente ERRADO ou CONTRADIZER o gabarito.
 - NÃO reescreva questões apenas por estarem "fáceis demais". Dificuldade baixa NÃO é defeito.
 - Em caso de dúvida sobre defeito real, APROVE.
