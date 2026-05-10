@@ -230,8 +230,13 @@ async function processQuestion(
     return { status: "error", auto_fixed: false, flagged: false };
   }
 
-  const noIssues = result.issues.length === 0 && !result.proposed_patch;
+  // Considera "sem defeito real" quando não há issues de severidade média/alta.
+  const hasRealDefect = result.issues.some(
+    (i: any) => i?.severity === "medium" || i?.severity === "high",
+  );
+  const noIssues = !hasRealDefect && !result.proposed_patch;
   const canAutoFix =
+    hasRealDefect &&
     !!result.proposed_patch &&
     result.confidence >= AUTO_FIX_CONFIDENCE &&
     result.risk_level === AUTO_FIX_RISK &&
