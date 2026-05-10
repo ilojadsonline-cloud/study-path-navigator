@@ -114,23 +114,22 @@ Gabarito atual: ${correta} (índice ${q.gabarito})
 Comentário atual:
 ${q.comentario}
 
-Audite com rigor de banca examinadora. Verifique:
+Audite com rigor de banca examinadora. Verifique APENAS problemas REAIS de correção/coerência:
 1. Gabarito está correto à luz do texto legal? (mais grave)
-2. Enunciado tem ambiguidade, erro de português crítico, ou pegadinha mal feita?
+2. Enunciado tem ambiguidade real, erro de português que prejudique o entendimento, ou pegadinha mal feita que induza a erro injusto?
 3. Existe MAIS de uma alternativa correta? Existe NENHUMA correta?
-4. Distratores são plausíveis (erro típico do estudante) ou são óbvios/absurdos demais?
-5. Há afirmação extra-legal, inventada, ou que contraria o texto legal?
-6. Comentário está coerente com o gabarito, é direto e cita base legal explícita (Art./inciso/§)?
-7. Alternativas duplicadas, vazias, triviais ou de tamanhos muito desiguais?
-8. A questão está fácil demais para uma banca de elite (PMTO/FGV/CESPE)?
-9. COMENTÁRIO está curto/raso demais (menos de ~250 caracteres), confuso, sem citação legal explícita, ou apenas repete a alternativa correta sem ensinar?
+4. Distratores absurdos/óbvios a ponto de denunciar a resposta (NÃO marque distrator apenas "fraco" se a questão funciona)?
+5. Há afirmação extra-legal, inventada, ou que CONTRARIA o texto legal?
+6. Comentário CONTRADIZ o gabarito, está factualmente errado, ou cita dispositivo errado?
+7. Alternativas duplicadas, vazias ou idênticas em conteúdo?
 
-REGRA ESPECÍFICA DE COMENTÁRIO POBRE:
-- Se o comentário atual for MUITO CURTO (< ~250 caracteres), CONFUSO, GENÉRICO, sem citar Art./inciso/§, ou se limitar a dizer "a correta é a letra X porque está na lei", isso já é motivo suficiente para reescrever — mesmo que o restante da questão esteja correto.
-- Nesse caso, registre uma issue "comentario_incoerente" (severity: medium) e devolva no proposed_patch APENAS o campo "comentario" reescrito como o PROFESSOR ORIENTADOR (vide regra abaixo). Não mexa em enunciado/alternativas/gabarito se eles estiverem corretos.
-- Risk_level pode ser "low" nesse cenário (só comentário), permitindo auto-correção.
+REGRA DE OURO — NÃO MEXER NO QUE ESTÁ CORRETO:
+- Se o gabarito está correto, as alternativas funcionam, o enunciado é claro e o comentário é coerente (mesmo que curto, simples ou sem floreio), a questão é APROVADA. Devolva confidence alta, issues=[], proposed_patch=null.
+- NÃO reescreva comentários apenas por serem curtos, simples, sem citar Art./§, ou por preferência estilística. Só sinalize "comentario_incoerente" quando ele estiver factualmente ERRADO ou CONTRADIZER o gabarito.
+- NÃO reescreva questões apenas por estarem "fáceis demais" ou por preferência de estilo de banca. Dificuldade baixa NÃO é defeito.
+- Em caso de dúvida sobre se há defeito real, APROVE a questão.
 
-REGRA DE REESCRITA TOTAL (use sempre que houver problema de média/alta gravidade no enunciado/alternativas/gabarito OU dificuldade baixa demais):
+REGRA DE REESCRITA (use APENAS quando houver defeito real de média/alta gravidade no enunciado/alternativas/gabarito/comentário):
 - Reescreva a questão por completo no proposed_patch: enunciado novo + alt_a..alt_e + gabarito + comentário.
 - ENUNCIADO: claro, específico, ancorado no texto legal, com nível de dificuldade ELEVADO (exija raciocínio, exceção da regra, prazo exato, autoridade competente, hierarquia entre dispositivos). Evite perguntas literais "qual o artigo X". Prefira casos concretos curtos ou comparação entre institutos.
 - ALTERNATIVAS (5): tamanhos parecidos, plausíveis, sem duplicatas, sem "todas/nenhuma das anteriores". Cada distratora deve corresponder a um ERRO TÍPICO do estudante: troca de prazo, troca de autoridade competente, confusão entre institutos parecidos, inversão regra/exceção, dispositivo revogado, ou aplicação errada do princípio. Nada de distrator obviamente falso.
@@ -231,8 +230,13 @@ async function processQuestion(
     return { status: "error", auto_fixed: false, flagged: false };
   }
 
-  const noIssues = result.issues.length === 0 && !result.proposed_patch;
+  // Considera "sem defeito real" quando não há issues de severidade média/alta.
+  const hasRealDefect = result.issues.some(
+    (i: any) => i?.severity === "medium" || i?.severity === "high",
+  );
+  const noIssues = !hasRealDefect && !result.proposed_patch;
   const canAutoFix =
+    hasRealDefect &&
     !!result.proposed_patch &&
     result.confidence >= AUTO_FIX_CONFIDENCE &&
     result.risk_level === AUTO_FIX_RISK &&
