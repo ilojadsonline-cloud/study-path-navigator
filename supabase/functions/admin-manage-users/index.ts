@@ -411,6 +411,52 @@ serve(async (req) => {
       });
     }
 
+    // ── SUBSCRIPTION OVERVIEW (active + blocked) ──
+    if (action === "subscription_overview") {
+      const { data: profiles } = await supabaseAdmin
+        .from("profiles")
+        .select("user_id, nome, cpf, email, created_at")
+        .order("created_at", { ascending: false })
+        .limit(1000);
+
+      const list = profiles || [];
+      const active: any[] = [];
+      const blocked: any[] = [];
+
+      // Lookup auth in batches
+      for (let i = 0; i < list.length; i += 15) {
+        const batch = list.slice(i, i + 15);
+        const results = await Promise.all(batch.map(async (p: any) => {
+          try {
+            const { data: authData } = await supabaseAdmin.auth.admin.getUserById(p.user_id);
+            const u: any = authData?.user;
+            const bannedUntil = u?.banned_until as string | undefined;
+            const isBlocked = bannedUntil ? new Date(bannedUntil) > new Date() : false;
+            const meta = u?.app_metadata || {};
+            return {
+              ...p,
+              is_blocked: isBlocked,
+              banned_until: bannedUntil ?? null,
+              last_sign_in_at: u?.last_sign_in_at ?? null,
+              access_expires_at: meta.access_expires_at ?? null,
+              reactivated_at: meta.reactivated_at ?? null,
+              payment_source: meta.payment_source ?? null,
+              trial_blocked: !!meta.trial_blocked,
+            };
+          } catch {
+            return { ...p, is_blocked: false, banned_until: null, last_sign_in_at: null };
+          }
+        }));
+        for (const r of results) {
+          if (r.is_blocked) blocked.push(r); else active.push(r);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, active, blocked }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     throw new Error("Ação inválida.");
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
