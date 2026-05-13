@@ -30,6 +30,7 @@ type OverviewUser = {
   reactivated_at: string | null;
   payment_source: string | null;
   trial_blocked: boolean;
+  block_reason?: string | null;
 };
 
 type PaymentEvent = {
