@@ -488,9 +488,15 @@ const Landing = () => {
                     {selectedAnswer === currentQuestion.gabarito ? "Resposta Correta!" : "Resposta Incorreta"}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {currentQuestion.comentario}
-                </p>
+                <div className="mt-3 pt-3 border-t border-border/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gold/15 text-gold text-[10px] font-bold">CH</span>
+                    <span className="text-xs font-bold text-foreground">Comentário do Professor</span>
+                  </div>
+                  <p className="text-xs md:text-sm text-foreground/80 leading-relaxed whitespace-pre-line">
+                    {currentQuestion.comentario}
+                  </p>
+                </div>
               </motion.div>
             )}
 
