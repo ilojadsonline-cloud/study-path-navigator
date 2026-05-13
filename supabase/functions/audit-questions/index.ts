@@ -163,17 +163,12 @@ Tom direto, técnico, didático, em pt-BR. Sem repetir o enunciado, sem "conform
 REGRAS DE ENUNCIADO (quando reescrever):
 - Claro, específico, ancorado na lei. Prefira casos concretos curtos. Mantenha a dificuldade compatível com a original.
 
-REGRAS DE COMENTÁRIO (PROFESSOR ORIENTADOR) — quando reescrever comentário:
-- 300–700 caracteres, tom de professor conversando com o aluno.
-- Estrutura: 1 frase contextualizando o instituto; citação do dispositivo (Art. X, inciso Y, §Z) explicando por que a correta é correta; quando útil, 1 frase sobre a "pegadinha" da distratora mais perigosa.
-- Sem repetir a alternativa inteira, sem enrolação, em pt-BR. Nada de "conforme a lei vigente" sem citar qual.
-
 Retorne JSON ESTRITO:
 {
-  "confidence": 0.0-1.0,           // sua confiança no diagnóstico
-  "risk_level": "low" | "medium" | "high",  // risco de aplicar correção automática (low = mudança segura; high = exige humano)
+  "confidence": 0.0-1.0,
+  "risk_level": "low" | "medium" | "high",
   "issues": [
-    { "type": "gabarito_errado|ambiguidade|distrator_fraco|extra_legal|comentario_incoerente|alt_duplicada|outros", "severity": "low|medium|high", "description": "..." }
+    { "type": "gabarito_errado|sem_correta|multiplas_corretas|alucinacao_juridica|bug_estrutural|sem_comentario|comentario_loop|comentario_incompleto|distrator_fraco|gabarito_obvio|hierarquia_violada|funcao_inconsistente|duplicada|incoerente|texto_legal_desatualizado|desalinhamento|extra_legal|alt_duplicada|ambiguidade|outros", "severity": "low|medium|high", "description": "..." }
   ],
   "proposed_patch": {              // null APENAS se a questão estiver impecável. Caso precise de qualquer ajuste relevante, devolva enunciado, alt_a..alt_e, gabarito e comentário JUNTOS.
     "enunciado"?: "...",
