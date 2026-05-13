@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.block-expired-access]
 verify_jwt = false
+
+[functions.subscription-details]
+verify_jwt = false
+
+[functions.cancel-subscription]
+verify_jwt = false
