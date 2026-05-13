@@ -690,9 +690,10 @@ const Landing = () => {
                 Pague do <span className="text-gradient-primary">jeito que preferir</span>
               </h3>
               <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-                Escolha entre <strong className="text-foreground">Stripe</strong> (cartão internacional, com teste grátis de 1 dia)
-                ou <strong className="text-foreground">Mercado Pago</strong> (Pix, Boleto ou cartão brasileiro).
+                Pagamento via <strong className="text-foreground">Mercado Pago</strong> (cartão de crédito, débito ou PIX),
+                com <strong className="text-foreground">1 dia de teste grátis</strong> antes da primeira cobrança.
               </p>
+
             </div>
 
             <div className="grid sm:grid-cols-3 gap-3">
