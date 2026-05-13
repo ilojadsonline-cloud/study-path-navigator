@@ -423,9 +423,23 @@ serve(async (req) => {
       const active: any[] = [];
       const blocked: any[] = [];
 
-      // Lookup auth in batches
-      for (let i = 0; i < list.length; i += 15) {
-        const batch = list.slice(i, i + 15);
+      // 1) Pre-fetch MercadoPago active subscriptions for all known emails
+      const mpToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
+      const mpMap = new Map<string, { subscription_end: string }>();
+      if (mpToken) {
+        try {
+          const emails = list.map((p: any) => p.email).filter(Boolean).map((e: string) => e.toLowerCase());
+          const found = await getMercadoPagoSubscriptionsByEmail(mpToken, emails);
+          for (const [email, sub] of found) mpMap.set(email, sub);
+        } catch (e) { logStep("MP overview warn", { err: String(e) }); }
+      }
+
+      // 2) Stripe client (lazy lookup per user)
+      const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+      const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" }) : null;
+
+      for (let i = 0; i < list.length; i += 12) {
+        const batch = list.slice(i, i + 12);
         const results = await Promise.all(batch.map(async (p: any) => {
           try {
             const { data: authData } = await supabaseAdmin.auth.admin.getUserById(p.user_id);
@@ -433,15 +447,39 @@ serve(async (req) => {
             const bannedUntil = u?.banned_until as string | undefined;
             const isBlocked = bannedUntil ? new Date(bannedUntil) > new Date() : false;
             const meta = u?.app_metadata || {};
+            const emailLc = (p.email || u?.email || "").toLowerCase();
+
+            let access_expires_at: string | null = meta.access_expires_at ?? null;
+            let reactivated_at: string | null = meta.reactivated_at ?? null;
+            let payment_source: string | null = meta.payment_source ?? null;
+
+            // Enriquece quando faltam dados (caso típico de assinantes Stripe legados)
+            if (!isBlocked && !access_expires_at) {
+              if (mpMap.has(emailLc)) {
+                const mp = mpMap.get(emailLc)!;
+                access_expires_at = mp.subscription_end;
+                payment_source = payment_source || "mercadopago";
+              } else if (stripe && emailLc) {
+                try {
+                  const access = await getStripePaidAccess(stripe, emailLc);
+                  if (access.subscribed) {
+                    access_expires_at = access.subscription_end;
+                    payment_source = payment_source || "stripe";
+                  }
+                } catch { /* ignore */ }
+              }
+            }
+
             return {
               ...p,
               is_blocked: isBlocked,
               banned_until: bannedUntil ?? null,
               last_sign_in_at: u?.last_sign_in_at ?? null,
-              access_expires_at: meta.access_expires_at ?? null,
-              reactivated_at: meta.reactivated_at ?? null,
-              payment_source: meta.payment_source ?? null,
+              access_expires_at,
+              reactivated_at,
+              payment_source,
               trial_blocked: !!meta.trial_blocked,
+              block_reason: meta.block_reason ?? null,
             };
           } catch {
             return { ...p, is_blocked: false, banned_until: null, last_sign_in_at: null };
