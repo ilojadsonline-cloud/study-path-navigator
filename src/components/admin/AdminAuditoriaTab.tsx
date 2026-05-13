@@ -449,6 +449,55 @@ export function AdminAuditoriaTab() {
     }
   }
 
+  function toggleSelect(id: number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === audits.length && audits.length > 0) setSelectedIds(new Set());
+    else setSelectedIds(new Set(audits.map(a => a.id)));
+  }
+
+  async function bulkDeleteSelected() {
+    const selected = audits.filter(a => selectedIds.has(a.id));
+    if (selected.length === 0) return;
+    setBulkDeleting(true);
+    let ok = 0, fail = 0;
+    try {
+      const questaoIds = Array.from(new Set(selected.map(a => a.questao_id)));
+      const auditIds = selected.map(a => a.id);
+      // Exclui questões em lote
+      const { error: delErr } = await supabase.from("questoes").delete().in("id", questaoIds);
+      if (delErr) throw delErr;
+      // Marca auditorias como rejeitadas (preserva histórico)
+      const { error: updErr } = await supabase
+        .from("question_audits")
+        .update({ status: "rejected", ai_summary: "Questão excluída em lote pelo admin" })
+        .in("id", auditIds);
+      if (updErr) throw updErr;
+      // Encerra outras auditorias abertas dessas questões
+      await supabase
+        .from("question_audits")
+        .update({ status: "superseded" })
+        .in("questao_id", questaoIds)
+        .in("status", OPEN_AUDIT_STATUSES);
+      ok = selected.length;
+      setAudits(prev => prev.filter(x => !selectedIds.has(x.id)));
+      setSelectedIds(new Set());
+      toast.success(`${ok} questão(ões) excluída(s) com sucesso`);
+    } catch (e: any) {
+      fail = selected.length;
+      toast.error("Falha na exclusão em lote: " + (e?.message ?? e));
+    } finally {
+      setBulkDeleting(false);
+      setConfirmDelete(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card className="glass-card">
