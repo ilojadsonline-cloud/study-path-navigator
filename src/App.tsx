@@ -58,6 +58,9 @@ const App = () => (
             <Route path="/esqueci-senha" element={<EsqueciSenha />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/contato-publico" element={<ContatoPublico />} />
+            <Route path="/pagamento/sucesso" element={<PagamentoSucesso />} />
+            <Route path="/pagamento/pendente" element={<PagamentoPendente />} />
+            <Route path="/pagamento/falha" element={<PagamentoFalha />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/edital" element={<ProtectedRoute><Edital /></ProtectedRoute>} />
             <Route path="/questoes" element={<ProtectedRoute><Questoes /></ProtectedRoute>} />
