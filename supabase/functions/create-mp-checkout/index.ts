@@ -11,6 +11,7 @@ const logStep = (step: string, details?: any) => {
 };
 
 const PLAN_AMOUNT = 89.90;
+const TRIAL_DAYS = 1;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -27,9 +28,11 @@ serve(async (req) => {
     } catch {}
 
     const payerEmail = (body?.email || "").trim().toLowerCase();
+    // O parâmetro `trial` é mantido por compatibilidade com chamadas existentes,
+    // mas o trial de 1 dia é SEMPRE aplicado pelo plano (regra de negócio atual).
 
     if (!payerEmail) {
-      return new Response(JSON.stringify({ error: "Informe o email para iniciar o pagamento." }), {
+      return new Response(JSON.stringify({ error: "Informe o email para iniciar a assinatura." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
       });
@@ -43,66 +46,48 @@ serve(async (req) => {
     }
 
     const origin = req.headers.get("origin") || "https://www.metodochoa.com.br";
+    const externalReference = `choa-sub-${Date.now()}-${payerEmail}`;
 
-    // Estratégia: Preference (pagamento único) — aceita Pix + Cartão de Crédito + Boleto
-    // Acesso liberado por 90 dias após confirmação. Sem renovação automática.
-    // Quando expirar, usuário compra novamente e a verificação por email reativa o acesso.
-    const externalReference = `choa-paid-${Date.now()}-${payerEmail}`;
-
-    const preferenceBody: any = {
-      items: [
-        {
-          id: "choa-trimestral",
-          title: "Método CHOA 2026 — Acesso Trimestral (90 dias)",
-          description: "Plataforma de prática ativa e simulados. Acesso por 90 dias.",
-          quantity: 1,
-          unit_price: PLAN_AMOUNT,
-          currency_id: "BRL",
-          category_id: "education",
-        },
-      ],
-      payer: {
-        email: payerEmail,
-      },
-      payment_methods: {
-        // Aceita todos os métodos: Pix, cartão de crédito, débito, boleto
-        excluded_payment_types: [],
-        excluded_payment_methods: [],
-        installments: 12,
-      },
-      back_urls: {
-        success: `${origin}/cadastro?mp_status=success`,
-        failure: `${origin}/assinatura?payment=canceled`,
-        pending: `${origin}/cadastro?mp_status=pending`,
-      },
-      auto_return: "approved",
+    // ===== Assinatura recorrente via MP (preapproval) =====
+    // - 1 dia de teste gratuito (free_trial nativo)
+    // - Cobrança automática de R$ 89,90 a cada 3 meses após o trial
+    // - Cancelamento durante o trial: usuário não é cobrado
+    const preapprovalBody: any = {
+      reason: "Método CHOA 2026 — Assinatura Trimestral",
       external_reference: externalReference,
-      statement_descriptor: "METODO CHOA",
-      metadata: {
-        plan: "trimestral",
-        days: 90,
-        email: payerEmail,
+      payer_email: payerEmail,
+      back_url: `${origin}/cadastro?mp_status=success`,
+      status: "pending",
+      auto_recurring: {
+        frequency: 3,
+        frequency_type: "months",
+        transaction_amount: PLAN_AMOUNT,
+        currency_id: "BRL",
+        free_trial: {
+          frequency: TRIAL_DAYS,
+          frequency_type: "days",
+        },
       },
     };
 
-    logStep("Criando preference", { email: payerEmail });
+    logStep("Criando preapproval", { email: payerEmail });
 
-    const mpRes = await fetch("https://api.mercadopago.com/checkout/preferences", {
+    const mpRes = await fetch("https://api.mercadopago.com/preapproval", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(preferenceBody),
+      body: JSON.stringify(preapprovalBody),
     });
 
     const mpData = await mpRes.json();
 
     if (!mpRes.ok) {
-      logStep("Erro MP", { status: mpRes.status, data: mpData });
+      logStep("Erro MP preapproval", { status: mpRes.status, data: mpData });
       return new Response(
         JSON.stringify({
-          error: mpData?.message || "Falha ao criar checkout no Mercado Pago",
+          error: mpData?.message || "Falha ao criar assinatura no Mercado Pago",
           details: mpData,
         }),
         {
@@ -113,17 +98,17 @@ serve(async (req) => {
     }
 
     const initPoint = mpData?.init_point || mpData?.sandbox_init_point;
-    const preferenceId = mpData?.id;
+    const preapprovalId = mpData?.id;
 
     if (!initPoint) {
       logStep("Sem init_point", { mpData });
       throw new Error("init_point não retornado pelo Mercado Pago");
     }
 
-    logStep("Preference criada", { preferenceId, initPoint });
+    logStep("Preapproval criado", { preapprovalId, initPoint });
 
     return new Response(
-      JSON.stringify({ url: initPoint, preference_id: preferenceId }),
+      JSON.stringify({ url: initPoint, preapproval_id: preapprovalId }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,

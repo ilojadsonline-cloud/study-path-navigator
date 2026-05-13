@@ -209,3 +209,72 @@ export async function getMercadoPagoSubscriptionsByEmail(
 
   return matches;
 }
+// =============================================================================
+// MercadoPago Preapproval (assinatura recorrente) lookup
+// =============================================================================
+
+export interface MercadoPagoPreapprovalMatch {
+  provider: "mercadopago";
+  preapproval_id: string | null;
+  status: string;
+  is_trial: boolean;
+  next_payment_date: string | null;
+  trial_ends_at: string | null;
+}
+
+export async function findActiveMercadoPagoPreapproval(
+  accessToken: string,
+  emails: string[],
+): Promise<MercadoPagoPreapprovalMatch | null> {
+  const normalizedEmails = Array.from(
+    new Set(emails.map((e) => normalizeEmail(e)).filter((e): e is string => Boolean(e))),
+  );
+  if (normalizedEmails.length === 0) return null;
+
+  for (const email of normalizedEmails) {
+    try {
+      const url = `https://api.mercadopago.com/preapproval/search?payer_email=${encodeURIComponent(email)}&sort=date_created:desc&limit=20`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const results = Array.isArray(data?.results) ? data.results : [];
+
+      for (const pre of results) {
+        if (pre?.status !== "authorized") continue;
+
+        const ar = pre?.auto_recurring ?? {};
+        const summarized = pre?.summarized ?? {};
+        const chargedQty = Number(summarized?.charged_quantity ?? 0);
+        const freeTrial = ar?.free_trial;
+
+        // Detecta trial vigente: existe free_trial configurado e ainda não houve cobrança
+        let isTrial = false;
+        let trialEndsAt: string | null = null;
+        if (freeTrial && chargedQty === 0) {
+          const startMs = new Date(pre?.date_created ?? Date.now()).getTime();
+          const freq = Number(freeTrial?.frequency ?? 0);
+          const ftype = String(freeTrial?.frequency_type ?? "days");
+          const multiplier = ftype === "months" ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+          const endMs = startMs + freq * multiplier;
+          if (Date.now() < endMs) {
+            isTrial = true;
+            trialEndsAt = new Date(endMs).toISOString();
+          }
+        }
+
+        return {
+          provider: "mercadopago",
+          preapproval_id: pre?.id ?? null,
+          status: pre.status,
+          is_trial: isTrial,
+          next_payment_date: pre?.next_payment_date ?? null,
+          trial_ends_at: trialEndsAt,
+        };
+      }
+    } catch (err) {
+      console.error("[MP-PREAPPROVAL] lookup error", { email, err: String(err) });
+    }
+  }
+
+  return null;
+}

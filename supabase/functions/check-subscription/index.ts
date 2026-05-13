@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { resolveTrialWindow } from "./trial-access.ts";
-import { findApprovedMercadoPagoPayment } from "../_shared/mercadopago-payments.ts";
+import { findApprovedMercadoPagoPayment, findActiveMercadoPagoPreapproval } from "../_shared/mercadopago-payments.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -93,6 +93,45 @@ serve(async (req) => {
     }
 
     logStep("Searching Stripe with emails", { emails: emailsToSearch });
+
+    // ===== PRIORIDADE 1: MercadoPago Preapproval (assinatura recorrente nativa) =====
+    // O MP é o gateway ativo para novas assinaturas. Verificamos preapprovals
+    // autorizados (inclui período de teste vigente) ANTES do Stripe.
+    if (mpToken) {
+      try {
+        const mpPreapproval = await findActiveMercadoPagoPreapproval(mpToken, emailsToSearch);
+        if (mpPreapproval) {
+          logStep("MP preapproval ativo", {
+            preapprovalId: mpPreapproval.preapproval_id,
+            isTrial: mpPreapproval.is_trial,
+          });
+          await unbanAuthUser(supabaseClient, user.id);
+          try {
+            await supabaseClient.from("trial_usage").upsert({
+              email: user.email.toLowerCase(),
+              user_id: user.id,
+              provider: "mercadopago",
+              trial_ends_at: mpPreapproval.trial_ends_at,
+              converted_to_paid: !mpPreapproval.is_trial,
+            }, { onConflict: "email" });
+          } catch (_) {}
+
+          return new Response(JSON.stringify({
+            subscribed: true,
+            subscription_end: mpPreapproval.next_payment_date,
+            is_trial: mpPreapproval.is_trial,
+            trial_ends_at: mpPreapproval.trial_ends_at,
+            provider: "mercadopago",
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+      } catch (e) {
+        logStep("MP preapproval lookup warning", { error: String(e) });
+      }
+    }
+
 
     // Search Stripe for customer by each email variant
     let stripeCustomer = null;
