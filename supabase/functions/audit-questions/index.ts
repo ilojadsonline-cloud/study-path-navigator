@@ -263,7 +263,7 @@ async function processQuestion(
     hasRealDefect &&
     !!result.proposed_patch &&
     result.confidence >= AUTO_FIX_CONFIDENCE &&
-    result.risk_level === AUTO_FIX_RISK &&
+    AUTO_FIX_RISK_ALLOWED.includes(result.risk_level) &&
     !result.needs_human_review;
 
   let finalStatus: string;
