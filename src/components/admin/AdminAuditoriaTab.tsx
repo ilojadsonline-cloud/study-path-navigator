@@ -94,6 +94,9 @@ export function AdminAuditoriaTab() {
   const [disciplinas, setDisciplinas] = useState<string[]>([]);
   const [bulkApplying, setBulkApplying] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const stopRef = useRef(false);
   const filterStatusRef = useRef(filterStatus);
 
