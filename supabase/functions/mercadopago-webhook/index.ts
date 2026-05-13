@@ -247,9 +247,12 @@ serve(async (req) => {
 
         const user = await findUserByEmail(admin, email);
         const expiresAt = new Date(Date.now() + ACCESS_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
+        const isAvulso = payment?.metadata?.payment_type === "avulso";
+        const source = isAvulso ? "mercadopago_avulso" : "mercadopago";
+        const typeLabel = isAvulso ? "pix_ou_boleto" : (paymentMethod || null);
 
         if (user) {
-          await reactivateUser(admin, user, expiresAt);
+          await reactivateUser(admin, user, expiresAt, source, typeLabel);
           try {
             await admin.from("trial_usage").upsert(
               { email, user_id: user.id, provider: "mercadopago", converted_to_paid: true },
