@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import {
   Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy,
   Star, Zap, CheckCircle2, Clock, BarChart3, Lock, Users, Target,
-  ChevronRight, Eye, Gift, Lightbulb, TrendingUp, Brain, AlertTriangle,
-  CreditCard, QrCode, Receipt,
+  ChevronRight, Eye, Lightbulb, TrendingUp, Brain, AlertTriangle,
+  CreditCard, QrCode, Receipt, PlayCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
@@ -197,22 +197,22 @@ const Landing = () => {
               Ideal para complementar seu cursinho, grupo de estudos ou preparação individual.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                to="/assinatura?trial=1"
-                className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
+              <a
+                href="#demonstracao"
+                className="px-10 py-4 rounded-xl border border-primary/40 bg-primary/5 text-primary font-semibold text-base flex items-center gap-2 hover:bg-primary/10 transition-colors"
               >
-                <Gift className="w-5 h-5" />
-                Testar Grátis por 1 Dia
-              </Link>
+                <PlayCircle className="w-5 h-5" />
+                Ver demonstração
+              </a>
               <Link
                 to="/assinatura"
-                className="px-10 py-4 rounded-xl border border-primary/40 bg-primary/5 text-primary font-semibold text-base flex items-center gap-2 hover:bg-primary/10 transition-colors"
+                className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
               >
                 Assinar por R$ 89,90
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">Teste grátis de 1 dia via Stripe • Pix, Boleto e Cartão disponíveis no Mercado Pago</p>
+            <p className="text-xs text-muted-foreground mt-3">Pague com <strong className="text-foreground">Cartão</strong>, <strong className="text-foreground">Pix</strong> ou <strong className="text-foreground">Boleto</strong> via Mercado Pago • 90 dias de acesso completo</p>
           </motion.div>
         </section>
 
