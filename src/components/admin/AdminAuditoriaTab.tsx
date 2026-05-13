@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Undo2, Save, Pencil, Trash2, X, ShieldCheck, Wand2 } from "lucide-react";
@@ -93,6 +94,9 @@ export function AdminAuditoriaTab() {
   const [disciplinas, setDisciplinas] = useState<string[]>([]);
   const [bulkApplying, setBulkApplying] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const stopRef = useRef(false);
   const filterStatusRef = useRef(filterStatus);
 
@@ -129,6 +133,7 @@ export function AdminAuditoriaTab() {
     const { data, error } = await q;
     if (error) toast.error(error.message);
     else setAudits((data ?? []) as AuditRow[]);
+    setSelectedIds(new Set());
     setLoading(false);
   }
 
@@ -444,6 +449,55 @@ export function AdminAuditoriaTab() {
     }
   }
 
+  function toggleSelect(id: number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === audits.length && audits.length > 0) setSelectedIds(new Set());
+    else setSelectedIds(new Set(audits.map(a => a.id)));
+  }
+
+  async function bulkDeleteSelected() {
+    const selected = audits.filter(a => selectedIds.has(a.id));
+    if (selected.length === 0) return;
+    setBulkDeleting(true);
+    let ok = 0, fail = 0;
+    try {
+      const questaoIds = Array.from(new Set(selected.map(a => a.questao_id)));
+      const auditIds = selected.map(a => a.id);
+      // Exclui questões em lote
+      const { error: delErr } = await supabase.from("questoes").delete().in("id", questaoIds);
+      if (delErr) throw delErr;
+      // Marca auditorias como rejeitadas (preserva histórico)
+      const { error: updErr } = await supabase
+        .from("question_audits")
+        .update({ status: "rejected", ai_summary: "Questão excluída em lote pelo admin" })
+        .in("id", auditIds);
+      if (updErr) throw updErr;
+      // Encerra outras auditorias abertas dessas questões
+      await supabase
+        .from("question_audits")
+        .update({ status: "superseded" })
+        .in("questao_id", questaoIds)
+        .in("status", OPEN_AUDIT_STATUSES);
+      ok = selected.length;
+      setAudits(prev => prev.filter(x => !selectedIds.has(x.id)));
+      setSelectedIds(new Set());
+      toast.success(`${ok} questão(ões) excluída(s) com sucesso`);
+    } catch (e: any) {
+      fail = selected.length;
+      toast.error("Falha na exclusão em lote: " + (e?.message ?? e));
+    } finally {
+      setBulkDeleting(false);
+      setConfirmDelete(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card className="glass-card">
@@ -567,6 +621,37 @@ export function AdminAuditoriaTab() {
               >{s.label}</Badge>
             ))}
           </div>
+
+          {/* Barra de seleção em lote */}
+          <div className="flex items-center justify-between gap-2 mb-3 p-2 rounded-lg bg-muted/20 border border-border/40">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <Checkbox
+                checked={audits.length > 0 && selectedIds.size === audits.length}
+                onCheckedChange={toggleSelectAll}
+                aria-label="Selecionar todas"
+              />
+              <span>
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} selecionada(s)`
+                  : "Selecionar todas"}
+              </span>
+            </label>
+            {selectedIds.size > 0 && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setConfirmDelete(true)}
+                disabled={bulkDeleting}
+                className="gap-1"
+              >
+                {bulkDeleting
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Trash2 className="w-4 h-4" />}
+                Excluir selecionadas ({selectedIds.size})
+              </Button>
+            )}
+          </div>
+
           <ScrollArea className="h-[500px]">
             <div className="space-y-2">
               {audits.length === 0 && (
@@ -575,38 +660,75 @@ export function AdminAuditoriaTab() {
                 </p>
               )}
               {audits.map(a => (
-                <button
+                <div
                   key={a.id}
-                  onClick={() => openDetail(a)}
-                  className="w-full text-left p-3 rounded-lg border border-border/40 bg-card/50 hover:bg-card/80 hover:border-primary/40 transition flex items-start justify-between gap-3"
+                  className={`flex items-start gap-2 p-3 rounded-lg border bg-card/50 hover:bg-card/80 transition ${
+                    selectedIds.has(a.id) ? "border-primary/60 bg-primary/5" : "border-border/40 hover:border-primary/40"
+                  }`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <Badge variant={a.status === "auto_fixed" ? "default" : a.status === "manual_review" ? "destructive" : "outline"}>
-                        {STATUS_LABEL[a.status] ?? a.status}
-                      </Badge>
-                      <span className="text-xs font-mono text-muted-foreground" title="ID original da questão no banco">ID banco: #{a.questao_id}</span>
-                      {a.confidence != null && (
-                        <span className="text-xs text-muted-foreground">confiança: {(a.confidence * 100).toFixed(0)}%</span>
-                      )}
-                      {a.risk_level && (
-                        <span className="text-xs text-muted-foreground">risco: {a.risk_level}</span>
+                  <Checkbox
+                    checked={selectedIds.has(a.id)}
+                    onCheckedChange={() => toggleSelect(a.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Selecionar questão #${a.questao_id}`}
+                    className="mt-1"
+                  />
+                  <button
+                    onClick={() => openDetail(a)}
+                    className="flex-1 text-left flex items-start justify-between gap-3 min-w-0"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <Badge variant={a.status === "auto_fixed" ? "default" : a.status === "manual_review" ? "destructive" : "outline"}>
+                          {STATUS_LABEL[a.status] ?? a.status}
+                        </Badge>
+                        <span className="text-xs font-mono text-muted-foreground" title="ID original da questão no banco">ID banco: #{a.questao_id}</span>
+                        {a.confidence != null && (
+                          <span className="text-xs text-muted-foreground">confiança: {(a.confidence * 100).toFixed(0)}%</span>
+                        )}
+                        {a.risk_level && (
+                          <span className="text-xs text-muted-foreground">risco: {a.risk_level}</span>
+                        )}
+                      </div>
+                      <p className="text-sm truncate">{a.ai_summary ?? "(sem resumo da IA)"}</p>
+                      {a.issues?.length > 0 && (
+                        <p className="text-xs text-yellow-500 mt-1">
+                          {a.issues.length} problema(s) encontrado(s): {a.issues.map((i: any) => i.type).join(", ")}
+                        </p>
                       )}
                     </div>
-                    <p className="text-sm truncate">{a.ai_summary ?? "(sem resumo da IA)"}</p>
-                    {a.issues?.length > 0 && (
-                      <p className="text-xs text-yellow-500 mt-1">
-                        {a.issues.length} problema(s) encontrado(s): {a.issues.map((i: any) => i.type).join(", ")}
-                      </p>
-                    )}
-                  </div>
-                  <Eye className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
-                </button>
+                    <Eye className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+                  </button>
+                </div>
               ))}
             </div>
           </ScrollArea>
         </CardContent>
       </Card>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {selectedIds.size} questão(ões)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é <strong>irreversível</strong>. As questões selecionadas serão removidas
+              permanentemente do banco. As auditorias correspondentes serão marcadas como rejeitadas
+              no histórico, registrando a exclusão.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); bulkDeleteSelected(); }}
+              disabled={bulkDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />}
+              Excluir definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={!!detail} onOpenChange={(o) => { if (!o) { setDetail(null); setQuestao(null); setForm(null); } }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
