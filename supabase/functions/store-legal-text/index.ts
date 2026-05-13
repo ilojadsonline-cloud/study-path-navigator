@@ -7,12 +7,48 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+async function requireAdmin(req: Request): Promise<{ ok: true } | { ok: false; status: number; body: any }> {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return { ok: false, status: 401, body: { error: "Unauthorized" } };
+  }
+  const token = authHeader.replace("Bearer ", "");
+  const supabaseAuth = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: claims } = await supabaseAuth.auth.getClaims(token);
+  const userId = claims?.claims?.sub;
+  if (!userId) return { ok: false, status: 401, body: { error: "Unauthorized" } };
+
+  const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+  const { data: roleRow } = await admin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+  if (!roleRow) return { ok: false, status: 403, body: { error: "Forbidden" } };
+  return { ok: true };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const guard = await requireAdmin(req);
+    if (!guard.ok) {
+      return new Response(JSON.stringify(guard.body), {
+        status: guard.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { disciplina, lei_nome, content } = await req.json();
 
     if (!disciplina || !lei_nome || !content) {
@@ -22,10 +58,7 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
     // Delete old version completely before inserting new one
     await supabase
