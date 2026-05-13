@@ -321,7 +321,7 @@ const Landing = () => {
         </section>
 
         {/* Exemplo de Questão Interativa */}
-        <section className="max-w-4xl mx-auto px-4 pb-20">
+        <section id="demonstracao" className="max-w-4xl mx-auto px-4 pb-20 scroll-mt-20">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
@@ -444,13 +444,13 @@ const Landing = () => {
 
           {/* CTA after question */}
           <div className="text-center mt-6">
-            <p className="text-sm text-muted-foreground mb-3">Gostou? Temos mais de 1.000 questões como estas.</p>
+            <p className="text-sm text-muted-foreground mb-3">Gostou? Temos mais de 1.000 questões como estas — assine e libere o banco completo.</p>
             <Link
-              to="/assinatura?trial=1"
+              to="/assinatura"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity glow-primary"
             >
-              <Gift className="w-4 h-4" />
-              Testar Grátis por 1 Dia
+              Assinar por R$ 89,90
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </section>
@@ -657,17 +657,17 @@ const Landing = () => {
                   Assinar Agora
                   <ArrowRight className="w-5 h-5" />
                 </Link>
-                <Link
-                  to="/assinatura?trial=1"
+                <a
+                  href="#demonstracao"
                   className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-xl border border-primary/30 bg-primary/5 text-primary font-semibold text-base hover:bg-primary/10 transition-colors"
                 >
-                  <Gift className="w-5 h-5" />
-                  Testar Grátis por 1 Dia
-                </Link>
+                  <PlayCircle className="w-5 h-5" />
+                  Ver demonstração
+                </a>
               </div>
               <p className="text-[11px] text-muted-foreground mt-3">
-                💳 <strong className="text-foreground">Stripe</strong>: cartão de crédito + 1 dia grátis para testar.{" "}
-                <span className="text-foreground">Mercado Pago</span>: Pix, Boleto ou cartão (pagamento único, sem renovação automática).
+                💳 <strong className="text-foreground">Cartão de crédito</strong> com renovação automática a cada 3 meses, ou{" "}
+                <strong className="text-foreground">Pix / Boleto</strong> com pagamento único de 90 dias (sem renovação).
               </p>
             </div>
           </motion.div>
@@ -690,8 +690,8 @@ const Landing = () => {
                 Pague do <span className="text-gradient-primary">jeito que preferir</span>
               </h3>
               <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-                Pagamento via <strong className="text-foreground">Mercado Pago</strong> (cartão de crédito, débito ou PIX),
-                com <strong className="text-foreground">1 dia de teste grátis</strong> antes da primeira cobrança.
+                Pagamento processado pelo <strong className="text-foreground">Mercado Pago</strong>: cartão de crédito (renovação automática) ou
+                <strong className="text-foreground"> Pix / Boleto</strong> (pagamento único com 90 dias de acesso).
               </p>
 
             </div>
@@ -728,9 +728,9 @@ const Landing = () => {
 
             <div className="grid sm:grid-cols-2 gap-3 mt-4">
               <div className="flex items-start gap-2 p-3 rounded-lg bg-success/5 border border-success/20">
-                <Gift className="w-4 h-4 text-success shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
                 <p className="text-xs text-foreground">
-                  <strong>Teste grátis 1 dia</strong> disponível no Stripe (cartão internacional).
+                  <strong>Pagamento 100% seguro</strong> processado pelo Mercado Pago.
                 </p>
               </div>
               <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
@@ -763,19 +763,19 @@ const Landing = () => {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                to="/assinatura?trial=1"
-                className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
-              >
-                <Gift className="w-5 h-5" />
-                Testar Grátis por 1 Dia
-              </Link>
-              <Link
                 to="/assinatura"
-                className="px-10 py-4 rounded-xl border border-primary/40 bg-primary/5 text-primary font-semibold text-base flex items-center gap-2 hover:bg-primary/10 transition-colors"
+                className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
               >
                 Assinar por R$ 89,90
                 <ArrowRight className="w-5 h-5" />
               </Link>
+              <a
+                href="#demonstracao"
+                className="px-10 py-4 rounded-xl border border-primary/40 bg-primary/5 text-primary font-semibold text-base flex items-center gap-2 hover:bg-primary/10 transition-colors"
+              >
+                <PlayCircle className="w-5 h-5" />
+                Ver demonstração
+              </a>
             </div>
           </motion.div>
         </section>
