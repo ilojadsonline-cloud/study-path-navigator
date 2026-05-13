@@ -184,10 +184,8 @@ serve(async (req) => {
         reactivated: true,
         provider,
         subscription_end: subscriptionEnd,
-        had_user: Boolean(targetUser?.id),
-        message: targetUser?.id
-          ? "Pagamento confirmado! Seu acesso foi reativado. Faça login normalmente."
-          : "Pagamento confirmado, mas não encontramos um cadastro com este email. Faça seu cadastro usando o mesmo email do pagamento.",
+        message:
+          "Pagamento confirmado. Se houver um cadastro com este email, o acesso foi reativado — faça login normalmente. Caso ainda não tenha conta, conclua o cadastro usando o mesmo email do pagamento.",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
