@@ -38,46 +38,92 @@ const stats = [
   { icon: <Target className="w-5 h-5" />, value: "90", label: "Dias de acesso" },
 ];
 
-// Questões reais verificadas com base na legislação vigente
+// Questões reais extraídas diretamente do banco da plataforma
 const exampleQuestions = [
   {
-    disciplina: "RDMETO (Decreto 4.994/14)",
-    enunciado: "De acordo com o RDMETO (Decreto nº 4.994/2014), como são classificadas as transgressões disciplinares quanto à sua natureza?",
+    disciplina: "CPPM",
+    assunto: "Arquivamento e reabertura do inquérito policial militar",
+    dificuldade: "Médio",
+    enunciado:
+      "Após o arquivamento de um inquérito policial militar por falta de provas, sobrevêm novas provas indicando a autoria do crime. Nesse caso, o CPPM permite a reabertura do inquérito, desde que respeitados os limites do caso julgado e da extinção da punibilidade. Essa possibilidade está prevista no art. 25 do CPPM e é corretamente descrita como:",
     alternativas: [
-      "Simples, compostas e qualificadas.",
-      "Leves, médias e graves.",
-      "Administrativas, penais e civis.",
-      "De primeira, segunda e terceira classe.",
-      "Ordinárias, especiais e extraordinárias.",
+      "princípio da indisponibilidade do inquérito, que impede o arquivamento definitivo enquanto não prescrita a pretensão punitiva.",
+      "exceção à regra do arquivamento, permitindo a reabertura independentemente de novas provas, desde que dentro do prazo prescricional.",
+      "hipótese de reabertura do inquérito, que depende de autorização do juiz e de manifestação do Ministério Público, mas não exige novas provas.",
+      "possibilidade de arquivamento condicionado, que permite ao juiz determinar o sobrestamento do inquérito até o surgimento de novas provas.",
+      "regra de que o arquivamento não obsta a instauração de outro inquérito se novas provas aparecerem, ressalvados o caso julgado e a extinção da punibilidade.",
+    ],
+    gabarito: 4,
+    comentario:
+      "A questão trata da reabertura do inquérito policial militar após arquivamento, prevista no art. 25 do CPPM. O dispositivo estabelece que 'o arquivamento de inquérito não obsta a instauração de outro, se novas provas aparecerem em relação ao fato, ao indiciado ou a terceira pessoa, ressalvados o caso julgado e os casos de extinção da punibilidade'. A alternativa E reproduz fielmente essa regra. Cuidado com a alternativa A: o princípio da indisponibilidade não impede o arquivamento definitivo; ele apenas veda que o Ministério Público desista da ação penal já proposta. As alternativas B e C erram ao dispensar a exigência de novas provas, e a D cria uma figura de 'arquivamento condicionado' inexistente no CPPM. Portanto, a reabertura depende do surgimento de novas provas e respeita os limites do caso julgado e da prescrição.",
+  },
+  {
+    disciplina: "Direito Penal Militar",
+    assunto: "Causas de exclusão do crime — Obediência hierárquica",
+    dificuldade: "Médio",
+    enunciado:
+      "O Soldado Silva, durante uma operação, recebeu uma ordem direta e imediata de seu superior hierárquico, o Sargento Oliveira, para destruir um equipamento de comunicação que pertencia a um civil. Silva, temendo represálias, cumpriu a ordem, mesmo sabendo que o ato era ilícito. Posteriormente, o Sargento Oliveira alegou que a ordem era manifestamente criminosa. Sobre a responsabilidade penal de Silva, a lei penal militar estabelece que:",
+    alternativas: [
+      "Não é culpado quem comete o crime em estrita obediência a ordem, não manifestamente ilegal, de superior hierárquico.",
+      "Não é culpado quem comete o crime em estrita obediência a ordem, manifestamente ilegal, de superior hierárquico.",
+      "É culpado quem comete o crime em estrita obediência a ordem, não manifestamente ilegal, de superior hierárquico.",
+      "Não é culpado quem comete o crime em estrita obediência a qualquer ordem de superior hierárquico, independentemente de sua legalidade.",
+      "É culpado quem comete o crime em estrita obediência a ordem, manifestamente criminosa, de superior hierárquico.",
+    ],
+    gabarito: 0,
+    comentario:
+      "A questão trata da excludente de culpabilidade por obediência hierárquica, prevista no art. 38, alínea b, do Código Penal Militar (Decreto-Lei nº 1.001/1969). Para que o subordinado não seja culpado, é necessário que a ordem não seja manifestamente ilegal. No caso, a ordem era manifestamente criminosa (destruir bem de civil), portanto Silva não pode invocar a excludente, sendo culpado. A alternativa A está correta ao reproduzir o texto legal. Cuidado com a alternativa E: ela afirma que é culpado quem obedece a ordem manifestamente criminosa, o que é verdade, mas a questão pergunta o que a lei estabelece, e a lei estabelece a excludente para ordem não manifestamente ilegal. A alternativa A é a transcrição exata do dispositivo.",
+  },
+  {
+    disciplina: "RDMETO",
+    assunto: "Recursos disciplinares — Apelação",
+    dificuldade: "Médio",
+    enunciado:
+      "Sobre as medidas que a autoridade competente pode adotar ao apreciar um recurso de apelação interposto contra decisão de Conselho, assinale a alternativa CORRETA.",
+    alternativas: [
+      "A autoridade competente pode, após análise, determinar a produção de novas provas, devolvendo o processo aos membros do Conselho, sem necessidade de observância do contraditório e da ampla defesa, em nome da celeridade processual.",
+      "A autoridade competente, ao apreciar o recurso, está limitada a apenas manter ou anular a decisão proferida no julgamento, não podendo modificar a sanção aplicada.",
+      "A autoridade competente, após análise dos pressupostos básicos, pode, conforme o caso, anular a medida disciplinar imposta ao acusado, determinando o arquivamento do processo.",
+      "A autoridade competente, ao dar tipificação diversa à infração imputada ao acusado, está obrigada a aplicar automaticamente uma sanção mais grave, em razão da nova qualificação jurídica.",
+      "A autoridade competente, ao apreciar o recurso, pode determinar a produção de novas provas, mas apenas se o acusado apresentar requerimento específico nesse sentido, sob pena de preclusão.",
+    ],
+    gabarito: 2,
+    comentario:
+      "A questão trata das medidas que a autoridade competente pode adotar ao julgar recurso de apelação contra decisão de Conselho, conforme o Art. 164 do RDMETO. O inciso III do referido artigo autoriza expressamente a anulação da medida disciplinar e o arquivamento do processo, desde que analisados os pressupostos de admissibilidade. A alternativa C reproduz exatamente essa possibilidade. Cuidado com a alternativa A: a produção de novas provas é possível (inciso I), mas sempre com observância do contraditório e ampla defesa, não podendo suprimi-los. A alternativa B é falsa, pois a autoridade pode modificar a sanção (agravar ou atenuar). A alternativa D é incorreta, pois a nova tipificação não obriga sanção mais grave. A alternativa E também erra, pois a produção de provas pode ser determinada de ofício.",
+  },
+  {
+    disciplina: "Lei Orgânica da PM (Lei 14.751/2023)",
+    assunto: "Diretrizes",
+    dificuldade: "Difícil",
+    enunciado:
+      "Com base na Lei nº 14.751/2023, assinale a alternativa que apresenta uma diretriz a ser observada pelas Polícias Militares e Corpos de Bombeiros Militares dos Estados, do Distrito Federal e dos Territórios.",
+    alternativas: [
+      "Planejamento e distribuição do efetivo proporcionalmente ao número de habitantes na circunscrição, obedecidos indicadores, peculiaridades e critérios técnicos regionais, salvo o caso de unidades especializadas quando houver apenas uma unidade para determinada área geográfica.",
+      "Subordinação direta e exclusiva aos comandos das Forças Armadas, em razão da condição de forças auxiliares e reserva do Exército.",
+      "Sigilo absoluto em todos os procedimentos operacionais, formais e administrativos, ressalvados aqueles para os quais a lei determine publicidade.",
+      "Priorização de ações repressivas em detrimento de ações preventivas, como forma de garantir a eficiência na preservação da ordem pública.",
+      "Vinculação obrigatória a partidos políticos para definição de estratégias de segurança pública, em observância ao princípio democrático.",
+    ],
+    gabarito: 0,
+    comentario:
+      "A questão cobra as diretrizes do art. 4º da Lei nº 14.751/2023. A alternativa A reproduz fielmente o inciso IV, que estabelece o planejamento e distribuição do efetivo proporcionalmente ao número de habitantes, com a ressalva de unidades especializadas. As demais alternativas distorcem o texto legal: a B confunde a condição de força auxiliar com subordinação direta (inexistente); a C inverte a regra do sigilo (art. 4º, VII: publicidade, ressalvado sigilo legal); a D contraria a diretriz de prevenção (art. 4º, VIII); e a E é incompatível com os princípios da impessoalidade e moralidade (art. 3º, V e VII). Atenção à pegadinha da letra B: a subordinação é apenas como força auxiliar, não direta e exclusiva.",
+  },
+  {
+    disciplina: "LC nº 128/2021 (PMTO)",
+    assunto: "Unidades administrativas de direção",
+    dificuldade: "Médio",
+    enunciado:
+      "As unidades administrativas de direção da PMTO, conforme a Lei Complementar nº 128/2021, são responsáveis perante o Comandante-Geral pelo planejamento estratégico da Corporação. Nesse contexto, qual das seguintes atribuições é especificamente conferida a essas unidades?",
+    alternativas: [
+      "Executar diretamente as operações policiais militares, como o policiamento ostensivo.",
+      "Elaborar diretrizes e ordens do Comando-Geral para o acionamento das unidades de apoio e de execução.",
+      "Assessorar juridicamente o Comandante-Geral em matérias disciplinares e administrativas.",
+      "Gerir o orçamento e a contabilidade da Corporação, incluindo a folha de pagamento.",
+      "Fiscalizar e controlar internamente as unidades operacionais, realizando correições.",
     ],
     gabarito: 1,
-    comentario: "Conforme o Art. 18 do RDMETO (Decreto 4.994/2014), as transgressões disciplinares são classificadas em leves, médias e graves, de acordo com a sua natureza e a repercussão do ato praticado.",
-  },
-  {
-    disciplina: "Estatuto dos Militares (Lei 2.578/12)",
-    enunciado: "Nos termos da Lei nº 2.578/2012, assinale a alternativa que apresenta corretamente uma das formas de ingresso na Polícia Militar do Estado do Tocantins:",
-    alternativas: [
-      "Transferência de outras forças estaduais mediante aprovação do Comandante-Geral.",
-      "Nomeação direta pelo Governador do Estado para qualquer posto ou graduação.",
-      "Matrícula em curso de formação, após aprovação em concurso público de provas ou de provas e títulos.",
-      "Indicação de oficial superior com mais de 20 anos de serviço.",
-      "Convocação compulsória de reservistas das Forças Armadas.",
-    ],
-    gabarito: 2,
-    comentario: "Conforme o Art. 11 da Lei 2.578/2012, o ingresso na Polícia Militar será voluntário e dar-se-á mediante matrícula em curso de formação, após aprovação em concurso público de provas ou de provas e títulos.",
-  },
-  {
-    disciplina: "CPPM (Decreto-Lei 1.002/69)",
-    enunciado: "Segundo o Código de Processo Penal Militar (CPPM), qual é o prazo para conclusão do Inquérito Policial Militar quando o indiciado estiver preso?",
-    alternativas: [
-      "10 dias, improrrogáveis.",
-      "30 dias, prorrogáveis por mais 30.",
-      "20 dias, prorrogáveis por mais 20.",
-      "15 dias, prorrogáveis uma única vez.",
-      "40 dias, improrrogáveis.",
-    ],
-    gabarito: 2,
-    comentario: "Conforme o Art. 20 do CPPM (Decreto-Lei 1.002/69), o inquérito deverá terminar dentro em 20 (vinte) dias, se o indiciado estiver preso, contado esse prazo a partir do dia em que se executar a ordem de prisão.",
+    comentario:
+      "A questão exige conhecimento do art. 8º da LC 128/2021, que define a responsabilidade das unidades de direção pelo planejamento estratégico e pela elaboração de diretrizes e ordens do Comando-Geral para acionar as unidades de apoio e execução. A alternativa B é a correta. Cuidado com a alternativa A: a execução direta das operações é atribuição das unidades de execução (art. 7º), não das de direção. As demais alternativas (C, D, E) não correspondem ao art. 8º; a assessoria jurídica, a gestão orçamentária e a fiscalização interna são funções de outros órgãos ou não constam como atribuição específica das unidades de direção.",
   },
 ];
 
