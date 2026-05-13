@@ -26,6 +26,9 @@ import ContatoPublico from "./pages/ContatoPublico";
 import Configuracoes from "./pages/Configuracoes";
 import MeusReportes from "./pages/MeusReportes";
 import Cronograma from "./pages/Cronograma";
+import PagamentoSucesso from "./pages/PagamentoSucesso";
+import PagamentoPendente from "./pages/PagamentoPendente";
+import PagamentoFalha from "./pages/PagamentoFalha";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
