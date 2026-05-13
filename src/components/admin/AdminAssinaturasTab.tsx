@@ -280,7 +280,11 @@ export function AdminAssinaturasTab() {
                       <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Nenhum usuário bloqueado.</TableCell></TableRow>
                     ) : filteredBlocked.map((u) => {
                       const expired = u.access_expires_at && new Date(u.access_expires_at) < new Date();
-                      const reason = u.trial_blocked ? "Fim do teste" : expired ? "Acesso expirado (90d)" : "Bloqueio manual";
+                      const reason = u.block_reason === "acesso_expirado_90_dias"
+                        ? "Acesso expirado (90d)"
+                        : u.trial_blocked ? "Fim do teste"
+                        : expired ? "Acesso expirado (90d)"
+                        : "Bloqueio manual";
                       return (
                         <TableRow key={u.user_id}>
                           <TableCell className="font-medium">{u.nome}</TableCell>
