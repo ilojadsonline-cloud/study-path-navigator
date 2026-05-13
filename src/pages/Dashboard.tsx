@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp,
-  Trophy, Calendar, Zap, Loader2, FileText, PlayCircle, AlertTriangle, CreditCard
+  Trophy, Calendar, Zap, Loader2, FileText, PlayCircle
 } from "lucide-react";
 import { RankingCard } from "@/components/dashboard/RankingCard";
 import { RankingConsentModal } from "@/components/dashboard/RankingConsentModal";
@@ -54,7 +54,7 @@ const CHART_COLORS = {
 };
 
 const Dashboard = () => {
-  const { user, profile, isTrial, trialEndsAt } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
 
