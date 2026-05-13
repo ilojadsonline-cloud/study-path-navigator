@@ -232,15 +232,13 @@ export function AdminUsersTab() {
           </div>
           {u.provider === "mercadopago" ? (
             <Badge variant="secondary" className="text-[10px] bg-success/10 text-success">MP pago</Badge>
-          ) : u.is_trial ? (
-            <Badge variant="secondary" className="text-[10px]">Teste</Badge>
           ) : u.provider === "stripe" ? (
             <Badge variant="secondary" className="text-[10px]">Stripe</Badge>
           ) : null}
         </div>
       );
     }
-    if (u.trial_expired) return <Badge variant="destructive" className="text-[10px]">Teste expirado</Badge>;
+    if (u.trial_expired) return <Badge variant="destructive" className="text-[10px]">Acesso expirado</Badge>;
     return <span className="text-xs text-muted-foreground">Sem assinatura</span>;
   };
 

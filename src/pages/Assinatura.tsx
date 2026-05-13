@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, Check, Shield, Star, Clock, Loader2, Mail, AlertTriangle, LogOut, Gift, QrCode, Barcode } from "lucide-react";
+import { CreditCard, Check, Shield, Star, Clock, Loader2, Mail, AlertTriangle, LogOut, QrCode, Barcode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
@@ -18,7 +18,7 @@ const Assinatura = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const paymentStatus = searchParams.get("payment");
-  const trialExpiredParam = searchParams.get("trial_expired") === "1";
+  const expiredParam = searchParams.get("expired") === "1" || searchParams.get("trial_expired") === "1";
 
   const handleReactivate = async () => {
     const email = reactEmail.trim().toLowerCase();
@@ -50,7 +50,7 @@ const Assinatura = () => {
     }
   }, [paymentStatus, user, checkSubscription, toast]);
 
-  const isExpired = trialExpiredParam || (user && !subscribed);
+  const isExpired = expiredParam || (user && !subscribed);
 
   const ensureEmail = (): string | null => {
     const emailToUse = (user?.email || mpEmail).trim().toLowerCase();
@@ -161,14 +161,13 @@ const Assinatura = () => {
                 <CreditCard className="w-5 h-5 text-gold-foreground" />
               </div>
               <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
-                <Gift className="w-3 h-3" /> 1 DIA GRÁTIS
+                <Star className="w-3 h-3" /> RENOVAÇÃO AUTOMÁTICA
               </div>
             </div>
             <h2 className="text-lg font-bold mb-1">Cartão de Crédito</h2>
             <p className="text-xs text-muted-foreground mb-3">Renovação automática</p>
             <p className="text-sm text-foreground mb-4">
               Pague <strong>R$ 89,90 a cada 3 meses</strong>. Cancele quando quiser.
-              Inclui <strong>1 dia de acesso gratuito</strong> para testar.
             </p>
             <ul className="space-y-2 text-xs text-foreground/80 mb-5">
               <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-success" /> Renovação sem dor de cabeça</li>
