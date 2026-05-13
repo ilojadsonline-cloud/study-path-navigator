@@ -172,9 +172,16 @@ serve(async (req) => {
   const dataId = body?.data?.id ? String(body.data.id) : "";
   const type: string = body?.type || body?.topic || "";
 
-  // Validação de assinatura (quando configurada)
+  // Validação de assinatura — obrigatória. Sem segredo configurado, rejeitamos.
   const webhookSecret = Deno.env.get("MERCADOPAGO_WEBHOOK_SECRET");
-  if (webhookSecret && dataId) {
+  if (!webhookSecret) {
+    log("ERROR: MERCADOPAGO_WEBHOOK_SECRET não configurado — rejeitando requisição");
+    return new Response(JSON.stringify({ error: "webhook secret not configured" }), {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  if (dataId) {
     const ok = await verifyMpSignature(req, dataId, webhookSecret);
     if (!ok) {
       log("invalid signature");
@@ -183,8 +190,27 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-  } else if (!webhookSecret) {
-    log("WARNING: MERCADOPAGO_WEBHOOK_SECRET não configurado — modo permissivo");
+
+    // Idempotência: ignora event_id já processado com sucesso.
+    try {
+      const { data: existing } = await admin
+        .from("payment_events")
+        .select("id")
+        .eq("payment_id", String(dataId))
+        .eq("gateway", "mercadopago")
+        .in("action_taken", ["access_reactivated", "user_not_found"])
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        log("duplicate event ignored", { dataId });
+        return new Response(JSON.stringify({ received: true, duplicate: true }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } catch (e) {
+      log("idempotency check warning", { error: String(e) });
+    }
   }
 
   // Responde 200 imediatamente; processamento segue no background.
