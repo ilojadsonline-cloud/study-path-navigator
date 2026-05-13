@@ -282,7 +282,7 @@ export function AdminAssinaturasTab() {
                       const expired = u.access_expires_at && new Date(u.access_expires_at) < new Date();
                       const reason = u.block_reason === "acesso_expirado_90_dias"
                         ? "Acesso expirado (90d)"
-                        : u.trial_blocked ? "Fim do teste"
+                        : u.trial_blocked ? "Acesso expirado"
                         : expired ? "Acesso expirado (90d)"
                         : "Bloqueio manual";
                       return (

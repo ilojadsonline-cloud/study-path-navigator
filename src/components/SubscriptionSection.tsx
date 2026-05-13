@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { CreditCard, CalendarDays, Loader2, RefreshCw, ShieldAlert, CheckCircle2, Clock, Ban } from "lucide-react";
+import { CreditCard, CalendarDays, Loader2, RefreshCw, ShieldAlert, CheckCircle2, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -96,13 +96,7 @@ export const SubscriptionSection = () => {
         </span>
       );
     }
-    if (details.status === "trial") {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-500/15 text-yellow-500 text-xs font-semibold border border-yellow-500/30">
-          <Clock className="w-3.5 h-3.5" /> Período de Teste — Expira em {fmt(details.endDate)}
-        </span>
-      );
-    }
+    // Período de teste removido — sem badge "trial"
     if (details.status === "active_recurring") {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/15 text-success text-xs font-semibold border border-success/30">

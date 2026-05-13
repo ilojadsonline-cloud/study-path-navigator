@@ -26,8 +26,8 @@ const Login = () => {
     if (trialExpired) {
       void signOut().finally(() => {
         toast({
-          title: "Seu teste grátis expirou",
-          description: "Para continuar acessando a plataforma, assine o plano trimestral.",
+          title: "Acesso bloqueado",
+          description: "Sua assinatura não está ativa. Assine o plano trimestral para continuar.",
           variant: "destructive",
         });
         navigate("/assinatura", { replace: true });
@@ -80,10 +80,10 @@ const Login = () => {
         toast({
           title: "Acesso bloqueado",
           description:
-            "Seu período de teste de 24h terminou. Assine o plano para reativar o acesso — seus dados continuam preservados.",
+            "Sua assinatura não está ativa. Assine o plano para reativar o acesso — seus dados continuam preservados.",
           variant: "destructive",
         });
-        navigate("/assinatura?trial_expired=1", { replace: true });
+        navigate("/assinatura?expired=1", { replace: true });
       } else {
         toast({
           title: "Erro ao entrar",
