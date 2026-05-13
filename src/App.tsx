@@ -26,6 +26,9 @@ import ContatoPublico from "./pages/ContatoPublico";
 import Configuracoes from "./pages/Configuracoes";
 import MeusReportes from "./pages/MeusReportes";
 import Cronograma from "./pages/Cronograma";
+import PagamentoSucesso from "./pages/PagamentoSucesso";
+import PagamentoPendente from "./pages/PagamentoPendente";
+import PagamentoFalha from "./pages/PagamentoFalha";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -55,6 +58,9 @@ const App = () => (
             <Route path="/esqueci-senha" element={<EsqueciSenha />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/contato-publico" element={<ContatoPublico />} />
+            <Route path="/pagamento/sucesso" element={<PagamentoSucesso />} />
+            <Route path="/pagamento/pendente" element={<PagamentoPendente />} />
+            <Route path="/pagamento/falha" element={<PagamentoFalha />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/edital" element={<ProtectedRoute><Edital /></ProtectedRoute>} />
             <Route path="/questoes" element={<ProtectedRoute><Questoes /></ProtectedRoute>} />

@@ -30,6 +30,7 @@ type OverviewUser = {
   reactivated_at: string | null;
   payment_source: string | null;
   trial_blocked: boolean;
+  block_reason?: string | null;
 };
 
 type PaymentEvent = {
@@ -58,6 +59,14 @@ const daysLeft = (iso: string | null) => {
 
 const fmtBRL = (n: number | null) =>
   typeof n === "number" ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
+
+const sourceBadge = (src: string | null, daysRemaining: number | null) => {
+  if (!src) return { label: "—", variant: "outline" as const };
+  if (src === "mercadopago_avulso") return { label: `Pix/Boleto${daysRemaining != null ? ` — ${daysRemaining}d` : ""}`, variant: "secondary" as const };
+  if (src === "mercadopago") return { label: "Cartão — automática", variant: "default" as const };
+  if (src === "stripe") return { label: "Stripe — ativo", variant: "default" as const };
+  return { label: src, variant: "outline" as const };
+};
 
 export function AdminAssinaturasTab() {
   const { toast } = useToast();
@@ -230,7 +239,10 @@ export function AdminAssinaturasTab() {
                         <TableCell className="text-xs">{fmtDate(u.access_expires_at)}</TableCell>
                         <TableCell>{daysLeft(u.access_expires_at) ?? "—"}</TableCell>
                         <TableCell>
-                          {u.payment_source ? <Badge variant="outline" className="capitalize">{u.payment_source}</Badge> : <span className="text-muted-foreground text-xs">—</span>}
+                          {(() => {
+                            const b = sourceBadge(u.payment_source, daysLeft(u.access_expires_at));
+                            return <Badge variant={b.variant}>{b.label}</Badge>;
+                          })()}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -268,7 +280,11 @@ export function AdminAssinaturasTab() {
                       <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Nenhum usuário bloqueado.</TableCell></TableRow>
                     ) : filteredBlocked.map((u) => {
                       const expired = u.access_expires_at && new Date(u.access_expires_at) < new Date();
-                      const reason = u.trial_blocked ? "Fim do teste" : expired ? "Acesso expirado (90d)" : "Bloqueio manual";
+                      const reason = u.block_reason === "acesso_expirado_90_dias"
+                        ? "Acesso expirado (90d)"
+                        : u.trial_blocked ? "Fim do teste"
+                        : expired ? "Acesso expirado (90d)"
+                        : "Bloqueio manual";
                       return (
                         <TableRow key={u.user_id}>
                           <TableCell className="font-medium">{u.nome}</TableCell>

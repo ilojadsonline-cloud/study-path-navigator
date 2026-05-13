@@ -29,3 +29,9 @@ verify_jwt = false
 
 [functions.mercadopago-webhook]
 verify_jwt = false
+
+[functions.create-mp-pix-boleto]
+verify_jwt = false
+
+[functions.block-expired-access]
+verify_jwt = false

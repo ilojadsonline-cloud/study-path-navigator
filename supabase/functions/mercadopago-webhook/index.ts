@@ -91,15 +91,21 @@ async function findUserByEmail(admin: any, email: string): Promise<any | null> {
   return null;
 }
 
-async function reactivateUser(admin: any, user: any, expiresAtIso: string): Promise<void> {
+async function reactivateUser(
+  admin: any, user: any, expiresAtIso: string,
+  source: "mercadopago" | "mercadopago_avulso" = "mercadopago",
+  paymentTypeLabel?: string,
+): Promise<void> {
   await admin.auth.admin.updateUserById(user.id, {
     ban_duration: "none",
     app_metadata: {
       ...(user.app_metadata || {}),
       trial_blocked: false,
+      block_reason: null,
       reactivated_at: new Date().toISOString(),
       access_expires_at: expiresAtIso,
-      payment_source: "mercadopago",
+      payment_source: source,
+      payment_type: paymentTypeLabel ?? (user.app_metadata?.payment_type ?? null),
     },
   } as any);
 }
@@ -241,9 +247,12 @@ serve(async (req) => {
 
         const user = await findUserByEmail(admin, email);
         const expiresAt = new Date(Date.now() + ACCESS_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
+        const isAvulso = payment?.metadata?.payment_type === "avulso";
+        const source = isAvulso ? "mercadopago_avulso" : "mercadopago";
+        const typeLabel = isAvulso ? "pix_ou_boleto" : (paymentMethod || null);
 
         if (user) {
-          await reactivateUser(admin, user, expiresAt);
+          await reactivateUser(admin, user, expiresAt, source, typeLabel);
           try {
             await admin.from("trial_usage").upsert(
               { email, user_id: user.id, provider: "mercadopago", converted_to_paid: true },
