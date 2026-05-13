@@ -91,15 +91,21 @@ async function findUserByEmail(admin: any, email: string): Promise<any | null> {
   return null;
 }
 
-async function reactivateUser(admin: any, user: any, expiresAtIso: string): Promise<void> {
+async function reactivateUser(
+  admin: any, user: any, expiresAtIso: string,
+  source: "mercadopago" | "mercadopago_avulso" = "mercadopago",
+  paymentTypeLabel?: string,
+): Promise<void> {
   await admin.auth.admin.updateUserById(user.id, {
     ban_duration: "none",
     app_metadata: {
       ...(user.app_metadata || {}),
       trial_blocked: false,
+      block_reason: null,
       reactivated_at: new Date().toISOString(),
       access_expires_at: expiresAtIso,
-      payment_source: "mercadopago",
+      payment_source: source,
+      payment_type: paymentTypeLabel ?? (user.app_metadata?.payment_type ?? null),
     },
   } as any);
 }
