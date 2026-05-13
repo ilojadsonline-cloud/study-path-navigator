@@ -114,54 +114,54 @@ Gabarito atual: ${correta} (índice ${q.gabarito})
 Comentário atual:
 ${q.comentario}
 
-Audite com rigor de banca examinadora. Verifique APENAS problemas REAIS de correção/coerência:
-1. Gabarito está correto à luz do texto legal? (mais grave)
-2. Enunciado tem ambiguidade real, erro de português que prejudique o entendimento, ou pegadinha mal feita que induza a erro injusto?
-3. Existe MAIS de uma alternativa correta? Existe NENHUMA correta?
-4. DISTRATORES ÓBVIOS — defeito sério, deve ser corrigido SEMPRE que presente. Marque issue "distrator_fraco" com severity MEDIUM (HIGH se 2+ alternativas forem facilmente descartáveis). São considerados óbvios:
-   • Distrator absurdo, sem qualquer relação com o tema (instituto inexistente, dado fantasioso).
-   • Distrator gritantemente falso ao senso comum jurídico (ex.: "ministro do STF é eleito por voto popular").
-   • Distrator visivelmente mais curto/longo que os demais — denuncia a resposta de cara.
-   • Distrator que repete trecho do enunciado quase literalmente.
-   • Palavras-âncora ("sempre", "nunca", "somente", "exclusivamente") em apenas 1 alternativa enquanto as demais são moderadas.
-   • Registro/estilo destoante (4 técnicas + 1 coloquial; 4 afirmativas + 1 interrogativa).
-   • "Todas as anteriores", "Nenhuma das anteriores", "Apenas a alternativa X está correta", "N.D.A.".
-5. Há afirmação extra-legal, inventada, ou que CONTRARIA o texto legal?
-6. Comentário CONTRADIZ o gabarito, está factualmente errado, ou cita dispositivo errado?
-7. Alternativas duplicadas, vazias ou idênticas em conteúdo?
+Audite INTEGRALMENTE esta questão (sem amostragem, sem atalhos por palavra-chave). LEIA enunciado + 5 alternativas + gabarito + comentário e CONFRONTE TUDO com o texto legal acima. Verifique TODOS os defeitos abaixo:
+
+A. ALUCINAÇÃO JURÍDICA — fundamento legal inventado, artigo/inciso/§ que não existe na lei de referência, ou afirmação não amparada pelo texto legal disponível.
+B. BUG ESTRUTURAL — campo vazio, alternativa duplicada, formatação corrompida, enunciado truncado.
+C. AUSÊNCIA DE COMENTÁRIO — comentario vazio, "(sem comentário)" ou apenas placeholder.
+D. COMENTÁRIO EM LOOP — texto circular, repetição da mesma frase, não acrescenta informação, parafraseia o enunciado sem explicar.
+E. DUAS OU MAIS ALTERNATIVAS CORRETAS — mais de uma alternativa é defensável à luz da lei.
+F. NENHUMA ALTERNATIVA CORRETA — gabarito atual aponta para alternativa errada e nenhuma das outras está correta tampouco.
+G. VIOLAÇÃO DE HIERARQUIA — enunciado/alternativas atribuem competência, função, posto ou graduação de forma diferente do que a lei determina.
+H. ATRIBUIÇÃO DE FUNÇÃO INCONSISTENTE com o posto/graduação citado (ex.: cabo exercendo função privativa de oficial superior).
+I. QUESTÃO INCOERENTE/IMPOSSÍVEL — premissa contraditória, situação juridicamente inviável, sem solução lógica.
+J. DISTRATORES FRACOS/ÓBVIOS — alternativas absurdas, genéricas, gritantemente falsas, muito mais curtas/longas, com palavras-âncora isoladas ("sempre/nunca/somente"), "todas/nenhuma das anteriores", "n.d.a.", ou que entregam a resposta por eliminação. (severity medium; high se 2+).
+K. GABARITO VISUALMENTE IDENTIFICÁVEL — a correta destoa: única completa, única técnica, única com ressalva, única longa.
+L. ENUNCIADO/ALTERNATIVAS/COMENTÁRIO DESALINHADOS entre si — o comentário cita uma alternativa como correta diferente do gabarito, ou o enunciado pergunta X e as alternativas respondem Y.
+M. TEXTO LEGAL DESATUALIZADO — questão baseada em dispositivo revogado/alterado/substituído (compare com o texto legal de referência).
+N. COMENTÁRIO QUE NÃO EXPLICA CADA ALTERNATIVA INCORRETA INDIVIDUALMENTE — limita-se a "as demais estão erradas" ou explica só a correta.
 
 QUESTÕES INTERPRETATIVAS SÃO VÁLIDAS:
-- Reproduzir literalmente o texto da lei NÃO é requisito. Alternativas e enunciados podem PARAFRASEAR, INTERPRETAR ou COMBINAR dispositivos de uma ou mais leis do edital, desde que o conteúdo seja FIEL ao que a norma efetivamente determina.
-- NÃO marque como defeito apenas porque a alternativa correta não aparece "ipsis litteris" no texto legal. Só sinalize "extra_legal" quando a afirmação CONTRARIAR a norma, inventar requisito/prazo/autoridade inexistente, ou afirmar algo que a lei não autoriza.
-- Questões que exigem maior esforço interpretativo do aluno (aplicação a caso concreto, comparação entre institutos, combinação de artigos) são desejáveis e devem ser preservadas.
+- Reproduzir literalmente a lei NÃO é requisito. Paráfrase, interpretação e combinação de dispositivos são aceitas, desde que FIÉIS à norma.
+- Só sinalize "extra_legal/alucinacao_juridica" quando a afirmação CONTRARIAR a lei, inventar requisito/prazo/autoridade inexistente, ou afirmar algo não autorizado.
 
 REGRA DE OURO — NÃO MEXER NO QUE ESTÁ CORRETO:
-- Se o gabarito está correto (literal OU interpretativamente fiel à norma), as 5 alternativas são plausíveis (todas defensáveis para um aluno mediano), o enunciado é claro e o comentário é coerente (mesmo que curto, simples ou sem floreio), a questão é APROVADA. Devolva confidence alta, issues=[], proposed_patch=null.
-- NÃO reescreva comentários apenas por serem curtos/simples/sem citar Art./§. Só sinalize "comentario_incoerente" quando ele estiver factualmente ERRADO ou CONTRADIZER o gabarito.
-- NÃO reescreva questões apenas por estarem "fáceis demais". Dificuldade baixa NÃO é defeito.
+- Se gabarito está correto (literal OU interpretativamente fiel), as 5 alternativas são plausíveis e equilibradas, enunciado é claro, e o comentário explica corretamente a resposta E os erros das demais (mesmo que de forma sucinta), APROVE com confidence alta, issues=[], proposed_patch=null.
 - Em caso de dúvida sobre defeito real, APROVE.
 
-REGRA DE REESCRITA (use APENAS quando houver defeito real de média/alta gravidade):
-- Se o ÚNICO defeito for distrator fraco/óbvio: reescreva APENAS as alternativas problemáticas (preserve as boas, preserve enunciado/gabarito/comentário se estiverem corretos). No proposed_patch devolva só os campos alt_X afetados (e o "gabarito" atualizado caso a posição da correta tenha mudado).
-- Se o defeito for de gabarito/enunciado/comentário: reescreva tudo (enunciado + alt_a..alt_e + gabarito + comentário).
+POLÍTICA DE CORREÇÃO:
+- TENTE SEMPRE corrigir antes de mandar para revisão humana. Só marque needs_human_review=true quando a correção automática não for SEGURA juridicamente (ex.: você não tem certeza de qual é a resposta correta à luz da lei) ou quando a questão for duplicada e exigir decisão humana sobre exclusão.
+- Se o ÚNICO defeito for distrator fraco/óbvio: reescreva APENAS as alternativas problemáticas (preserve o resto). Devolva no patch só os campos alt_X afetados (e "gabarito" se a posição mudou).
+- Se houver defeito de gabarito/enunciado/comentário/hierarquia/coerência: reescreva enunciado + alt_a..alt_e + gabarito + comentario JUNTOS.
 
 ALGORITMO DE ESCRITA DAS ALTERNATIVAS (siga à risca quando reescrever qualquer alt_X):
-1. PARIDADE FORMAL: as 5 alternativas devem ter comprimento parecido (variação ±25% em caracteres), mesmo registro técnico-jurídico, mesma estrutura sintática (todas começam por verbo OU todas por substantivo) e pontuação coerente.
-2. PARIDADE SEMÂNTICA: todas igualmente plausíveis para alguém que estudou mas não dominou o detalhe — nada absurdo, nada inventado.
-3. CADA DISTRATORA = UM ERRO TÍPICO REAL DO ESTUDANTE, escolhido entre:
-   (a) Troca de prazo (5 dias por 10 dias).
-   (b) Troca de autoridade/órgão competente (Delegado por Juiz; Ministro por Presidente).
-   (c) Inversão regra ↔ exceção.
-   (d) Confusão entre institutos parecidos (preventiva × temporária; dolo eventual × culpa consciente).
-   (e) Dispositivo revogado/alterado ou de outra lei próxima.
-   (f) Aplicação errada de princípio correto (princípio existe, mas não incide aqui).
-   Anote MENTALMENTE qual erro cada distratora explora antes de escrever — não exponha no JSON.
-4. PROIBIDO: "todas/nenhuma das anteriores", "apenas a alternativa X", "n.d.a.", duplicatas, alternativa que contradiga o enunciado, palavras-âncora isoladas em 1 só alternativa.
-5. POSIÇÃO DA CORRETA: distribua aleatoriamente entre A–E (não vicie em C/D). Ajuste "gabarito" (0–4) conforme a nova posição.
-6. SOM DE BANCA: linguagem objetiva, terceira pessoa, sem ironia, sem exemplos hipotéticos longos dentro da alternativa — o caso vai no enunciado.
+1. PARIDADE FORMAL: 5 alternativas com comprimento similar (±25%), mesmo registro técnico-jurídico, mesma estrutura sintática, pontuação coerente.
+2. PARIDADE SEMÂNTICA: todas igualmente plausíveis para quem estudou mas não dominou o detalhe.
+3. CADA DISTRATORA = UM ERRO TÍPICO REAL (troca de prazo, troca de autoridade, inversão regra/exceção, confusão entre institutos parecidos, dispositivo revogado, aplicação errada de princípio). Não exponha qual erro no JSON.
+4. PROIBIDO: "todas/nenhuma das anteriores", "apenas a alternativa X", "n.d.a.", duplicatas, alternativa que contradiga o enunciado, palavras-âncora isoladas em 1 só.
+5. POSIÇÃO DA CORRETA: distribua aleatoriamente A–E (não vicie em C/D). Ajuste "gabarito" (0–4).
+6. RESPEITE A HIERARQUIA da lei: cargos, postos, graduações, competências exclusivas devem espelhar EXATAMENTE o que a norma fixa.
+
+REGRAS DE COMENTÁRIO (PROFESSOR ORIENTADOR) — OBRIGATÓRIO quando reescrever comentário:
+Estrutura em 4 movimentos, sem títulos visíveis, em parágrafos fluidos:
+(1) CONFIRMA a alternativa correta e CITA o dispositivo (Art. X, inciso Y, §Z) com o trecho legal essencial — não basta "conforme o art. X", explique o que ele diz e por que torna a alternativa correta.
+(2) NOMEIA EXPLICITAMENTE a pegadinha/trocadilho/elemento de confusão (ex.: "a banca trocou o prazo de 5 por 10 dias", "inverteu a competência do delegado pela do juiz", "aplicou exceção como se fosse regra").
+(3) ANALISA CADA ALTERNATIVA INCORRETA INDIVIDUALMENTE: para A, B, C, D, E que não são o gabarito, diga o ERRO ESPECÍFICO (inversão de competência, troca de prazo, atribuição indevida de função, condição inexistente na lei, confusão entre institutos parecidos). Use o formato "A) ... — erro: ...; B) ... — erro: ...". NUNCA escreva "as demais estão incorretas".
+(4) Se a questão envolve hierarquia/posto/graduação/comissão/competência exclusiva, REFORÇA a regra geral e as exceções da lei para fixação.
+Tom direto, técnico, didático, em pt-BR. Sem repetir o enunciado, sem "conforme a legislação vigente" solto, sem rodeios. 600–1500 caracteres.
 
 REGRAS DE ENUNCIADO (quando reescrever):
-- Claro, específico, ancorado no texto legal. Prefira casos concretos curtos ou comparação entre institutos. Evite "qual o artigo X" literal. Mantenha dificuldade compatível com a original (não infle artificialmente).
+- Claro, específico, ancorado na lei. Prefira casos concretos curtos. Mantenha a dificuldade compatível com a original.
 
 REGRAS DE COMENTÁRIO (PROFESSOR ORIENTADOR) — quando reescrever comentário:
 - 300–700 caracteres, tom de professor conversando com o aluno.
