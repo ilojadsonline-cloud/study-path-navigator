@@ -10,6 +10,7 @@ import { Trophy, User, Shield, Pencil, Lock, Phone, Loader2, Eye, EyeOff, Credit
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { SubscriptionSection } from "@/components/SubscriptionSection";
 
 const Configuracoes = () => {
   const { user, profile, subscribed, subscriptionEnd, checkSubscription } = useAuth();
