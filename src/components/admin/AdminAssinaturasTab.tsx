@@ -238,7 +238,10 @@ export function AdminAssinaturasTab() {
                         <TableCell className="text-xs">{fmtDate(u.access_expires_at)}</TableCell>
                         <TableCell>{daysLeft(u.access_expires_at) ?? "—"}</TableCell>
                         <TableCell>
-                          {u.payment_source ? <Badge variant="outline" className="capitalize">{u.payment_source}</Badge> : <span className="text-muted-foreground text-xs">—</span>}
+                          {(() => {
+                            const b = sourceBadge(u.payment_source, daysLeft(u.access_expires_at));
+                            return <Badge variant={b.variant}>{b.label}</Badge>;
+                          })()}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
