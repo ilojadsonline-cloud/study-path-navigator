@@ -409,10 +409,24 @@ const Landing = () => {
             animate={{ opacity: 1, y: 0 }}
             className="glass-card rounded-2xl p-6 md:p-8 border-primary/10"
           >
-            {/* Discipline badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4">
-              <BookOpen className="w-3 h-3" />
-              {currentQuestion.disciplina}
+            {/* Header badges */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                <BookOpen className="w-3 h-3" />
+                {currentQuestion.disciplina}
+              </span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-muted/40 text-muted-foreground text-xs font-medium">
+                {currentQuestion.assunto}
+              </span>
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                currentQuestion.dificuldade === "Difícil"
+                  ? "bg-destructive/10 text-destructive"
+                  : currentQuestion.dificuldade === "Médio"
+                  ? "bg-gold/10 text-gold"
+                  : "bg-success/10 text-success"
+              }`}>
+                {currentQuestion.dificuldade}
+              </span>
             </div>
 
             {/* Question */}
