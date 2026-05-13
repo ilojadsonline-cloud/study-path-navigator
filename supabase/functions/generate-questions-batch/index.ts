@@ -764,6 +764,34 @@ serve(async (req) => {
   const errosEncontrados: Array<{ codigo: string; descricao: string }> = [];
 
   try {
+    // ── Auth: somente admins podem gerar questões (consome créditos de IA) ──
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAuth = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: claims } = await supabaseAuth.auth.getClaims(authHeader.replace("Bearer ", ""));
+    const callerId = claims?.claims?.sub;
+    if (!callerId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const adminClient = createClient(SUPABASE_URL, SERVICE_KEY);
+    const { data: roleRow } = await adminClient
+      .from("user_roles").select("role").eq("user_id", callerId).eq("role", "admin").maybeSingle();
+    if (!roleRow) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { disciplina_index, batch_size } = await req.json();
     const requestedBatchSize = Number(batch_size) || 2;
     // Mínimo 2 questões por lote (resiliência: se uma falha, sobra outra). Cap em 2 pelo budget de tempo.

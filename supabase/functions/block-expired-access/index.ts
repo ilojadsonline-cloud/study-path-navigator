@@ -28,6 +28,25 @@ async function hasActiveStripe(stripe: any, email: string): Promise<boolean> {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Auth: requer CRON_SECRET (header Authorization: Bearer <secret> ou x-cron-secret).
+  // Falha fechada se segredo não configurado.
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  if (!cronSecret) {
+    log("CRON_SECRET not configured — rejecting");
+    return new Response(JSON.stringify({ error: "cron secret not configured" }), {
+      status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const provided = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : (req.headers.get("x-cron-secret") ?? "");
+  if (provided !== cronSecret) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
