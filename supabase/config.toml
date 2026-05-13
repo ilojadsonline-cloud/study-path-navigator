@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.reactivate-access]
 verify_jwt = false
+
+[functions.mercadopago-webhook]
+verify_jwt = false
