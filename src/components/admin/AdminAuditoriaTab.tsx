@@ -133,6 +133,7 @@ export function AdminAuditoriaTab() {
     const { data, error } = await q;
     if (error) toast.error(error.message);
     else setAudits((data ?? []) as AuditRow[]);
+    setSelectedIds(new Set());
     setLoading(false);
   }
 
