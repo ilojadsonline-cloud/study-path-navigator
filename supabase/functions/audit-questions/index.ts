@@ -11,8 +11,8 @@ const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-const AUTO_FIX_CONFIDENCE = 0.9;
-const AUTO_FIX_RISK = "low";
+const AUTO_FIX_CONFIDENCE = 0.85;
+const AUTO_FIX_RISK_ALLOWED = ["low", "medium"]; // só "high" exige humano
 const MAX_PER_INVOCATION = 4; // mais ritmo sem sacrificar qualidade
 const PROCESS_CONCURRENCY = 2; // 2 chamadas IA em paralelo, dentro do limite de 150s
 const PAGE_Q = 250;
