@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen } from "lucide-react";
+import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen, CreditCard } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 
 // Lazy load das abas — reduz bundle inicial e evita cálculo simultâneo
@@ -16,6 +16,7 @@ const AdminGerarTab = lazy(() => import("@/components/admin/AdminGerarTab").then
 const AdminAuditoriaTab = lazy(() => import("@/components/admin/AdminAuditoriaTab").then(m => ({ default: m.AdminAuditoriaTab })));
 const AdminOnlineTab = lazy(() => import("@/components/admin/AdminOnlineTab").then(m => ({ default: m.AdminOnlineTab })));
 const AdminTextosLegaisContent = lazy(() => import("@/components/admin/AdminTextosLegaisTab"));
+const AdminAssinaturasTab = lazy(() => import("@/components/admin/AdminAssinaturasTab").then(m => ({ default: m.AdminAssinaturasTab })));
 
 const Fallback = () => (
   <div className="flex items-center justify-center py-16">
@@ -64,6 +65,7 @@ const AdminPanel = () => {
               <TabsTrigger value="auditoria" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><ShieldCheck className="w-3.5 h-3.5" />Validação IA</TabsTrigger>
               <TabsTrigger value="online" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Wifi className="w-3.5 h-3.5" />Online</TabsTrigger>
               <TabsTrigger value="textos" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><BookOpen className="w-3.5 h-3.5" />Textos Legais</TabsTrigger>
+              <TabsTrigger value="assinaturas" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><CreditCard className="w-3.5 h-3.5" />Assinaturas</TabsTrigger>
             </TabsList>
           </div>
 
@@ -77,6 +79,7 @@ const AdminPanel = () => {
           <TabsContent value="auditoria" className="mt-6" forceMount={visited.has("auditoria") ? true : undefined} hidden={activeTab !== "auditoria"}>{renderTab("auditoria", AdminAuditoriaTab)}</TabsContent>
           <TabsContent value="online" className="mt-6" forceMount={visited.has("online") ? true : undefined} hidden={activeTab !== "online"}>{renderTab("online", AdminOnlineTab)}</TabsContent>
           <TabsContent value="textos" className="mt-6" forceMount={visited.has("textos") ? true : undefined} hidden={activeTab !== "textos"}>{renderTab("textos", AdminTextosLegaisContent)}</TabsContent>
+          <TabsContent value="assinaturas" className="mt-6" forceMount={visited.has("assinaturas") ? true : undefined} hidden={activeTab !== "assinaturas"}>{renderTab("assinaturas", AdminAssinaturasTab)}</TabsContent>
         </Tabs>
       </div>
     </AppLayout>

@@ -232,6 +232,51 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_events: {
+        Row: {
+          action_taken: string | null
+          amount: number | null
+          created_at: string
+          email: string | null
+          gateway: string
+          id: string
+          payment_id: string | null
+          payment_type: string | null
+          processed_at: string
+          raw_payload: Json | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          amount?: number | null
+          created_at?: string
+          email?: string | null
+          gateway?: string
+          id?: string
+          payment_id?: string | null
+          payment_type?: string | null
+          processed_at?: string
+          raw_payload?: Json | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          amount?: number | null
+          created_at?: string
+          email?: string | null
+          gateway?: string
+          id?: string
+          payment_id?: string | null
+          payment_type?: string | null
+          processed_at?: string
+          raw_payload?: Json | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           cpf: string
