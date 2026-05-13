@@ -59,6 +59,14 @@ const daysLeft = (iso: string | null) => {
 const fmtBRL = (n: number | null) =>
   typeof n === "number" ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
 
+const sourceBadge = (src: string | null, daysRemaining: number | null) => {
+  if (!src) return { label: "—", variant: "outline" as const };
+  if (src === "mercadopago_avulso") return { label: `Pix/Boleto${daysRemaining != null ? ` — ${daysRemaining}d` : ""}`, variant: "secondary" as const };
+  if (src === "mercadopago") return { label: "Cartão — automática", variant: "default" as const };
+  if (src === "stripe") return { label: "Stripe — ativo", variant: "default" as const };
+  return { label: src, variant: "outline" as const };
+};
+
 export function AdminAssinaturasTab() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
