@@ -874,6 +874,11 @@ export function AdminAuditoriaTab() {
                   <X className="w-4 h-4" /> Manter como está
                 </Button>
               )}
+              {detail && (
+                <Button variant="secondary" size="sm" onClick={() => markResolved(detail)} className="gap-1">
+                  <ShieldCheck className="w-4 h-4" /> Marcar como resolvida
+                </Button>
+              )}
               {detail?.proposed_patch && (
                 <Button variant="outline" size="sm" onClick={() => applyAISuggestion(detail)} className="gap-1">
                   <CheckCircle2 className="w-4 h-4" /> Aplicar sugestão da IA
