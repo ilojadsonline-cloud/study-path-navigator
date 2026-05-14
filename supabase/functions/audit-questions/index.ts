@@ -62,6 +62,7 @@ type AuditResult = {
   proposed_patch: Partial<Questao> | null;
   needs_human_review: boolean;
   ai_summary: string;
+  techniques_used: string[];
 };
 
 function stripThinkTags(s: string): string {
