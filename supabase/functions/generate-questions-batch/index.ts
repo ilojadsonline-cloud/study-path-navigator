@@ -292,10 +292,16 @@ function detectAmbiguity(q: any, blocks: ArticleBlock[], lawNorm: string): { amb
     if (i === gab) continue;
     const altText = q[ALT_KEYS[i]] || "";
     const altLawScore = computeAltLiteralSupport(altText, lawNorm);
-    if (altLawScore > correctLawScore && altLawScore >= 0.75) {
+    // Só sinaliza inversão se a margem for SIGNIFICATIVA (>=15pp) e o gabarito tiver suporte fraco (<0.80).
+    // Em textos legais curtos, qualquer alternativa bem redigida atinge 85-100% — diferenças de 1-5pp são ruído.
+    if (
+      altLawScore >= 0.85 &&
+      correctLawScore < 0.80 &&
+      (altLawScore - correctLawScore) >= 0.15
+    ) {
       const letter = String.fromCharCode(65 + i);
-      return { 
-        ambiguous: true, 
+      return {
+        ambiguous: true,
         details: `Alternativa incorreta (${letter}) tem base literal MAIS FORTE que o gabarito (${(altLawScore*100).toFixed(0)}% vs ${(correctLawScore*100).toFixed(0)}%) — possível gabarito invertido`
       };
     }
@@ -1410,12 +1416,12 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       }
       batchSemanticFPs.add(semFP);
 
-      // ── Similarity dedup ──
-      const similarId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.45);
+      // ── Similarity dedup (Jaccard de enunciado): limiar 0.65 evita falsos positivos em leis curtas ──
+      const similarId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.65);
       if (similarId) {
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: similar à #${similarId}`); continue;
       }
-      const batchSimilarId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.45);
+      const batchSimilarId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.65);
       if (batchSimilarId !== null) {
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: similar a outra no lote`); continue;
       }
@@ -1587,8 +1593,8 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         console.log(`[GERAR] Q${idx+1} descartada: dup semântica ${highestSim.toFixed(2)} vs #${highestId}`);
         continue;
       }
-      if (highestSim >= 0.60) {
-        // zona cinza: descarta deste lote mas marca para reescrita futura com novo enfoque
+      if (highestSim >= 0.72) {
+        // zona cinza alta: descarta deste lote mas marca para reescrita futura com novo enfoque
         discarded++;
         questoesRevisaoManual.push({ motivo: `Similaridade média (${highestSim.toFixed(2)}) com Q#${highestId} — reescrever com novo ângulo` });
         console.log(`[GERAR] Q${idx+1} descartada: sim média ${highestSim.toFixed(2)} vs #${highestId} (reescrever)`);
