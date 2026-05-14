@@ -1593,8 +1593,8 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         console.log(`[GERAR] Q${idx+1} descartada: dup semântica ${highestSim.toFixed(2)} vs #${highestId}`);
         continue;
       }
-      if (highestSim >= 0.60) {
-        // zona cinza: descarta deste lote mas marca para reescrita futura com novo enfoque
+      if (highestSim >= 0.72) {
+        // zona cinza alta: descarta deste lote mas marca para reescrita futura com novo enfoque
         discarded++;
         questoesRevisaoManual.push({ motivo: `Similaridade média (${highestSim.toFixed(2)}) com Q#${highestId} — reescrever com novo ângulo` });
         console.log(`[GERAR] Q${idx+1} descartada: sim média ${highestSim.toFixed(2)} vs #${highestId} (reescrever)`);
