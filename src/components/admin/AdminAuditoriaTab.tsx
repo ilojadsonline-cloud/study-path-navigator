@@ -126,7 +126,7 @@ export function AdminAuditoriaTab() {
 
   async function loadAudits(statusOverride = filterStatus, activeJob = job) {
     setLoading(true);
-    let q = supabase.from("question_audits").select("*").order("created_at", { ascending: false }).limit(100);
+    let q = supabase.from("question_audits").select("*").order("created_at", { ascending: false }).limit(10000);
     if (statusOverride === "open") q = q.in("status", OPEN_AUDIT_STATUSES);
     else if (statusOverride === "session") q = q.in("status", SESSION_AUDIT_STATUSES).gte("created_at", activeJob?.created_at ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
     else q = q.eq("status", statusOverride);
