@@ -582,11 +582,6 @@ export function AdminAuditoriaTab() {
             <Button onClick={clearResolvedHistory} variant="outline" size="sm" className="gap-2 ml-auto">
               <RefreshCw className="w-3 h-3" /> Limpar histórico de resolvidas
             </Button>
-            {false && (
-              <Button onClick={cancel} variant="destructive" className="gap-2">
-                <Square className="w-4 h-4" />Parar auditoria
-              </Button>
-            )}
           </div>
 
           {job && (
