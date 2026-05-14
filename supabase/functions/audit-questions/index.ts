@@ -206,6 +206,19 @@ Retorne JSON ESTRITO:
 Se a questão estiver perfeita: confidence alta, issues=[], proposed_patch=null, needs_human_review=false.`;
 }
 
+/** Verifica se o gabarito é a alternativa mais longa OU mais curta do conjunto. */
+function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_e"|"gabarito">): boolean {
+  const lens = ["alt_a","alt_b","alt_c","alt_d","alt_e"].map((k) => String((q as any)[k] ?? "").trim().length);
+  const g = q.gabarito;
+  if (g < 0 || g > 4) return false;
+  const max = Math.max(...lens);
+  const min = Math.min(...lens);
+  // Se há empate no extremo, não é viés (não é única).
+  const isUniqueMax = lens[g] === max && lens.filter((l) => l === max).length === 1;
+  const isUniqueMin = lens[g] === min && lens.filter((l) => l === min).length === 1;
+  return isUniqueMax || isUniqueMin;
+}
+
 async function auditOne(q: Questao, legalText: string | null): Promise<AuditResult> {
   const raw = await callDeepSeek(buildAuditPrompt(q, legalText));
   const parsed = safeJsonParse(raw);
@@ -217,13 +230,13 @@ async function auditOne(q: Questao, legalText: string | null): Promise<AuditResu
       proposed_patch: null,
       needs_human_review: true,
       ai_summary: "Falha de parse do auditor",
+      techniques_used: [],
     };
   }
   const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
   const risk = ["low", "medium", "high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
   const issues = Array.isArray(parsed.issues) ? parsed.issues : [];
   let patch = parsed.proposed_patch && typeof parsed.proposed_patch === "object" ? parsed.proposed_patch : null;
-  // Sanitiza patch
   if (patch) {
     const allowed = ["gabarito", "comentario", "alt_a", "alt_b", "alt_c", "alt_d", "alt_e", "enunciado"];
     const clean: any = {};
@@ -234,13 +247,35 @@ async function auditOne(q: Questao, legalText: string | null): Promise<AuditResu
     }
     patch = Object.keys(clean).length ? clean : null;
   }
+  const techniques = Array.isArray(parsed.techniques_used)
+    ? parsed.techniques_used.map((t: any) => String(t)).slice(0, 10)
+    : [];
+
+  // Pós-validação anti-length-bias: avalia o estado FINAL (após patch, se houver).
+  const finalAlts = {
+    alt_a: patch?.alt_a ?? q.alt_a,
+    alt_b: patch?.alt_b ?? q.alt_b,
+    alt_c: patch?.alt_c ?? q.alt_c,
+    alt_d: patch?.alt_d ?? q.alt_d,
+    alt_e: patch?.alt_e ?? q.alt_e,
+    gabarito: typeof patch?.gabarito === "number" ? patch.gabarito : q.gabarito,
+  };
+  if (detectLengthBias(finalAlts) && !issues.some((i: any) => i?.type === "length_bias")) {
+    issues.push({
+      type: "length_bias",
+      severity: "high",
+      description: "Alternativa correta é a mais longa OU mais curta do conjunto — padrão previsível.",
+    });
+  }
+
   return {
     confidence: conf,
     risk_level: risk,
     issues,
     proposed_patch: patch,
-    needs_human_review: Boolean(parsed.needs_human_review) || issues.some((i: any) => i?.severity === "high"),
+    needs_human_review: Boolean(parsed.needs_human_review) || issues.some((i: any) => i?.severity === "high" && i?.type !== "length_bias"),
     ai_summary: String(parsed.ai_summary ?? ""),
+    techniques_used: techniques,
   };
 }
 
@@ -248,7 +283,7 @@ async function processQuestion(
   supabase: ReturnType<typeof createClient>,
   q: Questao,
   legalCache: Map<string, string | null>,
-): Promise<{ status: string; auto_fixed: boolean; flagged: boolean }> {
+): Promise<{ status: string; auto_fixed: boolean; flagged: boolean; deleted: boolean }> {
   // Busca texto legal por disciplina (cache)
   let legal = legalCache.get(q.disciplina);
   if (legal === undefined) {
@@ -274,10 +309,34 @@ async function processQuestion(
       issues: [{ type: "outros", severity: "high", description: msg }],
       ai_summary: "Erro durante auditoria",
     });
-    return { status: "error", auto_fixed: false, flagged: false };
+    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.MANUAL);
+    return { status: "error", auto_fixed: false, flagged: false, deleted: false };
   }
 
-  // Considera "sem defeito real" quando não há issues de severidade média/alta.
+  // AUTO-DELETE: duplicada ou irrecuperável.
+  const isDuplicate = result.issues.some((i: any) => i?.type === "duplicada");
+  const isUnrecoverable = result.issues.some((i: any) => i?.type === "unrecoverable" || i?.type === "incoerente");
+  const aiAutoDelete = /^AUTO_DELETE:/i.test(result.ai_summary || "");
+  if (aiAutoDelete || isDuplicate || isUnrecoverable) {
+    await supabase.from("question_audits").insert({
+      questao_id: q.id,
+      status: "auto_deleted",
+      confidence: result.confidence,
+      risk_level: result.risk_level,
+      issues: result.issues,
+      proposed_patch: null,
+      applied_patch: null,
+      ai_summary: result.ai_summary || (isDuplicate ? "Duplicata de menor qualidade" : "Questão irrecuperável"),
+    });
+    await supabase
+      .from("question_audits")
+      .update({ status: "superseded" })
+      .eq("questao_id", q.id)
+      .in("status", OPEN_AUDIT_STATUSES);
+    await supabase.from("questoes").delete().eq("id", q.id);
+    return { status: "deleted", auto_fixed: false, flagged: false, deleted: true };
+  }
+
   const hasRealDefect = result.issues.some(
     (i: any) => i?.severity === "medium" || i?.severity === "high",
   );
@@ -295,13 +354,12 @@ async function processQuestion(
   if (noIssues) {
     finalStatus = "approved";
   } else if (canAutoFix) {
-      await supabase
-        .from("question_audits")
-        .update({ status: "superseded", updated_at: new Date().toISOString() })
-        .eq("questao_id", q.id)
-        .in("status", OPEN_AUDIT_STATUSES);
+    await supabase
+      .from("question_audits")
+      .update({ status: "superseded", updated_at: new Date().toISOString() })
+      .eq("questao_id", q.id)
+      .in("status", OPEN_AUDIT_STATUSES);
 
-    // Snapshot antes
     const { data: audIns } = await supabase
       .from("question_audits")
       .insert({
@@ -326,7 +384,8 @@ async function processQuestion(
 
     await supabase.from("questoes").update(result.proposed_patch).eq("id", q.id);
     appliedPatch = result.proposed_patch;
-    return { status: "auto_fixed", auto_fixed: true, flagged: false };
+    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.AUTO_CORRECTED, result.techniques_used);
+    return { status: "auto_fixed", auto_fixed: true, flagged: false, deleted: false };
   } else {
     finalStatus = "manual_review";
   }
@@ -350,10 +409,18 @@ async function processQuestion(
     ai_summary: result.ai_summary,
   });
 
+  await setQuestionAuditStatus(
+    supabase,
+    q.id,
+    finalStatus === "approved" ? Q_STATUS.APPROVED : Q_STATUS.MANUAL,
+    result.techniques_used,
+  );
+
   return {
     status: finalStatus,
     auto_fixed: false,
     flagged: finalStatus === "manual_review",
+    deleted: false,
   };
 }
 
