@@ -18,6 +18,28 @@ const PROCESS_CONCURRENCY = 2; // 2 chamadas IA em paralelo, dentro do limite de
 const PAGE_Q = 250;
 const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
 
+// Estados do ciclo de vida da auditoria (em public.questoes.audit_status)
+const Q_STATUS = {
+  PENDING: "pending",
+  APPROVED: "approved",
+  AUTO_CORRECTED: "auto_corrected",
+  MANUAL: "manual_review",
+  ADMIN_RESOLVED: "admin_resolved",
+  DELETED: "deleted",
+} as const;
+
+/** Atualiza o estado de auditoria persistente da questão. */
+async function setQuestionAuditStatus(
+  supabase: ReturnType<typeof createClient>,
+  questaoId: number,
+  status: string,
+  techniques?: string[],
+) {
+  const patch: any = { audit_status: status, audit_status_updated_at: new Date().toISOString() };
+  if (Array.isArray(techniques)) patch.audit_techniques = techniques;
+  await supabase.from("questoes").update(patch).eq("id", questaoId);
+}
+
 type Questao = {
   id: number;
   disciplina: string;
@@ -40,6 +62,7 @@ type AuditResult = {
   proposed_patch: Partial<Questao> | null;
   needs_human_review: boolean;
   ai_summary: string;
+  techniques_used: string[];
 };
 
 function stripThinkTags(s: string): string {
@@ -69,7 +92,7 @@ async function callDeepSeek(prompt: string, timeoutMs = 55000): Promise<string> 
           {
             role: "system",
             content:
-              "Você é AUDITOR INTEGRAL e PROFESSOR ORIENTADOR de questões objetivas para concursos militares e jurídicos (PMTO, FGV/CESPE/VUNESP). Sua auditoria NÃO é por amostragem nem por palavras-chave: você LÊ a questão inteira (enunciado, A, B, C, D, E, gabarito e comentário) E confronta TUDO com o TEXTO LEGAL DE REFERÊNCIA fornecido. O objetivo central é garantir que enunciado, alternativas, gabarito e comentário estejam em SINTONIA entre si e FIÉIS à norma vigente. Você deve detectar, registrar e CORRIGIR (sempre que possível com segurança jurídica) todos estes defeitos: alucinação jurídica (fundamento inexistente), bug estrutural (campo vazio/corrompido), ausência de comentário, comentário em loop/circular, duas ou mais alternativas corretas, nenhuma correta, violação de hierarquia (atribui posto/função/competência diferente do que a lei fixa), atribuição de função incompatível com o posto/graduação citado, questão duplicada, questão incoerente/impossível, distratores fracos/óbvios, gabarito visualmente identificável (único completo, único técnico, único com ressalva), desalinhamento entre enunciado/alternativas/comentário, texto legal desatualizado/revogado, comentário que não explica cada alternativa individualmente. Reescrever é PREFERÍVEL a marcar para revisão humana — só envie para revisão manual quando a correção automática não for SEGURA juridicamente ou exigir julgamento humano sobre interpretação. Quando reescrever, eleve a questão ao padrão de banca de elite: distratores plausíveis baseados em ERROS TÍPICOS reais (troca de prazo, troca de autoridade, inversão regra/exceção, confusão entre institutos parecidos, dispositivo revogado, aplicação errada de princípio). Comentário OBRIGATORIAMENTE no perfil PROFESSOR ORIENTADOR: (1) confirma a correta e cita o dispositivo legal exato (Art./inciso/§) com o trecho relevante; (2) nomeia explicitamente a pegadinha/trocadilho/elemento de confusão; (3) analisa CADA alternativa incorreta individualmente, dizendo o erro específico (não 'as demais estão erradas'); (4) quando houver hierarquia/posto/competência exclusiva, reforça a regra geral e as exceções. Tom direto, técnico, didático, sem rodeios, sem repetir o enunciado, sem 'conforme a legislação vigente' solto. Responda APENAS JSON válido.",
+              "Você é AUDITOR INTEGRAL e PROFESSOR ORIENTADOR de questões objetivas para concursos militares e jurídicos (PMTO, FGV/CESPE/VUNESP). Auditoria SEM amostragem: leia enunciado, A–E, gabarito e comentário inteiros e confronte TUDO com o TEXTO LEGAL DE REFERÊNCIA. Detecte e (sempre que seguro) CORRIJA: alucinação jurídica, bug estrutural, comentário ausente/loop, duas+ alternativas corretas, nenhuma correta, violação de hierarquia funcional, função incompatível com o posto, duplicata, incoerência, distratores fracos, gabarito visualmente identificável, desalinhamento, legislação revogada/desatualizada, comentário que não analisa cada alternativa, e PADRÃO ANTIÉTICO 'alternativa correta = a mais longa OU a mais curta' do conjunto. Reescrever é PREFERÍVEL a marcar para revisão humana. Use estes códigos de issue quando aplicável: length_bias (gabarito é o mais longo/curto), insufficient_distractors (<2 técnicas de distração), hierarquia_violada, multiplas_corretas, texto_legal_desatualizado, duplicada, unrecoverable. Em duplicata e em irrecuperável, defina needs_human_review=false e indique no ai_summary 'AUTO_DELETE: <motivo>' — o sistema excluirá automaticamente. Para texto desatualizado (ex.: 'CPI'/'Comissão de Polícia Interna' substituída por 'CRP'/'Corregedoria' conforme texto vigente), faça a substituição no patch quando o sentido for preservado; senão, mande para revisão manual. TÉCNICAS DE DISTRAÇÃO obrigatórias (use ≥2 ao reescrever): inversão sujeito/predicado, troca de conectivo lógico, prazo trocado, cargo/posto trocado, verbo modal trocado (poderá↔deverá), negação inserida/removida, referência a lei errada, confusão de instância (Conselho↔Comando), completude falsa, generalização indevida. Registre as técnicas usadas em 'techniques_used'. ANTI-LENGTH-BIAS: ao reescrever, garanta que a alternativa correta NÃO seja a de maior nem a de menor número de caracteres do conjunto (±25% de paridade). COMENTÁRIO em 4 movimentos OBRIGATÓRIOS: (1) 'A alternativa correta é a [X], pois...' + citação literal do dispositivo; (2) 'A pegadinha desta questão está em...' nomeando explicitamente a técnica usada; (3) Análise individual de CADA alternativa errada com o dispositivo que a contradiz no formato 'Alternativa [Y]: incorreta porque ... Vide [art. Z]'; (4) 'Lembre-se: segundo o [art. X da Lei Y], [regra geral]'. Tom de tutor experiente. Responda APENAS JSON válido.",
           },
           { role: "user", content: prompt },
         ],
@@ -183,6 +206,19 @@ Retorne JSON ESTRITO:
 Se a questão estiver perfeita: confidence alta, issues=[], proposed_patch=null, needs_human_review=false.`;
 }
 
+/** Verifica se o gabarito é a alternativa mais longa OU mais curta do conjunto. */
+function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_e"|"gabarito">): boolean {
+  const lens = ["alt_a","alt_b","alt_c","alt_d","alt_e"].map((k) => String((q as any)[k] ?? "").trim().length);
+  const g = q.gabarito;
+  if (g < 0 || g > 4) return false;
+  const max = Math.max(...lens);
+  const min = Math.min(...lens);
+  // Se há empate no extremo, não é viés (não é única).
+  const isUniqueMax = lens[g] === max && lens.filter((l) => l === max).length === 1;
+  const isUniqueMin = lens[g] === min && lens.filter((l) => l === min).length === 1;
+  return isUniqueMax || isUniqueMin;
+}
+
 async function auditOne(q: Questao, legalText: string | null): Promise<AuditResult> {
   const raw = await callDeepSeek(buildAuditPrompt(q, legalText));
   const parsed = safeJsonParse(raw);
@@ -194,13 +230,13 @@ async function auditOne(q: Questao, legalText: string | null): Promise<AuditResu
       proposed_patch: null,
       needs_human_review: true,
       ai_summary: "Falha de parse do auditor",
+      techniques_used: [],
     };
   }
   const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
   const risk = ["low", "medium", "high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
   const issues = Array.isArray(parsed.issues) ? parsed.issues : [];
   let patch = parsed.proposed_patch && typeof parsed.proposed_patch === "object" ? parsed.proposed_patch : null;
-  // Sanitiza patch
   if (patch) {
     const allowed = ["gabarito", "comentario", "alt_a", "alt_b", "alt_c", "alt_d", "alt_e", "enunciado"];
     const clean: any = {};
@@ -211,13 +247,35 @@ async function auditOne(q: Questao, legalText: string | null): Promise<AuditResu
     }
     patch = Object.keys(clean).length ? clean : null;
   }
+  const techniques = Array.isArray(parsed.techniques_used)
+    ? parsed.techniques_used.map((t: any) => String(t)).slice(0, 10)
+    : [];
+
+  // Pós-validação anti-length-bias: avalia o estado FINAL (após patch, se houver).
+  const finalAlts = {
+    alt_a: patch?.alt_a ?? q.alt_a,
+    alt_b: patch?.alt_b ?? q.alt_b,
+    alt_c: patch?.alt_c ?? q.alt_c,
+    alt_d: patch?.alt_d ?? q.alt_d,
+    alt_e: patch?.alt_e ?? q.alt_e,
+    gabarito: typeof patch?.gabarito === "number" ? patch.gabarito : q.gabarito,
+  };
+  if (detectLengthBias(finalAlts) && !issues.some((i: any) => i?.type === "length_bias")) {
+    issues.push({
+      type: "length_bias",
+      severity: "high",
+      description: "Alternativa correta é a mais longa OU mais curta do conjunto — padrão previsível.",
+    });
+  }
+
   return {
     confidence: conf,
     risk_level: risk,
     issues,
     proposed_patch: patch,
-    needs_human_review: Boolean(parsed.needs_human_review) || issues.some((i: any) => i?.severity === "high"),
+    needs_human_review: Boolean(parsed.needs_human_review) || issues.some((i: any) => i?.severity === "high" && i?.type !== "length_bias"),
     ai_summary: String(parsed.ai_summary ?? ""),
+    techniques_used: techniques,
   };
 }
 
@@ -225,7 +283,7 @@ async function processQuestion(
   supabase: ReturnType<typeof createClient>,
   q: Questao,
   legalCache: Map<string, string | null>,
-): Promise<{ status: string; auto_fixed: boolean; flagged: boolean }> {
+): Promise<{ status: string; auto_fixed: boolean; flagged: boolean; deleted: boolean }> {
   // Busca texto legal por disciplina (cache)
   let legal = legalCache.get(q.disciplina);
   if (legal === undefined) {
@@ -251,10 +309,34 @@ async function processQuestion(
       issues: [{ type: "outros", severity: "high", description: msg }],
       ai_summary: "Erro durante auditoria",
     });
-    return { status: "error", auto_fixed: false, flagged: false };
+    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.MANUAL);
+    return { status: "error", auto_fixed: false, flagged: false, deleted: false };
   }
 
-  // Considera "sem defeito real" quando não há issues de severidade média/alta.
+  // AUTO-DELETE: duplicada ou irrecuperável.
+  const isDuplicate = result.issues.some((i: any) => i?.type === "duplicada");
+  const isUnrecoverable = result.issues.some((i: any) => i?.type === "unrecoverable" || i?.type === "incoerente");
+  const aiAutoDelete = /^AUTO_DELETE:/i.test(result.ai_summary || "");
+  if (aiAutoDelete || isDuplicate || isUnrecoverable) {
+    await supabase.from("question_audits").insert({
+      questao_id: q.id,
+      status: "auto_deleted",
+      confidence: result.confidence,
+      risk_level: result.risk_level,
+      issues: result.issues,
+      proposed_patch: null,
+      applied_patch: null,
+      ai_summary: result.ai_summary || (isDuplicate ? "Duplicata de menor qualidade" : "Questão irrecuperável"),
+    });
+    await supabase
+      .from("question_audits")
+      .update({ status: "superseded" })
+      .eq("questao_id", q.id)
+      .in("status", OPEN_AUDIT_STATUSES);
+    await supabase.from("questoes").delete().eq("id", q.id);
+    return { status: "deleted", auto_fixed: false, flagged: false, deleted: true };
+  }
+
   const hasRealDefect = result.issues.some(
     (i: any) => i?.severity === "medium" || i?.severity === "high",
   );
@@ -272,13 +354,12 @@ async function processQuestion(
   if (noIssues) {
     finalStatus = "approved";
   } else if (canAutoFix) {
-      await supabase
-        .from("question_audits")
-        .update({ status: "superseded", updated_at: new Date().toISOString() })
-        .eq("questao_id", q.id)
-        .in("status", OPEN_AUDIT_STATUSES);
+    await supabase
+      .from("question_audits")
+      .update({ status: "superseded", updated_at: new Date().toISOString() })
+      .eq("questao_id", q.id)
+      .in("status", OPEN_AUDIT_STATUSES);
 
-    // Snapshot antes
     const { data: audIns } = await supabase
       .from("question_audits")
       .insert({
@@ -303,7 +384,8 @@ async function processQuestion(
 
     await supabase.from("questoes").update(result.proposed_patch).eq("id", q.id);
     appliedPatch = result.proposed_patch;
-    return { status: "auto_fixed", auto_fixed: true, flagged: false };
+    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.AUTO_CORRECTED, result.techniques_used);
+    return { status: "auto_fixed", auto_fixed: true, flagged: false, deleted: false };
   } else {
     finalStatus = "manual_review";
   }
@@ -327,10 +409,18 @@ async function processQuestion(
     ai_summary: result.ai_summary,
   });
 
+  await setQuestionAuditStatus(
+    supabase,
+    q.id,
+    finalStatus === "approved" ? Q_STATUS.APPROVED : Q_STATUS.MANUAL,
+    result.techniques_used,
+  );
+
   return {
     status: finalStatus,
     auto_fixed: false,
     flagged: finalStatus === "manual_review",
+    deleted: false,
   };
 }
 
@@ -369,7 +459,38 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body.action ?? "run";
 
-    // Ações: start (cria job), run (processa lote), status (consulta job), cancel
+    // Ações: start (cria job), run (processa lote), status, cancel, clear_resolved, summary
+    if (action === "clear_resolved") {
+      // Reseta questões já marcadas como admin_resolved para a fila de auditoria.
+      const { error, count } = await supabase
+        .from("questoes")
+        .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() }, { count: "exact" })
+        .eq("audit_status", Q_STATUS.ADMIN_RESOLVED);
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ ok: true, reset: count ?? 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "summary") {
+      // Resumo do estado atual da fila de auditoria.
+      const counts: Record<string, number> = {};
+      for (const s of [Q_STATUS.PENDING, Q_STATUS.APPROVED, Q_STATUS.AUTO_CORRECTED, Q_STATUS.MANUAL, Q_STATUS.ADMIN_RESOLVED]) {
+        const { count } = await supabase
+          .from("questoes")
+          .select("id", { count: "exact", head: true })
+          .eq("audit_status", s);
+        counts[s] = count ?? 0;
+      }
+      return new Response(JSON.stringify({ counts }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "start") {
       const scope = {
         disciplinas: Array.isArray(body.disciplinas) ? body.disciplinas : null,
@@ -377,8 +498,20 @@ serve(async (req) => {
         limit: Math.min(Number(body.limit ?? 200), 100000),
       };
 
-      // Conta total elegível
-      let countQ = supabase.from("questoes").select("id", { count: "exact", head: true });
+      // RESET V4: questões aprovadas ou auto-corrigidas voltam para 'pending'.
+      // Manual_review e admin_resolved ficam de fora.
+      let resetQ = supabase
+        .from("questoes")
+        .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
+        .in("audit_status", [Q_STATUS.APPROVED, Q_STATUS.AUTO_CORRECTED]);
+      if (scope.disciplinas?.length) resetQ = resetQ.in("disciplina", scope.disciplinas);
+      await resetQ;
+
+      // Conta total elegível (somente pending — pula manual_review/admin_resolved/deleted).
+      let countQ = supabase
+        .from("questoes")
+        .select("id", { count: "exact", head: true })
+        .eq("audit_status", Q_STATUS.PENDING);
       if (scope.disciplinas?.length) countQ = countQ.in("disciplina", scope.disciplinas);
       const { count } = await countQ;
 
@@ -436,6 +569,7 @@ serve(async (req) => {
         .select("*")
         .order("id", { ascending: true })
         .gt("id", cursor)
+        .eq("audit_status", Q_STATUS.PENDING)
         .limit(PAGE_Q);
       if (job.scope?.disciplinas?.length) qBuilder = qBuilder.in("disciplina", job.scope.disciplinas);
       const { data: candidates, error: cErr } = await qBuilder;
@@ -487,7 +621,7 @@ serve(async (req) => {
     }
 
     const legalCache = new Map<string, string | null>();
-    let processed = 0, autoFixed = 0, flagged = 0, errors = 0;
+    let processed = 0, autoFixed = 0, flagged = 0, errors = 0, deleted = 0;
     let lastBatchError: string | null = null;
 
     for (let i = 0; i < pending.length; i += PROCESS_CONCURRENCY) {
@@ -501,6 +635,7 @@ serve(async (req) => {
           processed++;
           if (r.auto_fixed) autoFixed++;
           if (r.flagged) flagged++;
+          if (r.deleted) deleted++;
           if (r.status === "error") errors++;
         } else {
           errors++;
@@ -537,6 +672,7 @@ serve(async (req) => {
       processed_in_batch: processed,
       auto_fixed_in_batch: autoFixed,
       flagged_in_batch: flagged,
+      deleted_in_batch: deleted,
       errors_in_batch: errors,
       total_processed: newProcessed,
       done: isDone,

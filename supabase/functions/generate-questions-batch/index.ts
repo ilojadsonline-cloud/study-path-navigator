@@ -1084,18 +1084,27 @@ PRINCÍPIOS FUNDAMENTAIS:
 COMENTÁRIO NO ESTILO DE PROFESSOR (REGRA MAIS IMPORTANTE — é a premissa da plataforma):
 O comentário deve soar como um professor explicando ao aluno em sala de aula, NÃO como um documento jurídico robótico.
 
-FORMATO OBRIGATÓRIO:
-- PARÁGRAFO 1: Cite o artigo UMA ÚNICA VEZ no início ("Conforme o Art. X do [nome da lei]:") e transcreva o trecho relevante entre aspas. NUNCA repita o número do artigo no restante do comentário.
-- PARÁGRAFO 2: Explique COM SUAS PALAVRAS por que a alternativa correta está certa, conectando o texto legal ao cenário da questão.
-- PARÁGRAFO 3: Para cada alternativa incorreta, explique BREVEMENTE o erro em linguagem natural (ex: "A alternativa B erra ao afirmar que... quando na verdade..."). SEM repetir "Art. X" a cada frase.
-- PARÁGRAFO 4: Conclusão pedagógica curta — dica de estudo ou ponto-chave para memorizar.
+ESTRUTURA OBRIGATÓRIA EM 4 MOVIMENTOS (PERFIL PROFESSOR ORIENTADOR — todos obrigatórios):
+(1) "A alternativa correta é a [X], pois..." + citação literal e curta do dispositivo legal (entre aspas) que fundamenta a resposta.
+(2) "A pegadinha desta questão está em..." + nomeie EXPLICITAMENTE a técnica usada nos distratores (troca de prazo, inversão regra/exceção, troca de autoridade, verbo modal trocado, etc.).
+(3) Análise INDIVIDUAL de CADA alternativa incorreta no formato "Alternativa [Y]: incorreta porque [erro específico]. Vide [art. Z]." — nunca escreva "as demais estão erradas".
+(4) "Lembre-se: segundo o [art. X da Lei Y], [regra geral em uma frase]." — frase memorável de fixação.
+
+ANTI-PADRÃO 'ALTERNATIVA MAIS LONGA = CORRETA' (REGRA OBRIGATÓRIA):
+A alternativa correta NUNCA pode ser a de maior número de caracteres NEM a de menor número de caracteres do conjunto. Mantenha as 5 alternativas com paridade ±25% no comprimento. Antes de finalizar, MEÇA o comprimento de A, B, C, D, E e ajuste se a correta estiver no extremo.
+
+TÉCNICAS DE DISTRAÇÃO OBRIGATÓRIAS (use ≥2 técnicas DIFERENTES nas 4 alternativas incorretas de cada questão):
+- Inversão de sujeito/predicado | Troca de conectivo lógico (somente se↔sempre que; e↔ou; exceto↔inclusive)
+- Prazo trocado (30↔60 dias) | Cargo/posto trocado por hierarquia próxima
+- Verbo modal trocado (poderá↔deverá; é vedado↔é facultado) | Negação inserida ou removida
+- Referência cruzada a outra lei | Confusão de instância (Conselho↔Comando; Seção↔Divisão)
+- Completude falsa (omite condição essencial) | Generalização indevida
 
 PROIBIÇÕES NO COMENTÁRIO:
-- PROIBIDO repetir o número do artigo mais de 2 vezes no comentário inteiro.
-- PROIBIDO usar formatação robótica como "a) IDENTIFICAÇÃO DO FUNDAMENTO:", "b) EXPLICAÇÃO DA CORRETA:", "c) ANÁLISE INDIVIDUALIZADA".
-- PROIBIDO copiar trechos enormes da lei. Uma citação literal curta basta.
+- PROIBIDO formatação robótica como "a) IDENTIFICAÇÃO:", "b) EXPLICAÇÃO:".
+- PROIBIDO copiar trechos enormes da lei. Citação literal CURTA basta.
 - O comentário deve ter no MÁXIMO 1500 caracteres.
-- PROIBIDO incluir informações externas, opiniões pessoais ou interpretações não derivadas do texto legal.
+- PROIBIDO opiniões pessoais ou interpretações não derivadas do texto legal.
 
 QUESTÕES INTERPRETATIVAS SÃO PERMITIDAS E DESEJÁVEIS:
 - A alternativa correta NÃO precisa reproduzir o texto da lei "ipsis litteris". Pode parafrasear, aplicar a um caso concreto curto, comparar institutos OU combinar dispositivos de uma ou mais leis do banco — desde que o conteúdo seja FIEL ao que a norma efetivamente determina (sem inventar prazo, autoridade, requisito ou exceção).

@@ -500,6 +500,9 @@ export type Database = {
           artigo_principal: string | null
           assinatura_semantica: Json | null
           assunto: string
+          audit_status: string
+          audit_status_updated_at: string
+          audit_techniques: Json
           comentario: string
           created_at: string
           dificuldade: string
@@ -517,6 +520,9 @@ export type Database = {
           artigo_principal?: string | null
           assinatura_semantica?: Json | null
           assunto: string
+          audit_status?: string
+          audit_status_updated_at?: string
+          audit_techniques?: Json
           comentario: string
           created_at?: string
           dificuldade?: string
@@ -534,6 +540,9 @@ export type Database = {
           artigo_principal?: string | null
           assinatura_semantica?: Json | null
           assunto?: string
+          audit_status?: string
+          audit_status_updated_at?: string
+          audit_techniques?: Json
           comentario?: string
           created_at?: string
           dificuldade?: string
