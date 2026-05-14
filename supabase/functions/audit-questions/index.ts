@@ -621,7 +621,7 @@ serve(async (req) => {
     }
 
     const legalCache = new Map<string, string | null>();
-    let processed = 0, autoFixed = 0, flagged = 0, errors = 0;
+    let processed = 0, autoFixed = 0, flagged = 0, errors = 0, deleted = 0;
     let lastBatchError: string | null = null;
 
     for (let i = 0; i < pending.length; i += PROCESS_CONCURRENCY) {
@@ -635,6 +635,7 @@ serve(async (req) => {
           processed++;
           if (r.auto_fixed) autoFixed++;
           if (r.flagged) flagged++;
+          if (r.deleted) deleted++;
           if (r.status === "error") errors++;
         } else {
           errors++;
@@ -671,6 +672,7 @@ serve(async (req) => {
       processed_in_batch: processed,
       auto_fixed_in_batch: autoFixed,
       flagged_in_batch: flagged,
+      deleted_in_batch: deleted,
       errors_in_batch: errors,
       total_processed: newProcessed,
       done: isDone,
