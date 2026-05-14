@@ -224,6 +224,22 @@ export function AdminAuditoriaTab() {
     toast.info("Cancelando...");
   }
 
+  async function clearResolvedHistory() {
+    if (!confirm("Resetar TODAS as questões marcadas como 'resolvidas pelo admin' para reauditar do zero?")) return;
+    const { data, error } = await supabase.functions.invoke("audit-questions", { body: { action: "clear_resolved" } });
+    if (error) return toast.error(error.message);
+    toast.success(`${data?.reset ?? 0} questão(ões) liberadas para reauditoria.`);
+  }
+
+  async function markResolved(a: AuditRow) {
+    await supabase.from("question_audits").update({ status: "approved", ai_summary: "Resolvida pelo admin" }).eq("id", a.id);
+    await supabase.from("questoes").update({ audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() }).eq("id", a.questao_id);
+    await closeSiblingAudits(a.questao_id, a.id);
+    removeFromListIfResolved(a.id, "approved");
+    setDetail(null); setQuestao(null); setForm(null);
+    toast.success(`Questão #${a.questao_id} marcada como resolvida — não voltará à fila.`);
+  }
+
   // Remove da fila quando o admin já resolveu a pendência.
   function removeFromListIfResolved(auditId: number, newStatus: string) {
     const stillVisible =
