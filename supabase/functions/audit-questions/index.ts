@@ -569,6 +569,7 @@ serve(async (req) => {
         .select("*")
         .order("id", { ascending: true })
         .gt("id", cursor)
+        .eq("audit_status", Q_STATUS.PENDING)
         .limit(PAGE_Q);
       if (job.scope?.disciplinas?.length) qBuilder = qBuilder.in("disciplina", job.scope.disciplinas);
       const { data: candidates, error: cErr } = await qBuilder;
