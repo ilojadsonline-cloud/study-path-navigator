@@ -292,10 +292,16 @@ function detectAmbiguity(q: any, blocks: ArticleBlock[], lawNorm: string): { amb
     if (i === gab) continue;
     const altText = q[ALT_KEYS[i]] || "";
     const altLawScore = computeAltLiteralSupport(altText, lawNorm);
-    if (altLawScore > correctLawScore && altLawScore >= 0.75) {
+    // Só sinaliza inversão se a margem for SIGNIFICATIVA (>=15pp) e o gabarito tiver suporte fraco (<0.80).
+    // Em textos legais curtos, qualquer alternativa bem redigida atinge 85-100% — diferenças de 1-5pp são ruído.
+    if (
+      altLawScore >= 0.85 &&
+      correctLawScore < 0.80 &&
+      (altLawScore - correctLawScore) >= 0.15
+    ) {
       const letter = String.fromCharCode(65 + i);
-      return { 
-        ambiguous: true, 
+      return {
+        ambiguous: true,
         details: `Alternativa incorreta (${letter}) tem base literal MAIS FORTE que o gabarito (${(altLawScore*100).toFixed(0)}% vs ${(correctLawScore*100).toFixed(0)}%) — possível gabarito invertido`
       };
     }
