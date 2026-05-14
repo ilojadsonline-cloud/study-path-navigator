@@ -18,6 +18,28 @@ const PROCESS_CONCURRENCY = 2; // 2 chamadas IA em paralelo, dentro do limite de
 const PAGE_Q = 250;
 const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
 
+// Estados do ciclo de vida da auditoria (em public.questoes.audit_status)
+const Q_STATUS = {
+  PENDING: "pending",
+  APPROVED: "approved",
+  AUTO_CORRECTED: "auto_corrected",
+  MANUAL: "manual_review",
+  ADMIN_RESOLVED: "admin_resolved",
+  DELETED: "deleted",
+} as const;
+
+/** Atualiza o estado de auditoria persistente da questão. */
+async function setQuestionAuditStatus(
+  supabase: ReturnType<typeof createClient>,
+  questaoId: number,
+  status: string,
+  techniques?: string[],
+) {
+  const patch: any = { audit_status: status, audit_status_updated_at: new Date().toISOString() };
+  if (Array.isArray(techniques)) patch.audit_techniques = techniques;
+  await supabase.from("questoes").update(patch).eq("id", questaoId);
+}
+
 type Questao = {
   id: number;
   disciplina: string;
