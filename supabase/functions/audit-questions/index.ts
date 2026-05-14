@@ -459,7 +459,38 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body.action ?? "run";
 
-    // Ações: start (cria job), run (processa lote), status (consulta job), cancel
+    // Ações: start (cria job), run (processa lote), status, cancel, clear_resolved, summary
+    if (action === "clear_resolved") {
+      // Reseta questões já marcadas como admin_resolved para a fila de auditoria.
+      const { error, count } = await supabase
+        .from("questoes")
+        .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() }, { count: "exact" })
+        .eq("audit_status", Q_STATUS.ADMIN_RESOLVED);
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ ok: true, reset: count ?? 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "summary") {
+      // Resumo do estado atual da fila de auditoria.
+      const counts: Record<string, number> = {};
+      for (const s of [Q_STATUS.PENDING, Q_STATUS.APPROVED, Q_STATUS.AUTO_CORRECTED, Q_STATUS.MANUAL, Q_STATUS.ADMIN_RESOLVED]) {
+        const { count } = await supabase
+          .from("questoes")
+          .select("id", { count: "exact", head: true })
+          .eq("audit_status", s);
+        counts[s] = count ?? 0;
+      }
+      return new Response(JSON.stringify({ counts }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "start") {
       const scope = {
         disciplinas: Array.isArray(body.disciplinas) ? body.disciplinas : null,
@@ -467,8 +498,20 @@ serve(async (req) => {
         limit: Math.min(Number(body.limit ?? 200), 100000),
       };
 
-      // Conta total elegível
-      let countQ = supabase.from("questoes").select("id", { count: "exact", head: true });
+      // RESET V4: questões aprovadas ou auto-corrigidas voltam para 'pending'.
+      // Manual_review e admin_resolved ficam de fora.
+      let resetQ = supabase
+        .from("questoes")
+        .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
+        .in("audit_status", [Q_STATUS.APPROVED, Q_STATUS.AUTO_CORRECTED]);
+      if (scope.disciplinas?.length) resetQ = resetQ.in("disciplina", scope.disciplinas);
+      await resetQ;
+
+      // Conta total elegível (somente pending — pula manual_review/admin_resolved/deleted).
+      let countQ = supabase
+        .from("questoes")
+        .select("id", { count: "exact", head: true })
+        .eq("audit_status", Q_STATUS.PENDING);
       if (scope.disciplinas?.length) countQ = countQ.in("disciplina", scope.disciplinas);
       const { count } = await countQ;
 
