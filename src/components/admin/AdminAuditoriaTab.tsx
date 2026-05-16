@@ -97,6 +97,8 @@ export function AdminAuditoriaTab() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkApplyingSel, setBulkApplyingSel] = useState(false);
+  const [bulkKeeping, setBulkKeeping] = useState(false);
   const stopRef = useRef(false);
   const filterStatusRef = useRef(filterStatus);
 
