@@ -725,18 +725,40 @@ export function AdminAuditoriaTab() {
               </span>
             </label>
             {selectedIds.size > 0 && (
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => setConfirmDelete(true)}
-                disabled={bulkDeleting}
-                className="gap-1"
-              >
-                {bulkDeleting
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : <Trash2 className="w-4 h-4" />}
-                Excluir selecionadas ({selectedIds.size})
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={bulkApplySelected}
+                  disabled={bulkApplyingSel || bulkDeleting || bulkKeeping}
+                  className="gap-1"
+                  title="Aplica as sugestões da IA nas selecionadas que tiverem patch"
+                >
+                  {bulkApplyingSel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                  Aplicar sugestões IA ({selectedIds.size})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={bulkKeepSelected}
+                  disabled={bulkApplyingSel || bulkDeleting || bulkKeeping}
+                  className="gap-1"
+                  title="Mantém as questões como estão e remove da fila"
+                >
+                  {bulkKeeping ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  Manter como está ({selectedIds.size})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={bulkApplyingSel || bulkDeleting || bulkKeeping}
+                  className="gap-1"
+                >
+                  {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Excluir ({selectedIds.size})
+                </Button>
+              </div>
             )}
           </div>
 
