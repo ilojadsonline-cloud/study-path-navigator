@@ -433,6 +433,37 @@ async function processQuestion(
     return { status: "deleted", auto_fixed: false, flagged: false, deleted: true };
   }
 
+  // LENGTH BIAS: tenta reescrever distratores antes de marcar para revisão manual.
+  const hasLengthBias = result.issues.some((i: any) => i?.type === "length_bias");
+  if (hasLengthBias) {
+    const post = {
+      alt_a: result.proposed_patch?.alt_a ?? q.alt_a,
+      alt_b: result.proposed_patch?.alt_b ?? q.alt_b,
+      alt_c: result.proposed_patch?.alt_c ?? q.alt_c,
+      alt_d: result.proposed_patch?.alt_d ?? q.alt_d,
+      alt_e: result.proposed_patch?.alt_e ?? q.alt_e,
+      gabarito: typeof result.proposed_patch?.gabarito === "number" ? result.proposed_patch.gabarito : q.gabarito,
+    };
+    if (detectLengthBias(post)) {
+      const r = await rewriteDistractorsForLengthBias(q, result.proposed_patch, legal);
+      if (r.patch) {
+        result.proposed_patch = r.patch;
+        result.confidence = Math.max(result.confidence, 0.9);
+        result.risk_level = "low";
+        result.needs_human_review = false;
+        result.ai_summary = `${result.ai_summary} | length_bias corrigido: ${r.summary}`.trim();
+        result.issues = result.issues.filter((i: any) => i?.type !== "length_bias");
+      } else if (r.unrecoverable) {
+        result.needs_human_review = true;
+        result.ai_summary = `${result.ai_summary} | length_bias IRRECUPERÁVEL: ${r.summary}`.trim();
+      } else {
+        result.ai_summary = `${result.ai_summary} | rewrite falhou: ${r.summary}`.trim();
+      }
+    } else {
+      result.issues = result.issues.filter((i: any) => i?.type !== "length_bias");
+    }
+  }
+
   const hasRealDefect = result.issues.some(
     (i: any) => i?.severity === "medium" || i?.severity === "high",
   );
