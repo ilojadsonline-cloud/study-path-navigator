@@ -279,6 +279,102 @@ async function auditOne(q: Questao, legalText: string | null): Promise<AuditResu
   };
 }
 
+/**
+ * 2ª passagem: se a questão (após patch) AINDA tem length_bias, pede à IA
+ * para reescrever APENAS os distratores (mantendo a correta) equilibrando o
+ * tamanho. Se a IA conseguir, devolvemos novo patch + status auto_fix; se
+ * declarar irrecuperável, devolvemos null para cair em manual_review.
+ */
+async function rewriteDistractorsForLengthBias(
+  q: Questao,
+  currentPatch: any | null,
+  legalText: string | null,
+): Promise<{ patch: any | null; unrecoverable: boolean; summary: string }> {
+  const merged = {
+    enunciado: currentPatch?.enunciado ?? q.enunciado,
+    alt_a: currentPatch?.alt_a ?? q.alt_a,
+    alt_b: currentPatch?.alt_b ?? q.alt_b,
+    alt_c: currentPatch?.alt_c ?? q.alt_c,
+    alt_d: currentPatch?.alt_d ?? q.alt_d,
+    alt_e: currentPatch?.alt_e ?? q.alt_e,
+    gabarito: typeof currentPatch?.gabarito === "number" ? currentPatch.gabarito : q.gabarito,
+    comentario: currentPatch?.comentario ?? q.comentario,
+  };
+  const letras = ["A","B","C","D","E"];
+  const altsTxt = letras.map((l,i) => `${l}) ${(merged as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
+  const correctaLetra = letras[merged.gabarito] ?? "?";
+  const correctaTxt = (merged as any)[`alt_${correctaLetra.toLowerCase()}`] ?? "";
+  const targetLen = String(correctaTxt).trim().length;
+  const minLen = Math.floor(targetLen * 0.8);
+  const maxLen = Math.ceil(targetLen * 1.25);
+
+  const legalBlock = legalText
+    ? `TEXTO LEGAL DE REFERÊNCIA:\n"""${legalText.slice(0, 7000)}"""\n`
+    : "";
+
+  const prompt = `${legalBlock}
+QUESTÃO #${q.id} — REESCRITA DE DISTRATORES PARA ELIMINAR LENGTH BIAS
+Disciplina: ${q.disciplina} | Assunto: ${q.assunto}
+
+Enunciado: ${merged.enunciado}
+
+Alternativas atuais:
+${altsTxt}
+
+Gabarito: ${correctaLetra} (índice ${merged.gabarito})
+Alternativa correta (NÃO ALTERE seu sentido nem sua posição): "${correctaTxt}"
+Tamanho-alvo: ${targetLen} caracteres. Cada distrator deve ter entre ${minLen} e ${maxLen} caracteres.
+
+TAREFA:
+1. Reescreva APENAS as 4 alternativas INCORRETAS para que TODAS as 5 fiquem com tamanho similar (±25% da correta) e mesmo registro técnico-jurídico.
+2. Cada distrator deve permanecer juridicamente plausível mas claramente incorreto frente ao texto legal acima (use técnicas: troca de prazo, troca de autoridade, inversão regra/exceção, troca de conectivo, posto/cargo trocado, etc.).
+3. Mantenha o gabarito ${correctaLetra}. Mantenha a alternativa correta EXATAMENTE como está.
+4. NÃO mexa em enunciado nem comentário.
+5. Se for impossível reescrever os distratores preservando coerência jurídica e equilíbrio (ex.: a própria correta é tão curta/longa que não dá para equilibrar sem perder sentido), devolva unrecoverable=true.
+
+Retorne JSON ESTRITO:
+{
+  "alt_a": "...", "alt_b": "...", "alt_c": "...", "alt_d": "...", "alt_e": "...",
+  "unrecoverable": true|false,
+  "summary": "1 frase sobre o que foi reescrito ou por que é irrecuperável"
+}`;
+
+  let raw = "";
+  try { raw = await callDeepSeek(prompt, 45000); } catch (e) {
+    return { patch: null, unrecoverable: false, summary: `Falha rewrite IA: ${e instanceof Error ? e.message : e}` };
+  }
+  const parsed = safeJsonParse(raw);
+  if (!parsed || typeof parsed !== "object") {
+    return { patch: null, unrecoverable: false, summary: "Rewrite IA retornou JSON inválido" };
+  }
+  if (parsed.unrecoverable === true) {
+    return { patch: null, unrecoverable: true, summary: String(parsed.summary ?? "IA classificou como irrecuperável") };
+  }
+  const newPatch: any = {};
+  for (const k of ["alt_a","alt_b","alt_c","alt_d","alt_e"]) {
+    if (typeof parsed[k] === "string" && parsed[k].trim()) newPatch[k] = parsed[k].trim();
+  }
+  // Preserva a correta literalmente
+  const correctaKey = `alt_${correctaLetra.toLowerCase()}`;
+  newPatch[correctaKey] = correctaTxt;
+  // Merge com patch anterior (preserva enunciado/comentario/gabarito)
+  const combinedPatch = { ...(currentPatch ?? {}), ...newPatch };
+
+  // Verifica se resolveu o bias
+  const check = {
+    alt_a: combinedPatch.alt_a ?? q.alt_a,
+    alt_b: combinedPatch.alt_b ?? q.alt_b,
+    alt_c: combinedPatch.alt_c ?? q.alt_c,
+    alt_d: combinedPatch.alt_d ?? q.alt_d,
+    alt_e: combinedPatch.alt_e ?? q.alt_e,
+    gabarito: combinedPatch.gabarito ?? q.gabarito,
+  };
+  if (detectLengthBias(check)) {
+    return { patch: null, unrecoverable: true, summary: "Rewrite não eliminou o length_bias" };
+  }
+  return { patch: combinedPatch, unrecoverable: false, summary: String(parsed.summary ?? "Distratores reescritos para equilibrar tamanho") };
+}
+
 async function processQuestion(
   supabase: ReturnType<typeof createClient>,
   q: Questao,
@@ -335,6 +431,37 @@ async function processQuestion(
       .in("status", OPEN_AUDIT_STATUSES);
     await supabase.from("questoes").delete().eq("id", q.id);
     return { status: "deleted", auto_fixed: false, flagged: false, deleted: true };
+  }
+
+  // LENGTH BIAS: tenta reescrever distratores antes de marcar para revisão manual.
+  const hasLengthBias = result.issues.some((i: any) => i?.type === "length_bias");
+  if (hasLengthBias) {
+    const post = {
+      alt_a: result.proposed_patch?.alt_a ?? q.alt_a,
+      alt_b: result.proposed_patch?.alt_b ?? q.alt_b,
+      alt_c: result.proposed_patch?.alt_c ?? q.alt_c,
+      alt_d: result.proposed_patch?.alt_d ?? q.alt_d,
+      alt_e: result.proposed_patch?.alt_e ?? q.alt_e,
+      gabarito: typeof result.proposed_patch?.gabarito === "number" ? result.proposed_patch.gabarito : q.gabarito,
+    };
+    if (detectLengthBias(post)) {
+      const r = await rewriteDistractorsForLengthBias(q, result.proposed_patch, legal);
+      if (r.patch) {
+        result.proposed_patch = r.patch;
+        result.confidence = Math.max(result.confidence, 0.9);
+        result.risk_level = "low";
+        result.needs_human_review = false;
+        result.ai_summary = `${result.ai_summary} | length_bias corrigido: ${r.summary}`.trim();
+        result.issues = result.issues.filter((i: any) => i?.type !== "length_bias");
+      } else if (r.unrecoverable) {
+        result.needs_human_review = true;
+        result.ai_summary = `${result.ai_summary} | length_bias IRRECUPERÁVEL: ${r.summary}`.trim();
+      } else {
+        result.ai_summary = `${result.ai_summary} | rewrite falhou: ${r.summary}`.trim();
+      }
+    } else {
+      result.issues = result.issues.filter((i: any) => i?.type !== "length_bias");
+    }
   }
 
   const hasRealDefect = result.issues.some(

@@ -97,6 +97,8 @@ export function AdminAuditoriaTab() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkApplyingSel, setBulkApplyingSel] = useState(false);
+  const [bulkKeeping, setBulkKeeping] = useState(false);
   const stopRef = useRef(false);
   const filterStatusRef = useRef(filterStatus);
 
@@ -514,6 +516,73 @@ export function AdminAuditoriaTab() {
     }
   }
 
+  // Aplica sugestão da IA apenas nas selecionadas (somente as que têm proposed_patch)
+  async function bulkApplySelected() {
+    const selected = audits.filter(a => selectedIds.has(a.id) && a.proposed_patch);
+    if (selected.length === 0) {
+      toast.info("Nenhuma das selecionadas tem sugestão da IA para aplicar.");
+      return;
+    }
+    if (!confirm(`Aplicar as sugestões da IA em ${selected.length} questão(ões)? Cada original será salva como snapshot reversível.`)) return;
+    setBulkApplyingSel(true);
+    let ok = 0, fail = 0;
+    try {
+      for (const a of selected) {
+        try {
+          const { data: q } = await supabase.from("questoes").select("*").eq("id", a.questao_id).single();
+          if (q) {
+            await supabase.from("question_versions").insert({
+              questao_id: a.questao_id,
+              snapshot: q,
+              change_reason: "bulk_apply_selected_ai",
+              audit_id: a.id,
+            } as any);
+          }
+          const patch: any = { ...(a.proposed_patch as any) };
+          if ("gabarito" in patch) {
+            const g = Number(patch.gabarito);
+            if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+          }
+          const { error: upErr } = await supabase.from("questoes").update(patch).eq("id", a.questao_id);
+          if (upErr) throw upErr;
+          await supabase.from("question_audits").update({ status: "auto_fixed", applied_patch: patch }).eq("id", a.id);
+          await closeSiblingAudits(a.questao_id, a.id);
+          ok++;
+        } catch (e: any) {
+          console.error("bulk apply sel falhou", a.id, e?.message);
+          fail++;
+        }
+      }
+      setAudits(prev => prev.filter(x => !selected.some(s => s.id === x.id) || filterStatus === "auto_fixed"));
+      setSelectedIds(new Set());
+      toast.success(`${ok} aplicada(s)${fail ? `, ${fail} falharam` : ""}`);
+    } finally {
+      setBulkApplyingSel(false);
+    }
+  }
+
+  // Marca as selecionadas como "manter como está" (resolvidas pelo admin)
+  async function bulkKeepSelected() {
+    const selected = audits.filter(a => selectedIds.has(a.id));
+    if (selected.length === 0) return;
+    if (!confirm(`Manter ${selected.length} questão(ões) como estão? Saem da fila de revisão e não voltam.`)) return;
+    setBulkKeeping(true);
+    try {
+      const auditIds = selected.map(a => a.id);
+      const questaoIds = Array.from(new Set(selected.map(a => a.questao_id)));
+      await supabase.from("question_audits").update({ status: "approved", ai_summary: "Mantida pelo admin (lote)" }).in("id", auditIds);
+      await supabase.from("questoes").update({ audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() }).in("id", questaoIds);
+      await supabase.from("question_audits").update({ status: "superseded" }).in("questao_id", questaoIds).in("status", OPEN_AUDIT_STATUSES);
+      setAudits(prev => prev.filter(x => !selectedIds.has(x.id)));
+      setSelectedIds(new Set());
+      toast.success(`${selected.length} questão(ões) mantidas como estão`);
+    } catch (e: any) {
+      toast.error("Falha: " + (e?.message ?? e));
+    } finally {
+      setBulkKeeping(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card className="glass-card">
@@ -656,18 +725,40 @@ export function AdminAuditoriaTab() {
               </span>
             </label>
             {selectedIds.size > 0 && (
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => setConfirmDelete(true)}
-                disabled={bulkDeleting}
-                className="gap-1"
-              >
-                {bulkDeleting
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : <Trash2 className="w-4 h-4" />}
-                Excluir selecionadas ({selectedIds.size})
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={bulkApplySelected}
+                  disabled={bulkApplyingSel || bulkDeleting || bulkKeeping}
+                  className="gap-1"
+                  title="Aplica as sugestões da IA nas selecionadas que tiverem patch"
+                >
+                  {bulkApplyingSel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                  Aplicar sugestões IA ({selectedIds.size})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={bulkKeepSelected}
+                  disabled={bulkApplyingSel || bulkDeleting || bulkKeeping}
+                  className="gap-1"
+                  title="Mantém as questões como estão e remove da fila"
+                >
+                  {bulkKeeping ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  Manter como está ({selectedIds.size})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={bulkApplyingSel || bulkDeleting || bulkKeeping}
+                  className="gap-1"
+                >
+                  {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Excluir ({selectedIds.size})
+                </Button>
+              </div>
             )}
           </div>
 
