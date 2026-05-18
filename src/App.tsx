@@ -25,6 +25,7 @@ import Landing from "./pages/Landing";
 import ContatoPublico from "./pages/ContatoPublico";
 import Configuracoes from "./pages/Configuracoes";
 import MeusReportes from "./pages/MeusReportes";
+import MapasMentais from "./pages/MapasMentais";
 import Cronograma from "./pages/Cronograma";
 import PagamentoSucesso from "./pages/PagamentoSucesso";
 import PagamentoPendente from "./pages/PagamentoPendente";
