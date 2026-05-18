@@ -1,7 +1,13 @@
 import {
   LayoutDashboard, BookOpen, HelpCircle, Shuffle, CalendarDays,
   CreditCard, LogOut, Shield, MessageSquare, Settings, Flag,
+  Brain,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +23,7 @@ const menuItems = [
   { title: "Banco de Questões", url: "/questoes", icon: HelpCircle },
   { title: "Simulados", url: "/simulados", icon: Shuffle },
   { title: "Cronograma", url: "/cronograma", icon: CalendarDays },
+  { title: "Mapas Mentais", url: "/mapas-mentais", icon: Brain, comingSoon: true },
   { title: "Assinatura", url: "/assinatura", icon: CreditCard },
   { title: "Meus Reportes", url: "/meus-reportes", icon: Flag },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
@@ -58,21 +65,37 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="h-11">
-                    <NavLink
-                      to={item.url}
-                      end
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200"
-                      activeClassName="bg-primary/15 text-primary font-semibold glow-primary"
-                    >
-                      <item.icon className="w-5 h-5 shrink-0" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {menuItems.map((item) => {
+                const link = (
+                  <NavLink
+                    to={item.url}
+                    end
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200"
+                    activeClassName="bg-primary/15 text-primary font-semibold glow-primary"
+                  >
+                    <item.icon className="w-5 h-5 shrink-0" />
+                    {!collapsed && <span>{item.title}</span>}
+                  </NavLink>
+                );
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    {item.comingSoon ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton asChild className="h-11">
+                            {link}
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">(em breve)</TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <SidebarMenuButton asChild className="h-11">
+                        {link}
+                      </SidebarMenuButton>
+                    )}
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

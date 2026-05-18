@@ -25,6 +25,7 @@ import Landing from "./pages/Landing";
 import ContatoPublico from "./pages/ContatoPublico";
 import Configuracoes from "./pages/Configuracoes";
 import MeusReportes from "./pages/MeusReportes";
+import MapasMentais from "./pages/MapasMentais";
 import Cronograma from "./pages/Cronograma";
 import PagamentoSucesso from "./pages/PagamentoSucesso";
 import PagamentoPendente from "./pages/PagamentoPendente";
@@ -72,6 +73,7 @@ const App = () => (
             <Route path="/contato" element={<ProtectedRoute><Contato /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/meus-reportes" element={<ProtectedRoute><MeusReportes /></ProtectedRoute>} />
+            <Route path="/mapas-mentais" element={<ProtectedRoute><MapasMentais /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
