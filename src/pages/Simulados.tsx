@@ -208,19 +208,72 @@ const Simulados = () => {
   // ─── Generate simulado ───
   const gerarSimulado = useCallback(async () => {
     setLoading(true);
-    let query = supabase.from("questoes").select("*");
-    if (disciplina !== "Todas as Disciplinas") {
-      query = query.eq("disciplina", disciplina);
+    const total = numQuestoes;
+
+    // Fetch user's answered question IDs to prioritize unanswered ones
+    let respondidasIds = new Set<number>();
+    if (user) {
+      const { data: resp } = await supabase
+        .from("respostas_usuario")
+        .select("questao_id")
+        .eq("user_id", user.id);
+      if (resp) respondidasIds = new Set(resp.map((r: any) => r.questao_id));
     }
 
-    const { data, error } = await query;
+    const isAll = disciplina === "Todas as Disciplinas";
+    const disciplinasAlvo = isAll ? DISCIPLINAS_OFICIAIS : [disciplina];
+    const distribuicao = isAll
+      ? distribuirProporcional(total, DISCIPLINAS_OFICIAIS)
+      : { [disciplina]: total };
+
+    // Single query for all target disciplines (optimized, selecting only needed cols)
+    const { data, error } = await supabase
+      .from("questoes")
+      .select("id,disciplina,assunto,dificuldade,enunciado,alt_a,alt_b,alt_c,alt_d,alt_e,gabarito,comentario")
+      .in("disciplina", disciplinasAlvo);
+
     if (error || !data) {
+      toast.error("Erro ao carregar questões");
       setLoading(false);
       return;
     }
 
-    const shuffled = shuffleArray(data).slice(0, numQuestoes[0]);
-    const questoesSimulado: QuestaoSimulado[] = shuffled.map(q => ({
+    // Group by disciplina
+    const porDisciplina: Record<string, any[]> = {};
+    disciplinasAlvo.forEach(d => { porDisciplina[d] = []; });
+    data.forEach(q => { if (porDisciplina[q.disciplina]) porDisciplina[q.disciplina].push(q); });
+
+    // Select N per discipline, prioritizing unanswered
+    const selecionadas: any[] = [];
+    const faltam: { disciplina: string; quantidade: number }[] = [];
+
+    disciplinasAlvo.forEach(d => {
+      const need = distribuicao[d];
+      const pool = porDisciplina[d];
+      const naoResp = shuffleArray(pool.filter(q => !respondidasIds.has(q.id)));
+      const resp = shuffleArray(pool.filter(q => respondidasIds.has(q.id)));
+      const combined = [...naoResp, ...resp].slice(0, need);
+      selecionadas.push(...combined);
+      if (combined.length < need) {
+        faltam.push({ disciplina: d, quantidade: need - combined.length });
+      }
+    });
+
+    // Fallback: if any discipline lacked questions, fill from others to reach total
+    if (selecionadas.length < total && isAll) {
+      const usadosIds = new Set(selecionadas.map(q => q.id));
+      const sobra = shuffleArray(data.filter(q => !usadosIds.has(q.id)));
+      selecionadas.push(...sobra.slice(0, total - selecionadas.length));
+    }
+
+    if (faltam.length > 0) {
+      toast.warning(`Banco insuficiente em: ${faltam.map(f => f.disciplina).join(", ")}`);
+    }
+
+    // Final shuffle so questions aren't grouped by discipline
+    const shuffledFinal = shuffleArray(selecionadas);
+
+    const questoesSimulado: QuestaoSimulado[] = shuffledFinal.map(q => ({
       id: q.id,
       disciplina: q.disciplina,
       assunto: q.assunto,
@@ -238,7 +291,7 @@ const Simulados = () => {
     setFinished(false);
     setStarted(true);
     setLoading(false);
-  }, [disciplina, numQuestoes]);
+  }, [disciplina, numQuestoes, user]);
 
   const reiniciarSimulado = () => {
     if (user) deleteProgress(user.id);
