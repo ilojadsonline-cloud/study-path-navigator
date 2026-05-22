@@ -19,6 +19,14 @@ import {
 type DisciplinaProgress = { name: string; total: number; corretas: number };
 type AtividadeRecente = { text: string; time: string; icon: React.ReactNode; sortDate: Date };
 
+function localDateKey(d: Date | string): string {
+  const dt = typeof d === "string" ? new Date(d) : d;
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const day = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 async function fetchAllRespostas(userId: string) {
   const PAGE = 1000;
   let all: { id: number; correta: boolean; created_at: string; questao_id: number }[] = [];
