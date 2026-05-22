@@ -59,15 +59,9 @@ const Dashboard = () => {
     setShowNewToolsBanner(false);
   };
 
-  const [dailyGoalHours, setDailyGoalHours] = useState<number>(() => {
-    if (typeof window === "undefined") return 3;
-    const v = parseFloat(localStorage.getItem(DAILY_GOAL_KEY) || "3");
-    return isNaN(v) || v <= 0 ? 3 : v;
-  });
-  const updateDailyGoal = (h: number) => {
-    setDailyGoalHours(h);
-    localStorage.setItem(DAILY_GOAL_KEY, String(h));
-  };
+  const [dailyGoalHours, setDailyGoalHours] = useState<number>(3);
+  const [cronogramaInfo, setCronogramaInfo] = useState<{ horasSemanais: number; diasSemana: string[]; nome: string } | null>(null);
+
 
   const [loading, setLoading] = useState(true);
   const [totalQuestoes, setTotalQuestoes] = useState(0);
