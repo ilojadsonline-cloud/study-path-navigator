@@ -302,7 +302,7 @@ const Cadastro = () => {
           <div className="w-14 h-14 rounded-2xl gradient-primary glow-primary flex items-center justify-center mx-auto mb-3">
             <Shield className="w-7 h-7 text-primary-foreground" />
           </div>
-          <h1 className="text-xl font-black text-gradient-primary">CHOA 2026</h1>
+          <h1 className="text-xl font-black text-gradient-primary">Método CHOA</h1>
           <p className="text-xs text-muted-foreground">Pagamento confirmado! Crie sua conta abaixo.</p>
         </div>
 

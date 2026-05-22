@@ -36,7 +36,7 @@ serve(async (req) => {
 
     const preferencePayload = {
       items: [{
-        title: "Método CHOA 2026 — Acesso Trimestral (90 dias)",
+        title: "Método CHOA — Acesso Trimestral (90 dias)",
         quantity: 1,
         unit_price: PLAN_AMOUNT,
         currency_id: "BRL",

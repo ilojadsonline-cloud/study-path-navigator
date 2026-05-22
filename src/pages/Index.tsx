@@ -16,7 +16,7 @@ const Index = () => {
               <Shield className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <span className="font-bold text-sm text-gradient-primary">CHOA 2026</span>
+              <span className="font-bold text-sm text-gradient-primary">Método CHOA</span>
               <span className="block text-[10px] text-muted-foreground">Rumo ao Oficialato</span>
             </div>
           </div>
@@ -37,7 +37,7 @@ const Index = () => {
               Preparação exclusiva para PMTO
             </div>
             <h1 className="text-4xl md:text-6xl font-black leading-tight mb-4">
-              <span className="text-gradient-primary">Método CHOA 2026</span>
+              <span className="text-gradient-primary">Método CHOA</span>
               <br />
               <span className="text-foreground">Rumo ao Oficialato</span>
             </h1>
