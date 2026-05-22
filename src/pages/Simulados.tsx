@@ -9,14 +9,33 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-const disciplinasOpcoes = [
-  "Todas as Disciplinas",
+const DISCIPLINAS_OFICIAIS = [
   "Lei nº 2.578/2012",
   "LC nº 128/2021",
   "Lei nº 2.575/2012",
   "CPPM",
   "RDMETO",
 ];
+
+const disciplinasOpcoes = ["Todas as Disciplinas", ...DISCIPLINAS_OFICIAIS];
+
+const TOTAIS_OPCOES = [5, 10, 20, 30, 50];
+
+// Largest remainder method for proportional distribution (20% per discipline when equal)
+function distribuirProporcional(total: number, disciplinas: string[]): Record<string, number> {
+  const n = disciplinas.length;
+  const base = Math.floor(total / n);
+  let resto = total - base * n;
+  const dist: Record<string, number> = {};
+  disciplinas.forEach(d => { dist[d] = base; });
+  let i = 0;
+  while (resto > 0) {
+    dist[disciplinas[i % n]] += 1;
+    resto--;
+    i++;
+  }
+  return dist;
+}
 
 interface QuestaoSimulado {
   id: number;
