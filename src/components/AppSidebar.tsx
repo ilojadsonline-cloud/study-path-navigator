@@ -79,20 +79,9 @@ export function AppSidebar() {
                 );
                 return (
                   <SidebarMenuItem key={item.title}>
-                    {item.comingSoon ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <SidebarMenuButton asChild className="h-11">
-                            {link}
-                          </SidebarMenuButton>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">(em breve)</TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <SidebarMenuButton asChild className="h-11">
-                        {link}
-                      </SidebarMenuButton>
-                    )}
+                    <SidebarMenuButton asChild className="h-11">
+                      {link}
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
               })}
