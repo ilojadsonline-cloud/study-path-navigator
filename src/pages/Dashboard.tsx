@@ -514,18 +514,16 @@ const Dashboard = () => {
               {/* Metas de estudo */}
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                 className="glass-card rounded-xl p-4 sm:p-5 min-w-0">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between mb-4 gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <Target className="w-5 h-5 text-warning shrink-0" />
-                    <h2 className="font-semibold text-sm sm:text-base">Metas de Estudo</h2>
+                    <h2 className="font-semibold text-sm sm:text-base truncate">Metas de Estudo</h2>
                   </div>
-                  <select
-                    value={dailyGoalHours}
-                    onChange={e => updateDailyGoal(parseFloat(e.target.value))}
-                    className="text-[11px] bg-secondary/50 border border-border/40 rounded-md px-2 py-1 text-foreground"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 8].map(h => <option key={h} value={h}>{h}h / dia</option>)}
-                  </select>
+                  <Link to="/cronograma"
+                    className="text-[11px] bg-secondary/50 hover:bg-secondary border border-border/40 rounded-md px-2 py-1 text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 shrink-0">
+                    {cronogramaInfo ? "Editar cronograma" : "Criar cronograma"}
+                    <ArrowUpRight className="w-3 h-3" />
+                  </Link>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -541,10 +539,20 @@ const Dashboard = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] text-muted-foreground">Meta diária</p>
-                    <p className="text-lg font-bold text-warning leading-tight">{dailyGoalHours}h de estudo</p>
-                    <p className="text-[11px] text-muted-foreground mt-1">{minHojeFmt} concluídas</p>
+                    <p className="text-lg font-bold text-warning leading-tight">
+                      {dailyGoalHours.toFixed(1).replace(/\.0$/, "")}h de estudo
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{minHojeFmt} concluídas hoje</p>
+                    {cronogramaInfo ? (
+                      <p className="text-[10px] text-primary/80 mt-1 truncate">
+                        {cronogramaInfo.horasSemanais}h/sem • {cronogramaInfo.diasSemana.length} dias
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground/70 mt-1 italic">Sem cronograma ativo</p>
+                    )}
                   </div>
                 </div>
+
 
                 {/* Mini chart por hora */}
                 <div className="mt-4 h-16">
