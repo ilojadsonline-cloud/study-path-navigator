@@ -1,4 +1,3 @@
-import { Logo } from "@/components/Logo";
 import { motion } from "framer-motion";
 import { Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy, Star, Zap, UserPlus, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -13,8 +12,9 @@ const Index = () => {
       <div className="relative z-10">
         <nav className="flex items-center justify-between p-4 md:p-6 max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
-            <Logo className="w-10 h-10" />
-
+            <div className="w-10 h-10 rounded-xl gradient-primary glow-primary flex items-center justify-center">
+              <Shield className="w-5 h-5 text-primary-foreground" />
+            </div>
             <div>
               <span className="font-bold text-sm text-gradient-primary">CHOA 2026</span>
               <span className="block text-[10px] text-muted-foreground">Rumo ao Oficialato</span>
