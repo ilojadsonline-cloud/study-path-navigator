@@ -96,6 +96,25 @@ const Dashboard = () => {
       const { count: qCount } = await supabase.from("questoes").select("*", { count: "exact", head: true });
       setTotalQuestoes(qCount || 0);
 
+      // Cronograma ativo -> define meta diária
+      const { data: cronoData } = await supabase.from("cronogramas")
+        .select("nome, horas_semanais, dias_semana")
+        .eq("user_id", user.id).eq("ativo", true)
+        .order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      if (cronoData && cronoData.dias_semana?.length) {
+        const horasDia = cronoData.horas_semanais / cronoData.dias_semana.length;
+        setDailyGoalHours(Math.round(horasDia * 10) / 10);
+        setCronogramaInfo({
+          horasSemanais: cronoData.horas_semanais,
+          diasSemana: cronoData.dias_semana,
+          nome: cronoData.nome || "Meu Cronograma",
+        });
+      } else {
+        setCronogramaInfo(null);
+        setDailyGoalHours(3);
+      }
+
+
       const allRespostas = await fetchAllRespostas(user.id);
       setTotalRespondidas(allRespostas.length);
       setTotalCorretas(allRespostas.filter(r => r.correta).length);
