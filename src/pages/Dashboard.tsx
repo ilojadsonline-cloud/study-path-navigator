@@ -44,7 +44,7 @@ const COLORS = {
   muted: "hsl(215, 20%, 22%)",
 };
 
-const DAILY_GOAL_KEY = "daily_study_goal_hours_v1";
+
 
 const Dashboard = () => {
   const { user, profile } = useAuth();
@@ -59,15 +59,9 @@ const Dashboard = () => {
     setShowNewToolsBanner(false);
   };
 
-  const [dailyGoalHours, setDailyGoalHours] = useState<number>(() => {
-    if (typeof window === "undefined") return 3;
-    const v = parseFloat(localStorage.getItem(DAILY_GOAL_KEY) || "3");
-    return isNaN(v) || v <= 0 ? 3 : v;
-  });
-  const updateDailyGoal = (h: number) => {
-    setDailyGoalHours(h);
-    localStorage.setItem(DAILY_GOAL_KEY, String(h));
-  };
+  const [dailyGoalHours, setDailyGoalHours] = useState<number>(3);
+  const [cronogramaInfo, setCronogramaInfo] = useState<{ horasSemanais: number; diasSemana: string[]; nome: string } | null>(null);
+
 
   const [loading, setLoading] = useState(true);
   const [totalQuestoes, setTotalQuestoes] = useState(0);
@@ -101,6 +95,25 @@ const Dashboard = () => {
 
       const { count: qCount } = await supabase.from("questoes").select("*", { count: "exact", head: true });
       setTotalQuestoes(qCount || 0);
+
+      // Cronograma ativo -> define meta diária
+      const { data: cronoData } = await supabase.from("cronogramas")
+        .select("nome, horas_semanais, dias_semana")
+        .eq("user_id", user.id).eq("ativo", true)
+        .order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      if (cronoData && cronoData.dias_semana?.length) {
+        const horasDia = cronoData.horas_semanais / cronoData.dias_semana.length;
+        setDailyGoalHours(Math.round(horasDia * 10) / 10);
+        setCronogramaInfo({
+          horasSemanais: cronoData.horas_semanais,
+          diasSemana: cronoData.dias_semana,
+          nome: cronoData.nome || "Meu Cronograma",
+        });
+      } else {
+        setCronogramaInfo(null);
+        setDailyGoalHours(3);
+      }
+
 
       const allRespostas = await fetchAllRespostas(user.id);
       setTotalRespondidas(allRespostas.length);
@@ -520,18 +533,16 @@ const Dashboard = () => {
               {/* Metas de estudo */}
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                 className="glass-card rounded-xl p-4 sm:p-5 min-w-0">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between mb-4 gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <Target className="w-5 h-5 text-warning shrink-0" />
-                    <h2 className="font-semibold text-sm sm:text-base">Metas de Estudo</h2>
+                    <h2 className="font-semibold text-sm sm:text-base truncate">Metas de Estudo</h2>
                   </div>
-                  <select
-                    value={dailyGoalHours}
-                    onChange={e => updateDailyGoal(parseFloat(e.target.value))}
-                    className="text-[11px] bg-secondary/50 border border-border/40 rounded-md px-2 py-1 text-foreground"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 8].map(h => <option key={h} value={h}>{h}h / dia</option>)}
-                  </select>
+                  <Link to="/cronograma"
+                    className="text-[11px] bg-secondary/50 hover:bg-secondary border border-border/40 rounded-md px-2 py-1 text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 shrink-0">
+                    {cronogramaInfo ? "Editar cronograma" : "Criar cronograma"}
+                    <ArrowUpRight className="w-3 h-3" />
+                  </Link>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -547,10 +558,20 @@ const Dashboard = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] text-muted-foreground">Meta diária</p>
-                    <p className="text-lg font-bold text-warning leading-tight">{dailyGoalHours}h de estudo</p>
-                    <p className="text-[11px] text-muted-foreground mt-1">{minHojeFmt} concluídas</p>
+                    <p className="text-lg font-bold text-warning leading-tight">
+                      {dailyGoalHours.toFixed(1).replace(/\.0$/, "")}h de estudo
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{minHojeFmt} concluídas hoje</p>
+                    {cronogramaInfo ? (
+                      <p className="text-[10px] text-primary/80 mt-1 truncate">
+                        {cronogramaInfo.horasSemanais}h/sem • {cronogramaInfo.diasSemana.length} dias
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground/70 mt-1 italic">Sem cronograma ativo</p>
+                    )}
                   </div>
                 </div>
+
 
                 {/* Mini chart por hora */}
                 <div className="mt-4 h-16">
@@ -581,7 +602,8 @@ const Dashboard = () => {
                     <Calendar className="w-4 h-4 text-primary shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[11px] text-muted-foreground leading-tight">Próxima meta</p>
-                      <p className="text-xs font-semibold truncate">Estudar {dailyGoalHours}h amanhã</p>
+                      <p className="text-xs font-semibold truncate">Estudar {dailyGoalHours.toFixed(1).replace(/\.0$/, "")}h amanhã</p>
+
                     </div>
                   </div>
                   <ArrowUpRight className="w-4 h-4 text-primary shrink-0" />
