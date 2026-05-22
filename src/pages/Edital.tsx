@@ -555,18 +555,14 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
                   Mapas Mentais
                 </button>
 
-                {d.videoAulaUrl && (
-                  <a
-                    href={d.videoAulaUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
-                  >
-                    <PlayCircle className="w-4 h-4" />
-                    {d.videoAulaLabel}
-                    <ExternalLink className="w-3 h-3 opacity-60" />
-                  </a>
-                )}
+                <button
+                  onClick={() => navigate(`/bizuaula?disciplina=${encodeURIComponent(d.id)}`)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  BizuAula
+                </button>
+
               </div>
 
               <div className="space-y-3">
