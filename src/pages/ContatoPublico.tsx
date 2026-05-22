@@ -57,7 +57,7 @@ const ContatoPublico = () => {
               <Shield className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <span className="font-bold text-sm text-gradient-primary">CHOA 2026</span>
+              <span className="font-bold text-sm text-gradient-primary">Método CHOA</span>
               <span className="block text-[10px] text-muted-foreground">Rumo ao Oficialato</span>
             </div>
           </Link>

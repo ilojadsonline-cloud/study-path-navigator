@@ -53,7 +53,7 @@ serve(async (req) => {
     // - Cobrança automática de R$ 89,90 a cada 3 meses após o trial
     // - Cancelamento durante o trial: usuário não é cobrado
     const preapprovalBody: any = {
-      reason: "Método CHOA 2026 — Assinatura Trimestral",
+      reason: "Método CHOA — Assinatura Trimestral",
       external_reference: externalReference,
       payer_email: payerEmail,
       back_url: `${origin}/cadastro?mp_status=success`,

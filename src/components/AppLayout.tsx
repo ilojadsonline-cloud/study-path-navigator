@@ -69,7 +69,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
               <div className="hidden sm:flex items-center gap-2">
                 <Shield className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold text-gradient-primary">Método CHOA 2026</span>
+                <span className="text-sm font-semibold text-gradient-primary">Método CHOA</span>
               </div>
             </div>
             <div className="flex items-center gap-3 relative">

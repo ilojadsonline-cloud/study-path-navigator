@@ -55,7 +55,7 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-sm text-gradient-primary leading-tight">CHOA 2026</span>
+              <span className="font-bold text-sm text-gradient-primary leading-tight">Método CHOA</span>
               <span className="text-[10px] text-muted-foreground leading-tight">Rumo ao Oficialato</span>
             </div>
           )}

@@ -599,7 +599,7 @@ export default function Edital() {
         <header className="space-y-1">
           <h1 className="text-2xl font-black text-gradient-primary">📋 Edital Verticalizado</h1>
           <p className="text-sm text-muted-foreground">
-            Conteúdo programático detalhado por disciplina — CHOA PMTO 2026
+            Conteúdo programático detalhado por disciplina — Método CHOA
           </p>
         </header>
 
