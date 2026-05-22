@@ -24,6 +24,16 @@ const STATUS_FILTERS: { key: string; label: string }[] = [
   { key: "error", label: "Erros" },
 ];
 
+// Categorias derivadas dos issues — permitem triagem em lote
+const CATEGORY_FILTERS: { key: string; label: string; description: string }[] = [
+  { key: "all", label: "Todas categorias", description: "Sem filtro de categoria" },
+  { key: "alucinacao", label: "🧠 Alucinações jurídicas", description: "Fundamento legal inventado ou sem base na lei" },
+  { key: "invalida", label: "⛔ Inválidas / Irrecuperáveis", description: "Duplicadas, sem alternativa correta, incoerentes" },
+  { key: "com_erros", label: "⚠ Com erros graves", description: "Defeitos de gabarito, hierarquia, múltiplas corretas" },
+  { key: "aprimoravel", label: "✨ Válidas, com aprimoramento", description: "Corretas mas com distratores/comentário fracos" },
+  { key: "ok", label: "✓ Sem problemas", description: "Aprovadas sem ressalvas" },
+];
+
 const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
 const SESSION_AUDIT_STATUSES = ["auto_fixed", "approved", "manual_review", "pending", "error"];
 
@@ -35,6 +45,25 @@ const STATUS_LABEL: Record<string, string> = {
   error: "Erro",
   pending: "Pendente",
 };
+
+// Classifica uma auditoria em uma categoria de triagem
+function categorizeAudit(a: { issues: any[]; proposed_patch: any }): string {
+  const types = new Set((a.issues ?? []).map((i: any) => i?.type));
+  const severities = (a.issues ?? []).map((i: any) => i?.severity);
+  if (types.has("alucinacao_juridica") || types.has("extra_legal") || types.has("texto_legal_desatualizado")) {
+    return "alucinacao";
+  }
+  if (types.has("unrecoverable") || types.has("incoerente") || types.has("duplicada") || types.has("sem_correta")) {
+    return "invalida";
+  }
+  if (severities.includes("high") || types.has("gabarito_errado") || types.has("multiplas_corretas") || types.has("hierarquia_violada") || types.has("funcao_inconsistente") || types.has("desalinhamento")) {
+    return "com_erros";
+  }
+  if ((a.issues ?? []).length > 0 || a.proposed_patch) {
+    return "aprimoravel";
+  }
+  return "ok";
+}
 
 type AuditJob = {
   id: string;
@@ -86,6 +115,7 @@ export function AdminAuditoriaTab() {
   const [running, setRunning] = useState(false);
   const [audits, setAudits] = useState<AuditRow[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("open");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<AuditRow | null>(null);
   const [questao, setQuestao] = useState<any>(null);
@@ -475,9 +505,12 @@ export function AdminAuditoriaTab() {
     });
   }
 
+  // Lista filtrada por categoria (deriva de `audits`)
+  const visibleAudits = filterCategory === "all" ? audits : audits.filter(a => categorizeAudit(a) === filterCategory);
+
   function toggleSelectAll() {
-    if (selectedIds.size === audits.length && audits.length > 0) setSelectedIds(new Set());
-    else setSelectedIds(new Set(audits.map(a => a.id)));
+    if (selectedIds.size === visibleAudits.length && visibleAudits.length > 0) setSelectedIds(new Set());
+    else setSelectedIds(new Set(visibleAudits.map(a => a.id)));
   }
 
   async function bulkDeleteSelected() {
@@ -699,7 +732,7 @@ export function AdminAuditoriaTab() {
           </p>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-4 flex-wrap">
+          <div className="flex gap-2 mb-2 flex-wrap">
             {STATUS_FILTERS.map(s => (
               <Badge
                 key={s.key}
@@ -710,11 +743,29 @@ export function AdminAuditoriaTab() {
             ))}
           </div>
 
+          {/* Filtro por categoria — triagem pedagógica das auditadas */}
+          <div className="flex items-center gap-2 mb-4 flex-wrap p-2 rounded-lg bg-muted/10 border border-border/30">
+            <span className="text-xs text-muted-foreground font-medium">Categoria:</span>
+            {CATEGORY_FILTERS.map(c => {
+              const count = c.key === "all" ? audits.length : audits.filter(a => categorizeAudit(a) === c.key).length;
+              return (
+                <Badge
+                  key={c.key}
+                  variant={filterCategory === c.key ? "default" : "outline"}
+                  className="cursor-pointer"
+                  title={c.description}
+                  onClick={() => { setFilterCategory(c.key); setSelectedIds(new Set()); }}
+                >{c.label} <span className="ml-1 opacity-70">({count})</span></Badge>
+              );
+            })}
+          </div>
+
+
           {/* Barra de seleção em lote */}
           <div className="flex items-center justify-between gap-2 mb-3 p-2 rounded-lg bg-muted/20 border border-border/40">
             <label className="flex items-center gap-2 text-xs cursor-pointer">
               <Checkbox
-                checked={audits.length > 0 && selectedIds.size === audits.length}
+                checked={visibleAudits.length > 0 && selectedIds.size === visibleAudits.length}
                 onCheckedChange={toggleSelectAll}
                 aria-label="Selecionar todas"
               />
@@ -764,12 +815,12 @@ export function AdminAuditoriaTab() {
 
           <ScrollArea className="h-[500px]">
             <div className="space-y-2">
-              {audits.length === 0 && (
+              {visibleAudits.length === 0 && (
                 <p className="text-sm text-muted-foreground py-8 text-center">
                   Nenhuma questão neste filtro.
                 </p>
               )}
-              {audits.map(a => (
+              {visibleAudits.map(a => (
                 <div
                   key={a.id}
                   className={`flex items-start gap-2 p-3 rounded-lg border bg-card/50 hover:bg-card/80 transition ${
