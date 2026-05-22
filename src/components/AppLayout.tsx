@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Shield, Bell, X, Check } from "lucide-react";
+import { UserMenu } from "@/components/UserMenu";
+import { Shield, Bell, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -84,9 +85,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   </span>
                 )}
               </button>
-              <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
-                {initials}
-              </div>
+              <UserMenu initials={initials} />
 
               {/* Notifications Dropdown */}
               {showNotifications && (

@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, BookOpen, HelpCircle, Shuffle, CalendarDays,
-  CreditCard, LogOut, Shield, MessageSquare, Settings, Flag,
+  CreditCard, LogOut, Shield, MessageSquare, Flag,
   Brain, Youtube,
 } from "lucide-react";
 import {
@@ -26,8 +26,6 @@ const menuItems = [
   { title: "Mapas Mentais", url: "/mapas-mentais", icon: Brain },
   { title: "BizuAula", url: "/bizuaula", icon: Youtube },
   { title: "Assinatura", url: "/assinatura", icon: CreditCard },
-  { title: "Meus Reportes", url: "/meus-reportes", icon: Flag },
-  { title: "Configurações", url: "/configuracoes", icon: Settings },
   { title: "Contato", url: "/contato", icon: MessageSquare },
 ];
 
