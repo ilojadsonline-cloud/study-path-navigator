@@ -602,7 +602,8 @@ const Dashboard = () => {
                     <Calendar className="w-4 h-4 text-primary shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[11px] text-muted-foreground leading-tight">Próxima meta</p>
-                      <p className="text-xs font-semibold truncate">Estudar {dailyGoalHours}h amanhã</p>
+                      <p className="text-xs font-semibold truncate">Estudar {dailyGoalHours.toFixed(1).replace(/\.0$/, "")}h amanhã</p>
+
                     </div>
                   </div>
                   <ArrowUpRight className="w-4 h-4 text-primary shrink-0" />
