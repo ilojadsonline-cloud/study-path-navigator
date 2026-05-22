@@ -67,6 +67,7 @@ const AdminPanel = () => {
               <TabsTrigger value="online" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Wifi className="w-3.5 h-3.5" />Online</TabsTrigger>
               <TabsTrigger value="textos" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><BookOpen className="w-3.5 h-3.5" />Textos Legais</TabsTrigger>
               <TabsTrigger value="assinaturas" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><CreditCard className="w-3.5 h-3.5" />Assinaturas</TabsTrigger>
+              <TabsTrigger value="mapas" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Brain className="w-3.5 h-3.5" />Mapas Mentais</TabsTrigger>
             </TabsList>
           </div>
 
