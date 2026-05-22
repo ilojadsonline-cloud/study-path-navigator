@@ -299,9 +299,8 @@ const Cadastro = () => {
 
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl gradient-primary glow-primary flex items-center justify-center mx-auto mb-3">
-            <Shield className="w-7 h-7 text-primary-foreground" />
-          </div>
+          <Logo className="w-16 h-16 mx-auto mb-3" />
+
           <h1 className="text-xl font-black text-gradient-primary">CHOA 2026</h1>
           <p className="text-xs text-muted-foreground">Pagamento confirmado! Crie sua conta abaixo.</p>
         </div>
