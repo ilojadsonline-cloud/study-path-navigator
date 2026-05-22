@@ -108,7 +108,7 @@ const Index = () => {
         <section className="max-w-5xl mx-auto px-4 pb-20">
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { icon: <BookOpen className="w-6 h-6" />, title: "Edital Verticalizado", desc: "Trilha de estudos guiada baseada no edital CHOA/CHOM 2024 com todas as disciplinas." },
+              { icon: <BookOpen className="w-6 h-6" />, title: "Edital Verticalizado", desc: "Trilha de estudos guiada baseada no edital CHOA/CHOM com todas as disciplinas." },
               { icon: <HelpCircle className="w-6 h-6" />, title: "Banco de Questões", desc: "Questões no estilo PMTO com correção automática e comentários fundamentados." },
               { icon: <Shuffle className="w-6 h-6" />, title: "Simulados Inteligentes", desc: "Gerador de simulados com randomização forte de questões e alternativas." },
               { icon: <Trophy className="w-6 h-6" />, title: "Dashboard Completo", desc: "Acompanhe seu progresso, taxa de acertos e evolução em tempo real." },

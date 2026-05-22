@@ -108,7 +108,7 @@ const Assinatura = () => {
             <Shield className="w-7 h-7 text-gold-foreground" />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold">
-            <span className="text-gradient-gold">Plano CHOA Trimestral — R$ 89,90</span>
+            <span className="text-gradient-gold">Plano Método CHOA Trimestral — R$ 89,90</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Acesso completo à plataforma por 90 dias</p>
           {isExpired && (
