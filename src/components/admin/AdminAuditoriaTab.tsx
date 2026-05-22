@@ -505,9 +505,12 @@ export function AdminAuditoriaTab() {
     });
   }
 
+  // Lista filtrada por categoria (deriva de `audits`)
+  const visibleAudits = filterCategory === "all" ? audits : audits.filter(a => categorizeAudit(a) === filterCategory);
+
   function toggleSelectAll() {
-    if (selectedIds.size === audits.length && audits.length > 0) setSelectedIds(new Set());
-    else setSelectedIds(new Set(audits.map(a => a.id)));
+    if (selectedIds.size === visibleAudits.length && visibleAudits.length > 0) setSelectedIds(new Set());
+    else setSelectedIds(new Set(visibleAudits.map(a => a.id)));
   }
 
   async function bulkDeleteSelected() {
