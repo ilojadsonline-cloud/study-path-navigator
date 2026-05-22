@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, BookOpen, HelpCircle, Shuffle, CalendarDays,
   CreditCard, LogOut, Shield, MessageSquare, Settings, Flag,
-  Brain,
+  Brain, Youtube,
 } from "lucide-react";
 import {
   Tooltip,
@@ -24,6 +24,7 @@ const menuItems = [
   { title: "Simulados", url: "/simulados", icon: Shuffle },
   { title: "Cronograma", url: "/cronograma", icon: CalendarDays },
   { title: "Mapas Mentais", url: "/mapas-mentais", icon: Brain },
+  { title: "BizuAula", url: "/bizuaula", icon: Youtube },
   { title: "Assinatura", url: "/assinatura", icon: CreditCard },
   { title: "Meus Reportes", url: "/meus-reportes", icon: Flag },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
