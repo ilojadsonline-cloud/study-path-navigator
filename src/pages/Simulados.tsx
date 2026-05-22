@@ -506,13 +506,30 @@ const Simulados = () => {
           <div>
             <div className="flex justify-between items-center mb-3">
               <label className="text-sm font-medium">Número de Questões</label>
-              <span className="text-2xl font-bold text-gradient-primary">{numQuestoes[0]}</span>
+              <span className="text-2xl font-bold text-gradient-primary">{numQuestoes}</span>
             </div>
-            <Slider value={numQuestoes} onValueChange={setNumQuestoes} max={50} min={5} step={5} className="w-full" />
-            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-              <span>5</span><span>50</span>
+            <div className="grid grid-cols-5 gap-2">
+              {TOTAIS_OPCOES.map(n => (
+                <button key={n} onClick={() => setNumQuestoes(n)}
+                  className={`py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    numQuestoes === n ? "gradient-primary text-primary-foreground glow-primary" : "bg-secondary hover:bg-primary/15 hover:text-primary"
+                  }`}>{n}</button>
+              ))}
             </div>
+            {disciplina === "Todas as Disciplinas" && (
+              <div className="mt-3 p-3 rounded-lg bg-secondary/40 border border-border/50">
+                <p className="text-[11px] font-semibold text-muted-foreground mb-2">Distribuição proporcional (20% por disciplina):</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(distribuirProporcional(numQuestoes, DISCIPLINAS_OFICIAIS)).map(([d, q]) => (
+                    <Badge key={d} variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                      {d}: {q}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+
 
           <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
             <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
