@@ -853,7 +853,7 @@ const Landing = () => {
               <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
                 <Shield className="w-4 h-4 text-primary-foreground" />
               </div>
-              <span className="text-sm font-bold text-gradient-primary">Método CHOA 2026</span>
+              <span className="text-sm font-bold text-gradient-primary">Método CHOA</span>
             </div>
             <div className="flex items-center gap-6 text-xs text-muted-foreground">
               <Link to="/" className="hover:text-foreground transition-colors">Página Inicial</Link>
