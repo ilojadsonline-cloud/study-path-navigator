@@ -115,6 +115,7 @@ export function AdminAuditoriaTab() {
   const [running, setRunning] = useState(false);
   const [audits, setAudits] = useState<AuditRow[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("open");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<AuditRow | null>(null);
   const [questao, setQuestao] = useState<any>(null);
