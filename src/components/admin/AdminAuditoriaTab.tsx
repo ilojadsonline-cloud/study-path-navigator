@@ -765,7 +765,7 @@ export function AdminAuditoriaTab() {
           <div className="flex items-center justify-between gap-2 mb-3 p-2 rounded-lg bg-muted/20 border border-border/40">
             <label className="flex items-center gap-2 text-xs cursor-pointer">
               <Checkbox
-                checked={audits.length > 0 && selectedIds.size === audits.length}
+                checked={visibleAudits.length > 0 && selectedIds.size === visibleAudits.length}
                 onCheckedChange={toggleSelectAll}
                 aria-label="Selecionar todas"
               />
