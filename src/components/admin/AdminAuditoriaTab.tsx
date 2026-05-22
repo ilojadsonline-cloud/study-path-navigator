@@ -729,7 +729,7 @@ export function AdminAuditoriaTab() {
           </p>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-4 flex-wrap">
+          <div className="flex gap-2 mb-2 flex-wrap">
             {STATUS_FILTERS.map(s => (
               <Badge
                 key={s.key}
@@ -739,6 +739,24 @@ export function AdminAuditoriaTab() {
               >{s.label}</Badge>
             ))}
           </div>
+
+          {/* Filtro por categoria — triagem pedagógica das auditadas */}
+          <div className="flex items-center gap-2 mb-4 flex-wrap p-2 rounded-lg bg-muted/10 border border-border/30">
+            <span className="text-xs text-muted-foreground font-medium">Categoria:</span>
+            {CATEGORY_FILTERS.map(c => {
+              const count = c.key === "all" ? audits.length : audits.filter(a => categorizeAudit(a) === c.key).length;
+              return (
+                <Badge
+                  key={c.key}
+                  variant={filterCategory === c.key ? "default" : "outline"}
+                  className="cursor-pointer"
+                  title={c.description}
+                  onClick={() => { setFilterCategory(c.key); setSelectedIds(new Set()); }}
+                >{c.label} <span className="ml-1 opacity-70">({count})</span></Badge>
+              );
+            })}
+          </div>
+
 
           {/* Barra de seleção em lote */}
           <div className="flex items-center justify-between gap-2 mb-3 p-2 rounded-lg bg-muted/20 border border-border/40">
