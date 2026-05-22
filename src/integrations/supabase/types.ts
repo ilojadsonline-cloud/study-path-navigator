@@ -59,6 +59,36 @@ export type Database = {
         }
         Relationships: []
       }
+      bizuaulas_videos: {
+        Row: {
+          created_at: string
+          disciplina_id: string
+          id: string
+          ordem: number
+          titulo: string
+          updated_at: string
+          url_youtube: string
+        }
+        Insert: {
+          created_at?: string
+          disciplina_id: string
+          id?: string
+          ordem?: number
+          titulo: string
+          updated_at?: string
+          url_youtube: string
+        }
+        Update: {
+          created_at?: string
+          disciplina_id?: string
+          id?: string
+          ordem?: number
+          titulo?: string
+          updated_at?: string
+          url_youtube?: string
+        }
+        Relationships: []
+      }
       cronogramas: {
         Row: {
           atividades: Json
