@@ -467,13 +467,27 @@ async function processQuestion(
   const hasRealDefect = result.issues.some(
     (i: any) => i?.severity === "medium" || i?.severity === "high",
   );
+  // Alucinações jurídicas, questões sem base legal ou sem alternativa correta
+  // NUNCA são auto-corrigidas — sempre vão para revisão manual humana.
+  const HALLUCINATION_TYPES = new Set([
+    "alucinacao_juridica",
+    "extra_legal",
+    "sem_correta",
+    "texto_legal_desatualizado",
+    "hierarquia_violada",
+  ]);
+  const hasHallucination = result.issues.some((i: any) => HALLUCINATION_TYPES.has(i?.type));
+  if (hasHallucination) {
+    result.needs_human_review = true;
+  }
   const noIssues = !hasRealDefect && !result.proposed_patch;
   const canAutoFix =
     hasRealDefect &&
     !!result.proposed_patch &&
     result.confidence >= AUTO_FIX_CONFIDENCE &&
     AUTO_FIX_RISK_ALLOWED.includes(result.risk_level) &&
-    !result.needs_human_review;
+    !result.needs_human_review &&
+    !hasHallucination;
 
   let finalStatus: string;
   let appliedPatch: any = null;
