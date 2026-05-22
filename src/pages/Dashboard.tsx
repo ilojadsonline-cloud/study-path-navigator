@@ -104,6 +104,8 @@ const Dashboard = () => {
       if (cronoData && cronoData.dias_semana?.length) {
         const horasDia = cronoData.horas_semanais / cronoData.dias_semana.length;
         setDailyGoalHours(Math.round(horasDia * 10) / 10);
+        // Meta mensal derivada do cronograma: horas_semanais * ~4.33 semanas/mês
+        setMetaMensal(Math.round(cronoData.horas_semanais * 4.33));
         setCronogramaInfo({
           horasSemanais: cronoData.horas_semanais,
           diasSemana: cronoData.dias_semana,
@@ -112,6 +114,7 @@ const Dashboard = () => {
       } else {
         setCronogramaInfo(null);
         setDailyGoalHours(3);
+        setMetaMensal(60);
       }
 
 
