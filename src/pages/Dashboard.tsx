@@ -58,23 +58,14 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
 
-  // Alert about new Cronograma feature (show once)
-  useEffect(() => {
-    const key = "cronograma_feature_alert_shown";
-    if (!localStorage.getItem(key)) {
-      localStorage.setItem(key, "1");
-      setTimeout(() => {
-        sonnerToast("📅 Nova Funcionalidade: Cronograma de Estudos!", {
-          description: "Organize seus estudos com cronogramas personalizados. Acesse pelo menu lateral!",
-          duration: 8000,
-          action: {
-            label: "Ver agora",
-            onClick: () => navigate("/cronograma"),
-          },
-        });
-      }, 1500);
-    }
-  }, [navigate]);
+  // Banner de novas ferramentas (dismissível)
+  const [showNewToolsBanner, setShowNewToolsBanner] = useState(
+    () => typeof window !== "undefined" && !localStorage.getItem("new_tools_banner_dismissed_v1")
+  );
+  const dismissNewToolsBanner = () => {
+    localStorage.setItem("new_tools_banner_dismissed_v1", "1");
+    setShowNewToolsBanner(false);
+  };
 
   const [loading, setLoading] = useState(true);
   const [totalQuestoes, setTotalQuestoes] = useState(0);
