@@ -24,6 +24,16 @@ const STATUS_FILTERS: { key: string; label: string }[] = [
   { key: "error", label: "Erros" },
 ];
 
+// Categorias derivadas dos issues — permitem triagem em lote
+const CATEGORY_FILTERS: { key: string; label: string; description: string }[] = [
+  { key: "all", label: "Todas categorias", description: "Sem filtro de categoria" },
+  { key: "alucinacao", label: "🧠 Alucinações jurídicas", description: "Fundamento legal inventado ou sem base na lei" },
+  { key: "invalida", label: "⛔ Inválidas / Irrecuperáveis", description: "Duplicadas, sem alternativa correta, incoerentes" },
+  { key: "com_erros", label: "⚠ Com erros graves", description: "Defeitos de gabarito, hierarquia, múltiplas corretas" },
+  { key: "aprimoravel", label: "✨ Válidas, com aprimoramento", description: "Corretas mas com distratores/comentário fracos" },
+  { key: "ok", label: "✓ Sem problemas", description: "Aprovadas sem ressalvas" },
+];
+
 const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
 const SESSION_AUDIT_STATUSES = ["auto_fixed", "approved", "manual_review", "pending", "error"];
 
@@ -35,6 +45,25 @@ const STATUS_LABEL: Record<string, string> = {
   error: "Erro",
   pending: "Pendente",
 };
+
+// Classifica uma auditoria em uma categoria de triagem
+function categorizeAudit(a: { issues: any[]; proposed_patch: any }): string {
+  const types = new Set((a.issues ?? []).map((i: any) => i?.type));
+  const severities = (a.issues ?? []).map((i: any) => i?.severity);
+  if (types.has("alucinacao_juridica") || types.has("extra_legal") || types.has("texto_legal_desatualizado")) {
+    return "alucinacao";
+  }
+  if (types.has("unrecoverable") || types.has("incoerente") || types.has("duplicada") || types.has("sem_correta")) {
+    return "invalida";
+  }
+  if (severities.includes("high") || types.has("gabarito_errado") || types.has("multiplas_corretas") || types.has("hierarquia_violada") || types.has("funcao_inconsistente") || types.has("desalinhamento")) {
+    return "com_erros";
+  }
+  if ((a.issues ?? []).length > 0 || a.proposed_patch) {
+    return "aprimoravel";
+  }
+  return "ok";
+}
 
 type AuditJob = {
   id: string;
