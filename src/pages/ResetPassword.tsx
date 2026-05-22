@@ -1,3 +1,4 @@
+import { Logo } from "@/components/Logo";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Shield, Lock, Eye, EyeOff, ArrowRight, Loader2, CheckCircle } from "lucide-react";
@@ -181,9 +182,8 @@ const ResetPassword = () => {
 
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl gradient-primary glow-primary flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-8 h-8 text-primary-foreground" />
-          </div>
+          <Logo className="w-20 h-20 mx-auto mb-4" />
+
           <h1 className="text-2xl font-black text-gradient-primary">CHOA 2026</h1>
           <p className="text-xs text-muted-foreground mt-1">Nova senha</p>
         </div>

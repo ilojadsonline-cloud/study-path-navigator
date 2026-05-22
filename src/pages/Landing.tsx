@@ -1,3 +1,4 @@
+import { Logo } from "@/components/Logo";
 import { motion } from "framer-motion";
 import {
   Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy,
@@ -200,9 +201,8 @@ const Landing = () => {
         {/* Nav */}
         <nav className="flex items-center justify-between p-4 md:p-6 max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary glow-primary flex items-center justify-center">
-              <Shield className="w-5 h-5 text-primary-foreground" />
-            </div>
+            <Logo className="w-10 h-10" />
+
             <div>
               <span className="font-bold text-sm text-gradient-primary">Método CHOA 2026</span>
               <span className="block text-[10px] text-muted-foreground">Rumo ao Oficialato</span>
@@ -817,9 +817,8 @@ const Landing = () => {
             viewport={{ once: true }}
             className="glass-card rounded-2xl p-8 md:p-12 text-center border-primary/20"
           >
-            <div className="inline-flex p-3 rounded-xl gradient-primary glow-primary mb-6">
-              <Shield className="w-8 h-8 text-primary-foreground" />
-            </div>
+            <Logo className="w-16 h-16 mx-auto mb-6" />
+
             <h2 className="text-2xl md:text-3xl font-black mb-3">
               Já está estudando? Potencialize seus resultados.
             </h2>
@@ -850,9 +849,8 @@ const Landing = () => {
         <footer className="border-t border-border/30 py-8">
           <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                <Shield className="w-4 h-4 text-primary-foreground" />
-              </div>
+              <Logo className="w-8 h-8" />
+
               <span className="text-sm font-bold text-gradient-primary">Método CHOA 2026</span>
             </div>
             <div className="flex items-center gap-6 text-xs text-muted-foreground">

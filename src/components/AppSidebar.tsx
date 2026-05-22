@@ -1,3 +1,4 @@
+import { Logo } from "@/components/Logo";
 import {
   LayoutDashboard, BookOpen, HelpCircle, Shuffle, CalendarDays,
   CreditCard, LogOut, Shield, MessageSquare, Settings, Flag,
@@ -50,9 +51,8 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-border/50 gradient-sidebar">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center glow-primary shrink-0">
-            <Shield className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <Logo className="w-10 h-10 shrink-0" />
+
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm text-gradient-primary leading-tight">CHOA 2026</span>
