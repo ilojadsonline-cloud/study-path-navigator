@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { toast as sonnerToast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { StatCard } from "@/components/StatCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp,
-  Trophy, Calendar, Zap, Loader2, FileText, PlayCircle
+  Trophy, Calendar, Zap, Loader2, FileText, PlayCircle,
+  Sparkles, Youtube, Brain, X
 } from "lucide-react";
 import { RankingCard } from "@/components/dashboard/RankingCard";
 import { RankingConsentModal } from "@/components/dashboard/RankingConsentModal";
@@ -58,23 +58,14 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const firstName = profile?.nome?.split(" ")[0] || "Aspirante";
 
-  // Alert about new Cronograma feature (show once)
-  useEffect(() => {
-    const key = "cronograma_feature_alert_shown";
-    if (!localStorage.getItem(key)) {
-      localStorage.setItem(key, "1");
-      setTimeout(() => {
-        sonnerToast("📅 Nova Funcionalidade: Cronograma de Estudos!", {
-          description: "Organize seus estudos com cronogramas personalizados. Acesse pelo menu lateral!",
-          duration: 8000,
-          action: {
-            label: "Ver agora",
-            onClick: () => navigate("/cronograma"),
-          },
-        });
-      }, 1500);
-    }
-  }, [navigate]);
+  // Banner de novas ferramentas (dismissível)
+  const [showNewToolsBanner, setShowNewToolsBanner] = useState(
+    () => typeof window !== "undefined" && !localStorage.getItem("new_tools_banner_dismissed_v1")
+  );
+  const dismissNewToolsBanner = () => {
+    localStorage.setItem("new_tools_banner_dismissed_v1", "1");
+    setShowNewToolsBanner(false);
+  };
 
   const [loading, setLoading] = useState(true);
   const [totalQuestoes, setTotalQuestoes] = useState(0);
@@ -287,6 +278,61 @@ const Dashboard = () => {
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">Continue sua preparação para o CHOA 2026</p>
           </div>
         </motion.div>
+
+        {showNewToolsBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 sm:p-5"
+          >
+            <button
+              onClick={dismissNewToolsBanner}
+              aria-label="Fechar"
+              className="absolute top-2.5 right-2.5 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/15 shrink-0">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <div className="min-w-0 pr-6">
+                <p className="font-bold text-sm sm:text-base">Novas ferramentas chegaram!</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  Estamos evoluindo a plataforma para potencializar sua aprovação. Confira o que acabou de chegar:
+                </p>
+                <div className="grid sm:grid-cols-3 gap-2 mt-3">
+                  <Link to="/bizuaula" className="flex items-start gap-2 p-2.5 rounded-lg bg-card/60 border border-border/40 hover:border-primary/40 transition-colors">
+                    <Youtube className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold">BizuAula</p>
+                      <p className="text-[11px] text-muted-foreground leading-snug">Aulas curtas e diretas para máxima fixação.</p>
+                    </div>
+                  </Link>
+                  <Link to="/cronograma" className="flex items-start gap-2 p-2.5 rounded-lg bg-card/60 border border-border/40 hover:border-primary/40 transition-colors">
+                    <Calendar className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold">Cronograma de Estudos</p>
+                      <p className="text-[11px] text-muted-foreground leading-snug">Otimize suas horas de estudo semanais.</p>
+                    </div>
+                  </Link>
+                  <Link to="/mapas-mentais" className="flex items-start gap-2 p-2.5 rounded-lg bg-card/60 border border-border/40 hover:border-primary/40 transition-colors">
+                    <Brain className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold">Mapas Mentais</p>
+                      <p className="text-[11px] text-muted-foreground leading-snug">Apoio visual para revisão e fixação.</p>
+                    </div>
+                  </Link>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-3 italic">
+                  Continuamos trabalhando — em breve mais novidades chegarão à plataforma!
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
