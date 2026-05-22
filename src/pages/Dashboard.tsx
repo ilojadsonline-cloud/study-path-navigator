@@ -153,8 +153,8 @@ const Dashboard = () => {
       const days: { d: string; v: number }[] = [];
       for (let i = 13; i >= 0; i--) {
         const d = new Date(now - i * D);
-        const key = d.toISOString().slice(0, 10);
-        const v = allRespostas.filter(r => r.created_at.slice(0, 10) === key).length;
+        const key = localDateKey(d);
+        const v = allRespostas.filter(r => localDateKey(r.created_at) === key).length;
         days.push({ d: key, v });
       }
       setSparkRespostas(days);
@@ -180,8 +180,8 @@ const Dashboard = () => {
       const simDays: { d: string; v: number }[] = [];
       for (let i = 13; i >= 0; i--) {
         const d = new Date(now - i * D);
-        const key = d.toISOString().slice(0, 10);
-        const v = sims.filter(s => s.created_at.slice(0, 10) === key).length;
+        const key = localDateKey(d);
+        const v = sims.filter(s => localDateKey(s.created_at) === key).length;
         simDays.push({ d: key, v });
       }
       setSparkSimulados(simDays);
@@ -194,8 +194,8 @@ const Dashboard = () => {
       const totalSec = sess.reduce((s, x) => s + (x.duration_seconds || 0), 0);
       setHorasEstudoTotal(Math.round((totalSec / 3600) * 10) / 10);
 
-      const todayKey = new Date().toISOString().slice(0, 10);
-      const todaySec = sess.filter(s => (s.started_at || "").slice(0, 10) === todayKey)
+      const todayKey = localDateKey(new Date());
+      const todaySec = sess.filter(s => s.started_at && localDateKey(s.started_at) === todayKey)
         .reduce((a, b) => a + (b.duration_seconds || 0), 0);
       setMinutosEstudoHoje(Math.round(todaySec / 60));
 
@@ -205,19 +205,19 @@ const Dashboard = () => {
 
       // Distribuição por hora do dia (hoje)
       const byHour = Array.from({ length: 24 }, (_, h) => ({ h, v: 0 }));
-      sess.filter(s => (s.started_at || "").slice(0, 10) === todayKey).forEach(s => {
+      sess.filter(s => s.started_at && localDateKey(s.started_at) === todayKey).forEach(s => {
         const h = new Date(s.started_at).getHours();
         byHour[h].v += (s.duration_seconds || 0) / 60;
       });
       setStudyByHour(byHour);
 
-      // Streak (dias consecutivos com sessão ou resposta)
+      // Streak (dias consecutivos com sessão de estudo OU resposta)
       const activeDays = new Set<string>();
-      sess.forEach(s => activeDays.add((s.started_at || "").slice(0, 10)));
-      allRespostas.forEach(r => activeDays.add(r.created_at.slice(0, 10)));
+      sess.forEach(s => { if (s.started_at && (s.duration_seconds || 0) > 0) activeDays.add(localDateKey(s.started_at)); });
+      allRespostas.forEach(r => activeDays.add(localDateKey(r.created_at)));
       let streak = 0;
       for (let i = 0; i < 365; i++) {
-        const d = new Date(now - i * D).toISOString().slice(0, 10);
+        const d = localDateKey(new Date(now - i * D));
         if (activeDays.has(d)) streak++;
         else if (i === 0) continue; // permite hoje vazio
         else break;
