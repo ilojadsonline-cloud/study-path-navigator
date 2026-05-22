@@ -3,20 +3,39 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
 import { Shuffle, Settings, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowLeft, Loader2, RotateCcw } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
+
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-const disciplinasOpcoes = [
-  "Todas as Disciplinas",
+const DISCIPLINAS_OFICIAIS = [
   "Lei nº 2.578/2012",
   "LC nº 128/2021",
   "Lei nº 2.575/2012",
   "CPPM",
   "RDMETO",
 ];
+
+const disciplinasOpcoes = ["Todas as Disciplinas", ...DISCIPLINAS_OFICIAIS];
+
+const TOTAIS_OPCOES = [5, 10, 20, 30, 50];
+
+// Largest remainder method for proportional distribution (20% per discipline when equal)
+function distribuirProporcional(total: number, disciplinas: string[]): Record<string, number> {
+  const n = disciplinas.length;
+  const base = Math.floor(total / n);
+  let resto = total - base * n;
+  const dist: Record<string, number> = {};
+  disciplinas.forEach(d => { dist[d] = base; });
+  let i = 0;
+  while (resto > 0) {
+    dist[disciplinas[i % n]] += 1;
+    resto--;
+    i++;
+  }
+  return dist;
+}
 
 interface QuestaoSimulado {
   id: number;
@@ -78,7 +97,7 @@ async function loadProgress(userId: string) {
 
 const Simulados = () => {
   const { user } = useAuth();
-  const [numQuestoes, setNumQuestoes] = useState([20]);
+  const [numQuestoes, setNumQuestoes] = useState<number>(20);
   const [disciplina, setDisciplina] = useState("Todas as Disciplinas");
   const simuladoRef = useRef<QuestaoSimulado[]>([]);
   const [simulado, setSimulado] = useState<QuestaoSimulado[]>([]);
@@ -189,19 +208,72 @@ const Simulados = () => {
   // ─── Generate simulado ───
   const gerarSimulado = useCallback(async () => {
     setLoading(true);
-    let query = supabase.from("questoes").select("*");
-    if (disciplina !== "Todas as Disciplinas") {
-      query = query.eq("disciplina", disciplina);
+    const total = numQuestoes;
+
+    // Fetch user's answered question IDs to prioritize unanswered ones
+    let respondidasIds = new Set<number>();
+    if (user) {
+      const { data: resp } = await supabase
+        .from("respostas_usuario")
+        .select("questao_id")
+        .eq("user_id", user.id);
+      if (resp) respondidasIds = new Set(resp.map((r: any) => r.questao_id));
     }
 
-    const { data, error } = await query;
+    const isAll = disciplina === "Todas as Disciplinas";
+    const disciplinasAlvo = isAll ? DISCIPLINAS_OFICIAIS : [disciplina];
+    const distribuicao = isAll
+      ? distribuirProporcional(total, DISCIPLINAS_OFICIAIS)
+      : { [disciplina]: total };
+
+    // Single query for all target disciplines (optimized, selecting only needed cols)
+    const { data, error } = await supabase
+      .from("questoes")
+      .select("id,disciplina,assunto,dificuldade,enunciado,alt_a,alt_b,alt_c,alt_d,alt_e,gabarito,comentario")
+      .in("disciplina", disciplinasAlvo);
+
     if (error || !data) {
+      toast.error("Erro ao carregar questões");
       setLoading(false);
       return;
     }
 
-    const shuffled = shuffleArray(data).slice(0, numQuestoes[0]);
-    const questoesSimulado: QuestaoSimulado[] = shuffled.map(q => ({
+    // Group by disciplina
+    const porDisciplina: Record<string, any[]> = {};
+    disciplinasAlvo.forEach(d => { porDisciplina[d] = []; });
+    data.forEach(q => { if (porDisciplina[q.disciplina]) porDisciplina[q.disciplina].push(q); });
+
+    // Select N per discipline, prioritizing unanswered
+    const selecionadas: any[] = [];
+    const faltam: { disciplina: string; quantidade: number }[] = [];
+
+    disciplinasAlvo.forEach(d => {
+      const need = distribuicao[d];
+      const pool = porDisciplina[d];
+      const naoResp = shuffleArray(pool.filter(q => !respondidasIds.has(q.id)));
+      const resp = shuffleArray(pool.filter(q => respondidasIds.has(q.id)));
+      const combined = [...naoResp, ...resp].slice(0, need);
+      selecionadas.push(...combined);
+      if (combined.length < need) {
+        faltam.push({ disciplina: d, quantidade: need - combined.length });
+      }
+    });
+
+    // Fallback: if any discipline lacked questions, fill from others to reach total
+    if (selecionadas.length < total && isAll) {
+      const usadosIds = new Set(selecionadas.map(q => q.id));
+      const sobra = shuffleArray(data.filter(q => !usadosIds.has(q.id)));
+      selecionadas.push(...sobra.slice(0, total - selecionadas.length));
+    }
+
+    if (faltam.length > 0) {
+      toast.warning(`Banco insuficiente em: ${faltam.map(f => f.disciplina).join(", ")}`);
+    }
+
+    // Final shuffle so questions aren't grouped by discipline
+    const shuffledFinal = shuffleArray(selecionadas);
+
+    const questoesSimulado: QuestaoSimulado[] = shuffledFinal.map(q => ({
       id: q.id,
       disciplina: q.disciplina,
       assunto: q.assunto,
@@ -219,7 +291,7 @@ const Simulados = () => {
     setFinished(false);
     setStarted(true);
     setLoading(false);
-  }, [disciplina, numQuestoes]);
+  }, [disciplina, numQuestoes, user]);
 
   const reiniciarSimulado = () => {
     if (user) deleteProgress(user.id);
@@ -434,13 +506,30 @@ const Simulados = () => {
           <div>
             <div className="flex justify-between items-center mb-3">
               <label className="text-sm font-medium">Número de Questões</label>
-              <span className="text-2xl font-bold text-gradient-primary">{numQuestoes[0]}</span>
+              <span className="text-2xl font-bold text-gradient-primary">{numQuestoes}</span>
             </div>
-            <Slider value={numQuestoes} onValueChange={setNumQuestoes} max={50} min={5} step={5} className="w-full" />
-            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-              <span>5</span><span>50</span>
+            <div className="grid grid-cols-5 gap-2">
+              {TOTAIS_OPCOES.map(n => (
+                <button key={n} onClick={() => setNumQuestoes(n)}
+                  className={`py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    numQuestoes === n ? "gradient-primary text-primary-foreground glow-primary" : "bg-secondary hover:bg-primary/15 hover:text-primary"
+                  }`}>{n}</button>
+              ))}
             </div>
+            {disciplina === "Todas as Disciplinas" && (
+              <div className="mt-3 p-3 rounded-lg bg-secondary/40 border border-border/50">
+                <p className="text-[11px] font-semibold text-muted-foreground mb-2">Distribuição proporcional (20% por disciplina):</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(distribuirProporcional(numQuestoes, DISCIPLINAS_OFICIAIS)).map(([d, q]) => (
+                    <Badge key={d} variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                      {d}: {q}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+
 
           <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
             <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
