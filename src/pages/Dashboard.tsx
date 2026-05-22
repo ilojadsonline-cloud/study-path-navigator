@@ -71,7 +71,7 @@ const Dashboard = () => {
   const [horasEstudoTotal, setHorasEstudoTotal] = useState(0);
   const [minutosEstudoHoje, setMinutosEstudoHoje] = useState(0);
   const [horasMesAtual, setHorasMesAtual] = useState(0);
-  const [metaMensal] = useState(200);
+  const [metaMensal, setMetaMensal] = useState(200);
   const [streakDias, setStreakDias] = useState(0);
   const [disciplinas, setDisciplinas] = useState<DisciplinaProgress[]>([]);
   const [atividades, setAtividades] = useState<AtividadeRecente[]>([]);
