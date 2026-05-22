@@ -1,24 +1,161 @@
+import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { Construction, Clock } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
+import { Brain, FileDown, ChevronDown, ChevronUp, BookMarked, Loader2, Inbox } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { disciplinasLite } from "@/lib/edital-structure";
+import { toast } from "sonner";
+
+type MapaRow = {
+  id: string;
+  disciplina_id: string;
+  topico: string;
+  nome_arquivo: string;
+  storage_path: string;
+};
 
 export default function MapasMentais() {
+  const [params] = useSearchParams();
+  const initialDisc = params.get("disciplina") || disciplinasLite[0].id;
+  const [openId, setOpenId] = useState<string>(initialDisc);
+  const [rows, setRows] = useState<MapaRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabase
+        .from("mapas_mentais")
+        .select("id, disciplina_id, topico, nome_arquivo, storage_path");
+      if (!alive) return;
+      if (error) toast.error("Erro ao carregar mapas mentais");
+      setRows((data as MapaRow[]) || []);
+      setLoading(false);
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const mapByDiscTopic = useMemo(() => {
+    const m = new Map<string, MapaRow>();
+    for (const r of rows) m.set(`${r.disciplina_id}::${r.topico}`, r);
+    return m;
+  }, [rows]);
+
+  const openPdf = async (row: MapaRow) => {
+    setOpeningId(row.id);
+    try {
+      const { data, error } = await supabase
+        .storage
+        .from("mapas-mentais")
+        .createSignedUrl(row.storage_path, 60 * 10);
+      if (error || !data?.signedUrl) throw error || new Error("URL inválida");
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      toast.error(e?.message || "Não foi possível abrir o PDF");
+    } finally {
+      setOpeningId(null);
+    }
+  };
+
   return (
     <AppLayout>
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-          <Construction className="w-10 h-10 text-primary" />
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gradient-primary mb-3">
-          Mapas Mentais
-        </h1>
-        <p className="text-muted-foreground max-w-md mb-6">
-          Estamos construindo uma ferramenta poderosa de mapas mentais para
-          acelerar sua memorização e conexão entre os temas do edital.
-        </p>
-        <div className="glass-card rounded-xl px-6 py-3 flex items-center gap-2 text-sm text-primary">
-          <Clock className="w-4 h-4" />
-          <span>Disponível em breve</span>
-        </div>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <BackButton />
+        <header className="space-y-1">
+          <h1 className="text-2xl font-black text-gradient-primary flex items-center gap-2">
+            <Brain className="w-6 h-6" /> Mapas Mentais
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Mapas organizados por disciplina e tópico do Edital Verticalizado.
+          </p>
+        </header>
+
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {disciplinasLite.map((d, i) => {
+              const open = openId === d.id;
+              return (
+                <motion.div
+                  key={d.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  className="glass-card rounded-2xl overflow-hidden border border-border/50"
+                >
+                  <button
+                    onClick={() => setOpenId(open ? "" : d.id)}
+                    className="w-full flex items-center gap-4 p-5 text-left hover:bg-secondary/30 transition-colors"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Brain className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h2 className="font-bold text-sm md:text-base text-foreground leading-tight">{d.title}</h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">{d.subtitle}</p>
+                    </div>
+                    <div className="shrink-0 text-muted-foreground">
+                      {open ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </div>
+                  </button>
+
+                  <AnimatePresence>
+                    {open && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-5 pb-5 space-y-2">
+                          {d.topics.map((t) => {
+                            const row = mapByDiscTopic.get(`${d.id}::${t}`);
+                            return (
+                              <div
+                                key={t}
+                                className="flex items-center justify-between gap-3 rounded-xl bg-secondary/40 border border-border/30 p-3"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <BookMarked className="w-4 h-4 text-primary shrink-0" />
+                                  <span className="text-sm text-foreground truncate">{t}</span>
+                                </div>
+                                {row ? (
+                                  <button
+                                    onClick={() => openPdf(row)}
+                                    disabled={openingId === row.id}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-gold text-gold-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 shrink-0"
+                                  >
+                                    {openingId === row.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <FileDown className="w-3.5 h-3.5" />
+                                    )}
+                                    Abrir PDF
+                                  </button>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/40 text-muted-foreground text-xs shrink-0">
+                                    <Inbox className="w-3.5 h-3.5" /> Em breve
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </AppLayout>
   );

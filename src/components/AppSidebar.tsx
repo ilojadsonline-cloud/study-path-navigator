@@ -23,7 +23,7 @@ const menuItems = [
   { title: "Banco de Questões", url: "/questoes", icon: HelpCircle },
   { title: "Simulados", url: "/simulados", icon: Shuffle },
   { title: "Cronograma", url: "/cronograma", icon: CalendarDays },
-  { title: "Mapas Mentais", url: "/mapas-mentais", icon: Brain, comingSoon: true },
+  { title: "Mapas Mentais", url: "/mapas-mentais", icon: Brain },
   { title: "Assinatura", url: "/assinatura", icon: CreditCard },
   { title: "Meus Reportes", url: "/meus-reportes", icon: Flag },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
@@ -79,20 +79,9 @@ export function AppSidebar() {
                 );
                 return (
                   <SidebarMenuItem key={item.title}>
-                    {item.comingSoon ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <SidebarMenuButton asChild className="h-11">
-                            {link}
-                          </SidebarMenuButton>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">(em breve)</TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <SidebarMenuButton asChild className="h-11">
-                        {link}
-                      </SidebarMenuButton>
-                    )}
+                    <SidebarMenuButton asChild className="h-11">
+                      {link}
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
               })}

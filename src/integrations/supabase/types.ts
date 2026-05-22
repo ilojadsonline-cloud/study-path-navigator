@@ -179,6 +179,36 @@ export type Database = {
         }
         Relationships: []
       }
+      mapas_mentais: {
+        Row: {
+          created_at: string
+          disciplina_id: string
+          id: string
+          nome_arquivo: string
+          storage_path: string
+          topico: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          disciplina_id: string
+          id?: string
+          nome_arquivo: string
+          storage_path: string
+          topico: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          disciplina_id?: string
+          id?: string
+          nome_arquivo?: string
+          storage_path?: string
+          topico?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_reads: {
         Row: {
           id: number
