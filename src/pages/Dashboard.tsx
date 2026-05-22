@@ -44,7 +44,7 @@ const COLORS = {
   muted: "hsl(215, 20%, 22%)",
 };
 
-const DAILY_GOAL_KEY = "daily_study_goal_hours_v1";
+
 
 const Dashboard = () => {
   const { user, profile } = useAuth();
