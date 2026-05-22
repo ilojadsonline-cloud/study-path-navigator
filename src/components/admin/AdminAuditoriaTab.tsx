@@ -815,12 +815,12 @@ export function AdminAuditoriaTab() {
 
           <ScrollArea className="h-[500px]">
             <div className="space-y-2">
-              {audits.length === 0 && (
+              {visibleAudits.length === 0 && (
                 <p className="text-sm text-muted-foreground py-8 text-center">
                   Nenhuma questão neste filtro.
                 </p>
               )}
-              {audits.map(a => (
+              {visibleAudits.map(a => (
                 <div
                   key={a.id}
                   className={`flex items-start gap-2 p-3 rounded-lg border bg-card/50 hover:bg-card/80 transition ${
