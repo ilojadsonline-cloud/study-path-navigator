@@ -1,3 +1,4 @@
+import { Logo } from "@/components/Logo";
 import {
   LayoutDashboard, BookOpen, HelpCircle, Shuffle, CalendarDays,
   CreditCard, LogOut, Shield, MessageSquare, Settings, Flag,

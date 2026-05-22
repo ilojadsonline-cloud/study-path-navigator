@@ -1,3 +1,4 @@
+import { Logo } from "@/components/Logo";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Shield, Mail, ArrowRight, Loader2, CheckCircle } from "lucide-react";

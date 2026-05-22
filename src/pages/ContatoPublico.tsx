@@ -1,3 +1,4 @@
+import { Logo } from "@/components/Logo";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, Send, MessageSquare, User, Loader2, CheckCircle, Shield, ArrowLeft } from "lucide-react";

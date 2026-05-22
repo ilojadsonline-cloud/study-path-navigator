@@ -1,3 +1,4 @@
+import { Logo } from "@/components/Logo";
 import { motion } from "framer-motion";
 import {
   Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy,

@@ -1,3 +1,4 @@
+import { Logo } from "@/components/Logo";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Shield, Lock, Eye, EyeOff, User, CreditCard, ArrowRight, Loader2, AlertTriangle, Mail, Search } from "lucide-react";
