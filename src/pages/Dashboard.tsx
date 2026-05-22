@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { toast as sonnerToast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { StatCard } from "@/components/StatCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp,
-  Trophy, Calendar, Zap, Loader2, FileText, PlayCircle
+  Trophy, Calendar, Zap, Loader2, FileText, PlayCircle,
+  Sparkles, Youtube, Brain, X
 } from "lucide-react";
 import { RankingCard } from "@/components/dashboard/RankingCard";
 import { RankingConsentModal } from "@/components/dashboard/RankingConsentModal";
