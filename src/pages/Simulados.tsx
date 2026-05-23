@@ -232,11 +232,9 @@ const Simulados = () => {
       if (resp) respondidasIds = new Set(resp.map((r: any) => r.questao_id));
     }
 
-    const isAll = disciplina === "Todas as Disciplinas";
-    const disciplinasAlvo = isAll ? DISCIPLINAS_OFICIAIS : [disciplina];
-    const distribuicao = isAll
-      ? distribuirProporcional(total, DISCIPLINAS_OFICIAIS)
-      : { [disciplina]: total };
+    const isAll = disciplinasSel.length === 0;
+    const alvo = disciplinasAlvo; // [] -> todas; senão as selecionadas
+    const distribuicao = distribuirProporcional(total, alvo);
 
     // Single query for all target disciplines (optimized, selecting only needed cols)
     const { data, error } = await supabase
