@@ -329,7 +329,7 @@ const Simulados = () => {
         finalizado: true,
       });
     }
-  }, [stableSimulado, selectedAnswer, user, disciplina]);
+  }, [stableSimulado, selectedAnswer, user, disciplinaForSave]);
 
   const voltarParaConfig = useCallback(() => {
     if (user && !finished) deleteProgress(user.id);
