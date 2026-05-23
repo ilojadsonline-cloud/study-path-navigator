@@ -188,7 +188,7 @@ const Dashboard = () => {
 
       // Study sessions
       const { data: sessions } = await supabase.from("study_sessions")
-        .select("duration_seconds, started_at").eq("user_id", user.id);
+        .select("duration_seconds, started_at, created_at").eq("user_id", user.id);
 
       const sess = sessions || [];
       const totalSec = sess.reduce((s, x) => s + (x.duration_seconds || 0), 0);
@@ -199,8 +199,10 @@ const Dashboard = () => {
         .reduce((a, b) => a + (b.duration_seconds || 0), 0);
       setMinutosEstudoHoje(Math.round(todaySec / 60));
 
-      const mesSec = sess.filter(s => new Date(s.started_at) >= monthStart)
-        .reduce((a, b) => a + (b.duration_seconds || 0), 0);
+      const mesSec = sess.filter(s => {
+        const ts = s.started_at || (s as any).created_at;
+        return ts && new Date(ts) >= monthStart;
+      }).reduce((a, b) => a + (b.duration_seconds || 0), 0);
       setHorasMesAtual(Math.round((mesSec / 3600) * 10) / 10);
 
       // Distribuição por hora do dia (hoje)
@@ -324,10 +326,10 @@ const Dashboard = () => {
     : [{ name: "Vazio", value: 1 }];
 
   const horasFmt = useMemo(() => {
-    const h = Math.floor(horasEstudoTotal);
-    const m = Math.round((horasEstudoTotal - h) * 60);
+    const h = Math.floor(horasMesAtual);
+    const m = Math.round((horasMesAtual - h) * 60);
     return `${h}h ${m.toString().padStart(2, "0")}m`;
-  }, [horasEstudoTotal]);
+  }, [horasMesAtual]);
 
   const minHojeFmt = `${Math.floor(minutosEstudoHoje / 60)}h ${(minutosEstudoHoje % 60).toString().padStart(2, "0")}m`;
 
