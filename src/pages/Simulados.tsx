@@ -107,6 +107,7 @@ const Simulados = () => {
     : disciplinasSel.length === 1
       ? disciplinasSel[0]
       : `${disciplinasSel.length} disciplinas selecionadas`;
+  const disciplinaForSave = disciplinasSel.length === 0 ? "Todas as Disciplinas" : disciplinasSel.join("|");
   const simuladoRef = useRef<QuestaoSimulado[]>([]);
   const [simulado, setSimulado] = useState<QuestaoSimulado[]>([]);
   const [loading, setLoading] = useState(false);
