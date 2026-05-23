@@ -100,7 +100,7 @@ async function loadProgress(userId: string) {
 const Simulados = () => {
   const { user } = useAuth();
   const [numQuestoes, setNumQuestoes] = useState<number>(20);
-  const [disciplina, setDisciplina] = useState("Todas as Disciplinas");
+  const [disciplinasSel, setDisciplinasSel] = useState<string[]>([]); // [] = Todas
   const simuladoRef = useRef<QuestaoSimulado[]>([]);
   const [simulado, setSimulado] = useState<QuestaoSimulado[]>([]);
   const [loading, setLoading] = useState(false);
