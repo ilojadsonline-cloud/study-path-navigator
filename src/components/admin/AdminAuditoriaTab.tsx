@@ -176,11 +176,16 @@ export function AdminAuditoriaTab() {
     stopRef.current = false;
     setRunning(true);
     try {
+      if (scopeMode === "discipline" && selDisc.length === 0) {
+        toast.error("Selecione ao menos uma disciplina para o modo 'Disciplina específica'.");
+        setRunning(false);
+        return;
+      }
       const { data, error } = await supabase.functions.invoke("audit-questions", {
         body: {
           action: "start",
-          disciplinas: selDisc.length ? selDisc : null,
-          only_unaudited: onlyUnaudited,
+          mode: scopeMode,
+          disciplinas: scopeMode === "discipline" ? selDisc : (selDisc.length ? selDisc : null),
           limit,
         },
       });
@@ -188,7 +193,11 @@ export function AdminAuditoriaTab() {
       const j = data.job as AuditJob;
       setJob(j);
       setFilterStatus("session");
-      toast.success(`Auditoria iniciada (${j.total} questões)`);
+      const scopeLabel = scopeMode === "all" ? "todo o banco"
+        : scopeMode === "discipline" ? `disciplina(s): ${selDisc.join(", ")}`
+        : scopeMode === "unaudited" ? "apenas nunca revisadas"
+        : "apenas com reportes pendentes";
+      toast.success(`Auditoria iniciada — ${scopeLabel} (${j.total} questões)`);
       runLoop(j.id);
     } catch (e: any) {
       toast.error(e.message ?? "Falha ao iniciar");
