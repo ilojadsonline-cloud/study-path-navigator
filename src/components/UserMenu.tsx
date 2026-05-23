@@ -1,15 +1,33 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Settings, Flag, CreditCard, LogOut, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { Settings, Flag, CreditCard, LogOut, CheckCircle, AlertTriangle, Clock, ChevronDown, Loader2, LifeBuoy, Ban } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface UserMenuProps {
   initials: string;
 }
 
+interface SubDetails {
+  status: string;
+  paymentMethod: string | null;
+  planName: string;
+  planPrice: string;
+  endDate: string | null;
+  nextBillingDate: string | null;
+  canCancel: boolean;
+  cancelledAt: string | null;
+  isBlocked: boolean;
+}
+
 export function UserMenu({ initials }: UserMenuProps) {
   const [open, setOpen] = useState(false);
-  const { profile, signOut, subscribed, subscriptionEnd, isTrial, trialEndsAt, trialExpired } = useAuth();
+  const [subOpen, setSubOpen] = useState(false);
+  const [subDetails, setSubDetails] = useState<SubDetails | null>(null);
+  const [subLoading, setSubLoading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const { profile, signOut, subscribed, subscriptionEnd, isTrial, trialEndsAt, trialExpired, checkSubscription } = useAuth();
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -21,6 +39,42 @@ export function UserMenu({ initials }: UserMenuProps) {
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
+
+  const loadSubDetails = async () => {
+    setSubLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("subscription-details");
+      if (error) throw error;
+      setSubDetails(data as SubDetails);
+    } catch (err: any) {
+      toast.error("Não foi possível carregar dados da assinatura");
+    } finally {
+      setSubLoading(false);
+    }
+  };
+
+  const toggleSubPanel = () => {
+    const next = !subOpen;
+    setSubOpen(next);
+    if (next && !subDetails) loadSubDetails();
+  };
+
+  const handleCancel = async () => {
+    if (!confirm("Confirma o cancelamento? Você manterá acesso até o final do período já pago.")) return;
+    setCancelling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cancel-subscription");
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Falha ao cancelar");
+      toast.success(data.message || "Assinatura cancelada");
+      await loadSubDetails();
+      await checkSubscription();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao cancelar assinatura");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const handleLogout = async () => {
     setOpen(false);
@@ -117,14 +171,82 @@ export function UserMenu({ initials }: UserMenuProps) {
                 <Flag className="w-4 h-4 text-muted-foreground" />
                 <span>Meus Reportes</span>
               </Link>
-              <Link
-                to="/assinatura"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-foreground hover:bg-secondary transition-colors"
+              <button
+                onClick={toggleSubPanel}
+                className="w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-lg text-sm text-foreground hover:bg-secondary transition-colors"
               >
-                <CreditCard className="w-4 h-4 text-muted-foreground" />
-                <span>Minha Assinatura</span>
-              </Link>
+                <span className="flex items-center gap-2.5">
+                  <CreditCard className="w-4 h-4 text-muted-foreground" />
+                  Minha Assinatura
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${subOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {subOpen && (
+                <div className="mx-1 mb-1 mt-1 rounded-lg border border-border/40 bg-secondary/30 p-3 space-y-2.5 text-xs">
+                  {subLoading && !subDetails ? (
+                    <div className="flex items-center gap-2 text-muted-foreground py-2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando…
+                    </div>
+                  ) : subDetails ? (
+                    <>
+                      <div className="space-y-1">
+                        <DetailRow label="Plano" value={subDetails.planName} />
+                        <DetailRow label="Valor" value={subDetails.planPrice} />
+                        {subDetails.paymentMethod && <DetailRow label="Método" value={subDetails.paymentMethod} />}
+                        {subDetails.endDate && (
+                          <DetailRow
+                            label={subDetails.status === "active_recurring" && !subDetails.cancelledAt ? "Próxima cobrança" : "Acesso até"}
+                            value={formatDate(subDetails.endDate)}
+                          />
+                        )}
+                        <DetailRow
+                          label="Situação"
+                          value={
+                            subDetails.isBlocked || subDetails.status === "blocked" ? "Bloqueada" :
+                            subDetails.cancelledAt ? "Cancelada (acesso ativo)" :
+                            subDetails.status === "active_recurring" ? "Ativa (renovação automática)" :
+                            subDetails.status === "active_oneoff" ? "Ativa (sem renovação)" :
+                            subDetails.status === "trial" ? "Período de teste" :
+                            "Sem assinatura"
+                          }
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1.5 pt-1">
+                        {subDetails.canCancel && subDetails.status === "active_recurring" && !subDetails.cancelledAt && (
+                          <button
+                            onClick={handleCancel}
+                            disabled={cancelling}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-60"
+                          >
+                            {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
+                            Cancelar assinatura
+                          </button>
+                        )}
+                        {(subDetails.isBlocked || subDetails.status === "blocked" || subDetails.status === "none") && (
+                          <Link
+                            to="/assinatura"
+                            onClick={() => setOpen(false)}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold gradient-primary text-primary-foreground"
+                          >
+                            Renovar assinatura
+                          </Link>
+                        )}
+                        <Link
+                          to="/contato-publico"
+                          onClick={() => setOpen(false)}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold border border-border/50 text-foreground hover:bg-secondary transition-colors"
+                        >
+                          <LifeBuoy className="w-3.5 h-3.5" /> Solicitar ajuda / suporte
+                        </Link>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">Sem dados disponíveis.</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="border-t border-border/30 p-2">
@@ -139,6 +261,15 @@ export function UserMenu({ initials }: UserMenuProps) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium text-foreground text-right truncate max-w-[60%]">{value}</span>
     </div>
   );
 }

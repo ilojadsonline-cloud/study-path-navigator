@@ -211,15 +211,17 @@ const Dashboard = () => {
       });
       setStudyByHour(byHour);
 
-      // Streak (dias consecutivos com sessão de estudo OU resposta)
+      // Streak (dias consecutivos com login/sessão OU resposta)
+      // Basta ter aberto a plataforma (sessão criada) — não exige duração mínima
       const activeDays = new Set<string>();
-      sess.forEach(s => { if (s.started_at && (s.duration_seconds || 0) > 0) activeDays.add(localDateKey(s.started_at)); });
+      sess.forEach(s => { if (s.started_at) activeDays.add(localDateKey(s.started_at)); });
       allRespostas.forEach(r => activeDays.add(localDateKey(r.created_at)));
+      // Hoje sempre conta como ativo (usuário está logado vendo o dashboard)
+      activeDays.add(localDateKey(new Date()));
       let streak = 0;
       for (let i = 0; i < 365; i++) {
         const d = localDateKey(new Date(now - i * D));
         if (activeDays.has(d)) streak++;
-        else if (i === 0) continue; // permite hoje vazio
         else break;
       }
       setStreakDias(streak);
@@ -441,7 +443,10 @@ const Dashboard = () => {
                 icon={<Clock className="w-5 h-5" />}
                 pct={metaPctMensal}
                 pctLabel="da meta mensal"
-                subline={`Meta: ${metaMensal}h`}
+                subline={`Meta: ${metaMensal}h${cronogramaInfo ? "" : " (padrão)"}`}
+                hint="Conta tempo de plataforma aberta + resolução de questões"
+                ctaLabel={cronogramaInfo ? null : "Criar cronograma para meta personalizada"}
+                ctaHref="/cronograma"
                 color={COLORS.primary}
               />
               <KpiCard
@@ -705,9 +710,10 @@ function KpiCard({ title, value, icon, delta, deltaLabel, sparkColor, sparkData 
   );
 }
 
-function DonutKpiCard({ title, value, icon, pct, pctLabel, subline, color }: {
+function DonutKpiCard({ title, value, icon, pct, pctLabel, subline, color, hint, ctaLabel, ctaHref }: {
   title: string; value: string; icon: React.ReactNode;
   pct: number; pctLabel: string; subline: string; color: string;
+  hint?: string; ctaLabel?: string | null; ctaHref?: string;
 }) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
@@ -731,6 +737,14 @@ function DonutKpiCard({ title, value, icon, pct, pctLabel, subline, color }: {
           <p className="text-[11px] text-muted-foreground mt-0.5">{subline}</p>
         </div>
       </div>
+      {hint && (
+        <p className="text-[10px] text-muted-foreground/80 mt-2 leading-snug">{hint}</p>
+      )}
+      {ctaLabel && ctaHref && (
+        <Link to={ctaHref} className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline">
+          <Sparkles className="w-3 h-3" />{ctaLabel}
+        </Link>
+      )}
     </motion.div>
   );
 }
