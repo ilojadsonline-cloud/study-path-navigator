@@ -56,7 +56,7 @@ export function useStudyTimer() {
 
   const markActive = useCallback(() => {
     const now = Date.now();
-    stateRef.current.lastActive = Date.now();
+    stateRef.current.lastActive = now;
     if (pausedRef.current) {
       pausedRef.current = false;
       stateRef.current.lastTick = now;
@@ -131,6 +131,11 @@ export function useStudyTimer() {
 
     // Tick every INTERVAL_SECONDS
     const interval = setInterval(async () => {
+      if (!isSameLocalDay(state.startedAt)) {
+        resetForNewSession();
+        await initSession();
+        return;
+      }
       if (!state.sessionId) return;
 
       const now = Date.now();
@@ -158,9 +163,11 @@ export function useStudyTimer() {
       if (!state.sessionId) return;
       const now = Date.now();
       if (now - state.lastActive <= INACTIVITY_LIMIT_MS) {
-        state.elapsed += Math.min(INTERVAL_SECONDS, Math.floor((now - state.lastActive) / 1000));
+        state.elapsed += Math.max(0, Math.min(INTERVAL_SECONDS, Math.floor((now - state.lastTick) / 1000)));
+        state.lastTick = now;
       }
       saveState(state);
+      notifyTimerUpdated(state);
       // Use sendBeacon with proper auth headers via Blob
       const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/study_sessions?id=eq.${state.sessionId}`;
       const body = JSON.stringify({ duration_seconds: state.elapsed });
