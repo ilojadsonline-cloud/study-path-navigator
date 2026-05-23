@@ -201,7 +201,7 @@ const Simulados = () => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [selectedAnswer, user, started, finished, simulado, disciplina]);
+  }, [selectedAnswer, user, started, finished, simulado, disciplinaForSave]);
 
   // ─── Beforeunload warning ───
   useEffect(() => {
