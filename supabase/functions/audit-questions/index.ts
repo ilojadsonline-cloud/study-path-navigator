@@ -633,27 +633,48 @@ serve(async (req) => {
     }
 
     if (action === "start") {
-      const scope = {
+      // mode: 'all' | 'discipline' | 'unaudited' | 'reported'
+      const mode: "all" | "discipline" | "unaudited" | "reported" =
+        ["all", "discipline", "unaudited", "reported"].includes(body.mode) ? body.mode : "all";
+      const scope: any = {
+        mode,
         disciplinas: Array.isArray(body.disciplinas) ? body.disciplinas : null,
-        only_unaudited: body.only_unaudited !== false,
+        only_unaudited: mode === "unaudited",
         limit: Math.min(Number(body.limit ?? 200), 100000),
       };
 
-      // RESET V4: questões aprovadas ou auto-corrigidas voltam para 'pending'.
-      // Manual_review e admin_resolved ficam de fora.
-      let resetQ = supabase
-        .from("questoes")
-        .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
-        .in("audit_status", [Q_STATUS.APPROVED, Q_STATUS.AUTO_CORRECTED]);
-      if (scope.disciplinas?.length) resetQ = resetQ.in("disciplina", scope.disciplinas);
-      await resetQ;
+      if (mode === "reported") {
+        // Modo "reported": questões com reportes pendentes são forçadas à fila.
+        const { data: reps } = await supabase
+          .from("question_reports")
+          .select("questao_id")
+          .eq("status", "pendente")
+          .limit(100000);
+        const ids = Array.from(new Set((reps ?? []).map((r: any) => r.questao_id))).filter(Boolean);
+        scope.question_ids = ids;
+        if (ids.length) {
+          await supabase
+            .from("questoes")
+            .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
+            .in("id", ids);
+        }
+      } else if (mode === "all" || mode === "discipline") {
+        // RESET amplo: APROVADAS, AUTO_CORRIGIDAS e RESOLVIDAS pelo admin voltam para 'pending'.
+        let resetQ = supabase
+          .from("questoes")
+          .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
+          .in("audit_status", [Q_STATUS.APPROVED, Q_STATUS.AUTO_CORRECTED, Q_STATUS.ADMIN_RESOLVED]);
+        if (scope.disciplinas?.length) resetQ = resetQ.in("disciplina", scope.disciplinas);
+        await resetQ;
+      }
+      // mode === "unaudited": não altera status; loop filtra por only_unaudited.
 
-      // Conta total elegível (somente pending — pula manual_review/admin_resolved/deleted).
       let countQ = supabase
         .from("questoes")
         .select("id", { count: "exact", head: true })
         .eq("audit_status", Q_STATUS.PENDING);
       if (scope.disciplinas?.length) countQ = countQ.in("disciplina", scope.disciplinas);
+      if (scope.question_ids?.length) countQ = countQ.in("id", scope.question_ids);
       const { count } = await countQ;
 
       const { data: job } = await supabase.from("audit_jobs").insert({
