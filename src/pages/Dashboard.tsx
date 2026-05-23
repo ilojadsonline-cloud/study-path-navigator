@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { RankingCard } from "@/components/dashboard/RankingCard";
 import { RankingConsentModal } from "@/components/dashboard/RankingConsentModal";
+import { getLocalStudyTimerSnapshot, type TimerState } from "@/hooks/useStudyTimer";
 import { useNavigate, Link } from "react-router-dom";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, Tooltip,
@@ -18,6 +19,7 @@ import {
 
 type DisciplinaProgress = { name: string; total: number; corretas: number };
 type AtividadeRecente = { text: string; time: string; icon: React.ReactNode; sortDate: Date };
+type StudySession = { id: number; duration_seconds: number; started_at: string | null; created_at: string | null };
 
 function localDateKey(d: Date | string): string {
   const dt = typeof d === "string" ? new Date(d) : d;
@@ -25,6 +27,30 @@ function localDateKey(d: Date | string): string {
   const m = String(dt.getMonth() + 1).padStart(2, "0");
   const day = String(dt.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function getStudySessionDate(session: Pick<StudySession, "started_at" | "created_at">): string | null {
+  return session.started_at || session.created_at || null;
+}
+
+function mergeLiveStudySession(sessions: StudySession[], live: TimerState | null): StudySession[] {
+  if (!live?.sessionId || !live.startedAt) return sessions;
+  const liveDuration = Math.max(0, Math.floor(live.elapsed || 0));
+  let found = false;
+  const merged = sessions.map((session) => {
+    if (session.id !== live.sessionId) return session;
+    found = true;
+    return {
+      ...session,
+      started_at: session.started_at || live.startedAt,
+      created_at: session.created_at || live.startedAt,
+      duration_seconds: Math.max(session.duration_seconds || 0, liveDuration),
+    };
+  });
+  if (!found) {
+    merged.push({ id: live.sessionId, duration_seconds: liveDuration, started_at: live.startedAt, created_at: live.startedAt });
+  }
+  return merged;
 }
 
 async function fetchAllRespostas(userId: string) {
