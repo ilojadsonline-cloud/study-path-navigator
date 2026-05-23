@@ -395,9 +395,19 @@ async function processQuestion(
     legalCache.set(q.disciplina, legal);
   }
 
+  // Reportes de usuários pendentes — sinal forte de defeito real.
+  const { data: repsData } = await supabase
+    .from("question_reports")
+    .select("motivo, status")
+    .eq("questao_id", q.id)
+    .in("status", ["pendente", "em_analise"])
+    .limit(10);
+  const userReports: string[] = (repsData ?? []).map((r: any) => String(r.motivo ?? "").trim()).filter(Boolean);
+  const hasUserReports = userReports.length > 0;
+
   let result: AuditResult;
   try {
-    result = await auditOne(q, legal);
+    result = await auditOne(q, legal, userReports);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     await supabase.from("question_audits").insert({
@@ -411,6 +421,25 @@ async function processQuestion(
     await setQuestionAuditStatus(supabase, q.id, Q_STATUS.MANUAL);
     return { status: "error", auto_fixed: false, flagged: false, deleted: false };
   }
+
+  // Endurecimento: qualquer reporte pendente impede aprovação silenciosa e
+  // restringe auto_fix a casos com altíssima confiança e baixo risco.
+  if (hasUserReports) {
+    if (!result.issues.some((i: any) => i?.type === "reporte_usuario")) {
+      result.issues.push({
+        type: "reporte_usuario",
+        severity: "high",
+        description: `Questão possui ${userReports.length} reporte(s) de usuário pendente(s) — exige verificação.`,
+      });
+    }
+    if (result.risk_level === "low") result.risk_level = "medium";
+    // Se a IA quer mexer no gabarito ou está abaixo de 0.95 → revisão humana.
+    const wantsGabaritoChange = result.proposed_patch && typeof (result.proposed_patch as any).gabarito === "number" && (result.proposed_patch as any).gabarito !== q.gabarito;
+    if (wantsGabaritoChange || result.confidence < 0.95) {
+      result.needs_human_review = true;
+    }
+  }
+
 
   // AUTO-DELETE: duplicada ou irrecuperável.
   const isDuplicate = result.issues.some((i: any) => i?.type === "duplicada");
