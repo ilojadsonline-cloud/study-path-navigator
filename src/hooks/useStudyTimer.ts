@@ -80,7 +80,7 @@ export function useStudyTimer() {
       notifyTimerUpdated(state);
     };
 
-    if (state.userId !== user.id || !isSameLocalDay(state.startedAt)) {
+    if ((state.userId && state.userId !== user.id) || (state.startedAt && !isSameLocalDay(state.startedAt))) {
       resetForNewSession();
     }
 
