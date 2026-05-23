@@ -101,6 +101,12 @@ const Simulados = () => {
   const { user } = useAuth();
   const [numQuestoes, setNumQuestoes] = useState<number>(20);
   const [disciplinasSel, setDisciplinasSel] = useState<string[]>([]); // [] = Todas
+  const disciplinasAlvo = disciplinasSel.length === 0 ? DISCIPLINAS_OFICIAIS : disciplinasSel;
+  const disciplinaLabel = disciplinasSel.length === 0
+    ? "Todas as Disciplinas"
+    : disciplinasSel.length === 1
+      ? disciplinasSel[0]
+      : `${disciplinasSel.length} disciplinas selecionadas`;
   const simuladoRef = useRef<QuestaoSimulado[]>([]);
   const [simulado, setSimulado] = useState<QuestaoSimulado[]>([]);
   const [loading, setLoading] = useState(false);
