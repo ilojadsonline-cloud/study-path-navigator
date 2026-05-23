@@ -692,11 +692,12 @@ serve(async (req) => {
             .in("id", ids);
         }
       } else if (mode === "all" || mode === "discipline") {
-        // RESET amplo: APROVADAS, AUTO_CORRIGIDAS e RESOLVIDAS pelo admin voltam para 'pending'.
+        // RESET TOTAL do escopo: em nova auditoria ampla, TODA questão existente volta para 'pending'.
+        // O bug dos "300 e poucas" ocorria porque manual_review/error ficavam fora da contagem.
         let resetQ = supabase
           .from("questoes")
           .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
-          .in("audit_status", [Q_STATUS.APPROVED, Q_STATUS.AUTO_CORRECTED, Q_STATUS.ADMIN_RESOLVED]);
+          .neq("audit_status", Q_STATUS.DELETED);
         if (scope.disciplinas?.length) resetQ = resetQ.in("disciplina", scope.disciplinas);
         await resetQ;
       }
