@@ -211,15 +211,17 @@ const Dashboard = () => {
       });
       setStudyByHour(byHour);
 
-      // Streak (dias consecutivos com sessão de estudo OU resposta)
+      // Streak (dias consecutivos com login/sessão OU resposta)
+      // Basta ter aberto a plataforma (sessão criada) — não exige duração mínima
       const activeDays = new Set<string>();
-      sess.forEach(s => { if (s.started_at && (s.duration_seconds || 0) > 0) activeDays.add(localDateKey(s.started_at)); });
+      sess.forEach(s => { if (s.started_at) activeDays.add(localDateKey(s.started_at)); });
       allRespostas.forEach(r => activeDays.add(localDateKey(r.created_at)));
+      // Hoje sempre conta como ativo (usuário está logado vendo o dashboard)
+      activeDays.add(localDateKey(new Date()));
       let streak = 0;
       for (let i = 0; i < 365; i++) {
         const d = localDateKey(new Date(now - i * D));
         if (activeDays.has(d)) streak++;
-        else if (i === 0) continue; // permite hoje vazio
         else break;
       }
       setStreakDias(streak);
