@@ -6,18 +6,36 @@ const INTERVAL_SECONDS = 60;
 const INACTIVITY_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
 const LS_KEY = "study_timer_state";
 
-interface TimerState {
+export interface TimerState {
   sessionId: number | null;
   elapsed: number;
   lastActive: number;
+  lastTick: number;
+  startedAt: string | null;
+  userId: string | null;
+}
+
+function emptyState(): TimerState {
+  const now = Date.now();
+  return { sessionId: null, elapsed: 0, lastActive: now, lastTick: now, startedAt: null, userId: null };
+}
+
+function isSameLocalDay(a?: string | number | null, b: Date = new Date()): boolean {
+  if (!a) return false;
+  const da = new Date(a);
+  return da.getFullYear() === b.getFullYear() && da.getMonth() === b.getMonth() && da.getDate() === b.getDate();
 }
 
 function loadState(): TimerState {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return { ...emptyState(), ...JSON.parse(raw) };
   } catch {}
-  return { sessionId: null, elapsed: 0, lastActive: Date.now() };
+  return emptyState();
+}
+
+export function getLocalStudyTimerSnapshot(): TimerState {
+  return loadState();
 }
 
 function saveState(state: TimerState) {
@@ -26,15 +44,22 @@ function saveState(state: TimerState) {
   } catch {}
 }
 
+function notifyTimerUpdated(state: TimerState) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("study-timer-updated", { detail: state }));
+}
+
 export function useStudyTimer() {
   const { user } = useAuth();
   const stateRef = useRef<TimerState>(loadState());
   const pausedRef = useRef(false);
 
   const markActive = useCallback(() => {
+    const now = Date.now();
     stateRef.current.lastActive = Date.now();
     if (pausedRef.current) {
       pausedRef.current = false;
+      stateRef.current.lastTick = now;
     }
     saveState(stateRef.current);
   }, []);
