@@ -120,6 +120,8 @@ const Dashboard = () => {
   const [studyByHour, setStudyByHour] = useState<{ h: number; v: number }[]>(
     Array.from({ length: 24 }, (_, h) => ({ h, v: 0 }))
   );
+  const [studySessions, setStudySessions] = useState<StudySession[]>([]);
+  const [liveStudyTimer, setLiveStudyTimer] = useState<TimerState | null>(() => getLocalStudyTimerSnapshot());
   const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
 
   useEffect(() => {
@@ -214,27 +216,35 @@ const Dashboard = () => {
 
       // Study sessions
       const { data: sessions } = await supabase.from("study_sessions")
-        .select("duration_seconds, started_at, created_at").eq("user_id", user.id);
+        .select("id, duration_seconds, started_at, created_at").eq("user_id", user.id);
 
-      const sess = sessions || [];
+      const storedSessions = (sessions || []) as StudySession[];
+      setStudySessions(storedSessions);
+      const sess = mergeLiveStudySession(storedSessions, getLocalStudyTimerSnapshot());
       const totalSec = sess.reduce((s, x) => s + (x.duration_seconds || 0), 0);
       setHorasEstudoTotal(Math.round((totalSec / 3600) * 10) / 10);
 
       const todayKey = localDateKey(new Date());
-      const todaySec = sess.filter(s => s.started_at && localDateKey(s.started_at) === todayKey)
+      const todaySec = sess.filter(s => {
+        const ts = getStudySessionDate(s);
+        return ts && localDateKey(ts) === todayKey;
+      })
         .reduce((a, b) => a + (b.duration_seconds || 0), 0);
       setMinutosEstudoHoje(Math.round(todaySec / 60));
 
       const mesSec = sess.filter(s => {
-        const ts = s.started_at || (s as any).created_at;
+        const ts = getStudySessionDate(s);
         return ts && new Date(ts) >= monthStart;
       }).reduce((a, b) => a + (b.duration_seconds || 0), 0);
       setHorasMesAtual(Math.round((mesSec / 3600) * 10) / 10);
 
       // Distribuição por hora do dia (hoje)
       const byHour = Array.from({ length: 24 }, (_, h) => ({ h, v: 0 }));
-      sess.filter(s => s.started_at && localDateKey(s.started_at) === todayKey).forEach(s => {
-        const h = new Date(s.started_at).getHours();
+      sess.filter(s => {
+        const ts = getStudySessionDate(s);
+        return ts && localDateKey(ts) === todayKey;
+      }).forEach(s => {
+        const h = new Date(getStudySessionDate(s)!).getHours();
         byHour[h].v += (s.duration_seconds || 0) / 60;
       });
       setStudyByHour(byHour);
@@ -242,7 +252,10 @@ const Dashboard = () => {
       // Streak (dias consecutivos com login/sessão OU resposta)
       // Basta ter aberto a plataforma (sessão criada) — não exige duração mínima
       const activeDays = new Set<string>();
-      sess.forEach(s => { if (s.started_at) activeDays.add(localDateKey(s.started_at)); });
+      sess.forEach(s => {
+        const ts = getStudySessionDate(s);
+        if (ts) activeDays.add(localDateKey(ts));
+      });
       allRespostas.forEach(r => activeDays.add(localDateKey(r.created_at)));
       // Hoje sempre conta como ativo (usuário está logado vendo o dashboard)
       activeDays.add(localDateKey(new Date()));
