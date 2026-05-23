@@ -171,14 +171,82 @@ export function UserMenu({ initials }: UserMenuProps) {
                 <Flag className="w-4 h-4 text-muted-foreground" />
                 <span>Meus Reportes</span>
               </Link>
-              <Link
-                to="/assinatura"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-foreground hover:bg-secondary transition-colors"
+              <button
+                onClick={toggleSubPanel}
+                className="w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-lg text-sm text-foreground hover:bg-secondary transition-colors"
               >
-                <CreditCard className="w-4 h-4 text-muted-foreground" />
-                <span>Minha Assinatura</span>
-              </Link>
+                <span className="flex items-center gap-2.5">
+                  <CreditCard className="w-4 h-4 text-muted-foreground" />
+                  Minha Assinatura
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${subOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {subOpen && (
+                <div className="mx-1 mb-1 mt-1 rounded-lg border border-border/40 bg-secondary/30 p-3 space-y-2.5 text-xs">
+                  {subLoading && !subDetails ? (
+                    <div className="flex items-center gap-2 text-muted-foreground py-2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando…
+                    </div>
+                  ) : subDetails ? (
+                    <>
+                      <div className="space-y-1">
+                        <DetailRow label="Plano" value={subDetails.planName} />
+                        <DetailRow label="Valor" value={subDetails.planPrice} />
+                        {subDetails.paymentMethod && <DetailRow label="Método" value={subDetails.paymentMethod} />}
+                        {subDetails.endDate && (
+                          <DetailRow
+                            label={subDetails.status === "active_recurring" && !subDetails.cancelledAt ? "Próxima cobrança" : "Acesso até"}
+                            value={formatDate(subDetails.endDate)}
+                          />
+                        )}
+                        <DetailRow
+                          label="Situação"
+                          value={
+                            subDetails.isBlocked || subDetails.status === "blocked" ? "Bloqueada" :
+                            subDetails.cancelledAt ? "Cancelada (acesso ativo)" :
+                            subDetails.status === "active_recurring" ? "Ativa (renovação automática)" :
+                            subDetails.status === "active_oneoff" ? "Ativa (sem renovação)" :
+                            subDetails.status === "trial" ? "Período de teste" :
+                            "Sem assinatura"
+                          }
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1.5 pt-1">
+                        {subDetails.canCancel && subDetails.status === "active_recurring" && !subDetails.cancelledAt && (
+                          <button
+                            onClick={handleCancel}
+                            disabled={cancelling}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-60"
+                          >
+                            {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
+                            Cancelar assinatura
+                          </button>
+                        )}
+                        {(subDetails.isBlocked || subDetails.status === "blocked" || subDetails.status === "none") && (
+                          <Link
+                            to="/assinatura"
+                            onClick={() => setOpen(false)}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold gradient-primary text-primary-foreground"
+                          >
+                            Renovar assinatura
+                          </Link>
+                        )}
+                        <Link
+                          to="/contato-publico"
+                          onClick={() => setOpen(false)}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold border border-border/50 text-foreground hover:bg-secondary transition-colors"
+                        >
+                          <LifeBuoy className="w-3.5 h-3.5" /> Solicitar ajuda / suporte
+                        </Link>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">Sem dados disponíveis.</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="border-t border-border/30 p-2">
