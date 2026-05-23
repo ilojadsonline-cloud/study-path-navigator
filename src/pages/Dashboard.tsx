@@ -710,9 +710,10 @@ function KpiCard({ title, value, icon, delta, deltaLabel, sparkColor, sparkData 
   );
 }
 
-function DonutKpiCard({ title, value, icon, pct, pctLabel, subline, color }: {
+function DonutKpiCard({ title, value, icon, pct, pctLabel, subline, color, hint, ctaLabel, ctaHref }: {
   title: string; value: string; icon: React.ReactNode;
   pct: number; pctLabel: string; subline: string; color: string;
+  hint?: string; ctaLabel?: string | null; ctaHref?: string;
 }) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
@@ -736,6 +737,14 @@ function DonutKpiCard({ title, value, icon, pct, pctLabel, subline, color }: {
           <p className="text-[11px] text-muted-foreground mt-0.5">{subline}</p>
         </div>
       </div>
+      {hint && (
+        <p className="text-[10px] text-muted-foreground/80 mt-2 leading-snug">{hint}</p>
+      )}
+      {ctaLabel && ctaHref && (
+        <Link to={ctaHref} className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline">
+          <Sparkles className="w-3 h-3" />{ctaLabel}
+        </Link>
+      )}
     </motion.div>
   );
 }
