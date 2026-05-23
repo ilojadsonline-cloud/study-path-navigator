@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { RankingCard } from "@/components/dashboard/RankingCard";
 import { RankingConsentModal } from "@/components/dashboard/RankingConsentModal";
+import { getLocalStudyTimerSnapshot, type TimerState } from "@/hooks/useStudyTimer";
 import { useNavigate, Link } from "react-router-dom";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, Tooltip,
@@ -18,6 +19,7 @@ import {
 
 type DisciplinaProgress = { name: string; total: number; corretas: number };
 type AtividadeRecente = { text: string; time: string; icon: React.ReactNode; sortDate: Date };
+type StudySession = { id: number; duration_seconds: number; started_at: string | null; created_at: string | null };
 
 function localDateKey(d: Date | string): string {
   const dt = typeof d === "string" ? new Date(d) : d;
@@ -25,6 +27,59 @@ function localDateKey(d: Date | string): string {
   const m = String(dt.getMonth() + 1).padStart(2, "0");
   const day = String(dt.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function getStudySessionDate(session: Pick<StudySession, "started_at" | "created_at">): string | null {
+  return session.started_at || session.created_at || null;
+}
+
+function mergeLiveStudySession(sessions: StudySession[], live: TimerState | null): StudySession[] {
+  if (!live?.sessionId || !live.startedAt) return sessions;
+  const liveDelta = Math.max(0, Math.min(60, Math.floor((Date.now() - (live.lastTick || Date.now())) / 1000)));
+  const liveDuration = Math.max(0, Math.floor((live.elapsed || 0) + liveDelta));
+  let found = false;
+  const merged = sessions.map((session) => {
+    if (session.id !== live.sessionId) return session;
+    found = true;
+    return {
+      ...session,
+      started_at: session.started_at || live.startedAt,
+      created_at: session.created_at || live.startedAt,
+      duration_seconds: Math.max(session.duration_seconds || 0, liveDuration),
+    };
+  });
+  if (!found) {
+    merged.push({ id: live.sessionId, duration_seconds: liveDuration, started_at: live.startedAt, created_at: live.startedAt });
+  }
+  return merged;
+}
+
+function calculateStudyMetrics(sessions: StudySession[]) {
+  const todayKey = localDateKey(new Date());
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  const totalSec = sessions.reduce((s, x) => s + (x.duration_seconds || 0), 0);
+  const todaySec = sessions.filter((session) => {
+    const ts = getStudySessionDate(session);
+    return ts && localDateKey(ts) === todayKey;
+  }).reduce((a, b) => a + (b.duration_seconds || 0), 0);
+  const monthSec = sessions.filter((session) => {
+    const ts = getStudySessionDate(session);
+    return ts && new Date(ts) >= monthStart;
+  }).reduce((a, b) => a + (b.duration_seconds || 0), 0);
+
+  const byHour = Array.from({ length: 24 }, (_, h) => ({ h, v: 0 }));
+  sessions.filter((session) => {
+    const ts = getStudySessionDate(session);
+    return ts && localDateKey(ts) === todayKey;
+  }).forEach((session) => {
+    const ts = getStudySessionDate(session)!;
+    byHour[new Date(ts).getHours()].v += (session.duration_seconds || 0) / 60;
+  });
+
+  return { totalSec, todaySec, monthSec, byHour };
 }
 
 async function fetchAllRespostas(userId: string) {
@@ -94,6 +149,7 @@ const Dashboard = () => {
   const [studyByHour, setStudyByHour] = useState<{ h: number; v: number }[]>(
     Array.from({ length: 24 }, (_, h) => ({ h, v: 0 }))
   );
+  const [studySessions, setStudySessions] = useState<StudySession[]>([]);
   const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
 
   useEffect(() => {
@@ -188,27 +244,37 @@ const Dashboard = () => {
 
       // Study sessions
       const { data: sessions } = await supabase.from("study_sessions")
-        .select("duration_seconds, started_at, created_at").eq("user_id", user.id);
+        .select("id, duration_seconds, started_at, created_at").eq("user_id", user.id);
 
-      const sess = sessions || [];
+      const storedSessions = (sessions || []) as StudySession[];
+      const localTimer = getLocalStudyTimerSnapshot();
+      const currentLiveTimer = !localTimer.userId || localTimer.userId === user.id ? localTimer : null;
+      setStudySessions(storedSessions);
+      const sess = mergeLiveStudySession(storedSessions, currentLiveTimer);
       const totalSec = sess.reduce((s, x) => s + (x.duration_seconds || 0), 0);
       setHorasEstudoTotal(Math.round((totalSec / 3600) * 10) / 10);
 
       const todayKey = localDateKey(new Date());
-      const todaySec = sess.filter(s => s.started_at && localDateKey(s.started_at) === todayKey)
+      const todaySec = sess.filter(s => {
+        const ts = getStudySessionDate(s);
+        return ts && localDateKey(ts) === todayKey;
+      })
         .reduce((a, b) => a + (b.duration_seconds || 0), 0);
       setMinutosEstudoHoje(Math.round(todaySec / 60));
 
       const mesSec = sess.filter(s => {
-        const ts = s.started_at || (s as any).created_at;
+        const ts = getStudySessionDate(s);
         return ts && new Date(ts) >= monthStart;
       }).reduce((a, b) => a + (b.duration_seconds || 0), 0);
       setHorasMesAtual(Math.round((mesSec / 3600) * 10) / 10);
 
       // Distribuição por hora do dia (hoje)
       const byHour = Array.from({ length: 24 }, (_, h) => ({ h, v: 0 }));
-      sess.filter(s => s.started_at && localDateKey(s.started_at) === todayKey).forEach(s => {
-        const h = new Date(s.started_at).getHours();
+      sess.filter(s => {
+        const ts = getStudySessionDate(s);
+        return ts && localDateKey(ts) === todayKey;
+      }).forEach(s => {
+        const h = new Date(getStudySessionDate(s)!).getHours();
         byHour[h].v += (s.duration_seconds || 0) / 60;
       });
       setStudyByHour(byHour);
@@ -216,7 +282,10 @@ const Dashboard = () => {
       // Streak (dias consecutivos com login/sessão OU resposta)
       // Basta ter aberto a plataforma (sessão criada) — não exige duração mínima
       const activeDays = new Set<string>();
-      sess.forEach(s => { if (s.started_at) activeDays.add(localDateKey(s.started_at)); });
+      sess.forEach(s => {
+        const ts = getStudySessionDate(s);
+        if (ts) activeDays.add(localDateKey(ts));
+      });
       allRespostas.forEach(r => activeDays.add(localDateKey(r.created_at)));
       // Hoje sempre conta como ativo (usuário está logado vendo o dashboard)
       activeDays.add(localDateKey(new Date()));
@@ -294,18 +363,41 @@ const Dashboard = () => {
 
       // Simulado incompleto
       const { data: progressData } = await supabase
-        .from("simulado_progress" as any).select("*").eq("user_id", user.id).single();
+        .from("simulado_progress").select("*").eq("user_id", user.id).single();
       if (progressData) {
-        const p = progressData as any;
         let respostas: Record<string, number> = {};
-        try { respostas = typeof p.respostas === "string" ? JSON.parse(p.respostas) : p.respostas || {}; }
+        try { respostas = typeof progressData.respostas === "string" ? JSON.parse(progressData.respostas) : (progressData.respostas as Record<string, number>) || {}; }
         catch { respostas = {}; }
-        setIncompleteSimulado({ disciplina: p.disciplina, respondidas: Object.keys(respostas).length, total: p.total });
+        setIncompleteSimulado({ disciplina: progressData.disciplina, respondidas: Object.keys(respostas).length, total: progressData.total });
       }
 
       setLoading(false);
     })();
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const refreshLiveStudyProgress = () => {
+      const snapshot = getLocalStudyTimerSnapshot();
+      const currentLiveTimer = !snapshot.userId || snapshot.userId === user.id ? snapshot : null;
+      const mergedSessions = mergeLiveStudySession(studySessions, currentLiveTimer);
+      const metrics = calculateStudyMetrics(mergedSessions);
+      setHorasEstudoTotal(Math.round((metrics.totalSec / 3600) * 10) / 10);
+      setMinutosEstudoHoje(Math.round(metrics.todaySec / 60));
+      setHorasMesAtual(Math.round((metrics.monthSec / 3600) * 10) / 10);
+      setStudyByHour(metrics.byHour);
+    };
+
+    refreshLiveStudyProgress();
+    window.addEventListener("study-timer-updated", refreshLiveStudyProgress);
+    const interval = window.setInterval(refreshLiveStudyProgress, 15000);
+
+    return () => {
+      window.removeEventListener("study-timer-updated", refreshLiveStudyProgress);
+      window.clearInterval(interval);
+    };
+  }, [studySessions, user]);
 
   const taxaAcertos = totalRespondidas > 0 ? Math.round((totalCorretas / totalRespondidas) * 100) : 0;
   const totalErros = totalRespondidas - totalCorretas;
@@ -579,7 +671,7 @@ const Dashboard = () => {
                     <p className="text-lg font-bold text-warning leading-tight">
                       {dailyGoalHours.toFixed(1).replace(/\.0$/, "")}h de estudo
                     </p>
-                    <p className="text-[11px] text-muted-foreground mt-1">{minHojeFmt} concluídas hoje</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{minHojeFmt} de plataforma aberta hoje</p>
                     {cronogramaInfo ? (
                       <p className="text-[10px] text-primary/80 mt-1 truncate">
                         {cronogramaInfo.horasSemanais}h/sem • {cronogramaInfo.diasSemana.length} dias
