@@ -443,7 +443,10 @@ const Dashboard = () => {
                 icon={<Clock className="w-5 h-5" />}
                 pct={metaPctMensal}
                 pctLabel="da meta mensal"
-                subline={`Meta: ${metaMensal}h`}
+                subline={`Meta: ${metaMensal}h${cronogramaInfo ? "" : " (padrão)"}`}
+                hint="Conta tempo de plataforma aberta + resolução de questões"
+                ctaLabel={cronogramaInfo ? null : "Criar cronograma para meta personalizada"}
+                ctaHref="/cronograma"
                 color={COLORS.primary}
               />
               <KpiCard
