@@ -29,7 +29,9 @@ function loadState(): TimerState {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) return { ...emptyState(), ...JSON.parse(raw) };
-  } catch {}
+  } catch {
+    return emptyState();
+  }
   return emptyState();
 }
 
@@ -40,7 +42,9 @@ export function getLocalStudyTimerSnapshot(): TimerState {
 function saveState(state: TimerState) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(state));
-  } catch {}
+  } catch {
+    return;
+  }
 }
 
 function notifyTimerUpdated(state: TimerState) {
