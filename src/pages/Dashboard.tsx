@@ -35,7 +35,8 @@ function getStudySessionDate(session: Pick<StudySession, "started_at" | "created
 
 function mergeLiveStudySession(sessions: StudySession[], live: TimerState | null): StudySession[] {
   if (!live?.sessionId || !live.startedAt) return sessions;
-  const liveDuration = Math.max(0, Math.floor(live.elapsed || 0));
+  const liveDelta = Math.max(0, Math.min(60, Math.floor((Date.now() - (live.lastTick || Date.now())) / 1000)));
+  const liveDuration = Math.max(0, Math.floor((live.elapsed || 0) + liveDelta));
   let found = false;
   const merged = sessions.map((session) => {
     if (session.id !== live.sessionId) return session;
@@ -149,7 +150,6 @@ const Dashboard = () => {
     Array.from({ length: 24 }, (_, h) => ({ h, v: 0 }))
   );
   const [studySessions, setStudySessions] = useState<StudySession[]>([]);
-  const [liveStudyTimer, setLiveStudyTimer] = useState<TimerState | null>(() => getLocalStudyTimerSnapshot());
   const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
 
   useEffect(() => {
@@ -250,7 +250,6 @@ const Dashboard = () => {
       const localTimer = getLocalStudyTimerSnapshot();
       const currentLiveTimer = !localTimer.userId || localTimer.userId === user.id ? localTimer : null;
       setStudySessions(storedSessions);
-      setLiveStudyTimer(currentLiveTimer);
       const sess = mergeLiveStudySession(storedSessions, currentLiveTimer);
       const totalSec = sess.reduce((s, x) => s + (x.duration_seconds || 0), 0);
       setHorasEstudoTotal(Math.round((totalSec / 3600) * 10) / 10);
@@ -383,7 +382,6 @@ const Dashboard = () => {
     const refreshLiveStudyProgress = () => {
       const snapshot = getLocalStudyTimerSnapshot();
       const currentLiveTimer = !snapshot.userId || snapshot.userId === user.id ? snapshot : null;
-      setLiveStudyTimer(currentLiveTimer);
       const mergedSessions = mergeLiveStudySession(studySessions, currentLiveTimer);
       const metrics = calculateStudyMetrics(mergedSessions);
       setHorasEstudoTotal(Math.round((metrics.totalSec / 3600) * 10) / 10);
