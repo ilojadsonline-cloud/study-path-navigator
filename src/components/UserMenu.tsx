@@ -264,3 +264,12 @@ export function UserMenu({ initials }: UserMenuProps) {
     </div>
   );
 }
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium text-foreground text-right truncate max-w-[60%]">{value}</span>
+    </div>
+  );
+}
