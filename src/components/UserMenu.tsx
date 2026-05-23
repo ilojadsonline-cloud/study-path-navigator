@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Settings, Flag, CreditCard, LogOut, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { Settings, Flag, CreditCard, LogOut, CheckCircle, AlertTriangle, Clock, ChevronDown, Loader2, LifeBuoy, Ban } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface UserMenuProps {
   initials: string;
