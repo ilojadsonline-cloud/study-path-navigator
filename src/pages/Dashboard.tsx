@@ -188,7 +188,7 @@ const Dashboard = () => {
 
       // Study sessions
       const { data: sessions } = await supabase.from("study_sessions")
-        .select("duration_seconds, started_at").eq("user_id", user.id);
+        .select("duration_seconds, started_at, created_at").eq("user_id", user.id);
 
       const sess = sessions || [];
       const totalSec = sess.reduce((s, x) => s + (x.duration_seconds || 0), 0);
