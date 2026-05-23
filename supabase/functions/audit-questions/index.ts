@@ -219,8 +219,11 @@ function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_
   return isUniqueMax || isUniqueMin;
 }
 
-async function auditOne(q: Questao, legalText: string | null): Promise<AuditResult> {
-  const raw = await callDeepSeek(buildAuditPrompt(q, legalText));
+async function auditOne(q: Questao, legalText: string | null, userReports: string[] = []): Promise<AuditResult> {
+  const reportsBlock = userReports.length
+    ? `\n\nREPORTES DE USUÁRIOS SOBRE ESTA QUESTÃO (tratá-los como ALERTA OBRIGATÓRIO — investigue cada alegação contra o texto legal antes de aprovar):\n${userReports.map((m, i) => `[Reporte ${i + 1}] ${m}`).join("\n")}\n\nREGRA CRÍTICA: se qualquer reporte apontar gabarito errado, alternativa correta diferente, conteúdo invertido, ano/prazo/posto errados, e VOCÊ não tiver certeza absoluta (texto legal claríssimo + 100% de confiança), marque needs_human_review=true e NÃO auto-corrija. Se o reporte estiver certo conforme a lei, proponha o patch correto. Inclua um issue do tipo "reporte_usuario" descrevendo a verificação feita.\n`
+    : "";
+  const raw = await callDeepSeek(buildAuditPrompt(q, legalText) + reportsBlock);
   const parsed = safeJsonParse(raw);
   if (!parsed || typeof parsed !== "object") {
     return {
