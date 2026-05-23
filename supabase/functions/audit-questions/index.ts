@@ -734,6 +734,7 @@ serve(async (req) => {
         .eq("audit_status", Q_STATUS.PENDING)
         .limit(PAGE_Q);
       if (job.scope?.disciplinas?.length) qBuilder = qBuilder.in("disciplina", job.scope.disciplinas);
+      if (job.scope?.question_ids?.length) qBuilder = qBuilder.in("id", job.scope.question_ids);
       const { data: candidates, error: cErr } = await qBuilder;
       if (cErr || !candidates || candidates.length === 0) break;
       const candidateIds = (candidates as any[]).map((q) => q.id);
