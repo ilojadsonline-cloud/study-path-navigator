@@ -68,6 +68,21 @@ export function useStudyTimer() {
     if (!user) return;
 
     const state = stateRef.current;
+    const resetForNewSession = () => {
+      const now = Date.now();
+      state.sessionId = null;
+      state.elapsed = 0;
+      state.lastActive = now;
+      state.lastTick = now;
+      state.startedAt = null;
+      state.userId = user.id;
+      saveState(state);
+      notifyTimerUpdated(state);
+    };
+
+    if (state.userId !== user.id || !isSameLocalDay(state.startedAt)) {
+      resetForNewSession();
+    }
 
     // Start or resume session
     const initSession = async () => {
@@ -76,23 +91,35 @@ export function useStudyTimer() {
         // Check if session still exists
         const { data } = await supabase
           .from("study_sessions")
-          .select("id")
+          .select("id, started_at, duration_seconds")
           .eq("id", state.sessionId)
           .single();
-        if (data) return; // session still valid
+        if (data && isSameLocalDay(data.started_at)) {
+          state.startedAt = data.started_at;
+          state.elapsed = Math.max(state.elapsed, data.duration_seconds || 0);
+          state.lastTick = Date.now();
+          state.userId = user.id;
+          saveState(state);
+          notifyTimerUpdated(state);
+          return; // session still valid for today
+        }
       }
 
       // Create new session
       const { data, error } = await supabase
         .from("study_sessions")
         .insert({ user_id: user.id, duration_seconds: 0 })
-        .select("id")
+        .select("id, started_at")
         .single();
       if (!error && data) {
         state.sessionId = data.id;
         state.elapsed = 0;
         state.lastActive = Date.now();
+        state.lastTick = Date.now();
+        state.startedAt = data.started_at;
+        state.userId = user.id;
         saveState(state);
+        notifyTimerUpdated(state);
       }
     };
 
@@ -114,8 +141,11 @@ export function useStudyTimer() {
         return; // Don't count inactive time
       }
 
-      state.elapsed += INTERVAL_SECONDS;
+      const delta = Math.max(0, Math.min(INTERVAL_SECONDS, Math.floor((now - state.lastTick) / 1000) || INTERVAL_SECONDS));
+      state.elapsed += delta;
+      state.lastTick = now;
       saveState(state);
+      notifyTimerUpdated(state);
 
       await supabase
         .from("study_sessions")
