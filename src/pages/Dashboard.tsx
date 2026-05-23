@@ -363,13 +363,12 @@ const Dashboard = () => {
 
       // Simulado incompleto
       const { data: progressData } = await supabase
-        .from("simulado_progress" as any).select("*").eq("user_id", user.id).single();
+        .from("simulado_progress").select("*").eq("user_id", user.id).single();
       if (progressData) {
-        const p = progressData as any;
         let respostas: Record<string, number> = {};
-        try { respostas = typeof p.respostas === "string" ? JSON.parse(p.respostas) : p.respostas || {}; }
+        try { respostas = typeof progressData.respostas === "string" ? JSON.parse(progressData.respostas) : (progressData.respostas as Record<string, number>) || {}; }
         catch { respostas = {}; }
-        setIncompleteSimulado({ disciplina: p.disciplina, respondidas: Object.keys(respostas).length, total: p.total });
+        setIncompleteSimulado({ disciplina: progressData.disciplina, respondidas: Object.keys(respostas).length, total: progressData.total });
       }
 
       setLoading(false);
