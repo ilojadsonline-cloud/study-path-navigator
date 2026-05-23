@@ -302,7 +302,7 @@ const Simulados = () => {
     setFinished(false);
     setStarted(true);
     setLoading(false);
-  }, [disciplina, numQuestoes, user]);
+  }, [disciplinasSel, numQuestoes, user]);
 
   const reiniciarSimulado = () => {
     if (user) deleteProgress(user.id);
