@@ -122,6 +122,14 @@ export function useStudyTimer() {
     // Activity listeners for inactivity detection
     const activityEvents = ["mousedown", "keydown", "scroll", "touchstart", "mousemove"];
     activityEvents.forEach(evt => window.addEventListener(evt, markActive, { passive: true }));
+    const handleVisibilityChange = () => {
+      const now = Date.now();
+      state.lastActive = now;
+      state.lastTick = now;
+      saveState(state);
+      notifyTimerUpdated(state);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     // Tick every INTERVAL_SECONDS
     const interval = setInterval(async () => {
@@ -189,6 +197,7 @@ export function useStudyTimer() {
       clearInterval(interval);
       window.removeEventListener("beforeunload", handleUnload);
       activityEvents.forEach(evt => window.removeEventListener(evt, markActive));
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       // Final save on cleanup
       if (state.sessionId) {
         supabase
