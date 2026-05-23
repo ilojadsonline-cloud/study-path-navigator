@@ -672,7 +672,7 @@ const Dashboard = () => {
                     <p className="text-lg font-bold text-warning leading-tight">
                       {dailyGoalHours.toFixed(1).replace(/\.0$/, "")}h de estudo
                     </p>
-                    <p className="text-[11px] text-muted-foreground mt-1">{minHojeFmt} concluídas hoje</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{minHojeFmt} de plataforma aberta hoje</p>
                     {cronogramaInfo ? (
                       <p className="text-[10px] text-primary/80 mt-1 truncate">
                         {cronogramaInfo.horasSemanais}h/sem • {cronogramaInfo.diasSemana.length} dias
