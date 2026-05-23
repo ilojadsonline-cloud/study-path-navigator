@@ -322,7 +322,7 @@ const Simulados = () => {
       const acertos = stableSimulado.filter(q => selectedAnswer[q.id] === q.gabaritoShuffled).length;
       await supabase.from("simulados").insert({
         user_id: user.id,
-        disciplina,
+        disciplina: disciplinaForSave,
         questao_ids: stableSimulado.map(q => q.id),
         total: stableSimulado.length,
         acertos,
