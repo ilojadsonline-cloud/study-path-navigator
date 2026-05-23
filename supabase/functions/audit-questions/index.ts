@@ -219,8 +219,11 @@ function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_
   return isUniqueMax || isUniqueMin;
 }
 
-async function auditOne(q: Questao, legalText: string | null): Promise<AuditResult> {
-  const raw = await callDeepSeek(buildAuditPrompt(q, legalText));
+async function auditOne(q: Questao, legalText: string | null, userReports: string[] = []): Promise<AuditResult> {
+  const reportsBlock = userReports.length
+    ? `\n\nREPORTES DE USUÁRIOS SOBRE ESTA QUESTÃO (tratá-los como ALERTA OBRIGATÓRIO — investigue cada alegação contra o texto legal antes de aprovar):\n${userReports.map((m, i) => `[Reporte ${i + 1}] ${m}`).join("\n")}\n\nREGRA CRÍTICA: se qualquer reporte apontar gabarito errado, alternativa correta diferente, conteúdo invertido, ano/prazo/posto errados, e VOCÊ não tiver certeza absoluta (texto legal claríssimo + 100% de confiança), marque needs_human_review=true e NÃO auto-corrija. Se o reporte estiver certo conforme a lei, proponha o patch correto. Inclua um issue do tipo "reporte_usuario" descrevendo a verificação feita.\n`
+    : "";
+  const raw = await callDeepSeek(buildAuditPrompt(q, legalText) + reportsBlock);
   const parsed = safeJsonParse(raw);
   if (!parsed || typeof parsed !== "object") {
     return {
@@ -392,9 +395,19 @@ async function processQuestion(
     legalCache.set(q.disciplina, legal);
   }
 
+  // Reportes de usuários pendentes — sinal forte de defeito real.
+  const { data: repsData } = await supabase
+    .from("question_reports")
+    .select("motivo, status")
+    .eq("questao_id", q.id)
+    .in("status", ["pendente", "em_analise"])
+    .limit(10);
+  const userReports: string[] = (repsData ?? []).map((r: any) => String(r.motivo ?? "").trim()).filter(Boolean);
+  const hasUserReports = userReports.length > 0;
+
   let result: AuditResult;
   try {
-    result = await auditOne(q, legal);
+    result = await auditOne(q, legal, userReports);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     await supabase.from("question_audits").insert({
@@ -408,6 +421,25 @@ async function processQuestion(
     await setQuestionAuditStatus(supabase, q.id, Q_STATUS.MANUAL);
     return { status: "error", auto_fixed: false, flagged: false, deleted: false };
   }
+
+  // Endurecimento: qualquer reporte pendente impede aprovação silenciosa e
+  // restringe auto_fix a casos com altíssima confiança e baixo risco.
+  if (hasUserReports) {
+    if (!result.issues.some((i: any) => i?.type === "reporte_usuario")) {
+      result.issues.push({
+        type: "reporte_usuario",
+        severity: "high",
+        description: `Questão possui ${userReports.length} reporte(s) de usuário pendente(s) — exige verificação.`,
+      });
+    }
+    if (result.risk_level === "low") result.risk_level = "medium";
+    // Se a IA quer mexer no gabarito ou está abaixo de 0.95 → revisão humana.
+    const wantsGabaritoChange = result.proposed_patch && typeof (result.proposed_patch as any).gabarito === "number" && (result.proposed_patch as any).gabarito !== q.gabarito;
+    if (wantsGabaritoChange || result.confidence < 0.95) {
+      result.needs_human_review = true;
+    }
+  }
+
 
   // AUTO-DELETE: duplicada ou irrecuperável.
   const isDuplicate = result.issues.some((i: any) => i?.type === "duplicada");
@@ -475,6 +507,7 @@ async function processQuestion(
     "sem_correta",
     "texto_legal_desatualizado",
     "hierarquia_violada",
+    "reporte_usuario",
   ]);
   const hasHallucination = result.issues.some((i: any) => HALLUCINATION_TYPES.has(i?.type));
   if (hasHallucination) {
@@ -633,27 +666,48 @@ serve(async (req) => {
     }
 
     if (action === "start") {
-      const scope = {
+      // mode: 'all' | 'discipline' | 'unaudited' | 'reported'
+      const mode: "all" | "discipline" | "unaudited" | "reported" =
+        ["all", "discipline", "unaudited", "reported"].includes(body.mode) ? body.mode : "all";
+      const scope: any = {
+        mode,
         disciplinas: Array.isArray(body.disciplinas) ? body.disciplinas : null,
-        only_unaudited: body.only_unaudited !== false,
+        only_unaudited: mode === "unaudited",
         limit: Math.min(Number(body.limit ?? 200), 100000),
       };
 
-      // RESET V4: questões aprovadas ou auto-corrigidas voltam para 'pending'.
-      // Manual_review e admin_resolved ficam de fora.
-      let resetQ = supabase
-        .from("questoes")
-        .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
-        .in("audit_status", [Q_STATUS.APPROVED, Q_STATUS.AUTO_CORRECTED]);
-      if (scope.disciplinas?.length) resetQ = resetQ.in("disciplina", scope.disciplinas);
-      await resetQ;
+      if (mode === "reported") {
+        // Modo "reported": questões com reportes pendentes são forçadas à fila.
+        const { data: reps } = await supabase
+          .from("question_reports")
+          .select("questao_id")
+          .eq("status", "pendente")
+          .limit(100000);
+        const ids = Array.from(new Set((reps ?? []).map((r: any) => r.questao_id))).filter(Boolean);
+        scope.question_ids = ids;
+        if (ids.length) {
+          await supabase
+            .from("questoes")
+            .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
+            .in("id", ids);
+        }
+      } else if (mode === "all" || mode === "discipline") {
+        // RESET amplo: APROVADAS, AUTO_CORRIGIDAS e RESOLVIDAS pelo admin voltam para 'pending'.
+        let resetQ = supabase
+          .from("questoes")
+          .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
+          .in("audit_status", [Q_STATUS.APPROVED, Q_STATUS.AUTO_CORRECTED, Q_STATUS.ADMIN_RESOLVED]);
+        if (scope.disciplinas?.length) resetQ = resetQ.in("disciplina", scope.disciplinas);
+        await resetQ;
+      }
+      // mode === "unaudited": não altera status; loop filtra por only_unaudited.
 
-      // Conta total elegível (somente pending — pula manual_review/admin_resolved/deleted).
       let countQ = supabase
         .from("questoes")
         .select("id", { count: "exact", head: true })
         .eq("audit_status", Q_STATUS.PENDING);
       if (scope.disciplinas?.length) countQ = countQ.in("disciplina", scope.disciplinas);
+      if (scope.question_ids?.length) countQ = countQ.in("id", scope.question_ids);
       const { count } = await countQ;
 
       const { data: job } = await supabase.from("audit_jobs").insert({
@@ -713,6 +767,7 @@ serve(async (req) => {
         .eq("audit_status", Q_STATUS.PENDING)
         .limit(PAGE_Q);
       if (job.scope?.disciplinas?.length) qBuilder = qBuilder.in("disciplina", job.scope.disciplinas);
+      if (job.scope?.question_ids?.length) qBuilder = qBuilder.in("id", job.scope.question_ids);
       const { data: candidates, error: cErr } = await qBuilder;
       if (cErr || !candidates || candidates.length === 0) break;
       const candidateIds = (candidates as any[]).map((q) => q.id);
