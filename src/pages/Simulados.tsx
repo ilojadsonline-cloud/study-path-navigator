@@ -503,15 +503,51 @@ const Simulados = () => {
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">Disciplina</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {disciplinasOpcoes.map((d) => (
-                <button key={d} onClick={() => setDisciplina(d)}
-                  className={`px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                    disciplina === d ? "gradient-primary text-primary-foreground glow-primary" : "bg-secondary hover:bg-primary/15 hover:text-primary"
-                  }`}>{d}</button>
-              ))}
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium">Disciplinas</label>
+              <span className="text-[11px] text-muted-foreground">
+                {disciplinasSel.length === 0 ? "Todas selecionadas" : `${disciplinasSel.length} selecionada(s)`}
+              </span>
             </div>
+            <div className="flex gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => setDisciplinasSel([])}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${disciplinasSel.length === 0 ? "gradient-primary text-primary-foreground glow-primary" : "bg-secondary hover:bg-primary/15"}`}
+              >Todas</button>
+              <button
+                type="button"
+                onClick={() => setDisciplinasSel([...DISCIPLINAS_OFICIAIS])}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary hover:bg-primary/15"
+              >Marcar todas</button>
+              <button
+                type="button"
+                onClick={() => setDisciplinasSel([])}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary hover:bg-destructive/20"
+              >Limpar</button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {DISCIPLINAS_OFICIAIS.map((d) => {
+                const active = disciplinasSel.includes(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() =>
+                      setDisciplinasSel(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
+                    }
+                    className={`px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-200 text-left ${
+                      active ? "gradient-primary text-primary-foreground glow-primary" : "bg-secondary hover:bg-primary/15 hover:text-primary"
+                    }`}
+                  >
+                    <span className="inline-block w-3 mr-1">{active ? "✓" : "·"}</span>{d}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Selecione 2 ou mais para personalizar. Vazio = todas as disciplinas (distribuição proporcional).
+            </p>
           </div>
 
           <div>
@@ -527,18 +563,18 @@ const Simulados = () => {
                   }`}>{n}</button>
               ))}
             </div>
-            {disciplina === "Todas as Disciplinas" && (
-              <div className="mt-3 p-3 rounded-lg bg-secondary/40 border border-border/50">
-                <p className="text-[11px] font-semibold text-muted-foreground mb-2">Distribuição proporcional (20% por disciplina):</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {Object.entries(distribuirProporcional(numQuestoes, DISCIPLINAS_OFICIAIS)).map(([d, q]) => (
-                    <Badge key={d} variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
-                      {d}: {q}
-                    </Badge>
-                  ))}
-                </div>
+            <div className="mt-3 p-3 rounded-lg bg-secondary/40 border border-border/50">
+              <p className="text-[11px] font-semibold text-muted-foreground mb-2">
+                Distribuição proporcional entre {disciplinasAlvo.length} disciplina(s):
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {Object.entries(distribuirProporcional(numQuestoes, disciplinasAlvo)).map(([d, q]) => (
+                  <Badge key={d} variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                    {d}: {q}
+                  </Badge>
+                ))}
               </div>
-            )}
+            </div>
           </div>
 
 
