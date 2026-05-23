@@ -247,8 +247,11 @@ const Dashboard = () => {
         .select("id, duration_seconds, started_at, created_at").eq("user_id", user.id);
 
       const storedSessions = (sessions || []) as StudySession[];
+      const localTimer = getLocalStudyTimerSnapshot();
+      const currentLiveTimer = !localTimer.userId || localTimer.userId === user.id ? localTimer : null;
       setStudySessions(storedSessions);
-      const sess = mergeLiveStudySession(storedSessions, getLocalStudyTimerSnapshot());
+      setLiveStudyTimer(currentLiveTimer);
+      const sess = mergeLiveStudySession(storedSessions, currentLiveTimer);
       const totalSec = sess.reduce((s, x) => s + (x.duration_seconds || 0), 0);
       setHorasEstudoTotal(Math.round((totalSec / 3600) * 10) / 10);
 
@@ -373,6 +376,31 @@ const Dashboard = () => {
       setLoading(false);
     })();
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const refreshLiveStudyProgress = () => {
+      const snapshot = getLocalStudyTimerSnapshot();
+      const currentLiveTimer = !snapshot.userId || snapshot.userId === user.id ? snapshot : null;
+      setLiveStudyTimer(currentLiveTimer);
+      const mergedSessions = mergeLiveStudySession(studySessions, currentLiveTimer);
+      const metrics = calculateStudyMetrics(mergedSessions);
+      setHorasEstudoTotal(Math.round((metrics.totalSec / 3600) * 10) / 10);
+      setMinutosEstudoHoje(Math.round(metrics.todaySec / 60));
+      setHorasMesAtual(Math.round((metrics.monthSec / 3600) * 10) / 10);
+      setStudyByHour(metrics.byHour);
+    };
+
+    refreshLiveStudyProgress();
+    window.addEventListener("study-timer-updated", refreshLiveStudyProgress);
+    const interval = window.setInterval(refreshLiveStudyProgress, 15000);
+
+    return () => {
+      window.removeEventListener("study-timer-updated", refreshLiveStudyProgress);
+      window.clearInterval(interval);
+    };
+  }, [studySessions, user]);
 
   const taxaAcertos = totalRespondidas > 0 ? Math.round((totalCorretas / totalRespondidas) * 100) : 0;
   const totalErros = totalRespondidas - totalCorretas;
