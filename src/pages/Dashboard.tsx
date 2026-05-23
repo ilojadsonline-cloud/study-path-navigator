@@ -199,8 +199,10 @@ const Dashboard = () => {
         .reduce((a, b) => a + (b.duration_seconds || 0), 0);
       setMinutosEstudoHoje(Math.round(todaySec / 60));
 
-      const mesSec = sess.filter(s => new Date(s.started_at) >= monthStart)
-        .reduce((a, b) => a + (b.duration_seconds || 0), 0);
+      const mesSec = sess.filter(s => {
+        const ts = s.started_at || (s as any).created_at;
+        return ts && new Date(ts) >= monthStart;
+      }).reduce((a, b) => a + (b.duration_seconds || 0), 0);
       setHorasMesAtual(Math.round((mesSec / 3600) * 10) / 10);
 
       // Distribuição por hora do dia (hoje)
