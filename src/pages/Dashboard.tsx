@@ -53,6 +53,34 @@ function mergeLiveStudySession(sessions: StudySession[], live: TimerState | null
   return merged;
 }
 
+function calculateStudyMetrics(sessions: StudySession[]) {
+  const todayKey = localDateKey(new Date());
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  const totalSec = sessions.reduce((s, x) => s + (x.duration_seconds || 0), 0);
+  const todaySec = sessions.filter((session) => {
+    const ts = getStudySessionDate(session);
+    return ts && localDateKey(ts) === todayKey;
+  }).reduce((a, b) => a + (b.duration_seconds || 0), 0);
+  const monthSec = sessions.filter((session) => {
+    const ts = getStudySessionDate(session);
+    return ts && new Date(ts) >= monthStart;
+  }).reduce((a, b) => a + (b.duration_seconds || 0), 0);
+
+  const byHour = Array.from({ length: 24 }, (_, h) => ({ h, v: 0 }));
+  sessions.filter((session) => {
+    const ts = getStudySessionDate(session);
+    return ts && localDateKey(ts) === todayKey;
+  }).forEach((session) => {
+    const ts = getStudySessionDate(session)!;
+    byHour[new Date(ts).getHours()].v += (session.duration_seconds || 0) / 60;
+  });
+
+  return { totalSec, todaySec, monthSec, byHour };
+}
+
 async function fetchAllRespostas(userId: string) {
   const PAGE = 1000;
   let all: { id: number; correta: boolean; created_at: string; questao_id: number }[] = [];
