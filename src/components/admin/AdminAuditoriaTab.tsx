@@ -640,37 +640,70 @@ export function AdminAuditoriaTab() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-muted-foreground">Disciplinas a auditar (vazio = todas):</p>
-              <Button size="sm" variant="ghost" onClick={loadDisciplinas} className="h-6 text-xs">
-                <RefreshCw className="w-3 h-3 mr-1" /> Atualizar
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {disciplinas.length === 0 && (
-                <span className="text-xs text-muted-foreground italic">Carregando disciplinas...</span>
-              )}
-              {disciplinas.map(d => (
-                <Badge
-                  key={d}
-                  variant={selDisc.includes(d) ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() =>
-                    setSelDisc(s => s.includes(d) ? s.filter(x => x !== d) : [...s, d])
-                  }
-                >{d}</Badge>
+          {/* ESCOPO da nova auditoria — admin define exatamente o que vai rodar */}
+          <div className="space-y-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
+            <p className="text-sm font-semibold text-primary">Escopo desta auditoria</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {([
+                { key: "all", label: "🌐 Todo o banco", desc: "Reauditar TODAS as questões (inclusive aprovadas, auto-corrigidas e marcadas como resolvidas)." },
+                { key: "discipline", label: "📚 Disciplina(s) específica(s)", desc: "Reauditar todas as questões da(s) disciplina(s) selecionada(s) abaixo." },
+                { key: "unaudited", label: "🆕 Apenas nunca revisadas", desc: "Pular questões já auditadas alguma vez; processar somente as novinhas." },
+                { key: "reported", label: "🚨 Apenas com reportes pendentes", desc: "Forçar reauditoria das questões reportadas por usuários (com regra extra anti-erro)." },
+              ] as const).map(opt => (
+                <label
+                  key={opt.key}
+                  className={`flex items-start gap-2 p-2 rounded cursor-pointer border ${scopeMode === opt.key ? "border-primary bg-primary/10" : "border-border/40 hover:border-primary/40"}`}
+                >
+                  <input
+                    type="radio"
+                    name="scope-mode"
+                    className="mt-1"
+                    checked={scopeMode === opt.key}
+                    onChange={() => setScopeMode(opt.key)}
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{opt.label}</p>
+                    <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                  </div>
+                </label>
               ))}
             </div>
           </div>
+
+          {(scopeMode === "all" || scopeMode === "discipline") && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">
+                  {scopeMode === "discipline"
+                    ? "Selecione UMA ou MAIS disciplinas (obrigatório):"
+                    : "Filtrar por disciplina (opcional — vazio = todas):"}
+                </p>
+                <Button size="sm" variant="ghost" onClick={loadDisciplinas} className="h-6 text-xs">
+                  <RefreshCw className="w-3 h-3 mr-1" /> Atualizar
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {disciplinas.length === 0 && (
+                  <span className="text-xs text-muted-foreground italic">Carregando disciplinas...</span>
+                )}
+                {disciplinas.map(d => (
+                  <Badge
+                    key={d}
+                    variant={selDisc.includes(d) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() =>
+                      setSelDisc(s => s.includes(d) ? s.filter(x => x !== d) : [...s, d])
+                    }
+                  >{d}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-4 flex-wrap">
             <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={onlyUnaudited} onCheckedChange={(v) => setOnlyUnaudited(!!v)} />
-              Auditar apenas questões nunca revisadas
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              Quantas questões:
-              <Input type="number" value={limit} onChange={e => setLimit(Number(e.target.value))} className="w-24" />
+              Limite de questões nesta rodada:
+              <Input type="number" value={limit} onChange={e => setLimit(Number(e.target.value))} className="w-28" />
             </label>
           </div>
           <div className="flex gap-2">
