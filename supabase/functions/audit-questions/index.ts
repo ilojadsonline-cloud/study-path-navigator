@@ -507,6 +507,7 @@ async function processQuestion(
     "sem_correta",
     "texto_legal_desatualizado",
     "hierarquia_violada",
+    "reporte_usuario",
   ]);
   const hasHallucination = result.issues.some((i: any) => HALLUCINATION_TYPES.has(i?.type));
   if (hasHallucination) {
