@@ -326,10 +326,10 @@ const Dashboard = () => {
     : [{ name: "Vazio", value: 1 }];
 
   const horasFmt = useMemo(() => {
-    const h = Math.floor(horasEstudoTotal);
-    const m = Math.round((horasEstudoTotal - h) * 60);
+    const h = Math.floor(horasMesAtual);
+    const m = Math.round((horasMesAtual - h) * 60);
     return `${h}h ${m.toString().padStart(2, "0")}m`;
-  }, [horasEstudoTotal]);
+  }, [horasMesAtual]);
 
   const minHojeFmt = `${Math.floor(minutosEstudoHoje / 60)}h ${(minutosEstudoHoje % 60).toString().padStart(2, "0")}m`;
 
