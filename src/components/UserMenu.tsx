@@ -9,9 +9,25 @@ interface UserMenuProps {
   initials: string;
 }
 
+interface SubDetails {
+  status: string;
+  paymentMethod: string | null;
+  planName: string;
+  planPrice: string;
+  endDate: string | null;
+  nextBillingDate: string | null;
+  canCancel: boolean;
+  cancelledAt: string | null;
+  isBlocked: boolean;
+}
+
 export function UserMenu({ initials }: UserMenuProps) {
   const [open, setOpen] = useState(false);
-  const { profile, signOut, subscribed, subscriptionEnd, isTrial, trialEndsAt, trialExpired } = useAuth();
+  const [subOpen, setSubOpen] = useState(false);
+  const [subDetails, setSubDetails] = useState<SubDetails | null>(null);
+  const [subLoading, setSubLoading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const { profile, signOut, subscribed, subscriptionEnd, isTrial, trialEndsAt, trialExpired, checkSubscription } = useAuth();
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -23,6 +39,42 @@ export function UserMenu({ initials }: UserMenuProps) {
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
+
+  const loadSubDetails = async () => {
+    setSubLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("subscription-details");
+      if (error) throw error;
+      setSubDetails(data as SubDetails);
+    } catch (err: any) {
+      toast.error("Não foi possível carregar dados da assinatura");
+    } finally {
+      setSubLoading(false);
+    }
+  };
+
+  const toggleSubPanel = () => {
+    const next = !subOpen;
+    setSubOpen(next);
+    if (next && !subDetails) loadSubDetails();
+  };
+
+  const handleCancel = async () => {
+    if (!confirm("Confirma o cancelamento? Você manterá acesso até o final do período já pago.")) return;
+    setCancelling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cancel-subscription");
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Falha ao cancelar");
+      toast.success(data.message || "Assinatura cancelada");
+      await loadSubDetails();
+      await checkSubscription();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao cancelar assinatura");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const handleLogout = async () => {
     setOpen(false);
