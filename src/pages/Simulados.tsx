@@ -369,7 +369,7 @@ const Simulados = () => {
                 <h1 className="text-lg sm:text-xl font-bold">
                   <span className="text-gradient-primary">Simulado</span>
                 </h1>
-                <p className="text-xs text-muted-foreground truncate">{disciplina} • {stableSimulado.length} questões</p>
+                <p className="text-xs text-muted-foreground truncate">{disciplinaLabel} • {stableSimulado.length} questões</p>
               </div>
             </div>
             <div className="flex items-center justify-between sm:justify-end gap-3">
