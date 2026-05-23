@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 const INTERVAL_SECONDS = 60;
-const INACTIVITY_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
 const LS_KEY = "study_timer_state";
 
 export interface TimerState {
@@ -52,15 +51,10 @@ function notifyTimerUpdated(state: TimerState) {
 export function useStudyTimer() {
   const { user } = useAuth();
   const stateRef = useRef<TimerState>(loadState());
-  const pausedRef = useRef(false);
 
   const markActive = useCallback(() => {
     const now = Date.now();
     stateRef.current.lastActive = now;
-    if (pausedRef.current) {
-      pausedRef.current = false;
-      stateRef.current.lastTick = now;
-    }
     saveState(stateRef.current);
   }, []);
 
@@ -139,11 +133,10 @@ export function useStudyTimer() {
       if (!state.sessionId) return;
 
       const now = Date.now();
-      const inactive = now - state.lastActive > INACTIVITY_LIMIT_MS;
-
-      if (inactive) {
-        pausedRef.current = true;
-        return; // Don't count inactive time
+      if (document.hidden) {
+        state.lastTick = now;
+        saveState(state);
+        return; // Conta plataforma aberta/visível, sem acumular quando a aba está em segundo plano
       }
 
       const delta = Math.max(0, Math.min(INTERVAL_SECONDS, Math.floor((now - state.lastTick) / 1000) || INTERVAL_SECONDS));
@@ -162,7 +155,7 @@ export function useStudyTimer() {
     const handleUnload = () => {
       if (!state.sessionId) return;
       const now = Date.now();
-      if (now - state.lastActive <= INACTIVITY_LIMIT_MS) {
+      if (!document.hidden) {
         state.elapsed += Math.max(0, Math.min(INTERVAL_SECONDS, Math.floor((now - state.lastTick) / 1000)));
         state.lastTick = now;
       }
