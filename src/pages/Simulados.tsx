@@ -191,7 +191,7 @@ const Simulados = () => {
     saveTimeoutRef.current = setTimeout(() => {
       saveProgress(
         user.id,
-        disciplina,
+        disciplinaForSave,
         simulado.map(q => q.id),
         selectedAnswer,
         simulado.length
