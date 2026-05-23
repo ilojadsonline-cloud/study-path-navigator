@@ -100,7 +100,14 @@ async function loadProgress(userId: string) {
 const Simulados = () => {
   const { user } = useAuth();
   const [numQuestoes, setNumQuestoes] = useState<number>(20);
-  const [disciplina, setDisciplina] = useState("Todas as Disciplinas");
+  const [disciplinasSel, setDisciplinasSel] = useState<string[]>([]); // [] = Todas
+  const disciplinasAlvo = disciplinasSel.length === 0 ? DISCIPLINAS_OFICIAIS : disciplinasSel;
+  const disciplinaLabel = disciplinasSel.length === 0
+    ? "Todas as Disciplinas"
+    : disciplinasSel.length === 1
+      ? disciplinasSel[0]
+      : `${disciplinasSel.length} disciplinas selecionadas`;
+  const disciplinaForSave = disciplinasSel.length === 0 ? "Todas as Disciplinas" : disciplinasSel.join("|");
   const simuladoRef = useRef<QuestaoSimulado[]>([]);
   const [simulado, setSimulado] = useState<QuestaoSimulado[]>([]);
   const [loading, setLoading] = useState(false);
@@ -160,7 +167,11 @@ const Simulados = () => {
       simuladoRef.current = questoes;
       setSimulado(questoes);
       setSelectedAnswer(savedAnswers);
-      setDisciplina(progress.disciplina || "Todas as Disciplinas");
+      const savedLabel = progress.disciplina || "Todas as Disciplinas";
+      if (savedLabel === "Todas as Disciplinas") setDisciplinasSel([]);
+      else if (savedLabel.includes("|")) setDisciplinasSel(savedLabel.split("|").filter(Boolean));
+      else if (DISCIPLINAS_OFICIAIS.includes(savedLabel)) setDisciplinasSel([savedLabel]);
+      else setDisciplinasSel([]);
       setStarted(true);
       setResumeLoading(false);
       toast.info("Simulado incompleto restaurado!");
@@ -180,7 +191,7 @@ const Simulados = () => {
     saveTimeoutRef.current = setTimeout(() => {
       saveProgress(
         user.id,
-        disciplina,
+        disciplinaForSave,
         simulado.map(q => q.id),
         selectedAnswer,
         simulado.length
@@ -190,7 +201,7 @@ const Simulados = () => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [selectedAnswer, user, started, finished, simulado, disciplina]);
+  }, [selectedAnswer, user, started, finished, simulado, disciplinaForSave]);
 
   // ─── Beforeunload warning ───
   useEffect(() => {
@@ -222,11 +233,9 @@ const Simulados = () => {
       if (resp) respondidasIds = new Set(resp.map((r: any) => r.questao_id));
     }
 
-    const isAll = disciplina === "Todas as Disciplinas";
-    const disciplinasAlvo = isAll ? DISCIPLINAS_OFICIAIS : [disciplina];
-    const distribuicao = isAll
-      ? distribuirProporcional(total, DISCIPLINAS_OFICIAIS)
-      : { [disciplina]: total };
+    const isAll = disciplinasSel.length === 0;
+    const alvo = disciplinasAlvo; // [] -> todas; senão as selecionadas
+    const distribuicao = distribuirProporcional(total, alvo);
 
     // Single query for all target disciplines (optimized, selecting only needed cols)
     const { data, error } = await supabase
@@ -293,7 +302,7 @@ const Simulados = () => {
     setFinished(false);
     setStarted(true);
     setLoading(false);
-  }, [disciplina, numQuestoes, user]);
+  }, [disciplinasSel, numQuestoes, user]);
 
   const reiniciarSimulado = () => {
     if (user) deleteProgress(user.id);
@@ -313,14 +322,14 @@ const Simulados = () => {
       const acertos = stableSimulado.filter(q => selectedAnswer[q.id] === q.gabaritoShuffled).length;
       await supabase.from("simulados").insert({
         user_id: user.id,
-        disciplina,
+        disciplina: disciplinaForSave,
         questao_ids: stableSimulado.map(q => q.id),
         total: stableSimulado.length,
         acertos,
         finalizado: true,
       });
     }
-  }, [stableSimulado, selectedAnswer, user, disciplina]);
+  }, [stableSimulado, selectedAnswer, user, disciplinaForSave]);
 
   const voltarParaConfig = useCallback(() => {
     if (user && !finished) deleteProgress(user.id);
@@ -360,7 +369,7 @@ const Simulados = () => {
                 <h1 className="text-lg sm:text-xl font-bold">
                   <span className="text-gradient-primary">Simulado</span>
                 </h1>
-                <p className="text-xs text-muted-foreground truncate">{disciplina} • {stableSimulado.length} questões</p>
+                <p className="text-xs text-muted-foreground truncate">{disciplinaLabel} • {stableSimulado.length} questões</p>
               </div>
             </div>
             <div className="flex items-center justify-between sm:justify-end gap-3">
@@ -494,15 +503,51 @@ const Simulados = () => {
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">Disciplina</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {disciplinasOpcoes.map((d) => (
-                <button key={d} onClick={() => setDisciplina(d)}
-                  className={`px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                    disciplina === d ? "gradient-primary text-primary-foreground glow-primary" : "bg-secondary hover:bg-primary/15 hover:text-primary"
-                  }`}>{d}</button>
-              ))}
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium">Disciplinas</label>
+              <span className="text-[11px] text-muted-foreground">
+                {disciplinasSel.length === 0 ? "Todas selecionadas" : `${disciplinasSel.length} selecionada(s)`}
+              </span>
             </div>
+            <div className="flex gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => setDisciplinasSel([])}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${disciplinasSel.length === 0 ? "gradient-primary text-primary-foreground glow-primary" : "bg-secondary hover:bg-primary/15"}`}
+              >Todas</button>
+              <button
+                type="button"
+                onClick={() => setDisciplinasSel([...DISCIPLINAS_OFICIAIS])}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary hover:bg-primary/15"
+              >Marcar todas</button>
+              <button
+                type="button"
+                onClick={() => setDisciplinasSel([])}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary hover:bg-destructive/20"
+              >Limpar</button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {DISCIPLINAS_OFICIAIS.map((d) => {
+                const active = disciplinasSel.includes(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() =>
+                      setDisciplinasSel(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
+                    }
+                    className={`px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-200 text-left ${
+                      active ? "gradient-primary text-primary-foreground glow-primary" : "bg-secondary hover:bg-primary/15 hover:text-primary"
+                    }`}
+                  >
+                    <span className="inline-block w-3 mr-1">{active ? "✓" : "·"}</span>{d}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Selecione 2 ou mais para personalizar. Vazio = todas as disciplinas (distribuição proporcional).
+            </p>
           </div>
 
           <div>
@@ -518,18 +563,18 @@ const Simulados = () => {
                   }`}>{n}</button>
               ))}
             </div>
-            {disciplina === "Todas as Disciplinas" && (
-              <div className="mt-3 p-3 rounded-lg bg-secondary/40 border border-border/50">
-                <p className="text-[11px] font-semibold text-muted-foreground mb-2">Distribuição proporcional (20% por disciplina):</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {Object.entries(distribuirProporcional(numQuestoes, DISCIPLINAS_OFICIAIS)).map(([d, q]) => (
-                    <Badge key={d} variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
-                      {d}: {q}
-                    </Badge>
-                  ))}
-                </div>
+            <div className="mt-3 p-3 rounded-lg bg-secondary/40 border border-border/50">
+              <p className="text-[11px] font-semibold text-muted-foreground mb-2">
+                Distribuição proporcional entre {disciplinasAlvo.length} disciplina(s):
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {Object.entries(distribuirProporcional(numQuestoes, disciplinasAlvo)).map(([d, q]) => (
+                  <Badge key={d} variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                    {d}: {q}
+                  </Badge>
+                ))}
               </div>
-            )}
+            </div>
           </div>
 
 
