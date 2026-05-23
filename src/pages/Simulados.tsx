@@ -166,7 +166,11 @@ const Simulados = () => {
       simuladoRef.current = questoes;
       setSimulado(questoes);
       setSelectedAnswer(savedAnswers);
-      setDisciplina(progress.disciplina || "Todas as Disciplinas");
+      const savedLabel = progress.disciplina || "Todas as Disciplinas";
+      if (savedLabel === "Todas as Disciplinas") setDisciplinasSel([]);
+      else if (savedLabel.includes("|")) setDisciplinasSel(savedLabel.split("|").filter(Boolean));
+      else if (DISCIPLINAS_OFICIAIS.includes(savedLabel)) setDisciplinasSel([savedLabel]);
+      else setDisciplinasSel([]);
       setStarted(true);
       setResumeLoading(false);
       toast.info("Simulado incompleto restaurado!");
