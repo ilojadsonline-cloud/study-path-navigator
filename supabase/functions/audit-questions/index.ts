@@ -69,6 +69,40 @@ type AuditResult = {
   techniques_used: string[];
 };
 
+type ArticleBlock = { artNum: string; text: string; normText: string };
+
+function normalizeLegalText(text: unknown): string {
+  return String(text ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[§º°ª.,;:!?()\[\]\-–—""''\"\']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseArticleBlocks(lawText: string): ArticleBlock[] {
+  const positions: Array<{ num: string; pos: number }> = [];
+  const re = /\bArt\.?\s*(\d+)(?:º|°|o)?\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(lawText)) !== null) {
+    positions.push({ num: match[1], pos: match.index });
+  }
+  return positions.map((p, idx) => {
+    const end = idx + 1 < positions.length ? positions[idx + 1].pos : lawText.length;
+    const text = lawText.slice(p.pos, end).trim();
+    return { artNum: p.num, text, normText: normalizeLegalText(text) };
+  });
+}
+
+function extractArticleNumbers(text: unknown): string[] {
+  const out = new Set<string>();
+  const re = /\b(?:Art\.?|artigo)\s*(\d+)(?:º|°|o)?\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(String(text ?? ""))) !== null) out.add(match[1]);
+  return [...out];
+}
+
 function stripThinkTags(s: string): string {
   return s.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
 }
