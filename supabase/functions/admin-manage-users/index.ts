@@ -392,10 +392,13 @@ serve(async (req) => {
 
     // ── UPDATE QUESTION ──
     if (action === "update_question") {
-      const { question_id, updates } = params;
-      if (!question_id || !updates) throw new Error("question_id e updates são obrigatórios");
+      const { question_id, question_ids, updates } = params;
+      const ids: any[] = Array.isArray(question_ids) && question_ids.length > 0
+        ? question_ids
+        : (question_id ? [question_id] : []);
+      if (ids.length === 0 || !updates) throw new Error("question_id(s) e updates são obrigatórios");
 
-      const allowed = ["enunciado", "alt_a", "alt_b", "alt_c", "alt_d", "alt_e", "gabarito", "comentario", "disciplina", "assunto", "dificuldade"];
+      const allowed = ["enunciado", "alt_a", "alt_b", "alt_c", "alt_d", "alt_e", "gabarito", "comentario", "disciplina", "assunto", "dificuldade", "audit_status", "audit_status_updated_at", "audit_techniques", "artigo_principal", "assinatura_semantica"];
       const safeUpdates: Record<string, unknown> = {};
       for (const key of allowed) {
         if (key in updates) safeUpdates[key] = updates[key];
@@ -403,10 +406,10 @@ serve(async (req) => {
 
       if (Object.keys(safeUpdates).length === 0) throw new Error("Nenhum campo válido para atualizar");
 
-      const { error } = await supabaseAdmin.from("questoes").update(safeUpdates).eq("id", question_id);
+      const { error } = await supabaseAdmin.from("questoes").update(safeUpdates).in("id", ids);
       if (error) throw new Error(`Erro ao atualizar questão: ${error.message}`);
 
-      return new Response(JSON.stringify({ success: true }), {
+      return new Response(JSON.stringify({ success: true, updated: ids.length }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

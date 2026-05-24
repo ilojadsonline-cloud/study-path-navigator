@@ -272,9 +272,23 @@ export function AdminAuditoriaTab() {
     toast.success(`${data?.reset ?? 0} questão(ões) liberadas para reauditoria.`);
   }
 
+  // Atualiza questoes via edge function (RLS bloqueia UPDATE direto do client).
+  async function updateQuestao(
+    target: number | number[],
+    updates: Record<string, unknown>,
+  ): Promise<{ error: { message: string } | null }> {
+    const body: any = { action: "update_question", updates };
+    if (Array.isArray(target)) body.question_ids = target;
+    else body.question_id = target;
+    const { data, error } = await supabase.functions.invoke("admin-manage-users", { body });
+    if (error) return { error: { message: error.message } };
+    if (data?.error) return { error: { message: data.error } };
+    return { error: null };
+  }
+
   async function markResolved(a: AuditRow) {
     await supabase.from("question_audits").update({ status: "approved", ai_summary: "Resolvida pelo admin" }).eq("id", a.id);
-    await supabase.from("questoes").update({ audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() }).eq("id", a.questao_id);
+    await updateQuestao(a.questao_id, { audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() });
     await closeSiblingAudits(a.questao_id, a.id);
     removeFromListIfResolved(a.id, "approved");
     setDetail(null); setQuestao(null); setForm(null);
@@ -325,7 +339,7 @@ export function AdminAuditoriaTab() {
       const g = Number(patch.gabarito);
       if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
     }
-    const { error: upErr } = await supabase.from("questoes").update(patch).eq("id", a.questao_id);
+    const { error: upErr } = await updateQuestao(a.questao_id, patch);
     if (upErr) { toast.error("Falha ao atualizar questão: " + upErr.message); return; }
     await supabase.from("question_audits").update({
       status: "auto_fixed",
@@ -374,7 +388,7 @@ export function AdminAuditoriaTab() {
             const g = Number(patch.gabarito);
             if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
           }
-          const { error: upErr } = await supabase.from("questoes").update(patch).eq("id", a.questao_id);
+          const { error: upErr } = await updateQuestao(a.questao_id, patch);
           if (upErr) throw upErr;
           await supabase.from("question_audits").update({
             status: "auto_fixed",
@@ -416,7 +430,7 @@ export function AdminAuditoriaTab() {
     if (!ver) return toast.error("Sem snapshot para reverter");
     const snap: any = ver.snapshot;
     const { id, created_at, ...rest } = snap;
-    await supabase.from("questoes").update(rest).eq("id", a.questao_id);
+    await updateQuestao(a.questao_id, rest);
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Questão revertida ao estado anterior");
     await closeSiblingAudits(a.questao_id, a.id);
@@ -486,7 +500,7 @@ export function AdminAuditoriaTab() {
         assunto: form.assunto,
         dificuldade: form.dificuldade,
       };
-      const { error } = await supabase.from("questoes").update(patch).eq("id", detail.questao_id);
+      const { error } = await updateQuestao(detail.questao_id, patch);
       if (error) throw error;
       await supabase.from("question_audits").update({
         status: "approved",
@@ -585,7 +599,7 @@ export function AdminAuditoriaTab() {
             const g = Number(patch.gabarito);
             if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
           }
-          const { error: upErr } = await supabase.from("questoes").update(patch).eq("id", a.questao_id);
+          const { error: upErr } = await updateQuestao(a.questao_id, patch);
           if (upErr) throw upErr;
           await supabase.from("question_audits").update({ status: "auto_fixed", applied_patch: patch }).eq("id", a.id);
           await closeSiblingAudits(a.questao_id, a.id);
@@ -613,7 +627,7 @@ export function AdminAuditoriaTab() {
       const auditIds = selected.map(a => a.id);
       const questaoIds = Array.from(new Set(selected.map(a => a.questao_id)));
       await supabase.from("question_audits").update({ status: "approved", ai_summary: "Mantida pelo admin (lote)" }).in("id", auditIds);
-      await supabase.from("questoes").update({ audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() }).in("id", questaoIds);
+      await updateQuestao(questaoIds, { audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() });
       await supabase.from("question_audits").update({ status: "superseded" }).in("questao_id", questaoIds).in("status", OPEN_AUDIT_STATUSES);
       setAudits(prev => prev.filter(x => !selectedIds.has(x.id)));
       setSelectedIds(new Set());
