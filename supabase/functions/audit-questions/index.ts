@@ -313,6 +313,45 @@ function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_
   return isUniqueMax || isUniqueMin;
 }
 
+function articleExists(legalText: string | null, artNum: string): boolean {
+  if (!legalText) return false;
+  return parseArticleBlocks(legalText).some((b) => b.artNum === artNum);
+}
+
+function getReferencedExistingArticles(q: Questao, legalText: string | null): Set<string> {
+  const refs = extractArticleNumbers([
+    q.artigo_principal,
+    q.enunciado,
+    q.alt_a,
+    q.alt_b,
+    q.alt_c,
+    q.alt_d,
+    q.alt_e,
+    q.comentario,
+  ].join("\n"));
+  return new Set(refs.filter((num) => articleExists(legalText, num)));
+}
+
+function removeFalseHallucinationIssues(issues: any[], q: Questao, legalText: string | null): { issues: any[]; removed: string[] } {
+  const existingRefs = getReferencedExistingArticles(q, legalText);
+  if (!existingRefs.size) return { issues, removed: [] };
+  const removed: string[] = [];
+  const filtered = issues.filter((issue: any) => {
+    const type = String(issue?.type ?? "");
+    if (type !== "alucinacao_juridica" && type !== "texto_legal_desatualizado") return true;
+    const text = [issue?.description, issue?.evidence, issue?.suggestion].map((v) => String(v ?? "")).join(" ");
+    const citedInIssue = extractArticleNumbers(text);
+    const saysMissing = /n[aã]o\s+(?:existe|possui|consta|prev[êe])|inexistente|inventad[ao]|alucina/i.test(text);
+    const onlyExisting = citedInIssue.length > 0 && citedInIssue.every((num) => existingRefs.has(num));
+    if (saysMissing && onlyExisting) {
+      removed.push(citedInIssue.map((n) => `Art. ${n}`).join(", "));
+      return false;
+    }
+    return true;
+  });
+  return { issues: filtered, removed };
+}
+
 /** Reescritor Maritaca: recebe questão + diagnóstico + lei e devolve patch jurídico de alta qualidade. */
 async function rewriteWithMaritaca(
   q: Questao,
