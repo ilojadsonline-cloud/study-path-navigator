@@ -272,6 +272,20 @@ export function AdminAuditoriaTab() {
     toast.success(`${data?.reset ?? 0} questão(ões) liberadas para reauditoria.`);
   }
 
+  // Atualiza questoes via edge function (RLS bloqueia UPDATE direto do client).
+  async function updateQuestao(
+    target: number | number[],
+    updates: Record<string, unknown>,
+  ): Promise<{ error: { message: string } | null }> {
+    const body: any = { action: "update_question", updates };
+    if (Array.isArray(target)) body.question_ids = target;
+    else body.question_id = target;
+    const { data, error } = await supabase.functions.invoke("admin-manage-users", { body });
+    if (error) return { error: { message: error.message } };
+    if (data?.error) return { error: { message: data.error } };
+    return { error: null };
+  }
+
   async function markResolved(a: AuditRow) {
     await supabase.from("question_audits").update({ status: "approved", ai_summary: "Resolvida pelo admin" }).eq("id", a.id);
     await supabase.from("questoes").update({ audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() }).eq("id", a.questao_id);
