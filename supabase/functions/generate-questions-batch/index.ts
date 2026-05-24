@@ -1536,6 +1536,18 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         }
       }
 
+      // ── Validação ANTI-ALUCINAÇÃO em TODOS os campos (enunciado + alternativas + comentário) ──
+      // Citações com marcador externo ("da Lei X", "do CPP" etc.) são permitidas;
+      // apenas citações INTERNAS ("Art. N" sem qualificador) precisam existir em `blocks`.
+      const allFieldsCheck = validateCitationsInAllFields(q, blocks);
+      if (!allFieldsCheck.valid) {
+        discarded++;
+        const detalhe = allFieldsCheck.missing.map(m => `${m.field}: ${m.arts.join(", ")}`).join(" | ");
+        questoesRevisaoManual.push({ motivo: `Citação de artigo inexistente na lei alvo (${detalhe})` });
+        console.log(`[GERAR] Q${idx+1} descartada: artigos inexistentes em campos — ${detalhe}`);
+        continue;
+      }
+
       // ── Cross-validation ──
       const crossCheck = crossValidateReferences(q.enunciado, q.comentario);
       if (!crossCheck.valid) {
