@@ -80,6 +80,7 @@ function safeJsonParse(s: string): any {
   return null;
 }
 
+/** DeepSeek — DIAGNÓSTICO ESTRUTURADO (sem patch). Identifica defeitos e indica campo/evidência/sugestão. */
 async function callDeepSeek(prompt: string, timeoutMs = 55000): Promise<string> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -96,17 +97,53 @@ async function callDeepSeek(prompt: string, timeoutMs = 55000): Promise<string> 
           {
             role: "system",
             content:
-              "Você é AUDITOR INTEGRAL e PROFESSOR ORIENTADOR de questões objetivas para concursos militares e jurídicos (PMTO, FGV/CESPE/VUNESP). Auditoria SEM amostragem: leia enunciado, A–E, gabarito e comentário inteiros e confronte TUDO com o TEXTO LEGAL DE REFERÊNCIA. Detecte e (sempre que seguro) CORRIJA: alucinação jurídica, bug estrutural, comentário ausente/loop, duas+ alternativas corretas, nenhuma correta, violação de hierarquia funcional, função incompatível com o posto, duplicata, incoerência, distratores fracos, gabarito visualmente identificável, desalinhamento, legislação revogada/desatualizada, comentário que não analisa cada alternativa, e PADRÃO ANTIÉTICO 'alternativa correta = a mais longa OU a mais curta' do conjunto. Reescrever é PREFERÍVEL a marcar para revisão humana. Use estes códigos de issue quando aplicável: length_bias (gabarito é o mais longo/curto), insufficient_distractors (<2 técnicas de distração), hierarquia_violada, multiplas_corretas, texto_legal_desatualizado, duplicada, unrecoverable. Em duplicata e em irrecuperável, defina needs_human_review=false e indique no ai_summary 'AUTO_DELETE: <motivo>' — o sistema excluirá automaticamente. Para texto desatualizado (ex.: 'CPI'/'Comissão de Polícia Interna' substituída por 'CRP'/'Corregedoria' conforme texto vigente), faça a substituição no patch quando o sentido for preservado; senão, mande para revisão manual. TÉCNICAS DE DISTRAÇÃO obrigatórias (use ≥2 ao reescrever): inversão sujeito/predicado, troca de conectivo lógico, prazo trocado, cargo/posto trocado, verbo modal trocado (poderá↔deverá), negação inserida/removida, referência a lei errada, confusão de instância (Conselho↔Comando), completude falsa, generalização indevida. Registre as técnicas usadas em 'techniques_used'. ANTI-LENGTH-BIAS: ao reescrever, garanta que a alternativa correta NÃO seja a de maior nem a de menor número de caracteres do conjunto (±25% de paridade). COMENTÁRIO em 4 movimentos OBRIGATÓRIOS: (1) 'A alternativa correta é a [X], pois...' + citação literal do dispositivo; (2) 'A pegadinha desta questão está em...' nomeando explicitamente a técnica usada; (3) Análise individual de CADA alternativa errada com o dispositivo que a contradiz no formato 'Alternativa [Y]: incorreta porque ... Vide [art. Z]'; (4) 'Lembre-se: segundo o [art. X da Lei Y], [regra geral]'. Tom de tutor experiente. Responda APENAS JSON válido.",
+              "Você é AUDITOR-DIAGNOSTICADOR de questões objetivas para concursos militares (PMTO, CFO/CHOA) e jurídicos (FGV/CESPE/VUNESP). Sua FUNÇÃO ÚNICA é DIAGNOSTICAR defeitos — NÃO REESCREVA conteúdo. A reescrita será feita por outra IA jurídica especializada. Leia enunciado, A–E, gabarito e comentário INTEGRALMENTE e confronte com o TEXTO LEGAL DE REFERÊNCIA. Detecte SEM AMOSTRAGEM: (a) questões repetidas/duplicadas que abordam exatamente o mesmo assunto/dispositivo; (b) DUAS OU MAIS alternativas corretas à luz da lei; (c) NENHUMA alternativa correta (gabarito aponta errada e nenhuma outra serve); (d) ALUCINAÇÃO JURÍDICA — artigo/inciso/§ inexistente, fundamento inventado, dispositivo revogado; (e) violação de hierarquia funcional (posto/graduação/competência incompatível); (f) função incompatível com o posto citado; (g) gabarito visualmente identificável (única longa/curta/técnica/com ressalva); (h) padrão antiético length_bias (correta é a mais longa OU mais curta — único caso); (i) distratores fracos/óbvios/absurdos; (j) DISTRATORES LONGOS DEMAIS (algum distrator com mais de 1.7× o tamanho médio dos demais — type='distrator_longo'); (k) comentário ausente, em loop, ou que não analisa cada alternativa errada individualmente; (l) enunciado/alternativas/comentário desalinhados; (m) texto legal desatualizado/revogado; (n) bug estrutural (alt vazia, duplicada, formatação corrompida); (o) duas técnicas de distração insuficientes (<2 — insufficient_distractors). Para CADA issue obrigatoriamente preencha: type, severity, field ('enunciado'|'alt_a'|'alt_b'|'alt_c'|'alt_d'|'alt_e'|'gabarito'|'comentario'|'questao_inteira'), evidence (trecho EXATO do conteúdo problemático em ≤200 chars) e suggestion (instrução curta e ACIONÁVEL para a IA reescritora: 'reescrever distrator B mais curto preservando erro de prazo', 'corrigir gabarito para C porque art. 12 prevê...', 'remover citação de Art. 999 inexistente', 'reescrever comentário no estilo professor 4 movimentos'). Em duplicata e em irrecuperável, defina needs_human_review=false e indique no ai_summary 'AUTO_DELETE: <motivo>'. NUNCA emita proposed_patch — sempre null. NÃO reescreva nada. Sua saída é apenas DIAGNÓSTICO. Responda APENAS JSON válido.",
           },
           { role: "user", content: prompt },
         ],
-        temperature: 0.2,
-        max_tokens: 6000,
+        temperature: 0.1,
+        max_tokens: 3000,
         response_format: { type: "json_object" },
       }),
       signal: ctrl.signal,
     });
     if (!res.ok) throw new Error(`DeepSeek HTTP ${res.status}`);
+    const data = await res.json();
+    return stripThinkTags(data?.choices?.[0]?.message?.content ?? "");
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Maritaca Sabiá 4 — REESCRITOR jurídico. Recebe questão + diagnóstico do DeepSeek + lei e devolve patch. */
+async function callMaritaca(prompt: string, timeoutMs = 70000): Promise<string> {
+  if (!MARITACA_API_KEY) throw new Error("MARITACA_API_KEY não configurada");
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch("https://chat.maritaca.ai/api/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${MARITACA_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "sabia-4",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Você é PROFESSOR-REESCRITOR JURÍDICO de altíssimo nível especializado em concursos militares (PMTO, CFO/CHOA) e bancas CESPE/CEBRASPE/FGV/VUNESP. Recebe uma QUESTÃO defeituosa, o DIAGNÓSTICO formal de outro auditor (IA) e o TEXTO LEGAL DE REFERÊNCIA. Sua missão é CORRIGIR a questão exigindo o MÁXIMO de conhecimento e interpretação jurídica — não invente nada fora do texto legal. Regras: (1) corrija TODOS os defeitos listados pelo diagnóstico; (2) preserve a essência didática quando possível; (3) ANTI-LENGTH-BIAS: a alternativa correta NUNCA pode ser a única mais longa nem a única mais curta — paridade ±25%; (4) DISTRATORES LONGOS DEMAIS devem ser ENCURTADOS preservando o erro típico (troca de prazo/autoridade/conectivo) e a plausibilidade; (5) cada distrator usa uma técnica DIFERENTE de erro (≥2 técnicas no conjunto); (6) gabarito 0–4; (7) COMENTÁRIO no estilo professor orientador em 4 movimentos OBRIGATÓRIOS — (i) 'A alternativa correta é a [X], pois...' + citação literal e curta do dispositivo; (ii) 'A pegadinha desta questão está em...' nomeando a técnica; (iii) análise INDIVIDUAL de cada alternativa errada no formato 'Alternativa [Y]: incorreta porque ... Vide [art. Z]'; (iv) 'Lembre-se: segundo o [art. X da Lei Y], [regra geral]'; (8) 600–1500 caracteres no comentário; (9) RESPEITE a hierarquia militar e atribua competências exatamente como a lei fixa; (10) se citar lei DIFERENTE da lei principal, mencione o diploma por extenso (ex.: 'art. 9º do CPM', 'art. 5º, LV, da CF'); (11) se a questão for IRRECUPERÁVEL juridicamente (sem alternativa correta possível à luz da lei, sem base legal etc.), devolva unrecoverable=true. Responda APENAS JSON válido com o patch.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.2,
+        top_p: 0.92,
+        max_tokens: 4500,
+      }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`Maritaca HTTP ${res.status}`);
     const data = await res.json();
     return stripThinkTags(data?.choices?.[0]?.message?.content ?? "");
   } finally {
