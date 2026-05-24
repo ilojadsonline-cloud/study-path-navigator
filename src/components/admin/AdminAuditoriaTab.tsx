@@ -599,7 +599,7 @@ export function AdminAuditoriaTab() {
             const g = Number(patch.gabarito);
             if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
           }
-          const { error: upErr } = await supabase.from("questoes").update(patch).eq("id", a.questao_id);
+          const { error: upErr } = await updateQuestao(a.questao_id, patch);
           if (upErr) throw upErr;
           await supabase.from("question_audits").update({ status: "auto_fixed", applied_patch: patch }).eq("id", a.id);
           await closeSiblingAudits(a.questao_id, a.id);
