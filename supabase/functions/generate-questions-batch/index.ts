@@ -1198,10 +1198,10 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
     const apiUrl = useMaritaca
       ? "https://chat.maritaca.ai/api/chat/completions"
       : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    const apiModel = useMaritaca ? "sabia-3" : "google/gemini-2.5-flash";
+    const apiModel = useMaritaca ? "sabia-4" : "google/gemini-2.5-flash";
     const apiKey = useMaritaca ? MARITACA_API_KEY! : LOVABLE_API_KEY!;
 
-    console.log(`[GERAR] Provider: ${useMaritaca ? "Maritaca (sabia-3)" : "Lovable AI (gemini-2.5-flash)"}, batch=${batchSize}, maxTokens=${maxTokens}`);
+    console.log(`[GERAR] Provider: ${useMaritaca ? "Maritaca (sabia-4)" : "Lovable AI (gemini-2.5-flash)"}, batch=${batchSize}, maxTokens=${maxTokens}`);
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
