@@ -1264,7 +1264,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
             { role: "user", content: prompt },
           ],
           max_tokens: maxTokens,
-          temperature: 0.45,
+          temperature: 0.25,
           stream: false,
         };
         // response_format json_object é suportado por Lovable; Maritaca ignora silenciosamente.
