@@ -257,29 +257,89 @@ function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_
   return isUniqueMax || isUniqueMin;
 }
 
-async function auditOne(q: Questao, legalText: string | null, userReports: string[] = []): Promise<AuditResult> {
-  const reportsBlock = userReports.length
-    ? `\n\nREPORTES DE USUÁRIOS SOBRE ESTA QUESTÃO (tratá-los como ALERTA OBRIGATÓRIO — investigue cada alegação contra o texto legal antes de aprovar):\n${userReports.map((m, i) => `[Reporte ${i + 1}] ${m}`).join("\n")}\n\nREGRA CRÍTICA: se qualquer reporte apontar gabarito errado, alternativa correta diferente, conteúdo invertido, ano/prazo/posto errados, e VOCÊ não tiver certeza absoluta (texto legal claríssimo + 100% de confiança), marque needs_human_review=true e NÃO auto-corrija. Se o reporte estiver certo conforme a lei, proponha o patch correto. Inclua um issue do tipo "reporte_usuario" descrevendo a verificação feita.\n`
-    : "";
-  const raw = await callDeepSeek(buildAuditPrompt(q, legalText) + reportsBlock);
+/** Reescritor Maritaca: recebe questão + diagnóstico + lei e devolve patch jurídico de alta qualidade. */
+async function rewriteWithMaritaca(
+  q: Questao,
+  diagnosis: { issues: any[]; ai_summary: string },
+  legalText: string | null,
+): Promise<{ patch: any | null; unrecoverable: boolean; summary: string }> {
+  const alts = ["A","B","C","D","E"].map((l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
+  const correctaLetra = ["A","B","C","D","E"][q.gabarito] ?? "?";
+  const legalBlock = legalText
+    ? `TEXTO LEGAL DE REFERÊNCIA (ÚNICA fonte de verdade):\n"""${legalText.slice(0, 10000)}"""\n`
+    : "ATENÇÃO: sem texto legal disponível. Use o conhecimento jurídico geral com cautela.\n";
+
+  const issuesTxt = (diagnosis.issues || []).map((i: any, idx: number) =>
+    `${idx + 1}. [${i.type} | severity=${i.severity} | field=${i.field ?? "?"}] ${i.description ?? ""}${i.evidence ? ` | EVIDÊNCIA: "${String(i.evidence).slice(0, 200)}"` : ""}${i.suggestion ? ` | SUGESTÃO: ${i.suggestion}` : ""}`
+  ).join("\n");
+
+  const prompt = `${legalBlock}
+QUESTÃO #${q.id}
+Disciplina: ${q.disciplina}
+Assunto: ${q.assunto}
+Artigo declarado: ${q.artigo_principal ?? "(não informado)"}
+
+Enunciado:
+${q.enunciado}
+
+Alternativas:
+${alts}
+
+Gabarito atual: ${correctaLetra} (índice ${q.gabarito})
+
+Comentário atual:
+${q.comentario}
+
+DIAGNÓSTICO DO AUDITOR (DeepSeek) — RESUMO: ${diagnosis.ai_summary ?? "(sem resumo)"}
+ISSUES IDENTIFICADAS:
+${issuesTxt || "(nenhuma)"}
+
+TAREFA: produza um PATCH que corrija TODOS os defeitos diagnosticados. Aplique o máximo de conhecimento e interpretação jurídica.
+
+REGRAS DE REESCRITA:
+1. Corrija EXATAMENTE os campos apontados em "field" do diagnóstico. Preserve o restante quando possível.
+2. ANTI-LENGTH-BIAS: a alternativa correta NUNCA pode ser a única mais longa nem a única mais curta. Paridade ±25%.
+3. DISTRATORES LONGOS: encurte mantendo o erro típico (troca de prazo, autoridade, conectivo, regra/exceção).
+4. CADA DISTRATOR usa uma técnica DIFERENTE de erro (≥2 técnicas no conjunto).
+5. PROIBIDO "todas/nenhuma das anteriores", "n.d.a.", duplicatas, alternativa que contradiz o enunciado.
+6. Gabarito = inteiro 0-4. Se trocar a alternativa correta, ajuste o gabarito.
+7. HIERARQUIA militar: cargos/postos/competências fiéis à lei. Cite lei externa por extenso ("art. 9º do CPM").
+8. COMENTÁRIO em 4 movimentos OBRIGATÓRIOS, parágrafos fluidos, 600-1500 chars:
+   (i) "A alternativa correta é a [X], pois..." + citação literal curta do dispositivo.
+   (ii) "A pegadinha desta questão está em..." + nomeia a técnica.
+   (iii) Análise INDIVIDUAL de cada alternativa errada: "Alternativa [Y]: incorreta porque ... Vide [art. Z]". NUNCA "as demais estão erradas".
+   (iv) "Lembre-se: segundo o [art. X da Lei Y], [regra geral]".
+9. Se a questão for IRRECUPERÁVEL juridicamente (ex.: nenhuma alternativa pode ser correta à luz da lei, ou diagnóstico AUTO_DELETE), devolva unrecoverable=true e patch=null.
+
+Retorne JSON ESTRITO:
+{
+  "patch": {
+    "enunciado"?: "...",
+    "alt_a"?: "...", "alt_b"?: "...", "alt_c"?: "...", "alt_d"?: "...", "alt_e"?: "...",
+    "gabarito"?: 0-4,
+    "comentario"?: "..."
+  } | null,
+  "techniques_used": ["..."],
+  "unrecoverable": true|false,
+  "summary": "1-2 frases sobre o que foi corrigido"
+}`;
+
+  let raw = "";
+  try {
+    raw = await callMaritaca(prompt);
+  } catch (e) {
+    return { patch: null, unrecoverable: false, summary: `Falha Maritaca: ${e instanceof Error ? e.message : e}` };
+  }
   const parsed = safeJsonParse(raw);
   if (!parsed || typeof parsed !== "object") {
-    return {
-      confidence: 0,
-      risk_level: "high",
-      issues: [{ type: "outros", severity: "high", description: "Auditor IA retornou resposta inválida" }],
-      proposed_patch: null,
-      needs_human_review: true,
-      ai_summary: "Falha de parse do auditor",
-      techniques_used: [],
-    };
+    return { patch: null, unrecoverable: false, summary: "Maritaca retornou JSON inválido" };
   }
-  const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
-  const risk = ["low", "medium", "high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
-  const issues = Array.isArray(parsed.issues) ? parsed.issues : [];
-  let patch = parsed.proposed_patch && typeof parsed.proposed_patch === "object" ? parsed.proposed_patch : null;
+  if (parsed.unrecoverable === true) {
+    return { patch: null, unrecoverable: true, summary: String(parsed.summary ?? "Maritaca classificou como irrecuperável") };
+  }
+  let patch = parsed.patch && typeof parsed.patch === "object" ? parsed.patch : null;
   if (patch) {
-    const allowed = ["gabarito", "comentario", "alt_a", "alt_b", "alt_c", "alt_d", "alt_e", "enunciado"];
+    const allowed = ["gabarito","comentario","alt_a","alt_b","alt_c","alt_d","alt_e","enunciado"];
     const clean: any = {};
     for (const k of allowed) if (k in patch) clean[k] = patch[k];
     if ("gabarito" in clean) {
@@ -288,25 +348,106 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
     }
     patch = Object.keys(clean).length ? clean : null;
   }
-  const techniques = Array.isArray(parsed.techniques_used)
-    ? parsed.techniques_used.map((t: any) => String(t)).slice(0, 10)
-    : [];
+  const techniques = Array.isArray(parsed.techniques_used) ? parsed.techniques_used.map((t: any) => String(t)).slice(0, 10) : [];
+  (patch ?? {}).__techniques = techniques;
+  return { patch, unrecoverable: false, summary: String(parsed.summary ?? "Patch gerado pela Maritaca") };
+}
 
-  // Pós-validação anti-length-bias: avalia o estado FINAL (após patch, se houver).
-  const finalAlts = {
-    alt_a: patch?.alt_a ?? q.alt_a,
-    alt_b: patch?.alt_b ?? q.alt_b,
-    alt_c: patch?.alt_c ?? q.alt_c,
-    alt_d: patch?.alt_d ?? q.alt_d,
-    alt_e: patch?.alt_e ?? q.alt_e,
-    gabarito: typeof patch?.gabarito === "number" ? patch.gabarito : q.gabarito,
-  };
-  if (detectLengthBias(finalAlts) && !issues.some((i: any) => i?.type === "length_bias")) {
+async function auditOne(q: Questao, legalText: string | null, userReports: string[] = []): Promise<AuditResult> {
+  const reportsBlock = userReports.length
+    ? `\n\nREPORTES DE USUÁRIOS SOBRE ESTA QUESTÃO (ALERTA OBRIGATÓRIO — confronte cada alegação com o texto legal):\n${userReports.map((m, i) => `[Reporte ${i + 1}] ${m}`).join("\n")}\nSe um reporte apontar gabarito errado/conteúdo invertido E o texto legal confirmar, registre issue com type='reporte_usuario', field=campo afetado, evidence=trecho, suggestion=correção necessária.\n`
+    : "";
+
+  // ── ETAPA 1: DeepSeek DIAGNOSTICA defeitos com field/evidence/suggestion. ──
+  const raw = await callDeepSeek(buildAuditPrompt(q, legalText) + reportsBlock);
+  const parsed = safeJsonParse(raw);
+  if (!parsed || typeof parsed !== "object") {
+    return {
+      confidence: 0,
+      risk_level: "high",
+      issues: [{ type: "outros", severity: "high", field: "questao_inteira", description: "DeepSeek retornou resposta inválida", suggestion: "Tentar novamente ou revisar manualmente" }],
+      proposed_patch: null,
+      needs_human_review: true,
+      ai_summary: "Falha de parse do diagnóstico DeepSeek",
+      techniques_used: [],
+    };
+  }
+  const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
+  const risk = ["low", "medium", "high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
+  const issues: any[] = Array.isArray(parsed.issues) ? parsed.issues : [];
+  const aiSummary = String(parsed.ai_summary ?? "");
+
+  // ── Detecções determinísticas que complementam o DeepSeek ──
+  if (detectLengthBias(q) && !issues.some((i: any) => i?.type === "length_bias")) {
+    const lens = ["alt_a","alt_b","alt_c","alt_d","alt_e"].map((k) => String((q as any)[k] ?? "").length);
+    const isMax = lens[q.gabarito] === Math.max(...lens);
     issues.push({
       type: "length_bias",
       severity: "high",
-      description: "Alternativa correta é a mais longa OU mais curta do conjunto — padrão previsível.",
+      field: `alt_${["a","b","c","d","e"][q.gabarito]}`,
+      evidence: `tamanho da correta=${lens[q.gabarito]}; outros=${lens.filter((_, i) => i !== q.gabarito).join(",")}`,
+      description: `Alternativa correta é a única ${isMax ? "mais longa" : "mais curta"} — padrão previsível.`,
+      suggestion: "Reescrever distratores para paridade ±25% sem alterar o gabarito.",
     });
+  }
+  for (const o of detectOversizedDistractors(q)) {
+    if (!issues.some((i: any) => i?.type === "distrator_longo" && i?.field === o.field)) {
+      issues.push({
+        type: "distrator_longo",
+        severity: "medium",
+        field: o.field,
+        evidence: `${o.field} tem ${o.len} chars (média das demais ≈ ${o.mean}, ratio ${(o.len/o.mean).toFixed(2)}×)`,
+        description: `Distrator desproporcionalmente longo frente aos demais — torna a questão previsível.`,
+        suggestion: `Encurtar ${o.field} para ~${o.mean} chars preservando o erro típico (troca de prazo/autoridade/conectivo).`,
+      });
+    }
+  }
+
+  // ── ETAPA 2: se há defeitos reais, Maritaca REESCREVE. ──
+  let patch: any = null;
+  let techniques: string[] = [];
+  let rewriteSummary = "";
+  const isAutoDelete = /^AUTO_DELETE:/i.test(aiSummary);
+  const hasIrrecoverable = issues.some((i: any) => i?.type === "incoerente" || i?.type === "duplicada" || i?.type === "unrecoverable");
+  const hasRealDefect = issues.some((i: any) => i?.severity === "medium" || i?.severity === "high");
+
+  if (hasRealDefect && !isAutoDelete && !hasIrrecoverable && MARITACA_API_KEY) {
+    const r = await rewriteWithMaritaca(q, { issues, ai_summary: aiSummary }, legalText);
+    rewriteSummary = r.summary;
+    if (r.unrecoverable) {
+      issues.push({
+        type: "unrecoverable",
+        severity: "high",
+        field: "questao_inteira",
+        description: "Maritaca classificou a questão como irrecuperável após análise jurídica.",
+        suggestion: "Exclusão recomendada.",
+      });
+    } else if (r.patch) {
+      techniques = (r.patch.__techniques as string[]) ?? [];
+      delete r.patch.__techniques;
+      patch = r.patch;
+    }
+  }
+
+  // Re-verifica length_bias no estado FINAL (após patch).
+  if (patch) {
+    const finalAlts = {
+      alt_a: patch.alt_a ?? q.alt_a,
+      alt_b: patch.alt_b ?? q.alt_b,
+      alt_c: patch.alt_c ?? q.alt_c,
+      alt_d: patch.alt_d ?? q.alt_d,
+      alt_e: patch.alt_e ?? q.alt_e,
+      gabarito: typeof patch.gabarito === "number" ? patch.gabarito : q.gabarito,
+    };
+    if (detectLengthBias(finalAlts) && !issues.some((i: any) => i?.type === "length_bias_persistente")) {
+      issues.push({
+        type: "length_bias_persistente",
+        severity: "high",
+        field: "questao_inteira",
+        description: "Após reescrita da Maritaca o length_bias persistiu.",
+        suggestion: "Revisar manualmente o equilíbrio das alternativas.",
+      });
+    }
   }
 
   return {
@@ -314,8 +455,8 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
     risk_level: risk,
     issues,
     proposed_patch: patch,
-    needs_human_review: Boolean(parsed.needs_human_review) || issues.some((i: any) => i?.severity === "high" && i?.type !== "length_bias"),
-    ai_summary: String(parsed.ai_summary ?? ""),
+    needs_human_review: Boolean(parsed.needs_human_review) || issues.some((i: any) => i?.severity === "high" && i?.type !== "length_bias" && i?.type !== "distrator_longo"),
+    ai_summary: [aiSummary, rewriteSummary && `Reescrita (Maritaca): ${rewriteSummary}`].filter(Boolean).join(" | "),
     techniques_used: techniques,
   };
 }
