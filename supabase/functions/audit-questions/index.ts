@@ -190,9 +190,21 @@ function buildAuditPrompt(q: Questao, legalText: string | null): string {
     (l, i) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`
   ).join("\n");
   const correta = ["A", "B", "C", "D", "E"][q.gabarito] ?? "?";
+  const blocks = legalText ? parseArticleBlocks(legalText) : [];
+  const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
+  const relevantNums = [...new Set([...cited, ...(q.artigo_principal ? extractArticleNumbers(q.artigo_principal) : [])])];
+  const relevantBlocks = relevantNums
+    .map((num) => blocks.find((b) => b.artNum === num))
+    .filter(Boolean) as ArticleBlock[];
+  const articleIndex = blocks.length
+    ? `ÍNDICE DETERMINÍSTICO DA LEI CARREGADA: ${blocks.map((b) => `Art. ${b.artNum}`).join(", ")}\n`
+    : "";
+  const relevantBlock = relevantBlocks.length
+    ? `DISPOSITIVOS CITADOS NA QUESTÃO E ENCONTRADOS NA LEI (priorize esta prova determinística antes de acusar alucinação):\n${relevantBlocks.map((b) => b.text.slice(0, 2500)).join("\n\n")}\n`
+    : "";
 
   const legalBlock = legalText
-    ? `TEXTO LEGAL DE REFERÊNCIA (use como ÚNICA fonte de verdade):\n"""${legalText.slice(0, 9000)}"""\n`
+    ? `${articleIndex}${relevantBlock}TEXTO LEGAL DE REFERÊNCIA (use como ÚNICA fonte de verdade; pode estar truncado por limite técnico, então o ÍNDICE acima prevalece para EXISTÊNCIA de artigo):\n"""${legalText.slice(0, 9000)}"""\n`
     : "ATENÇÃO: Não há texto legal disponível para referência cruzada — audite com base em conhecimento jurídico geral mas marque qualquer afirmação não verificável como issue.\n";
 
   return `${legalBlock}
@@ -234,6 +246,7 @@ Q. TEXTO_LEGAL_DESATUALIZADO — questão baseada em dispositivo revogado/altera
 R. INCOERENTE — premissa contraditória, situação juridicamente inviável. type='incoerente' (irrecuperável).
 
 REGRA INTERPRETATIVA: paráfrase, interpretação e combinação de dispositivos SÃO VÁLIDAS — só marque alucinação quando a afirmação CONTRARIAR a lei ou inventar requisito/prazo/autoridade.
+REGRA ANTI-FALSO-POSITIVO: se um artigo aparece no ÍNDICE DETERMINÍSTICO ou no bloco "DISPOSITIVOS CITADOS...", é PROIBIDO dizer que esse artigo não existe. Nesse caso, se houver problema, classifique como desalinhamento, gabarito_errado ou comentario_incompleto — nunca como alucinacao_juridica por inexistência do artigo.
 REGRA DE OURO: se gabarito correto, 5 alternativas plausíveis e equilibradas, enunciado claro e comentário coerente — APROVE com issues=[].
 
 OBRIGATÓRIO PARA CADA ISSUE:
