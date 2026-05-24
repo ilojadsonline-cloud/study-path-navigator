@@ -507,7 +507,7 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
     issues,
     proposed_patch: patch,
     needs_human_review: Boolean(parsed.needs_human_review) || issues.some((i: any) => i?.severity === "high" && i?.type !== "length_bias" && i?.type !== "distrator_longo"),
-    ai_summary: [aiSummary, rewriteSummary && `Reescrita (Maritaca): ${rewriteSummary}`].filter(Boolean).join(" | "),
+    ai_summary: [aiSummary, rewriteSummary].filter(Boolean).join(" | "),
     techniques_used: techniques,
   };
 }
