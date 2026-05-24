@@ -469,8 +469,13 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
   }
   const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
   const risk = ["low", "medium", "high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
-  const issues: any[] = Array.isArray(parsed.issues) ? parsed.issues : [];
-  const aiSummary = String(parsed.ai_summary ?? "");
+  let issues: any[] = Array.isArray(parsed.issues) ? parsed.issues : [];
+  let aiSummary = String(parsed.ai_summary ?? "");
+  const falseHallucinations = removeFalseHallucinationIssues(issues, q, legalText);
+  issues = falseHallucinations.issues;
+  if (falseHallucinations.removed.length) {
+    aiSummary = `${aiSummary} | Falso positivo removido: artigo existente na lei (${[...new Set(falseHallucinations.removed)].join(", ")}).`.trim();
+  }
 
   // ── Detecções determinísticas que complementam o DeepSeek ──
   if (detectLengthBias(q) && !issues.some((i: any) => i?.type === "length_bias")) {
