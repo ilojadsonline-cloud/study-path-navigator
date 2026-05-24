@@ -430,7 +430,7 @@ export function AdminAuditoriaTab() {
     if (!ver) return toast.error("Sem snapshot para reverter");
     const snap: any = ver.snapshot;
     const { id, created_at, ...rest } = snap;
-    await supabase.from("questoes").update(rest).eq("id", a.questao_id);
+    await updateQuestao(a.questao_id, rest);
     await supabase.from("question_audits").update({ status: "rejected" }).eq("id", a.id);
     toast.success("Questão revertida ao estado anterior");
     await closeSiblingAudits(a.questao_id, a.id);
