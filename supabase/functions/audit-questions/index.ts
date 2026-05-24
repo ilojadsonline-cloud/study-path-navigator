@@ -412,31 +412,73 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
     }
   }
 
-  // ── ETAPA 2: se há defeitos reais, Maritaca REESCREVE. ──
+  // ── ETAPA 2: ROTEAMENTO POR COMPLEXIDADE ──
+  // Issues SIMPLES (mecânicas) → DeepSeek já entregou o patch.
+  // Issues COMPLEXAS (prosa jurídica) → Maritaca Sabiá 4 reescreve.
+  const SIMPLE_TYPES = new Set(["gabarito_errado", "bug_estrutural", "formatacao"]);
+  const FORCED_COMPLEX_TYPES = new Set([
+    "length_bias", "distrator_longo", "distrator_fraco", "alucinacao_juridica",
+    "multiplas_corretas", "sem_correta", "hierarquia_violada", "funcao_inconsistente",
+    "desalinhamento", "sem_comentario", "comentario_loop", "comentario_incompleto",
+    "texto_legal_desatualizado", "insufficient_distractors", "incoerente", "duplicada",
+    "reporte_usuario",
+  ]);
+  // Normaliza fix_complexity de cada issue (DeepSeek pode errar — código tem a palavra final).
+  for (const i of issues) {
+    const t = String(i?.type ?? "");
+    if (FORCED_COMPLEX_TYPES.has(t)) i.fix_complexity = "complex";
+    else if (SIMPLE_TYPES.has(t) && i.fix_complexity !== "complex") i.fix_complexity = "simple";
+    else if (!i.fix_complexity) i.fix_complexity = "complex";
+  }
+
   let patch: any = null;
   let techniques: string[] = [];
   let rewriteSummary = "";
   const isAutoDelete = /^AUTO_DELETE:/i.test(aiSummary);
   const hasIrrecoverable = issues.some((i: any) => i?.type === "incoerente" || i?.type === "duplicada" || i?.type === "unrecoverable");
   const hasRealDefect = issues.some((i: any) => i?.severity === "medium" || i?.severity === "high");
+  const hasComplex = issues.some((i: any) => i?.fix_complexity === "complex");
+  const hasSimple = issues.some((i: any) => i?.fix_complexity === "simple");
 
-  if (hasRealDefect && !isAutoDelete && !hasIrrecoverable && MARITACA_API_KEY) {
-    const r = await rewriteWithMaritaca(q, { issues, ai_summary: aiSummary }, legalText);
-    rewriteSummary = r.summary;
-    if (r.unrecoverable) {
-      issues.push({
-        type: "unrecoverable",
-        severity: "high",
-        field: "questao_inteira",
-        description: "Maritaca classificou a questão como irrecuperável após análise jurídica.",
-        suggestion: "Exclusão recomendada.",
-      });
-    } else if (r.patch) {
-      techniques = (r.patch.__techniques as string[]) ?? [];
-      delete r.patch.__techniques;
-      patch = r.patch;
+  if (!isAutoDelete && !hasIrrecoverable && hasRealDefect) {
+    if (!hasComplex && hasSimple) {
+      // ── Caminho rápido: DeepSeek aplica correção mecânica. ──
+      const ds = parsed.proposed_patch && typeof parsed.proposed_patch === "object" ? parsed.proposed_patch : null;
+      if (ds) {
+        const allowed = ["gabarito","alt_a","alt_b","alt_c","alt_d","alt_e","enunciado"];
+        const clean: any = {};
+        for (const k of allowed) if (k in ds) clean[k] = (ds as any)[k];
+        if ("gabarito" in clean) {
+          const g = Number(clean.gabarito);
+          if (!Number.isInteger(g) || g < 0 || g > 4) delete clean.gabarito;
+        }
+        if (Object.keys(clean).length) {
+          patch = clean;
+          rewriteSummary = "Correção simples aplicada pelo DeepSeek (sem reescrita de prosa).";
+        }
+      }
+      // Se DeepSeek não entregou patch utilizável, cai para revisão manual (não chama Maritaca à toa).
+    } else if (hasComplex && MARITACA_API_KEY) {
+      // ── Caminho jurídico: Maritaca Sabiá 4 reescreve. ──
+      const r = await rewriteWithMaritaca(q, { issues, ai_summary: aiSummary }, legalText);
+      rewriteSummary = `Reescrita (Maritaca): ${r.summary}`;
+      if (r.unrecoverable) {
+        issues.push({
+          type: "unrecoverable",
+          severity: "high",
+          field: "questao_inteira",
+          description: "Maritaca classificou a questão como irrecuperável após análise jurídica.",
+          suggestion: "Exclusão recomendada.",
+          fix_complexity: "complex",
+        });
+      } else if (r.patch) {
+        techniques = (r.patch.__techniques as string[]) ?? [];
+        delete r.patch.__techniques;
+        patch = r.patch;
+      }
     }
   }
+
 
   // Re-verifica length_bias no estado FINAL (após patch).
   if (patch) {
