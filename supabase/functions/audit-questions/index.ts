@@ -336,12 +336,13 @@ function removeFalseHallucinationIssues(issues: any[], q: Questao, legalText: st
   const existingRefs = getReferencedExistingArticles(q, legalText);
   if (!existingRefs.size) return { issues, removed: [] };
   const removed: string[] = [];
+  const MISSING_ARTICLE_DERIVED_TYPES = new Set(["alucinacao_juridica", "texto_legal_desatualizado", "sem_correta", "gabarito_errado", "comentario_incompleto"]);
   const filtered = issues.filter((issue: any) => {
     const type = String(issue?.type ?? "");
-    if (type !== "alucinacao_juridica" && type !== "texto_legal_desatualizado") return true;
+    if (!MISSING_ARTICLE_DERIVED_TYPES.has(type)) return true;
     const text = [issue?.description, issue?.evidence, issue?.suggestion].map((v) => String(v ?? "")).join(" ");
     const citedInIssue = extractArticleNumbers(text);
-    const saysMissing = /n[aã]o\s+(?:existe|possui|consta|prev[êe])|inexistente|inventad[ao]|alucina/i.test(text);
+    const saysMissing = /n[aã]o\s+(?:existe|possui|consta|prev[êe]|pode\s+ser\s+verificad[ao])|inexistente|inventad[ao]|alucina|sem\s+base\s+legal|carece(?:m)?\s+de\s+fundamento/i.test(text);
     const onlyExisting = citedInIssue.length > 0 && citedInIssue.every((num) => existingRefs.has(num));
     if (saysMissing && onlyExisting) {
       removed.push(citedInIssue.map((n) => `Art. ${n}`).join(", "));
