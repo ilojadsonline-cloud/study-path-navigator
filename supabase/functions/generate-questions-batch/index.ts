@@ -178,6 +178,25 @@ function extractAllCitedArticles(text: string): string[] {
   return [...new Set(matches.map(m => m.match(/\d+/)?.[0] || "").filter(Boolean))];
 }
 
+/**
+ * Extrai apenas citações de artigo que se referem à LEI ATUAL.
+ * Citações com marcador externo ("da Lei X", "do CPP", "da CF", etc.) são consideradas
+ * de OUTRO diploma e ignoradas pela validação contra `blocks`.
+ */
+function extractInternalCitedArticles(text: string): string[] {
+  const result: string[] = [];
+  const re = /Art\.?\s*(\d+)([^.;]{0,80})/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const num = m[1];
+    const tail = (m[2] || "").toLowerCase();
+    const externalMarker = /\b(d[aoe]s?\s+(lei|lc|lei\s+complementar|decreto|c[óo]digo|cf|constitui[çc][ãa]o|cpp|cpm|cppm|cpc|cp|ctn|clt|estatuto|regulamento)\b)/i;
+    if (externalMarker.test(tail)) continue;
+    result.push(num);
+  }
+  return [...new Set(result)];
+}
+
 function extractCommentEvidenceSnippets(comment: string): string[] {
   const snippets = Array.from(
     comment.matchAll(/["""''']([^"""''']{20,500})["""''']/g),
@@ -203,10 +222,31 @@ function articleExistsInBlocks(artNum: string, blocks: ArticleBlock[]): boolean 
 }
 
 function validateAllCitations(comment: string, blocks: ArticleBlock[]): { valid: boolean; missing: string[] } {
-  const cited = extractAllCitedArticles(comment);
+  // Apenas citações INTERNAS são validadas; citações externas explícitas são permitidas.
+  const cited = extractInternalCitedArticles(comment);
   const missing: string[] = [];
   for (const artNum of cited) {
     if (!articleExistsInBlocks(artNum, blocks)) missing.push(`Art. ${artNum}`);
+  }
+  return { valid: missing.length === 0, missing };
+}
+
+/** Valida citações de artigo em QUALQUER campo da questão (enunciado, alternativas, comentário). */
+function validateCitationsInAllFields(q: Record<string, any>, blocks: ArticleBlock[]): { valid: boolean; missing: Array<{ field: string; arts: string[] }> } {
+  const fields: Array<[string, string]> = [
+    ["enunciado", String(q.enunciado || "")],
+    ["alt_a", String(q.alt_a || "")],
+    ["alt_b", String(q.alt_b || "")],
+    ["alt_c", String(q.alt_c || "")],
+    ["alt_d", String(q.alt_d || "")],
+    ["alt_e", String(q.alt_e || "")],
+    ["comentario", String(q.comentario || "")],
+  ];
+  const missing: Array<{ field: string; arts: string[] }> = [];
+  for (const [name, txt] of fields) {
+    const internalCited = extractInternalCitedArticles(txt);
+    const bad = internalCited.filter(n => !articleExistsInBlocks(n, blocks));
+    if (bad.length) missing.push({ field: name, arts: bad.map(n => `Art. ${n}`) });
   }
   return { valid: missing.length === 0, missing };
 }
@@ -1114,9 +1154,17 @@ QUESTÕES INTERPRETATIVAS SÃO PERMITIDAS E DESEJÁVEIS:
 - A alternativa correta NÃO precisa reproduzir o texto da lei "ipsis litteris". Pode parafrasear, aplicar a um caso concreto curto, comparar institutos OU combinar dispositivos de uma ou mais leis do banco — desde que o conteúdo seja FIEL ao que a norma efetivamente determina (sem inventar prazo, autoridade, requisito ou exceção).
 - Mantenha SEMPRE rastreabilidade: o comentário deve citar o(s) artigo(s) que sustenta(m) a interpretação.
 
-REGRA PARA NÚMEROS DE ARTIGOS:
+REGRA PARA NÚMEROS DE ARTIGOS (ANTI-ALUCINAÇÃO — CHECAGEM OBRIGATÓRIA):
 - Antes de citar "Art. X", LOCALIZE o trecho no texto legal e verifique em qual artigo ele realmente aparece.
-- O número do artigo NÃO é um detalhe menor: um artigo errado invalida toda a questão.
+- O número do artigo NÃO é detalhe menor: um artigo errado invalida toda a questão.
+- PROIBIDO citar artigo que não conste explicitamente no TEXTO LEGAL fornecido abaixo. Se não encontrou o número exato no texto, NÃO invente — escolha outro ângulo dentro de um artigo que existe.
+- NUNCA cite "Art. X" sem antes ter LIDO o conteúdo do Art. X no texto fornecido.
+
+REGRA PARA LEIS EXTERNAS (CITAÇÃO CRUZADA — OBRIGATÓRIA):
+- A lei principal desta questão é "${disc.leiNome}". Se a questão exigir conhecimento de OUTRA lei/diploma (CPP, CPM, CPPM, CF, CTN, CPC, CP, CLT, outro Decreto, outra Lei Complementar etc.), você DEVE:
+  1) Mencionar o diploma POR EXTENSO no enunciado/alternativa/comentário (ex: "conforme o art. 5º, LV, da Constituição Federal", "nos termos do art. 9º do CPM").
+  2) NUNCA citar apenas "Art. X" sem qualificar quando o artigo não pertence à lei principal — isso causa ambiguidade.
+  3) Preferir manter a questão dentro da lei principal sempre que possível.
 
 Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do JSON, no formato {"questions":[...]}. Configure sua "temperatura interna" para o MÍNIMO — auditoria objetiva baseada APENAS nos fatos do texto legal, sem criatividade indesejada.`;
 
@@ -1216,7 +1264,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
             { role: "user", content: prompt },
           ],
           max_tokens: maxTokens,
-          temperature: 0.45,
+          temperature: 0.25,
           stream: false,
         };
         // response_format json_object é suportado por Lovable; Maritaca ignora silenciosamente.
@@ -1416,11 +1464,11 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       batchSemanticFPs.add(semFP);
 
       // ── Similarity dedup (Jaccard de enunciado): limiar 0.65 evita falsos positivos em leis curtas ──
-      const similarId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.65);
+      const similarId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55);
       if (similarId) {
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: similar à #${similarId}`); continue;
       }
-      const batchSimilarId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.65);
+      const batchSimilarId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55);
       if (batchSimilarId !== null) {
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: similar a outra no lote`); continue;
       }
@@ -1486,6 +1534,18 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
           console.log(`[GERAR] Q${idx+1} descartada: ${snippetCheck.mismatches[0]}`);
           continue;
         }
+      }
+
+      // ── Validação ANTI-ALUCINAÇÃO em TODOS os campos (enunciado + alternativas + comentário) ──
+      // Citações com marcador externo ("da Lei X", "do CPP" etc.) são permitidas;
+      // apenas citações INTERNAS ("Art. N" sem qualificador) precisam existir em `blocks`.
+      const allFieldsCheck = validateCitationsInAllFields(q, blocks);
+      if (!allFieldsCheck.valid) {
+        discarded++;
+        const detalhe = allFieldsCheck.missing.map(m => `${m.field}: ${m.arts.join(", ")}`).join(" | ");
+        questoesRevisaoManual.push({ motivo: `Citação de artigo inexistente na lei alvo (${detalhe})` });
+        console.log(`[GERAR] Q${idx+1} descartada: artigos inexistentes em campos — ${detalhe}`);
+        continue;
       }
 
       // ── Cross-validation ──
