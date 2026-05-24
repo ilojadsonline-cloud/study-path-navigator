@@ -178,73 +178,70 @@ Gabarito atual: ${correta} (índice ${q.gabarito})
 Comentário atual:
 ${q.comentario}
 
-Audite INTEGRALMENTE esta questão (sem amostragem, sem atalhos por palavra-chave). LEIA enunciado + 5 alternativas + gabarito + comentário e CONFRONTE TUDO com o texto legal acima. Verifique TODOS os defeitos abaixo:
+DIAGNOSTIQUE INTEGRALMENTE esta questão. Você NÃO REESCREVE — apenas identifica defeitos. A reescrita será feita por outra IA jurídica especializada (Sabiá 4). Verifique TODOS os defeitos abaixo:
 
-A. ALUCINAÇÃO JURÍDICA — fundamento legal inventado, artigo/inciso/§ que não existe na lei de referência, ou afirmação não amparada pelo texto legal disponível.
-B. BUG ESTRUTURAL — campo vazio, alternativa duplicada, formatação corrompida, enunciado truncado.
-C. AUSÊNCIA DE COMENTÁRIO — comentario vazio, "(sem comentário)" ou apenas placeholder.
-D. COMENTÁRIO EM LOOP — texto circular, repetição da mesma frase, não acrescenta informação, parafraseia o enunciado sem explicar.
-E. DUAS OU MAIS ALTERNATIVAS CORRETAS — mais de uma alternativa é defensável à luz da lei.
-F. NENHUMA ALTERNATIVA CORRETA — gabarito atual aponta para alternativa errada e nenhuma das outras está correta tampouco.
-G. VIOLAÇÃO DE HIERARQUIA — enunciado/alternativas atribuem competência, função, posto ou graduação de forma diferente do que a lei determina.
-H. ATRIBUIÇÃO DE FUNÇÃO INCONSISTENTE com o posto/graduação citado (ex.: cabo exercendo função privativa de oficial superior).
-I. QUESTÃO INCOERENTE/IMPOSSÍVEL — premissa contraditória, situação juridicamente inviável, sem solução lógica.
-J. DISTRATORES FRACOS/ÓBVIOS — alternativas absurdas, genéricas, gritantemente falsas, muito mais curtas/longas, com palavras-âncora isoladas ("sempre/nunca/somente"), "todas/nenhuma das anteriores", "n.d.a.", ou que entregam a resposta por eliminação. (severity medium; high se 2+).
-K. GABARITO VISUALMENTE IDENTIFICÁVEL — a correta destoa: única completa, única técnica, única com ressalva, única longa.
-L. ENUNCIADO/ALTERNATIVAS/COMENTÁRIO DESALINHADOS entre si — o comentário cita uma alternativa como correta diferente do gabarito, ou o enunciado pergunta X e as alternativas respondem Y.
-M. TEXTO LEGAL DESATUALIZADO — questão baseada em dispositivo revogado/alterado/substituído (compare com o texto legal de referência).
-N. COMENTÁRIO QUE NÃO EXPLICA CADA ALTERNATIVA INCORRETA INDIVIDUALMENTE — limita-se a "as demais estão erradas" ou explica só a correta.
+A. DUPLICADA — questão idêntica em sentido a outra já existente (mesmo dispositivo, mesma armadilha). type='duplicada'.
+B. DUAS+ ALTERNATIVAS CORRETAS — mais de uma alternativa é defensável à luz da lei. type='multiplas_corretas'.
+C. NENHUMA ALTERNATIVA CORRETA — gabarito atual está errado E nenhuma das outras serve. type='sem_correta'.
+D. ALUCINAÇÃO JURÍDICA — artigo/inciso/§ inexistente na lei, fundamento legal inventado, dispositivo revogado. type='alucinacao_juridica'.
+E. GABARITO ERRADO — gabarito aponta alternativa errada mas outra É correta. type='gabarito_errado'.
+F. VIOLAÇÃO DE HIERARQUIA — atribui competência/função/posto/graduação de forma diferente do que a lei determina. type='hierarquia_violada'.
+G. FUNÇÃO INCONSISTENTE com o posto/graduação citado. type='funcao_inconsistente'.
+H. LENGTH_BIAS — alternativa correta é a única mais longa OU a única mais curta. type='length_bias'.
+I. DISTRATORES FRACOS/ÓBVIOS — alternativas absurdas, óbvias, "todas/nenhuma das anteriores", n.d.a., palavras-âncora isoladas. type='distrator_fraco'.
+J. DISTRATORES LONGOS DEMAIS — algum distrator com mais de 1.7× o tamanho médio dos demais. type='distrator_longo' (cite no field o alt_X afetado e em suggestion 'encurtar preservando erro típico').
+K. INSUFFICIENT_DISTRACTORS — menos de 2 técnicas de distração diferentes. type='insufficient_distractors'.
+L. BUG ESTRUTURAL — campo vazio, alternativa duplicada, formatação corrompida, enunciado truncado. type='bug_estrutural'.
+M. SEM_COMENTARIO — comentário vazio/placeholder. type='sem_comentario'.
+N. COMENTARIO_LOOP — texto circular, parafraseia o enunciado sem explicar. type='comentario_loop'.
+O. COMENTARIO_INCOMPLETO — não analisa cada alternativa errada individualmente, falta um dos 4 movimentos (confirmação+citação / pegadinha / análise alt-a-alt / lembrete). type='comentario_incompleto'.
+P. DESALINHAMENTO — comentário cita correta diferente do gabarito, ou enunciado pergunta X e alternativas respondem Y. type='desalinhamento'.
+Q. TEXTO_LEGAL_DESATUALIZADO — questão baseada em dispositivo revogado/alterado/substituído. type='texto_legal_desatualizado'.
+R. INCOERENTE — premissa contraditória, situação juridicamente inviável. type='incoerente' (irrecuperável).
 
-QUESTÕES INTERPRETATIVAS SÃO VÁLIDAS:
-- Reproduzir literalmente a lei NÃO é requisito. Paráfrase, interpretação e combinação de dispositivos são aceitas, desde que FIÉIS à norma.
-- Só sinalize "extra_legal/alucinacao_juridica" quando a afirmação CONTRARIAR a lei, inventar requisito/prazo/autoridade inexistente, ou afirmar algo não autorizado.
+REGRA INTERPRETATIVA: paráfrase, interpretação e combinação de dispositivos SÃO VÁLIDAS — só marque alucinação quando a afirmação CONTRARIAR a lei ou inventar requisito/prazo/autoridade.
+REGRA DE OURO: se gabarito correto, 5 alternativas plausíveis e equilibradas, enunciado claro e comentário coerente — APROVE com issues=[].
 
-REGRA DE OURO — NÃO MEXER NO QUE ESTÁ CORRETO:
-- Se gabarito está correto (literal OU interpretativamente fiel), as 5 alternativas são plausíveis e equilibradas, enunciado é claro, e o comentário explica corretamente a resposta E os erros das demais (mesmo que de forma sucinta), APROVE com confidence alta, issues=[], proposed_patch=null.
-- Em caso de dúvida sobre defeito real, APROVE.
+OBRIGATÓRIO PARA CADA ISSUE:
+- type: código da lista acima
+- severity: low | medium | high
+- field: 'enunciado' | 'alt_a' | 'alt_b' | 'alt_c' | 'alt_d' | 'alt_e' | 'gabarito' | 'comentario' | 'questao_inteira'
+- evidence: trecho EXATO do conteúdo problemático (até 200 chars) — copie literalmente da questão. Para gabarito, indique "letra atual: X | correta segundo lei: Y".
+- description: explicação técnica do defeito.
+- suggestion: instrução curta e ACIONÁVEL para a IA reescritora (ex.: "encurtar alt_b para ~120 chars preservando troca de prazo", "corrigir gabarito para C — art. 12 fixa competência do Coronel", "remover citação 'Art. 999' inexistente; substituir por Art. 12", "reescrever comentário no estilo professor em 4 movimentos").
 
-POLÍTICA DE CORREÇÃO:
-- TENTE SEMPRE corrigir antes de mandar para revisão humana. Só marque needs_human_review=true quando a correção automática não for SEGURA juridicamente (ex.: você não tem certeza de qual é a resposta correta à luz da lei) ou quando a questão for duplicada e exigir decisão humana sobre exclusão.
-- Se o ÚNICO defeito for distrator fraco/óbvio: reescreva APENAS as alternativas problemáticas (preserve o resto). Devolva no patch só os campos alt_X afetados (e "gabarito" se a posição mudou).
-- Se houver defeito de gabarito/enunciado/comentário/hierarquia/coerência: reescreva enunciado + alt_a..alt_e + gabarito + comentario JUNTOS.
+EM DUPLICADA ou INCOERENTE (irrecuperável): defina needs_human_review=false e ai_summary começando com 'AUTO_DELETE: <motivo>'.
 
-ALGORITMO DE ESCRITA DAS ALTERNATIVAS (siga à risca quando reescrever qualquer alt_X):
-1. PARIDADE FORMAL: 5 alternativas com comprimento similar (±25%), mesmo registro técnico-jurídico, mesma estrutura sintática, pontuação coerente.
-2. PARIDADE SEMÂNTICA: todas igualmente plausíveis para quem estudou mas não dominou o detalhe.
-3. CADA DISTRATORA = UM ERRO TÍPICO REAL (troca de prazo, troca de autoridade, inversão regra/exceção, confusão entre institutos parecidos, dispositivo revogado, aplicação errada de princípio). Não exponha qual erro no JSON.
-4. PROIBIDO: "todas/nenhuma das anteriores", "apenas a alternativa X", "n.d.a.", duplicatas, alternativa que contradiga o enunciado, palavras-âncora isoladas em 1 só.
-5. POSIÇÃO DA CORRETA: distribua aleatoriamente A–E (não vicie em C/D). Ajuste "gabarito" (0–4).
-6. RESPEITE A HIERARQUIA da lei: cargos, postos, graduações, competências exclusivas devem espelhar EXATAMENTE o que a norma fixa.
-
-REGRAS DE COMENTÁRIO (PROFESSOR ORIENTADOR) — OBRIGATÓRIO quando reescrever comentário:
-Estrutura em 4 movimentos, sem títulos visíveis, em parágrafos fluidos:
-(1) CONFIRMA a alternativa correta e CITA o dispositivo (Art. X, inciso Y, §Z) com o trecho legal essencial — não basta "conforme o art. X", explique o que ele diz e por que torna a alternativa correta.
-(2) NOMEIA EXPLICITAMENTE a pegadinha/trocadilho/elemento de confusão (ex.: "a banca trocou o prazo de 5 por 10 dias", "inverteu a competência do delegado pela do juiz", "aplicou exceção como se fosse regra").
-(3) ANALISA CADA ALTERNATIVA INCORRETA INDIVIDUALMENTE: para A, B, C, D, E que não são o gabarito, diga o ERRO ESPECÍFICO (inversão de competência, troca de prazo, atribuição indevida de função, condição inexistente na lei, confusão entre institutos parecidos). Use o formato "A) ... — erro: ...; B) ... — erro: ...". NUNCA escreva "as demais estão incorretas".
-(4) Se a questão envolve hierarquia/posto/graduação/comissão/competência exclusiva, REFORÇA a regra geral e as exceções da lei para fixação.
-Tom direto, técnico, didático, em pt-BR. Sem repetir o enunciado, sem "conforme a legislação vigente" solto, sem rodeios. 600–1500 caracteres.
-
-REGRAS DE ENUNCIADO (quando reescrever):
-- Claro, específico, ancorado na lei. Prefira casos concretos curtos. Mantenha a dificuldade compatível com a original.
-
-Retorne JSON ESTRITO:
+Retorne JSON ESTRITO (NÃO emita proposed_patch — sempre null):
 {
   "confidence": 0.0-1.0,
   "risk_level": "low" | "medium" | "high",
   "issues": [
-    { "type": "gabarito_errado|sem_correta|multiplas_corretas|alucinacao_juridica|bug_estrutural|sem_comentario|comentario_loop|comentario_incompleto|distrator_fraco|gabarito_obvio|hierarquia_violada|funcao_inconsistente|duplicada|incoerente|texto_legal_desatualizado|desalinhamento|extra_legal|alt_duplicada|ambiguidade|outros", "severity": "low|medium|high", "description": "..." }
+    { "type": "...", "severity": "low|medium|high", "field": "...", "evidence": "...", "description": "...", "suggestion": "..." }
   ],
-  "proposed_patch": {              // null APENAS se a questão estiver impecável. Caso precise de qualquer ajuste relevante, devolva enunciado, alt_a..alt_e, gabarito e comentário JUNTOS.
-    "enunciado"?: "...",
-    "alt_a"?: "...", "alt_b"?: "...", "alt_c"?: "...", "alt_d"?: "...", "alt_e"?: "...",
-    "gabarito"?: 0-4,
-    "comentario"?: "..."
-  },
+  "proposed_patch": null,
   "needs_human_review": true|false,
-  "ai_summary": "1-2 frases resumindo o diagnóstico e o que foi reescrito"
+  "ai_summary": "1-2 frases resumindo o diagnóstico"
 }
 
 Se a questão estiver perfeita: confidence alta, issues=[], proposed_patch=null, needs_human_review=false.`;
+}
+
+/** Detecta distrator com mais de DISTRATOR_LEN_RATIO× o tamanho médio dos demais (incluindo a correta). */
+function detectOversizedDistractors(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_e"|"gabarito">): Array<{ field: string; len: number; mean: number }> {
+  const keys = ["alt_a","alt_b","alt_c","alt_d","alt_e"];
+  const lens = keys.map((k) => String((q as any)[k] ?? "").trim().length);
+  const g = q.gabarito;
+  const out: Array<{ field: string; len: number; mean: number }> = [];
+  for (let i = 0; i < 5; i++) {
+    if (i === g) continue;
+    const others = lens.filter((_, j) => j !== i);
+    const mean = others.reduce((a, b) => a + b, 0) / others.length;
+    if (mean > 0 && lens[i] >= mean * DISTRATOR_LEN_RATIO && lens[i] >= 200) {
+      out.push({ field: keys[i], len: lens[i], mean: Math.round(mean) });
+    }
+  }
+  return out;
 }
 
 /** Verifica se o gabarito é a alternativa mais longa OU mais curta do conjunto. */
