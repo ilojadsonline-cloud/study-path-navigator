@@ -627,7 +627,7 @@ export function AdminAuditoriaTab() {
       const auditIds = selected.map(a => a.id);
       const questaoIds = Array.from(new Set(selected.map(a => a.questao_id)));
       await supabase.from("question_audits").update({ status: "approved", ai_summary: "Mantida pelo admin (lote)" }).in("id", auditIds);
-      await supabase.from("questoes").update({ audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() }).in("id", questaoIds);
+      await updateQuestao(questaoIds, { audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() });
       await supabase.from("question_audits").update({ status: "superseded" }).in("questao_id", questaoIds).in("status", OPEN_AUDIT_STATUSES);
       setAudits(prev => prev.filter(x => !selectedIds.has(x.id)));
       setSelectedIds(new Set());
