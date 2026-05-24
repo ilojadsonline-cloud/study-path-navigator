@@ -1623,13 +1623,30 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
     if (validQuestions.length > 0) {
       console.log(`[AUDIT-XGEN] Iniciando auditoria cruzada de ${validQuestions.length} questões (sequencial p/ estabilidade)...`);
 
+      // Snippet FOCADO nos artigos citados pela questão → impede falsos descartes "artigo inexistente".
+      const buildFocusedLawSnippet = (q: any): string => {
+        const allText = [q.enunciado, q.comentario, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e]
+          .filter(Boolean).join("\n");
+        const citedNums = new Set<string>(extractAllCitedArticles(allText));
+        const pieces: string[] = [];
+        for (const num of citedNums) {
+          const block = blocks.find(b => b.artNum === num);
+          if (block) pieces.push(block.text.slice(0, 2400));
+        }
+        let snippet = pieces.join("\n\n").trim();
+        if (snippet.length < 1500) {
+          snippet = (snippet + "\n\n" + String(leiSeca || "").slice(0, 12000)).trim();
+        }
+        return snippet.slice(0, 14000);
+      };
+
       const buildAuditPrompt = (q: any) => {
         const altsTxt = ["A","B","C","D","E"].map(l => `${l}) ${q[`alt_${l.toLowerCase()}`]}`).join("\n");
         const correta = ["A","B","C","D","E"][q.gabarito] ?? "?";
-        const lawSnippet = String(leiSeca || "").slice(0, 7000);
-        return `Você audita questões objetivas de concurso jurídico-militar (PMTO). Seja CÉTICO.
+        const lawSnippet = buildFocusedLawSnippet(q);
+        return `Você audita questões objetivas de concurso jurídico-militar (PMTO). Seja CÉTICO mas JUSTO.
 
-TEXTO LEGAL DE REFERÊNCIA:
+TEXTO LEGAL DE REFERÊNCIA (RECORTE focado nos artigos citados pela questão):
 """${lawSnippet}"""
 
 QUESTÃO:
@@ -1640,12 +1657,18 @@ ${altsTxt}
 Gabarito declarado: ${correta}
 Comentário: ${q.comentario}
 
+REGRA CRÍTICA DE AUDITORIA:
+- O texto acima é apenas um RECORTE da lei completa. Se um artigo citado parecer não estar no recorte,
+  NÃO conclua que ele é inexistente nem marque 'high' por isso — registre apenas issue 'low' "fora do recorte".
+- Só use severidade 'high' quando houver ERRO FACTUAL DEMONSTRÁVEL dentro do recorte fornecido
+  (ex.: gabarito contradiz literalmente o artigo que ESTÁ no recorte, alternativa correta inexiste etc.).
+
 Verifique:
-1. Gabarito está correto pela letra do texto legal?
+1. Gabarito está correto pela letra do texto legal (quando o artigo aparece no recorte)?
 2. Existe outra alternativa também correta? Ou nenhuma correta?
-3. Algum distrator é absurdo / óbvio demais / vazio?
+3. Algum distrator é absurdo / óbvio / vazio?
 4. Comentário cita base legal coerente com o gabarito?
-5. Há afirmação extra-legal/inventada?
+5. Há afirmação claramente inventada (não apenas ausente do recorte)?
 
 Responda APENAS JSON:
 {
