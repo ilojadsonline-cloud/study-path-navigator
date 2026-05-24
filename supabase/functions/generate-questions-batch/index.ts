@@ -1154,9 +1154,17 @@ QUESTÕES INTERPRETATIVAS SÃO PERMITIDAS E DESEJÁVEIS:
 - A alternativa correta NÃO precisa reproduzir o texto da lei "ipsis litteris". Pode parafrasear, aplicar a um caso concreto curto, comparar institutos OU combinar dispositivos de uma ou mais leis do banco — desde que o conteúdo seja FIEL ao que a norma efetivamente determina (sem inventar prazo, autoridade, requisito ou exceção).
 - Mantenha SEMPRE rastreabilidade: o comentário deve citar o(s) artigo(s) que sustenta(m) a interpretação.
 
-REGRA PARA NÚMEROS DE ARTIGOS:
+REGRA PARA NÚMEROS DE ARTIGOS (ANTI-ALUCINAÇÃO — CHECAGEM OBRIGATÓRIA):
 - Antes de citar "Art. X", LOCALIZE o trecho no texto legal e verifique em qual artigo ele realmente aparece.
-- O número do artigo NÃO é um detalhe menor: um artigo errado invalida toda a questão.
+- O número do artigo NÃO é detalhe menor: um artigo errado invalida toda a questão.
+- PROIBIDO citar artigo que não conste explicitamente no TEXTO LEGAL fornecido abaixo. Se não encontrou o número exato no texto, NÃO invente — escolha outro ângulo dentro de um artigo que existe.
+- NUNCA cite "Art. X" sem antes ter LIDO o conteúdo do Art. X no texto fornecido.
+
+REGRA PARA LEIS EXTERNAS (CITAÇÃO CRUZADA — OBRIGATÓRIA):
+- A lei principal desta questão é "${disc.leiNome}". Se a questão exigir conhecimento de OUTRA lei/diploma (CPP, CPM, CPPM, CF, CTN, CPC, CP, CLT, outro Decreto, outra Lei Complementar etc.), você DEVE:
+  1) Mencionar o diploma POR EXTENSO no enunciado/alternativa/comentário (ex: "conforme o art. 5º, LV, da Constituição Federal", "nos termos do art. 9º do CPM").
+  2) NUNCA citar apenas "Art. X" sem qualificar quando o artigo não pertence à lei principal — isso causa ambiguidade.
+  3) Preferir manter a questão dentro da lei principal sempre que possível.
 
 Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do JSON, no formato {"questions":[...]}. Configure sua "temperatura interna" para o MÍNIMO — auditoria objetiva baseada APENAS nos fatos do texto legal, sem criatividade indesejada.`;
 
