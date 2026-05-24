@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY") ?? "";
+const MARITACA_API_KEY = Deno.env.get("MARITACA_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -17,6 +18,9 @@ const MAX_PER_INVOCATION = 4; // mais ritmo sem sacrificar qualidade
 const PROCESS_CONCURRENCY = 2; // 2 chamadas IA em paralelo, dentro do limite de 150s
 const PAGE_Q = 250;
 const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
+
+// Limite a partir do qual um distrator é considerado longo demais frente aos demais
+const DISTRATOR_LEN_RATIO = 1.7;
 
 // Estados do ciclo de vida da auditoria (em public.questoes.audit_status)
 const Q_STATUS = {
