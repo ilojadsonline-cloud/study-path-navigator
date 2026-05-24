@@ -206,22 +206,31 @@ OBRIGATÓRIO PARA CADA ISSUE:
 - type: código da lista acima
 - severity: low | medium | high
 - field: 'enunciado' | 'alt_a' | 'alt_b' | 'alt_c' | 'alt_d' | 'alt_e' | 'gabarito' | 'comentario' | 'questao_inteira'
-- evidence: trecho EXATO do conteúdo problemático (até 200 chars) — copie literalmente da questão. Para gabarito, indique "letra atual: X | correta segundo lei: Y".
+- evidence: trecho EXATO do conteúdo problemático (até 200 chars).
 - description: explicação técnica do defeito.
-- suggestion: instrução curta e ACIONÁVEL para a IA reescritora (ex.: "encurtar alt_b para ~120 chars preservando troca de prazo", "corrigir gabarito para C — art. 12 fixa competência do Coronel", "remover citação 'Art. 999' inexistente; substituir por Art. 12", "reescrever comentário no estilo professor em 4 movimentos").
+- suggestion: instrução curta e ACIONÁVEL para a IA reescritora.
+- fix_complexity: "simple" | "complex". Use "simple" APENAS quando a correção for mecânica e NÃO exigir reescrita de prosa jurídica. SÃO SIMPLES somente:
+   • gabarito_errado (basta trocar o índice do gabarito)
+   • bug_estrutural trivial (remover espaço/caractere, deduplicar alternativa idêntica, cortar truncamento óbvio)
+   • formatação/pontuação isolada
+  Tudo mais é "complex" (length_bias, distrator_longo, distrator_fraco, alucinacao_juridica, multiplas_corretas, sem_correta, hierarquia_violada, funcao_inconsistente, desalinhamento, comentario_*, texto_legal_desatualizado, insufficient_distractors, incoerente, duplicada).
 
-EM DUPLICADA ou INCOERENTE (irrecuperável): defina needs_human_review=false e ai_summary começando com 'AUTO_DELETE: <motivo>'.
+REGRA DE ROTEAMENTO:
+- Se TODAS as issues forem "simple": EMITA "proposed_patch" contendo APENAS os campos a alterar (ex.: { "gabarito": 2 }). NÃO reescreva prosa nem comentário.
+- Se houver QUALQUER issue "complex": "proposed_patch" DEVE ser null — a reescrita ficará a cargo da IA jurídica Sabiá 4.
 
-Retorne JSON ESTRITO (NÃO emita proposed_patch — sempre null):
+EM DUPLICADA ou INCOERENTE (irrecuperável): needs_human_review=false, proposed_patch=null, ai_summary começa com 'AUTO_DELETE: <motivo>'.
+
+Retorne JSON ESTRITO:
 {
   "confidence": 0.0-1.0,
   "risk_level": "low" | "medium" | "high",
   "issues": [
-    { "type": "...", "severity": "low|medium|high", "field": "...", "evidence": "...", "description": "...", "suggestion": "..." }
+    { "type": "...", "severity": "low|medium|high", "field": "...", "evidence": "...", "description": "...", "suggestion": "...", "fix_complexity": "simple|complex" }
   ],
-  "proposed_patch": null,
+  "proposed_patch": null | { "gabarito"?: 0-4, "alt_a"?: "...", "alt_b"?: "...", "alt_c"?: "...", "alt_d"?: "...", "alt_e"?: "...", "enunciado"?: "..." },
   "needs_human_review": true|false,
-  "ai_summary": "1-2 frases resumindo o diagnóstico"
+  "ai_summary": "1-2 frases"
 }
 
 Se a questão estiver perfeita: confidence alta, issues=[], proposed_patch=null, needs_human_review=false.`;
