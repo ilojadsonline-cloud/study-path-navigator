@@ -831,17 +831,15 @@ serve(async (req) => {
     const blocks = parseArticleBlocks(leiSeca);
     const availableArticles = blocks.map(b => `Art. ${b.artNum}`).join(", ");
 
-    // ── AI Provider: Lovable AI Gateway (much faster than DeepSeek) ──
-    // Fallback to DeepSeek only if LOVABLE_API_KEY is not configured.
+    // ── AI Provider: Maritaca Sabiá (gerador). DeepSeek permanece exclusivo para auditoria. ──
+    const MARITACA_API_KEY = Deno.env.get("MARITACA_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
-    // Forçado a usar DeepSeek conforme solicitado pelo admin (qualidade > velocidade).
-    // Lovable AI fica como fallback caso DEEPSEEK_API_KEY não esteja configurada.
-    const useLovable = !DEEPSEEK_API_KEY && !!LOVABLE_API_KEY;
-    if (!LOVABLE_API_KEY && !DEEPSEEK_API_KEY) {
+    const useMaritaca = !!MARITACA_API_KEY;
+    const useLovable = !useMaritaca && !!LOVABLE_API_KEY;
+    if (!MARITACA_API_KEY && !LOVABLE_API_KEY) {
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "Nenhuma API key de IA configurada.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Configure LOVABLE_API_KEY ou DEEPSEEK_API_KEY" }] },
+        status: "erro", mensagem: "Nenhuma API key de IA configurada para o gerador.",
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Configure MARITACA_API_KEY (preferencial) ou LOVABLE_API_KEY" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -1197,13 +1195,13 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
     // Output token budget — Gemini Flash handles slightly larger budgets faster
     const maxTokens = batchSize === 1 ? 1800 : 3000;
 
-    const apiUrl = useLovable
-      ? "https://ai.gateway.lovable.dev/v1/chat/completions"
-      : "https://api.deepseek.com/chat/completions";
-    const apiModel = useLovable ? "google/gemini-2.5-flash" : "deepseek-chat";
-    const apiKey = useLovable ? LOVABLE_API_KEY! : DEEPSEEK_API_KEY!;
+    const apiUrl = useMaritaca
+      ? "https://chat.maritaca.ai/api/chat/completions"
+      : "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const apiModel = useMaritaca ? "sabia-3" : "google/gemini-2.5-flash";
+    const apiKey = useMaritaca ? MARITACA_API_KEY! : LOVABLE_API_KEY!;
 
-    console.log(`[GERAR] Provider: ${useLovable ? "Lovable AI (gemini-2.5-flash)" : "DeepSeek"}, batch=${batchSize}, maxTokens=${maxTokens}`);
+    console.log(`[GERAR] Provider: ${useMaritaca ? "Maritaca (sabia-3)" : "Lovable AI (gemini-2.5-flash)"}, batch=${batchSize}, maxTokens=${maxTokens}`);
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
@@ -1220,9 +1218,10 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
           max_tokens: maxTokens,
           temperature: 0.45,
           stream: false,
-          response_format: { type: "json_object" },
         };
-        if (!useLovable) requestBody.top_p = 0.92;
+        // response_format json_object é suportado por Lovable; Maritaca ignora silenciosamente.
+        if (useLovable) requestBody.response_format = { type: "json_object" };
+        if (useMaritaca) requestBody.top_p = 0.92;
 
         const response = await fetch(apiUrl, {
           method: "POST",
