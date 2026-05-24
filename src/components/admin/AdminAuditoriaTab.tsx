@@ -500,7 +500,7 @@ export function AdminAuditoriaTab() {
         assunto: form.assunto,
         dificuldade: form.dificuldade,
       };
-      const { error } = await supabase.from("questoes").update(patch).eq("id", detail.questao_id);
+      const { error } = await updateQuestao(detail.questao_id, patch);
       if (error) throw error;
       await supabase.from("question_audits").update({
         status: "approved",
