@@ -123,7 +123,7 @@ const GerarQuestoes = () => {
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-gradient-primary">Gerador de Questões (DeepSeek)</h1>
+        <h1 className="text-2xl font-bold text-gradient-primary">Gerador de Questões (Maritaca Sabiá)</h1>
         <p className="text-sm text-muted-foreground">
           Gera questões priorizando artigos menos explorados da lei, com lotes menores para mais velocidade e menor desperdício de créditos.
         </p>
