@@ -288,7 +288,7 @@ export function AdminAuditoriaTab() {
 
   async function markResolved(a: AuditRow) {
     await supabase.from("question_audits").update({ status: "approved", ai_summary: "Resolvida pelo admin" }).eq("id", a.id);
-    await supabase.from("questoes").update({ audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() }).eq("id", a.questao_id);
+    await updateQuestao(a.questao_id, { audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() });
     await closeSiblingAudits(a.questao_id, a.id);
     removeFromListIfResolved(a.id, "approved");
     setDetail(null); setQuestao(null); setForm(null);
