@@ -69,6 +69,40 @@ type AuditResult = {
   techniques_used: string[];
 };
 
+type ArticleBlock = { artNum: string; text: string; normText: string };
+
+function normalizeLegalText(text: unknown): string {
+  return String(text ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[§º°ª.,;:!?()\[\]\-–—""''\"\']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseArticleBlocks(lawText: string): ArticleBlock[] {
+  const positions: Array<{ num: string; pos: number }> = [];
+  const re = /\bArt\.?\s*(\d+)(?:º|°|o)?\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(lawText)) !== null) {
+    positions.push({ num: match[1], pos: match.index });
+  }
+  return positions.map((p, idx) => {
+    const end = idx + 1 < positions.length ? positions[idx + 1].pos : lawText.length;
+    const text = lawText.slice(p.pos, end).trim();
+    return { artNum: p.num, text, normText: normalizeLegalText(text) };
+  });
+}
+
+function extractArticleNumbers(text: unknown): string[] {
+  const out = new Set<string>();
+  const re = /\b(?:Art\.?|artigo)\s*(\d+)(?:º|°|o)?\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(String(text ?? ""))) !== null) out.add(match[1]);
+  return [...out];
+}
+
 function stripThinkTags(s: string): string {
   return s.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
 }
@@ -156,9 +190,21 @@ function buildAuditPrompt(q: Questao, legalText: string | null): string {
     (l, i) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`
   ).join("\n");
   const correta = ["A", "B", "C", "D", "E"][q.gabarito] ?? "?";
+  const blocks = legalText ? parseArticleBlocks(legalText) : [];
+  const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
+  const relevantNums = [...new Set([...cited, ...(q.artigo_principal ? extractArticleNumbers(q.artigo_principal) : [])])];
+  const relevantBlocks = relevantNums
+    .map((num) => blocks.find((b) => b.artNum === num))
+    .filter(Boolean) as ArticleBlock[];
+  const articleIndex = blocks.length
+    ? `ÍNDICE DETERMINÍSTICO DA LEI CARREGADA: ${blocks.map((b) => `Art. ${b.artNum}`).join(", ")}\n`
+    : "";
+  const relevantBlock = relevantBlocks.length
+    ? `DISPOSITIVOS CITADOS NA QUESTÃO E ENCONTRADOS NA LEI (priorize esta prova determinística antes de acusar alucinação):\n${relevantBlocks.map((b) => b.text.slice(0, 2500)).join("\n\n")}\n`
+    : "";
 
   const legalBlock = legalText
-    ? `TEXTO LEGAL DE REFERÊNCIA (use como ÚNICA fonte de verdade):\n"""${legalText.slice(0, 9000)}"""\n`
+    ? `${articleIndex}${relevantBlock}TEXTO LEGAL DE REFERÊNCIA (use como ÚNICA fonte de verdade; pode estar truncado por limite técnico, então o ÍNDICE acima prevalece para EXISTÊNCIA de artigo):\n"""${legalText.slice(0, 9000)}"""\n`
     : "ATENÇÃO: Não há texto legal disponível para referência cruzada — audite com base em conhecimento jurídico geral mas marque qualquer afirmação não verificável como issue.\n";
 
   return `${legalBlock}
@@ -200,6 +246,7 @@ Q. TEXTO_LEGAL_DESATUALIZADO — questão baseada em dispositivo revogado/altera
 R. INCOERENTE — premissa contraditória, situação juridicamente inviável. type='incoerente' (irrecuperável).
 
 REGRA INTERPRETATIVA: paráfrase, interpretação e combinação de dispositivos SÃO VÁLIDAS — só marque alucinação quando a afirmação CONTRARIAR a lei ou inventar requisito/prazo/autoridade.
+REGRA ANTI-FALSO-POSITIVO: se um artigo aparece no ÍNDICE DETERMINÍSTICO ou no bloco "DISPOSITIVOS CITADOS...", é PROIBIDO dizer que esse artigo não existe. Nesse caso, se houver problema, classifique como desalinhamento, gabarito_errado ou comentario_incompleto — nunca como alucinacao_juridica por inexistência do artigo.
 REGRA DE OURO: se gabarito correto, 5 alternativas plausíveis e equilibradas, enunciado claro e comentário coerente — APROVE com issues=[].
 
 OBRIGATÓRIO PARA CADA ISSUE:
@@ -266,6 +313,46 @@ function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_
   return isUniqueMax || isUniqueMin;
 }
 
+function articleExists(legalText: string | null, artNum: string): boolean {
+  if (!legalText) return false;
+  return parseArticleBlocks(legalText).some((b) => b.artNum === artNum);
+}
+
+function getReferencedExistingArticles(q: Questao, legalText: string | null): Set<string> {
+  const refs = extractArticleNumbers([
+    q.artigo_principal,
+    q.enunciado,
+    q.alt_a,
+    q.alt_b,
+    q.alt_c,
+    q.alt_d,
+    q.alt_e,
+    q.comentario,
+  ].join("\n"));
+  return new Set(refs.filter((num) => articleExists(legalText, num)));
+}
+
+function removeFalseHallucinationIssues(issues: any[], q: Questao, legalText: string | null): { issues: any[]; removed: string[] } {
+  const existingRefs = getReferencedExistingArticles(q, legalText);
+  if (!existingRefs.size) return { issues, removed: [] };
+  const removed: string[] = [];
+  const MISSING_ARTICLE_DERIVED_TYPES = new Set(["alucinacao_juridica", "texto_legal_desatualizado", "sem_correta", "gabarito_errado", "comentario_incompleto"]);
+  const filtered = issues.filter((issue: any) => {
+    const type = String(issue?.type ?? "");
+    if (!MISSING_ARTICLE_DERIVED_TYPES.has(type)) return true;
+    const text = [issue?.description, issue?.evidence, issue?.suggestion].map((v) => String(v ?? "")).join(" ");
+    const citedInIssue = extractArticleNumbers(text);
+    const saysMissing = /n[aã]o\s+(?:existe|possui|consta|prev[êe]|pode\s+ser\s+verificad[ao])|inexistente|inventad[ao]|alucina|sem\s+base\s+legal|carece(?:m)?\s+de\s+fundamento/i.test(text);
+    const onlyExisting = citedInIssue.length > 0 && citedInIssue.every((num) => existingRefs.has(num));
+    if (saysMissing && onlyExisting) {
+      removed.push(citedInIssue.map((n) => `Art. ${n}`).join(", "));
+      return false;
+    }
+    return true;
+  });
+  return { issues: filtered, removed };
+}
+
 /** Reescritor Maritaca: recebe questão + diagnóstico + lei e devolve patch jurídico de alta qualidade. */
 async function rewriteWithMaritaca(
   q: Questao,
@@ -274,8 +361,11 @@ async function rewriteWithMaritaca(
 ): Promise<{ patch: any | null; unrecoverable: boolean; summary: string }> {
   const alts = ["A","B","C","D","E"].map((l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
   const correctaLetra = ["A","B","C","D","E"][q.gabarito] ?? "?";
+  const blocks = legalText ? parseArticleBlocks(legalText) : [];
+  const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
+  const relevantBlocks = cited.map((num) => blocks.find((b) => b.artNum === num)).filter(Boolean) as ArticleBlock[];
   const legalBlock = legalText
-    ? `TEXTO LEGAL DE REFERÊNCIA (ÚNICA fonte de verdade):\n"""${legalText.slice(0, 10000)}"""\n`
+    ? `${relevantBlocks.length ? `DISPOSITIVOS CITADOS E ENCONTRADOS NA LEI:\n${relevantBlocks.map((b) => b.text.slice(0, 2500)).join("\n\n")}\n` : ""}TEXTO LEGAL DE REFERÊNCIA (prévia; pode estar truncada):\n"""${legalText.slice(0, 10000)}"""\n`
     : "ATENÇÃO: sem texto legal disponível. Use o conhecimento jurídico geral com cautela.\n";
 
   const issuesTxt = (diagnosis.issues || []).map((i: any, idx: number) =>
@@ -383,8 +473,14 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
   }
   const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
   const risk = ["low", "medium", "high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
-  const issues: any[] = Array.isArray(parsed.issues) ? parsed.issues : [];
-  const aiSummary = String(parsed.ai_summary ?? "");
+  let issues: any[] = Array.isArray(parsed.issues) ? parsed.issues : [];
+  let aiSummary = String(parsed.ai_summary ?? "");
+  const falseHallucinations = removeFalseHallucinationIssues(issues, q, legalText);
+  issues = falseHallucinations.issues;
+  if (falseHallucinations.removed.length) {
+    aiSummary = aiSummary.replace(/^AUTO_DELETE:/i, "Falso AUTO_DELETE bloqueado:");
+    aiSummary = `${aiSummary} | Falso positivo removido: artigo existente na lei (${[...new Set(falseHallucinations.removed)].join(", ")}).`.trim();
+  }
 
   // ── Detecções determinísticas que complementam o DeepSeek ──
   if (detectLengthBias(q) && !issues.some((i: any) => i?.type === "length_bias")) {
