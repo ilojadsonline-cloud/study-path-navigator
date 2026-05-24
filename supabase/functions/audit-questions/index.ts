@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY") ?? "";
+const MARITACA_API_KEY = Deno.env.get("MARITACA_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -17,6 +18,9 @@ const MAX_PER_INVOCATION = 4; // mais ritmo sem sacrificar qualidade
 const PROCESS_CONCURRENCY = 2; // 2 chamadas IA em paralelo, dentro do limite de 150s
 const PAGE_Q = 250;
 const OPEN_AUDIT_STATUSES = ["manual_review", "pending", "error"];
+
+// Limite a partir do qual um distrator é considerado longo demais frente aos demais
+const DISTRATOR_LEN_RATIO = 1.7;
 
 // Estados do ciclo de vida da auditoria (em public.questoes.audit_status)
 const Q_STATUS = {
@@ -76,6 +80,7 @@ function safeJsonParse(s: string): any {
   return null;
 }
 
+/** DeepSeek — DIAGNÓSTICO ESTRUTURADO (sem patch). Identifica defeitos e indica campo/evidência/sugestão. */
 async function callDeepSeek(prompt: string, timeoutMs = 55000): Promise<string> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -92,17 +97,53 @@ async function callDeepSeek(prompt: string, timeoutMs = 55000): Promise<string> 
           {
             role: "system",
             content:
-              "Você é AUDITOR INTEGRAL e PROFESSOR ORIENTADOR de questões objetivas para concursos militares e jurídicos (PMTO, FGV/CESPE/VUNESP). Auditoria SEM amostragem: leia enunciado, A–E, gabarito e comentário inteiros e confronte TUDO com o TEXTO LEGAL DE REFERÊNCIA. Detecte e (sempre que seguro) CORRIJA: alucinação jurídica, bug estrutural, comentário ausente/loop, duas+ alternativas corretas, nenhuma correta, violação de hierarquia funcional, função incompatível com o posto, duplicata, incoerência, distratores fracos, gabarito visualmente identificável, desalinhamento, legislação revogada/desatualizada, comentário que não analisa cada alternativa, e PADRÃO ANTIÉTICO 'alternativa correta = a mais longa OU a mais curta' do conjunto. Reescrever é PREFERÍVEL a marcar para revisão humana. Use estes códigos de issue quando aplicável: length_bias (gabarito é o mais longo/curto), insufficient_distractors (<2 técnicas de distração), hierarquia_violada, multiplas_corretas, texto_legal_desatualizado, duplicada, unrecoverable. Em duplicata e em irrecuperável, defina needs_human_review=false e indique no ai_summary 'AUTO_DELETE: <motivo>' — o sistema excluirá automaticamente. Para texto desatualizado (ex.: 'CPI'/'Comissão de Polícia Interna' substituída por 'CRP'/'Corregedoria' conforme texto vigente), faça a substituição no patch quando o sentido for preservado; senão, mande para revisão manual. TÉCNICAS DE DISTRAÇÃO obrigatórias (use ≥2 ao reescrever): inversão sujeito/predicado, troca de conectivo lógico, prazo trocado, cargo/posto trocado, verbo modal trocado (poderá↔deverá), negação inserida/removida, referência a lei errada, confusão de instância (Conselho↔Comando), completude falsa, generalização indevida. Registre as técnicas usadas em 'techniques_used'. ANTI-LENGTH-BIAS: ao reescrever, garanta que a alternativa correta NÃO seja a de maior nem a de menor número de caracteres do conjunto (±25% de paridade). COMENTÁRIO em 4 movimentos OBRIGATÓRIOS: (1) 'A alternativa correta é a [X], pois...' + citação literal do dispositivo; (2) 'A pegadinha desta questão está em...' nomeando explicitamente a técnica usada; (3) Análise individual de CADA alternativa errada com o dispositivo que a contradiz no formato 'Alternativa [Y]: incorreta porque ... Vide [art. Z]'; (4) 'Lembre-se: segundo o [art. X da Lei Y], [regra geral]'. Tom de tutor experiente. Responda APENAS JSON válido.",
+              "Você é AUDITOR-DIAGNOSTICADOR de questões objetivas para concursos militares (PMTO, CFO/CHOA) e jurídicos (FGV/CESPE/VUNESP). Sua FUNÇÃO ÚNICA é DIAGNOSTICAR defeitos — NÃO REESCREVA conteúdo. A reescrita será feita por outra IA jurídica especializada. Leia enunciado, A–E, gabarito e comentário INTEGRALMENTE e confronte com o TEXTO LEGAL DE REFERÊNCIA. Detecte SEM AMOSTRAGEM: (a) questões repetidas/duplicadas que abordam exatamente o mesmo assunto/dispositivo; (b) DUAS OU MAIS alternativas corretas à luz da lei; (c) NENHUMA alternativa correta (gabarito aponta errada e nenhuma outra serve); (d) ALUCINAÇÃO JURÍDICA — artigo/inciso/§ inexistente, fundamento inventado, dispositivo revogado; (e) violação de hierarquia funcional (posto/graduação/competência incompatível); (f) função incompatível com o posto citado; (g) gabarito visualmente identificável (única longa/curta/técnica/com ressalva); (h) padrão antiético length_bias (correta é a mais longa OU mais curta — único caso); (i) distratores fracos/óbvios/absurdos; (j) DISTRATORES LONGOS DEMAIS (algum distrator com mais de 1.7× o tamanho médio dos demais — type='distrator_longo'); (k) comentário ausente, em loop, ou que não analisa cada alternativa errada individualmente; (l) enunciado/alternativas/comentário desalinhados; (m) texto legal desatualizado/revogado; (n) bug estrutural (alt vazia, duplicada, formatação corrompida); (o) duas técnicas de distração insuficientes (<2 — insufficient_distractors). Para CADA issue obrigatoriamente preencha: type, severity, field ('enunciado'|'alt_a'|'alt_b'|'alt_c'|'alt_d'|'alt_e'|'gabarito'|'comentario'|'questao_inteira'), evidence (trecho EXATO do conteúdo problemático em ≤200 chars) e suggestion (instrução curta e ACIONÁVEL para a IA reescritora: 'reescrever distrator B mais curto preservando erro de prazo', 'corrigir gabarito para C porque art. 12 prevê...', 'remover citação de Art. 999 inexistente', 'reescrever comentário no estilo professor 4 movimentos'). Em duplicata e em irrecuperável, defina needs_human_review=false e indique no ai_summary 'AUTO_DELETE: <motivo>'. NUNCA emita proposed_patch — sempre null. NÃO reescreva nada. Sua saída é apenas DIAGNÓSTICO. Responda APENAS JSON válido.",
           },
           { role: "user", content: prompt },
         ],
-        temperature: 0.2,
-        max_tokens: 6000,
+        temperature: 0.1,
+        max_tokens: 3000,
         response_format: { type: "json_object" },
       }),
       signal: ctrl.signal,
     });
     if (!res.ok) throw new Error(`DeepSeek HTTP ${res.status}`);
+    const data = await res.json();
+    return stripThinkTags(data?.choices?.[0]?.message?.content ?? "");
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Maritaca Sabiá 4 — REESCRITOR jurídico. Recebe questão + diagnóstico do DeepSeek + lei e devolve patch. */
+async function callMaritaca(prompt: string, timeoutMs = 70000): Promise<string> {
+  if (!MARITACA_API_KEY) throw new Error("MARITACA_API_KEY não configurada");
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch("https://chat.maritaca.ai/api/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${MARITACA_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "sabia-4",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Você é PROFESSOR-REESCRITOR JURÍDICO de altíssimo nível especializado em concursos militares (PMTO, CFO/CHOA) e bancas CESPE/CEBRASPE/FGV/VUNESP. Recebe uma QUESTÃO defeituosa, o DIAGNÓSTICO formal de outro auditor (IA) e o TEXTO LEGAL DE REFERÊNCIA. Sua missão é CORRIGIR a questão exigindo o MÁXIMO de conhecimento e interpretação jurídica — não invente nada fora do texto legal. Regras: (1) corrija TODOS os defeitos listados pelo diagnóstico; (2) preserve a essência didática quando possível; (3) ANTI-LENGTH-BIAS: a alternativa correta NUNCA pode ser a única mais longa nem a única mais curta — paridade ±25%; (4) DISTRATORES LONGOS DEMAIS devem ser ENCURTADOS preservando o erro típico (troca de prazo/autoridade/conectivo) e a plausibilidade; (5) cada distrator usa uma técnica DIFERENTE de erro (≥2 técnicas no conjunto); (6) gabarito 0–4; (7) COMENTÁRIO no estilo professor orientador em 4 movimentos OBRIGATÓRIOS — (i) 'A alternativa correta é a [X], pois...' + citação literal e curta do dispositivo; (ii) 'A pegadinha desta questão está em...' nomeando a técnica; (iii) análise INDIVIDUAL de cada alternativa errada no formato 'Alternativa [Y]: incorreta porque ... Vide [art. Z]'; (iv) 'Lembre-se: segundo o [art. X da Lei Y], [regra geral]'; (8) 600–1500 caracteres no comentário; (9) RESPEITE a hierarquia militar e atribua competências exatamente como a lei fixa; (10) se citar lei DIFERENTE da lei principal, mencione o diploma por extenso (ex.: 'art. 9º do CPM', 'art. 5º, LV, da CF'); (11) se a questão for IRRECUPERÁVEL juridicamente (sem alternativa correta possível à luz da lei, sem base legal etc.), devolva unrecoverable=true. Responda APENAS JSON válido com o patch.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.2,
+        top_p: 0.92,
+        max_tokens: 4500,
+      }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`Maritaca HTTP ${res.status}`);
     const data = await res.json();
     return stripThinkTags(data?.choices?.[0]?.message?.content ?? "");
   } finally {
@@ -137,73 +178,70 @@ Gabarito atual: ${correta} (índice ${q.gabarito})
 Comentário atual:
 ${q.comentario}
 
-Audite INTEGRALMENTE esta questão (sem amostragem, sem atalhos por palavra-chave). LEIA enunciado + 5 alternativas + gabarito + comentário e CONFRONTE TUDO com o texto legal acima. Verifique TODOS os defeitos abaixo:
+DIAGNOSTIQUE INTEGRALMENTE esta questão. Você NÃO REESCREVE — apenas identifica defeitos. A reescrita será feita por outra IA jurídica especializada (Sabiá 4). Verifique TODOS os defeitos abaixo:
 
-A. ALUCINAÇÃO JURÍDICA — fundamento legal inventado, artigo/inciso/§ que não existe na lei de referência, ou afirmação não amparada pelo texto legal disponível.
-B. BUG ESTRUTURAL — campo vazio, alternativa duplicada, formatação corrompida, enunciado truncado.
-C. AUSÊNCIA DE COMENTÁRIO — comentario vazio, "(sem comentário)" ou apenas placeholder.
-D. COMENTÁRIO EM LOOP — texto circular, repetição da mesma frase, não acrescenta informação, parafraseia o enunciado sem explicar.
-E. DUAS OU MAIS ALTERNATIVAS CORRETAS — mais de uma alternativa é defensável à luz da lei.
-F. NENHUMA ALTERNATIVA CORRETA — gabarito atual aponta para alternativa errada e nenhuma das outras está correta tampouco.
-G. VIOLAÇÃO DE HIERARQUIA — enunciado/alternativas atribuem competência, função, posto ou graduação de forma diferente do que a lei determina.
-H. ATRIBUIÇÃO DE FUNÇÃO INCONSISTENTE com o posto/graduação citado (ex.: cabo exercendo função privativa de oficial superior).
-I. QUESTÃO INCOERENTE/IMPOSSÍVEL — premissa contraditória, situação juridicamente inviável, sem solução lógica.
-J. DISTRATORES FRACOS/ÓBVIOS — alternativas absurdas, genéricas, gritantemente falsas, muito mais curtas/longas, com palavras-âncora isoladas ("sempre/nunca/somente"), "todas/nenhuma das anteriores", "n.d.a.", ou que entregam a resposta por eliminação. (severity medium; high se 2+).
-K. GABARITO VISUALMENTE IDENTIFICÁVEL — a correta destoa: única completa, única técnica, única com ressalva, única longa.
-L. ENUNCIADO/ALTERNATIVAS/COMENTÁRIO DESALINHADOS entre si — o comentário cita uma alternativa como correta diferente do gabarito, ou o enunciado pergunta X e as alternativas respondem Y.
-M. TEXTO LEGAL DESATUALIZADO — questão baseada em dispositivo revogado/alterado/substituído (compare com o texto legal de referência).
-N. COMENTÁRIO QUE NÃO EXPLICA CADA ALTERNATIVA INCORRETA INDIVIDUALMENTE — limita-se a "as demais estão erradas" ou explica só a correta.
+A. DUPLICADA — questão idêntica em sentido a outra já existente (mesmo dispositivo, mesma armadilha). type='duplicada'.
+B. DUAS+ ALTERNATIVAS CORRETAS — mais de uma alternativa é defensável à luz da lei. type='multiplas_corretas'.
+C. NENHUMA ALTERNATIVA CORRETA — gabarito atual está errado E nenhuma das outras serve. type='sem_correta'.
+D. ALUCINAÇÃO JURÍDICA — artigo/inciso/§ inexistente na lei, fundamento legal inventado, dispositivo revogado. type='alucinacao_juridica'.
+E. GABARITO ERRADO — gabarito aponta alternativa errada mas outra É correta. type='gabarito_errado'.
+F. VIOLAÇÃO DE HIERARQUIA — atribui competência/função/posto/graduação de forma diferente do que a lei determina. type='hierarquia_violada'.
+G. FUNÇÃO INCONSISTENTE com o posto/graduação citado. type='funcao_inconsistente'.
+H. LENGTH_BIAS — alternativa correta é a única mais longa OU a única mais curta. type='length_bias'.
+I. DISTRATORES FRACOS/ÓBVIOS — alternativas absurdas, óbvias, "todas/nenhuma das anteriores", n.d.a., palavras-âncora isoladas. type='distrator_fraco'.
+J. DISTRATORES LONGOS DEMAIS — algum distrator com mais de 1.7× o tamanho médio dos demais. type='distrator_longo' (cite no field o alt_X afetado e em suggestion 'encurtar preservando erro típico').
+K. INSUFFICIENT_DISTRACTORS — menos de 2 técnicas de distração diferentes. type='insufficient_distractors'.
+L. BUG ESTRUTURAL — campo vazio, alternativa duplicada, formatação corrompida, enunciado truncado. type='bug_estrutural'.
+M. SEM_COMENTARIO — comentário vazio/placeholder. type='sem_comentario'.
+N. COMENTARIO_LOOP — texto circular, parafraseia o enunciado sem explicar. type='comentario_loop'.
+O. COMENTARIO_INCOMPLETO — não analisa cada alternativa errada individualmente, falta um dos 4 movimentos (confirmação+citação / pegadinha / análise alt-a-alt / lembrete). type='comentario_incompleto'.
+P. DESALINHAMENTO — comentário cita correta diferente do gabarito, ou enunciado pergunta X e alternativas respondem Y. type='desalinhamento'.
+Q. TEXTO_LEGAL_DESATUALIZADO — questão baseada em dispositivo revogado/alterado/substituído. type='texto_legal_desatualizado'.
+R. INCOERENTE — premissa contraditória, situação juridicamente inviável. type='incoerente' (irrecuperável).
 
-QUESTÕES INTERPRETATIVAS SÃO VÁLIDAS:
-- Reproduzir literalmente a lei NÃO é requisito. Paráfrase, interpretação e combinação de dispositivos são aceitas, desde que FIÉIS à norma.
-- Só sinalize "extra_legal/alucinacao_juridica" quando a afirmação CONTRARIAR a lei, inventar requisito/prazo/autoridade inexistente, ou afirmar algo não autorizado.
+REGRA INTERPRETATIVA: paráfrase, interpretação e combinação de dispositivos SÃO VÁLIDAS — só marque alucinação quando a afirmação CONTRARIAR a lei ou inventar requisito/prazo/autoridade.
+REGRA DE OURO: se gabarito correto, 5 alternativas plausíveis e equilibradas, enunciado claro e comentário coerente — APROVE com issues=[].
 
-REGRA DE OURO — NÃO MEXER NO QUE ESTÁ CORRETO:
-- Se gabarito está correto (literal OU interpretativamente fiel), as 5 alternativas são plausíveis e equilibradas, enunciado é claro, e o comentário explica corretamente a resposta E os erros das demais (mesmo que de forma sucinta), APROVE com confidence alta, issues=[], proposed_patch=null.
-- Em caso de dúvida sobre defeito real, APROVE.
+OBRIGATÓRIO PARA CADA ISSUE:
+- type: código da lista acima
+- severity: low | medium | high
+- field: 'enunciado' | 'alt_a' | 'alt_b' | 'alt_c' | 'alt_d' | 'alt_e' | 'gabarito' | 'comentario' | 'questao_inteira'
+- evidence: trecho EXATO do conteúdo problemático (até 200 chars) — copie literalmente da questão. Para gabarito, indique "letra atual: X | correta segundo lei: Y".
+- description: explicação técnica do defeito.
+- suggestion: instrução curta e ACIONÁVEL para a IA reescritora (ex.: "encurtar alt_b para ~120 chars preservando troca de prazo", "corrigir gabarito para C — art. 12 fixa competência do Coronel", "remover citação 'Art. 999' inexistente; substituir por Art. 12", "reescrever comentário no estilo professor em 4 movimentos").
 
-POLÍTICA DE CORREÇÃO:
-- TENTE SEMPRE corrigir antes de mandar para revisão humana. Só marque needs_human_review=true quando a correção automática não for SEGURA juridicamente (ex.: você não tem certeza de qual é a resposta correta à luz da lei) ou quando a questão for duplicada e exigir decisão humana sobre exclusão.
-- Se o ÚNICO defeito for distrator fraco/óbvio: reescreva APENAS as alternativas problemáticas (preserve o resto). Devolva no patch só os campos alt_X afetados (e "gabarito" se a posição mudou).
-- Se houver defeito de gabarito/enunciado/comentário/hierarquia/coerência: reescreva enunciado + alt_a..alt_e + gabarito + comentario JUNTOS.
+EM DUPLICADA ou INCOERENTE (irrecuperável): defina needs_human_review=false e ai_summary começando com 'AUTO_DELETE: <motivo>'.
 
-ALGORITMO DE ESCRITA DAS ALTERNATIVAS (siga à risca quando reescrever qualquer alt_X):
-1. PARIDADE FORMAL: 5 alternativas com comprimento similar (±25%), mesmo registro técnico-jurídico, mesma estrutura sintática, pontuação coerente.
-2. PARIDADE SEMÂNTICA: todas igualmente plausíveis para quem estudou mas não dominou o detalhe.
-3. CADA DISTRATORA = UM ERRO TÍPICO REAL (troca de prazo, troca de autoridade, inversão regra/exceção, confusão entre institutos parecidos, dispositivo revogado, aplicação errada de princípio). Não exponha qual erro no JSON.
-4. PROIBIDO: "todas/nenhuma das anteriores", "apenas a alternativa X", "n.d.a.", duplicatas, alternativa que contradiga o enunciado, palavras-âncora isoladas em 1 só.
-5. POSIÇÃO DA CORRETA: distribua aleatoriamente A–E (não vicie em C/D). Ajuste "gabarito" (0–4).
-6. RESPEITE A HIERARQUIA da lei: cargos, postos, graduações, competências exclusivas devem espelhar EXATAMENTE o que a norma fixa.
-
-REGRAS DE COMENTÁRIO (PROFESSOR ORIENTADOR) — OBRIGATÓRIO quando reescrever comentário:
-Estrutura em 4 movimentos, sem títulos visíveis, em parágrafos fluidos:
-(1) CONFIRMA a alternativa correta e CITA o dispositivo (Art. X, inciso Y, §Z) com o trecho legal essencial — não basta "conforme o art. X", explique o que ele diz e por que torna a alternativa correta.
-(2) NOMEIA EXPLICITAMENTE a pegadinha/trocadilho/elemento de confusão (ex.: "a banca trocou o prazo de 5 por 10 dias", "inverteu a competência do delegado pela do juiz", "aplicou exceção como se fosse regra").
-(3) ANALISA CADA ALTERNATIVA INCORRETA INDIVIDUALMENTE: para A, B, C, D, E que não são o gabarito, diga o ERRO ESPECÍFICO (inversão de competência, troca de prazo, atribuição indevida de função, condição inexistente na lei, confusão entre institutos parecidos). Use o formato "A) ... — erro: ...; B) ... — erro: ...". NUNCA escreva "as demais estão incorretas".
-(4) Se a questão envolve hierarquia/posto/graduação/comissão/competência exclusiva, REFORÇA a regra geral e as exceções da lei para fixação.
-Tom direto, técnico, didático, em pt-BR. Sem repetir o enunciado, sem "conforme a legislação vigente" solto, sem rodeios. 600–1500 caracteres.
-
-REGRAS DE ENUNCIADO (quando reescrever):
-- Claro, específico, ancorado na lei. Prefira casos concretos curtos. Mantenha a dificuldade compatível com a original.
-
-Retorne JSON ESTRITO:
+Retorne JSON ESTRITO (NÃO emita proposed_patch — sempre null):
 {
   "confidence": 0.0-1.0,
   "risk_level": "low" | "medium" | "high",
   "issues": [
-    { "type": "gabarito_errado|sem_correta|multiplas_corretas|alucinacao_juridica|bug_estrutural|sem_comentario|comentario_loop|comentario_incompleto|distrator_fraco|gabarito_obvio|hierarquia_violada|funcao_inconsistente|duplicada|incoerente|texto_legal_desatualizado|desalinhamento|extra_legal|alt_duplicada|ambiguidade|outros", "severity": "low|medium|high", "description": "..." }
+    { "type": "...", "severity": "low|medium|high", "field": "...", "evidence": "...", "description": "...", "suggestion": "..." }
   ],
-  "proposed_patch": {              // null APENAS se a questão estiver impecável. Caso precise de qualquer ajuste relevante, devolva enunciado, alt_a..alt_e, gabarito e comentário JUNTOS.
-    "enunciado"?: "...",
-    "alt_a"?: "...", "alt_b"?: "...", "alt_c"?: "...", "alt_d"?: "...", "alt_e"?: "...",
-    "gabarito"?: 0-4,
-    "comentario"?: "..."
-  },
+  "proposed_patch": null,
   "needs_human_review": true|false,
-  "ai_summary": "1-2 frases resumindo o diagnóstico e o que foi reescrito"
+  "ai_summary": "1-2 frases resumindo o diagnóstico"
 }
 
 Se a questão estiver perfeita: confidence alta, issues=[], proposed_patch=null, needs_human_review=false.`;
+}
+
+/** Detecta distrator com mais de DISTRATOR_LEN_RATIO× o tamanho médio dos demais (incluindo a correta). */
+function detectOversizedDistractors(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_e"|"gabarito">): Array<{ field: string; len: number; mean: number }> {
+  const keys = ["alt_a","alt_b","alt_c","alt_d","alt_e"];
+  const lens = keys.map((k) => String((q as any)[k] ?? "").trim().length);
+  const g = q.gabarito;
+  const out: Array<{ field: string; len: number; mean: number }> = [];
+  for (let i = 0; i < 5; i++) {
+    if (i === g) continue;
+    const others = lens.filter((_, j) => j !== i);
+    const mean = others.reduce((a, b) => a + b, 0) / others.length;
+    if (mean > 0 && lens[i] >= mean * DISTRATOR_LEN_RATIO && lens[i] >= 200) {
+      out.push({ field: keys[i], len: lens[i], mean: Math.round(mean) });
+    }
+  }
+  return out;
 }
 
 /** Verifica se o gabarito é a alternativa mais longa OU mais curta do conjunto. */
@@ -219,29 +257,89 @@ function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_
   return isUniqueMax || isUniqueMin;
 }
 
-async function auditOne(q: Questao, legalText: string | null, userReports: string[] = []): Promise<AuditResult> {
-  const reportsBlock = userReports.length
-    ? `\n\nREPORTES DE USUÁRIOS SOBRE ESTA QUESTÃO (tratá-los como ALERTA OBRIGATÓRIO — investigue cada alegação contra o texto legal antes de aprovar):\n${userReports.map((m, i) => `[Reporte ${i + 1}] ${m}`).join("\n")}\n\nREGRA CRÍTICA: se qualquer reporte apontar gabarito errado, alternativa correta diferente, conteúdo invertido, ano/prazo/posto errados, e VOCÊ não tiver certeza absoluta (texto legal claríssimo + 100% de confiança), marque needs_human_review=true e NÃO auto-corrija. Se o reporte estiver certo conforme a lei, proponha o patch correto. Inclua um issue do tipo "reporte_usuario" descrevendo a verificação feita.\n`
-    : "";
-  const raw = await callDeepSeek(buildAuditPrompt(q, legalText) + reportsBlock);
+/** Reescritor Maritaca: recebe questão + diagnóstico + lei e devolve patch jurídico de alta qualidade. */
+async function rewriteWithMaritaca(
+  q: Questao,
+  diagnosis: { issues: any[]; ai_summary: string },
+  legalText: string | null,
+): Promise<{ patch: any | null; unrecoverable: boolean; summary: string }> {
+  const alts = ["A","B","C","D","E"].map((l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
+  const correctaLetra = ["A","B","C","D","E"][q.gabarito] ?? "?";
+  const legalBlock = legalText
+    ? `TEXTO LEGAL DE REFERÊNCIA (ÚNICA fonte de verdade):\n"""${legalText.slice(0, 10000)}"""\n`
+    : "ATENÇÃO: sem texto legal disponível. Use o conhecimento jurídico geral com cautela.\n";
+
+  const issuesTxt = (diagnosis.issues || []).map((i: any, idx: number) =>
+    `${idx + 1}. [${i.type} | severity=${i.severity} | field=${i.field ?? "?"}] ${i.description ?? ""}${i.evidence ? ` | EVIDÊNCIA: "${String(i.evidence).slice(0, 200)}"` : ""}${i.suggestion ? ` | SUGESTÃO: ${i.suggestion}` : ""}`
+  ).join("\n");
+
+  const prompt = `${legalBlock}
+QUESTÃO #${q.id}
+Disciplina: ${q.disciplina}
+Assunto: ${q.assunto}
+Artigo declarado: ${q.artigo_principal ?? "(não informado)"}
+
+Enunciado:
+${q.enunciado}
+
+Alternativas:
+${alts}
+
+Gabarito atual: ${correctaLetra} (índice ${q.gabarito})
+
+Comentário atual:
+${q.comentario}
+
+DIAGNÓSTICO DO AUDITOR (DeepSeek) — RESUMO: ${diagnosis.ai_summary ?? "(sem resumo)"}
+ISSUES IDENTIFICADAS:
+${issuesTxt || "(nenhuma)"}
+
+TAREFA: produza um PATCH que corrija TODOS os defeitos diagnosticados. Aplique o máximo de conhecimento e interpretação jurídica.
+
+REGRAS DE REESCRITA:
+1. Corrija EXATAMENTE os campos apontados em "field" do diagnóstico. Preserve o restante quando possível.
+2. ANTI-LENGTH-BIAS: a alternativa correta NUNCA pode ser a única mais longa nem a única mais curta. Paridade ±25%.
+3. DISTRATORES LONGOS: encurte mantendo o erro típico (troca de prazo, autoridade, conectivo, regra/exceção).
+4. CADA DISTRATOR usa uma técnica DIFERENTE de erro (≥2 técnicas no conjunto).
+5. PROIBIDO "todas/nenhuma das anteriores", "n.d.a.", duplicatas, alternativa que contradiz o enunciado.
+6. Gabarito = inteiro 0-4. Se trocar a alternativa correta, ajuste o gabarito.
+7. HIERARQUIA militar: cargos/postos/competências fiéis à lei. Cite lei externa por extenso ("art. 9º do CPM").
+8. COMENTÁRIO em 4 movimentos OBRIGATÓRIOS, parágrafos fluidos, 600-1500 chars:
+   (i) "A alternativa correta é a [X], pois..." + citação literal curta do dispositivo.
+   (ii) "A pegadinha desta questão está em..." + nomeia a técnica.
+   (iii) Análise INDIVIDUAL de cada alternativa errada: "Alternativa [Y]: incorreta porque ... Vide [art. Z]". NUNCA "as demais estão erradas".
+   (iv) "Lembre-se: segundo o [art. X da Lei Y], [regra geral]".
+9. Se a questão for IRRECUPERÁVEL juridicamente (ex.: nenhuma alternativa pode ser correta à luz da lei, ou diagnóstico AUTO_DELETE), devolva unrecoverable=true e patch=null.
+
+Retorne JSON ESTRITO:
+{
+  "patch": {
+    "enunciado"?: "...",
+    "alt_a"?: "...", "alt_b"?: "...", "alt_c"?: "...", "alt_d"?: "...", "alt_e"?: "...",
+    "gabarito"?: 0-4,
+    "comentario"?: "..."
+  } | null,
+  "techniques_used": ["..."],
+  "unrecoverable": true|false,
+  "summary": "1-2 frases sobre o que foi corrigido"
+}`;
+
+  let raw = "";
+  try {
+    raw = await callMaritaca(prompt);
+  } catch (e) {
+    return { patch: null, unrecoverable: false, summary: `Falha Maritaca: ${e instanceof Error ? e.message : e}` };
+  }
   const parsed = safeJsonParse(raw);
   if (!parsed || typeof parsed !== "object") {
-    return {
-      confidence: 0,
-      risk_level: "high",
-      issues: [{ type: "outros", severity: "high", description: "Auditor IA retornou resposta inválida" }],
-      proposed_patch: null,
-      needs_human_review: true,
-      ai_summary: "Falha de parse do auditor",
-      techniques_used: [],
-    };
+    return { patch: null, unrecoverable: false, summary: "Maritaca retornou JSON inválido" };
   }
-  const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
-  const risk = ["low", "medium", "high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
-  const issues = Array.isArray(parsed.issues) ? parsed.issues : [];
-  let patch = parsed.proposed_patch && typeof parsed.proposed_patch === "object" ? parsed.proposed_patch : null;
+  if (parsed.unrecoverable === true) {
+    return { patch: null, unrecoverable: true, summary: String(parsed.summary ?? "Maritaca classificou como irrecuperável") };
+  }
+  let patch = parsed.patch && typeof parsed.patch === "object" ? parsed.patch : null;
   if (patch) {
-    const allowed = ["gabarito", "comentario", "alt_a", "alt_b", "alt_c", "alt_d", "alt_e", "enunciado"];
+    const allowed = ["gabarito","comentario","alt_a","alt_b","alt_c","alt_d","alt_e","enunciado"];
     const clean: any = {};
     for (const k of allowed) if (k in patch) clean[k] = patch[k];
     if ("gabarito" in clean) {
@@ -250,25 +348,106 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
     }
     patch = Object.keys(clean).length ? clean : null;
   }
-  const techniques = Array.isArray(parsed.techniques_used)
-    ? parsed.techniques_used.map((t: any) => String(t)).slice(0, 10)
-    : [];
+  const techniques = Array.isArray(parsed.techniques_used) ? parsed.techniques_used.map((t: any) => String(t)).slice(0, 10) : [];
+  (patch ?? {}).__techniques = techniques;
+  return { patch, unrecoverable: false, summary: String(parsed.summary ?? "Patch gerado pela Maritaca") };
+}
 
-  // Pós-validação anti-length-bias: avalia o estado FINAL (após patch, se houver).
-  const finalAlts = {
-    alt_a: patch?.alt_a ?? q.alt_a,
-    alt_b: patch?.alt_b ?? q.alt_b,
-    alt_c: patch?.alt_c ?? q.alt_c,
-    alt_d: patch?.alt_d ?? q.alt_d,
-    alt_e: patch?.alt_e ?? q.alt_e,
-    gabarito: typeof patch?.gabarito === "number" ? patch.gabarito : q.gabarito,
-  };
-  if (detectLengthBias(finalAlts) && !issues.some((i: any) => i?.type === "length_bias")) {
+async function auditOne(q: Questao, legalText: string | null, userReports: string[] = []): Promise<AuditResult> {
+  const reportsBlock = userReports.length
+    ? `\n\nREPORTES DE USUÁRIOS SOBRE ESTA QUESTÃO (ALERTA OBRIGATÓRIO — confronte cada alegação com o texto legal):\n${userReports.map((m, i) => `[Reporte ${i + 1}] ${m}`).join("\n")}\nSe um reporte apontar gabarito errado/conteúdo invertido E o texto legal confirmar, registre issue com type='reporte_usuario', field=campo afetado, evidence=trecho, suggestion=correção necessária.\n`
+    : "";
+
+  // ── ETAPA 1: DeepSeek DIAGNOSTICA defeitos com field/evidence/suggestion. ──
+  const raw = await callDeepSeek(buildAuditPrompt(q, legalText) + reportsBlock);
+  const parsed = safeJsonParse(raw);
+  if (!parsed || typeof parsed !== "object") {
+    return {
+      confidence: 0,
+      risk_level: "high",
+      issues: [{ type: "outros", severity: "high", field: "questao_inteira", description: "DeepSeek retornou resposta inválida", suggestion: "Tentar novamente ou revisar manualmente" }],
+      proposed_patch: null,
+      needs_human_review: true,
+      ai_summary: "Falha de parse do diagnóstico DeepSeek",
+      techniques_used: [],
+    };
+  }
+  const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
+  const risk = ["low", "medium", "high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
+  const issues: any[] = Array.isArray(parsed.issues) ? parsed.issues : [];
+  const aiSummary = String(parsed.ai_summary ?? "");
+
+  // ── Detecções determinísticas que complementam o DeepSeek ──
+  if (detectLengthBias(q) && !issues.some((i: any) => i?.type === "length_bias")) {
+    const lens = ["alt_a","alt_b","alt_c","alt_d","alt_e"].map((k) => String((q as any)[k] ?? "").length);
+    const isMax = lens[q.gabarito] === Math.max(...lens);
     issues.push({
       type: "length_bias",
       severity: "high",
-      description: "Alternativa correta é a mais longa OU mais curta do conjunto — padrão previsível.",
+      field: `alt_${["a","b","c","d","e"][q.gabarito]}`,
+      evidence: `tamanho da correta=${lens[q.gabarito]}; outros=${lens.filter((_, i) => i !== q.gabarito).join(",")}`,
+      description: `Alternativa correta é a única ${isMax ? "mais longa" : "mais curta"} — padrão previsível.`,
+      suggestion: "Reescrever distratores para paridade ±25% sem alterar o gabarito.",
     });
+  }
+  for (const o of detectOversizedDistractors(q)) {
+    if (!issues.some((i: any) => i?.type === "distrator_longo" && i?.field === o.field)) {
+      issues.push({
+        type: "distrator_longo",
+        severity: "medium",
+        field: o.field,
+        evidence: `${o.field} tem ${o.len} chars (média das demais ≈ ${o.mean}, ratio ${(o.len/o.mean).toFixed(2)}×)`,
+        description: `Distrator desproporcionalmente longo frente aos demais — torna a questão previsível.`,
+        suggestion: `Encurtar ${o.field} para ~${o.mean} chars preservando o erro típico (troca de prazo/autoridade/conectivo).`,
+      });
+    }
+  }
+
+  // ── ETAPA 2: se há defeitos reais, Maritaca REESCREVE. ──
+  let patch: any = null;
+  let techniques: string[] = [];
+  let rewriteSummary = "";
+  const isAutoDelete = /^AUTO_DELETE:/i.test(aiSummary);
+  const hasIrrecoverable = issues.some((i: any) => i?.type === "incoerente" || i?.type === "duplicada" || i?.type === "unrecoverable");
+  const hasRealDefect = issues.some((i: any) => i?.severity === "medium" || i?.severity === "high");
+
+  if (hasRealDefect && !isAutoDelete && !hasIrrecoverable && MARITACA_API_KEY) {
+    const r = await rewriteWithMaritaca(q, { issues, ai_summary: aiSummary }, legalText);
+    rewriteSummary = r.summary;
+    if (r.unrecoverable) {
+      issues.push({
+        type: "unrecoverable",
+        severity: "high",
+        field: "questao_inteira",
+        description: "Maritaca classificou a questão como irrecuperável após análise jurídica.",
+        suggestion: "Exclusão recomendada.",
+      });
+    } else if (r.patch) {
+      techniques = (r.patch.__techniques as string[]) ?? [];
+      delete r.patch.__techniques;
+      patch = r.patch;
+    }
+  }
+
+  // Re-verifica length_bias no estado FINAL (após patch).
+  if (patch) {
+    const finalAlts = {
+      alt_a: patch.alt_a ?? q.alt_a,
+      alt_b: patch.alt_b ?? q.alt_b,
+      alt_c: patch.alt_c ?? q.alt_c,
+      alt_d: patch.alt_d ?? q.alt_d,
+      alt_e: patch.alt_e ?? q.alt_e,
+      gabarito: typeof patch.gabarito === "number" ? patch.gabarito : q.gabarito,
+    };
+    if (detectLengthBias(finalAlts) && !issues.some((i: any) => i?.type === "length_bias_persistente")) {
+      issues.push({
+        type: "length_bias_persistente",
+        severity: "high",
+        field: "questao_inteira",
+        description: "Após reescrita da Maritaca o length_bias persistiu.",
+        suggestion: "Revisar manualmente o equilíbrio das alternativas.",
+      });
+    }
   }
 
   return {
@@ -276,8 +455,8 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
     risk_level: risk,
     issues,
     proposed_patch: patch,
-    needs_human_review: Boolean(parsed.needs_human_review) || issues.some((i: any) => i?.severity === "high" && i?.type !== "length_bias"),
-    ai_summary: String(parsed.ai_summary ?? ""),
+    needs_human_review: Boolean(parsed.needs_human_review) || issues.some((i: any) => i?.severity === "high" && i?.type !== "length_bias" && i?.type !== "distrator_longo"),
+    ai_summary: [aiSummary, rewriteSummary && `Reescrita (Maritaca): ${rewriteSummary}`].filter(Boolean).join(" | "),
     techniques_used: techniques,
   };
 }
