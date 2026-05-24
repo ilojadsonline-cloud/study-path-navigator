@@ -952,13 +952,26 @@ export function AdminAuditoriaTab() {
                 </div>
                 {detail.issues?.length > 0 && (
                   <div>
-                    <strong className="text-xs uppercase text-muted-foreground">Problemas detectados:</strong>
-                    <ul className="list-disc list-inside mt-1 space-y-0.5">
+                    <strong className="text-xs uppercase text-muted-foreground">Problemas detectados (DeepSeek):</strong>
+                    <ul className="mt-1 space-y-2">
                       {detail.issues.map((i: any, idx: number) => (
-                        <li key={idx} className="text-xs">
-                          <span className="font-mono">{i.type}</span>
-                          {i.severity && <Badge variant="outline" className="ml-1 text-[10px]">{i.severity}</Badge>}
-                          {i.description && <span className="text-muted-foreground"> — {i.description}</span>}
+                        <li key={idx} className="text-xs rounded-md border border-border/40 bg-background/40 p-2 space-y-1">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="font-mono font-semibold">{i.type}</span>
+                            {i.severity && <Badge variant="outline" className="text-[10px]">{i.severity}</Badge>}
+                            {i.field && <Badge variant="secondary" className="text-[10px]">📍 {i.field}</Badge>}
+                          </div>
+                          {i.description && <p className="text-muted-foreground">{i.description}</p>}
+                          {i.evidence && (
+                            <p className="italic text-foreground/80">
+                              <span className="text-muted-foreground">Trecho:</span> "{String(i.evidence).slice(0, 240)}"
+                            </p>
+                          )}
+                          {i.suggestion && (
+                            <p className="text-primary">
+                              <span className="text-muted-foreground">Sugestão da IA:</span> {i.suggestion}
+                            </p>
+                          )}
                         </li>
                       ))}
                     </ul>
