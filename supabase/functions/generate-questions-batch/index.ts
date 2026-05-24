@@ -178,6 +178,25 @@ function extractAllCitedArticles(text: string): string[] {
   return [...new Set(matches.map(m => m.match(/\d+/)?.[0] || "").filter(Boolean))];
 }
 
+/**
+ * Extrai apenas citações de artigo que se referem à LEI ATUAL.
+ * Citações com marcador externo ("da Lei X", "do CPP", "da CF", etc.) são consideradas
+ * de OUTRO diploma e ignoradas pela validação contra `blocks`.
+ */
+function extractInternalCitedArticles(text: string): string[] {
+  const result: string[] = [];
+  const re = /Art\.?\s*(\d+)([^.;]{0,80})/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const num = m[1];
+    const tail = (m[2] || "").toLowerCase();
+    const externalMarker = /\b(d[aoe]s?\s+(lei|lc|lei\s+complementar|decreto|c[óo]digo|cf|constitui[çc][ãa]o|cpp|cpm|cppm|cpc|cp|ctn|clt|estatuto|regulamento)\b)/i;
+    if (externalMarker.test(tail)) continue;
+    result.push(num);
+  }
+  return [...new Set(result)];
+}
+
 function extractCommentEvidenceSnippets(comment: string): string[] {
   const snippets = Array.from(
     comment.matchAll(/["""''']([^"""''']{20,500})["""''']/g),
@@ -203,10 +222,31 @@ function articleExistsInBlocks(artNum: string, blocks: ArticleBlock[]): boolean 
 }
 
 function validateAllCitations(comment: string, blocks: ArticleBlock[]): { valid: boolean; missing: string[] } {
-  const cited = extractAllCitedArticles(comment);
+  // Apenas citações INTERNAS são validadas; citações externas explícitas são permitidas.
+  const cited = extractInternalCitedArticles(comment);
   const missing: string[] = [];
   for (const artNum of cited) {
     if (!articleExistsInBlocks(artNum, blocks)) missing.push(`Art. ${artNum}`);
+  }
+  return { valid: missing.length === 0, missing };
+}
+
+/** Valida citações de artigo em QUALQUER campo da questão (enunciado, alternativas, comentário). */
+function validateCitationsInAllFields(q: Record<string, any>, blocks: ArticleBlock[]): { valid: boolean; missing: Array<{ field: string; arts: string[] }> } {
+  const fields: Array<[string, string]> = [
+    ["enunciado", String(q.enunciado || "")],
+    ["alt_a", String(q.alt_a || "")],
+    ["alt_b", String(q.alt_b || "")],
+    ["alt_c", String(q.alt_c || "")],
+    ["alt_d", String(q.alt_d || "")],
+    ["alt_e", String(q.alt_e || "")],
+    ["comentario", String(q.comentario || "")],
+  ];
+  const missing: Array<{ field: string; arts: string[] }> = [];
+  for (const [name, txt] of fields) {
+    const internalCited = extractInternalCitedArticles(txt);
+    const bad = internalCited.filter(n => !articleExistsInBlocks(n, blocks));
+    if (bad.length) missing.push({ field: name, arts: bad.map(n => `Art. ${n}`) });
   }
   return { valid: missing.length === 0, missing };
 }
