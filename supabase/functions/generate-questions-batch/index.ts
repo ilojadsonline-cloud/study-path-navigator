@@ -1623,13 +1623,30 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
     if (validQuestions.length > 0) {
       console.log(`[AUDIT-XGEN] Iniciando auditoria cruzada de ${validQuestions.length} questões (sequencial p/ estabilidade)...`);
 
+      // Snippet FOCADO nos artigos citados pela questão → impede falsos descartes "artigo inexistente".
+      const buildFocusedLawSnippet = (q: any): string => {
+        const allText = [q.enunciado, q.comentario, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e]
+          .filter(Boolean).join("\n");
+        const citedNums = new Set<string>(extractAllCitedArticles(allText));
+        const pieces: string[] = [];
+        for (const num of citedNums) {
+          const block = blocks.find(b => b.artNum === num);
+          if (block) pieces.push(block.text.slice(0, 2400));
+        }
+        let snippet = pieces.join("\n\n").trim();
+        if (snippet.length < 1500) {
+          snippet = (snippet + "\n\n" + String(leiSeca || "").slice(0, 12000)).trim();
+        }
+        return snippet.slice(0, 14000);
+      };
+
       const buildAuditPrompt = (q: any) => {
         const altsTxt = ["A","B","C","D","E"].map(l => `${l}) ${q[`alt_${l.toLowerCase()}`]}`).join("\n");
         const correta = ["A","B","C","D","E"][q.gabarito] ?? "?";
-        const lawSnippet = String(leiSeca || "").slice(0, 7000);
-        return `Você audita questões objetivas de concurso jurídico-militar (PMTO). Seja CÉTICO.
+        const lawSnippet = buildFocusedLawSnippet(q);
+        return `Você audita questões objetivas de concurso jurídico-militar (PMTO). Seja CÉTICO mas JUSTO.
 
-TEXTO LEGAL DE REFERÊNCIA:
+TEXTO LEGAL DE REFERÊNCIA (RECORTE focado nos artigos citados pela questão):
 """${lawSnippet}"""
 
 QUESTÃO:
@@ -1640,12 +1657,18 @@ ${altsTxt}
 Gabarito declarado: ${correta}
 Comentário: ${q.comentario}
 
+REGRA CRÍTICA DE AUDITORIA:
+- O texto acima é apenas um RECORTE da lei completa. Se um artigo citado parecer não estar no recorte,
+  NÃO conclua que ele é inexistente nem marque 'high' por isso — registre apenas issue 'low' "fora do recorte".
+- Só use severidade 'high' quando houver ERRO FACTUAL DEMONSTRÁVEL dentro do recorte fornecido
+  (ex.: gabarito contradiz literalmente o artigo que ESTÁ no recorte, alternativa correta inexiste etc.).
+
 Verifique:
-1. Gabarito está correto pela letra do texto legal?
+1. Gabarito está correto pela letra do texto legal (quando o artigo aparece no recorte)?
 2. Existe outra alternativa também correta? Ou nenhuma correta?
-3. Algum distrator é absurdo / óbvio demais / vazio?
+3. Algum distrator é absurdo / óbvio / vazio?
 4. Comentário cita base legal coerente com o gabarito?
-5. Há afirmação extra-legal/inventada?
+5. Há afirmação claramente inventada (não apenas ausente do recorte)?
 
 Responda APENAS JSON:
 {
@@ -1706,6 +1729,26 @@ Responda APENAS JSON:
         const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
         const risk = ["low","medium","high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
         const issues = Array.isArray(parsed.issues) ? parsed.issues : [];
+
+        // ── Guarda anti-falso-descarte: se o auditor reclama de "artigo inexistente / não consta /
+        //    não está presente / fora do recorte", mas os artigos citados pela questão EXISTEM no
+        //    texto legal completo (blocks), reclassificamos essas issues como 'low' (fail-open).
+        const allQText = [q.enunciado, q.comentario, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].filter(Boolean).join(" ");
+        const citedNums = extractAllCitedArticles(allQText);
+        const allCitedExist = citedNums.length > 0 && citedNums.every(n => blocks.some(b => b.artNum === n));
+        const isOutOfSnippetComplaint = (desc: string) => /n[ãa]o\s+(consta|est[áa]\s+presente|cont[ée]m|aparece|encontra(?:do|da)?|inclui)|inexistente|n[ãa]o\s+presente|fora\s+do\s+recorte|n[ãa]o\s+fornec/i.test(desc);
+        let downgraded = 0;
+        for (const it of issues) {
+          const sev = String(it?.severity || "").toLowerCase();
+          const desc = String(it?.description || "");
+          if (sev === "high" && allCitedExist && isOutOfSnippetComplaint(desc)) {
+            it.severity = "low";
+            it.description = `[downgrade: artigo existe no texto completo] ${desc}`;
+            downgraded++;
+          }
+        }
+        if (downgraded > 0) console.log(`[AUDIT-XGEN] Q${i+1}: ${downgraded} issue(s) 'high' reclassificadas (artigo existe no texto completo)`);
+
         const hasHigh = issues.some((it: any) => String(it?.severity).toLowerCase() === "high");
         let patch: any = parsed.proposed_patch && typeof parsed.proposed_patch === "object" ? parsed.proposed_patch : null;
         if (patch) {
