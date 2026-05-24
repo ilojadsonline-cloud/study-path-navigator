@@ -339,7 +339,7 @@ export function AdminAuditoriaTab() {
       const g = Number(patch.gabarito);
       if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
     }
-    const { error: upErr } = await supabase.from("questoes").update(patch).eq("id", a.questao_id);
+    const { error: upErr } = await updateQuestao(a.questao_id, patch);
     if (upErr) { toast.error("Falha ao atualizar questão: " + upErr.message); return; }
     await supabase.from("question_audits").update({
       status: "auto_fixed",
