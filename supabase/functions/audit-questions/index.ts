@@ -361,8 +361,11 @@ async function rewriteWithMaritaca(
 ): Promise<{ patch: any | null; unrecoverable: boolean; summary: string }> {
   const alts = ["A","B","C","D","E"].map((l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
   const correctaLetra = ["A","B","C","D","E"][q.gabarito] ?? "?";
+  const blocks = legalText ? parseArticleBlocks(legalText) : [];
+  const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
+  const relevantBlocks = cited.map((num) => blocks.find((b) => b.artNum === num)).filter(Boolean) as ArticleBlock[];
   const legalBlock = legalText
-    ? `TEXTO LEGAL DE REFERÊNCIA (ÚNICA fonte de verdade):\n"""${legalText.slice(0, 10000)}"""\n`
+    ? `${relevantBlocks.length ? `DISPOSITIVOS CITADOS E ENCONTRADOS NA LEI:\n${relevantBlocks.map((b) => b.text.slice(0, 2500)).join("\n\n")}\n` : ""}TEXTO LEGAL DE REFERÊNCIA (prévia; pode estar truncada):\n"""${legalText.slice(0, 10000)}"""\n`
     : "ATENÇÃO: sem texto legal disponível. Use o conhecimento jurídico geral com cautela.\n";
 
   const issuesTxt = (diagnosis.issues || []).map((i: any, idx: number) =>
