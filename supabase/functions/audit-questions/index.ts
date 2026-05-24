@@ -478,6 +478,7 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
   const falseHallucinations = removeFalseHallucinationIssues(issues, q, legalText);
   issues = falseHallucinations.issues;
   if (falseHallucinations.removed.length) {
+    aiSummary = aiSummary.replace(/^AUTO_DELETE:/i, "Falso AUTO_DELETE bloqueado:");
     aiSummary = `${aiSummary} | Falso positivo removido: artigo existente na lei (${[...new Set(falseHallucinations.removed)].join(", ")}).`.trim();
   }
 
