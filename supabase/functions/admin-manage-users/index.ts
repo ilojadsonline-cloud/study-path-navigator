@@ -395,7 +395,7 @@ serve(async (req) => {
       const { question_id, updates } = params;
       if (!question_id || !updates) throw new Error("question_id e updates são obrigatórios");
 
-      const allowed = ["enunciado", "alt_a", "alt_b", "alt_c", "alt_d", "alt_e", "gabarito", "comentario", "disciplina", "assunto", "dificuldade"];
+      const allowed = ["enunciado", "alt_a", "alt_b", "alt_c", "alt_d", "alt_e", "gabarito", "comentario", "disciplina", "assunto", "dificuldade", "audit_status", "audit_status_updated_at", "audit_techniques", "artigo_principal", "assinatura_semantica"];
       const safeUpdates: Record<string, unknown> = {};
       for (const key of allowed) {
         if (key in updates) safeUpdates[key] = updates[key];
