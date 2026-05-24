@@ -1729,6 +1729,26 @@ Responda APENAS JSON:
         const conf = Math.max(0, Math.min(1, Number(parsed.confidence ?? 0)));
         const risk = ["low","medium","high"].includes(parsed.risk_level) ? parsed.risk_level : "medium";
         const issues = Array.isArray(parsed.issues) ? parsed.issues : [];
+
+        // ── Guarda anti-falso-descarte: se o auditor reclama de "artigo inexistente / não consta /
+        //    não está presente / fora do recorte", mas os artigos citados pela questão EXISTEM no
+        //    texto legal completo (blocks), reclassificamos essas issues como 'low' (fail-open).
+        const allQText = [q.enunciado, q.comentario, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].filter(Boolean).join(" ");
+        const citedNums = extractAllCitedArticles(allQText);
+        const allCitedExist = citedNums.length > 0 && citedNums.every(n => blocks.some(b => b.artNum === n));
+        const isOutOfSnippetComplaint = (desc: string) => /n[ãa]o\s+(consta|est[áa]\s+presente|cont[ée]m|aparece|encontra(?:do|da)?|inclui)|inexistente|n[ãa]o\s+presente|fora\s+do\s+recorte|n[ãa]o\s+fornec/i.test(desc);
+        let downgraded = 0;
+        for (const it of issues) {
+          const sev = String(it?.severity || "").toLowerCase();
+          const desc = String(it?.description || "");
+          if (sev === "high" && allCitedExist && isOutOfSnippetComplaint(desc)) {
+            it.severity = "low";
+            it.description = `[downgrade: artigo existe no texto completo] ${desc}`;
+            downgraded++;
+          }
+        }
+        if (downgraded > 0) console.log(`[AUDIT-XGEN] Q${i+1}: ${downgraded} issue(s) 'high' reclassificadas (artigo existe no texto completo)`);
+
         const hasHigh = issues.some((it: any) => String(it?.severity).toLowerCase() === "high");
         let patch: any = parsed.proposed_patch && typeof parsed.proposed_patch === "object" ? parsed.proposed_patch : null;
         if (patch) {
