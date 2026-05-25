@@ -483,17 +483,31 @@ Retorne JSON ESTRITO:
 }`;
 
   let raw = "";
+  let usedProvider: "Maritaca" | "DeepSeek (fallback)" = "Maritaca";
+  let fallbackReason = "";
   try {
     raw = await callMaritaca(prompt);
   } catch (e) {
-    return { patch: null, unrecoverable: false, summary: `Falha Maritaca: ${e instanceof Error ? e.message : e}` };
+    const isNoCredits = e instanceof NoCreditsError;
+    if (isNoCredits) {
+      fallbackReason = `Maritaca sem créditos (${(e as NoCreditsError).status}). Acionando DeepSeek como reescritor alternativo.`;
+      console.warn("[audit-questions]", fallbackReason);
+      try {
+        raw = await callDeepSeekRewriter(prompt);
+        usedProvider = "DeepSeek (fallback)";
+      } catch (e2) {
+        return { patch: null, unrecoverable: false, summary: `Falha Maritaca (sem créditos) e DeepSeek fallback: ${e2 instanceof Error ? e2.message : e2}` };
+      }
+    } else {
+      return { patch: null, unrecoverable: false, summary: `Falha Maritaca: ${e instanceof Error ? e.message : e}` };
+    }
   }
   const parsed = safeJsonParse(raw);
   if (!parsed || typeof parsed !== "object") {
-    return { patch: null, unrecoverable: false, summary: "Maritaca retornou JSON inválido" };
+    return { patch: null, unrecoverable: false, summary: `${usedProvider} retornou JSON inválido${fallbackReason ? ` (${fallbackReason})` : ""}` };
   }
   if (parsed.unrecoverable === true) {
-    return { patch: null, unrecoverable: true, summary: String(parsed.summary ?? "Maritaca classificou como irrecuperável") };
+    return { patch: null, unrecoverable: true, summary: String(parsed.summary ?? `${usedProvider} classificou como irrecuperável`) };
   }
   let patch = parsed.patch && typeof parsed.patch === "object" ? parsed.patch : null;
   if (patch) {
@@ -508,7 +522,8 @@ Retorne JSON ESTRITO:
   }
   const techniques = Array.isArray(parsed.techniques_used) ? parsed.techniques_used.map((t: any) => String(t)).slice(0, 10) : [];
   (patch ?? {}).__techniques = techniques;
-  return { patch, unrecoverable: false, summary: String(parsed.summary ?? "Patch gerado pela Maritaca") };
+  const baseSummary = String(parsed.summary ?? `Patch gerado por ${usedProvider}`);
+  return { patch, unrecoverable: false, summary: fallbackReason ? `[${usedProvider}] ${baseSummary}` : baseSummary };
 }
 
 async function auditOne(q: Questao, legalText: string | null, userReports: string[] = []): Promise<AuditResult> {
