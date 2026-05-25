@@ -182,9 +182,13 @@ async function callMaritaca(prompt: string, timeoutMs = 70000): Promise<string> 
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${MARITACA_API_KEY}`,
+        // Flex tier (-50% custo) — tolera latência maior; ideal para auditoria assíncrona.
+        "X-Service-Tier": "flex",
       },
       body: JSON.stringify({
         model: "sabia-4",
+        // Também envia no body para compatibilidade com o gateway OpenAI-like da Maritaca.
+        service_tier: "flex",
         messages: [
           { role: "system", content: REWRITER_SYSTEM_PROMPT },
           { role: "user", content: prompt },
@@ -193,6 +197,7 @@ async function callMaritaca(prompt: string, timeoutMs = 70000): Promise<string> 
         top_p: 0.92,
         max_tokens: 4500,
       }),
+
       signal: ctrl.signal,
     });
     if (!res.ok) {
