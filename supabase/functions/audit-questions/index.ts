@@ -149,9 +149,31 @@ async function callDeepSeek(prompt: string, timeoutMs = 55000): Promise<string> 
   }
 }
 
-/** Maritaca Sabiá 4 — REESCRITOR jurídico. Recebe questão + diagnóstico do DeepSeek + lei e devolve patch. */
+/** Erro lançado quando o provedor sinaliza falta de créditos/saldo. */
+class NoCreditsError extends Error {
+  provider: string;
+  status: number;
+  detail: string;
+  constructor(provider: string, status: number, detail: string) {
+    super(`${provider} sem créditos (HTTP ${status}): ${detail}`);
+    this.provider = provider;
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
+function looksLikeNoCredits(status: number, body: string): boolean {
+  if (status === 402) return true;
+  const hasKeyword = /insufficient|no credits|sem cr[eé]ditos|saldo|quota|billing|payment required|exhaust|insufficient_quota/i.test(body);
+  return hasKeyword && (status === 401 || status === 402 || status === 403 || status === 429);
+}
+
+const REWRITER_SYSTEM_PROMPT =
+  "Você é PROFESSOR-REESCRITOR JURÍDICO de altíssimo nível especializado em concursos militares (PMTO, CFO/CHOA) e bancas CESPE/CEBRASPE/FGV/VUNESP. Recebe uma QUESTÃO defeituosa, o DIAGNÓSTICO formal de outro auditor (IA) e o TEXTO LEGAL DE REFERÊNCIA. Sua missão é CORRIGIR a questão exigindo o MÁXIMO de conhecimento e interpretação jurídica — não invente nada fora do texto legal. Regras: (1) corrija TODOS os defeitos listados pelo diagnóstico; (2) preserve a essência didática quando possível; (3) ANTI-LENGTH-BIAS: a alternativa correta NUNCA pode ser a única mais longa nem a única mais curta — paridade ±25%; (4) DISTRATORES LONGOS DEMAIS devem ser ENCURTADOS preservando o erro típico (troca de prazo/autoridade/conectivo) e a plausibilidade; (5) cada distrator usa uma técnica DIFERENTE de erro (≥2 técnicas no conjunto); (6) gabarito 0–4; (7) COMENTÁRIO no estilo professor orientador em 4 movimentos OBRIGATÓRIOS — (i) 'A alternativa correta é a [X], pois...' + citação literal e curta do dispositivo; (ii) 'A pegadinha desta questão está em...' nomeando a técnica; (iii) análise INDIVIDUAL de cada alternativa errada no formato 'Alternativa [Y]: incorreta porque ... Vide [art. Z]'; (iv) 'Lembre-se: segundo o [art. X da Lei Y], [regra geral]'; (8) 600–1500 caracteres no comentário; (9) RESPEITE a hierarquia militar e atribua competências exatamente como a lei fixa; (10) se citar lei DIFERENTE da lei principal, mencione o diploma por extenso (ex.: 'art. 9º do CPM', 'art. 5º, LV, da CF'); (11) se a questão for IRRECUPERÁVEL juridicamente (sem alternativa correta possível à luz da lei, sem base legal etc.), devolva unrecoverable=true. Responda APENAS JSON válido com o patch.";
+
+/** Maritaca Sabiá 4 — REESCRITOR jurídico PRIMÁRIO. */
 async function callMaritaca(prompt: string, timeoutMs = 70000): Promise<string> {
-  if (!MARITACA_API_KEY) throw new Error("MARITACA_API_KEY não configurada");
+  if (!MARITACA_API_KEY) throw new NoCreditsError("Maritaca", 0, "MARITACA_API_KEY não configurada");
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -164,11 +186,7 @@ async function callMaritaca(prompt: string, timeoutMs = 70000): Promise<string> 
       body: JSON.stringify({
         model: "sabia-4",
         messages: [
-          {
-            role: "system",
-            content:
-              "Você é PROFESSOR-REESCRITOR JURÍDICO de altíssimo nível especializado em concursos militares (PMTO, CFO/CHOA) e bancas CESPE/CEBRASPE/FGV/VUNESP. Recebe uma QUESTÃO defeituosa, o DIAGNÓSTICO formal de outro auditor (IA) e o TEXTO LEGAL DE REFERÊNCIA. Sua missão é CORRIGIR a questão exigindo o MÁXIMO de conhecimento e interpretação jurídica — não invente nada fora do texto legal. Regras: (1) corrija TODOS os defeitos listados pelo diagnóstico; (2) preserve a essência didática quando possível; (3) ANTI-LENGTH-BIAS: a alternativa correta NUNCA pode ser a única mais longa nem a única mais curta — paridade ±25%; (4) DISTRATORES LONGOS DEMAIS devem ser ENCURTADOS preservando o erro típico (troca de prazo/autoridade/conectivo) e a plausibilidade; (5) cada distrator usa uma técnica DIFERENTE de erro (≥2 técnicas no conjunto); (6) gabarito 0–4; (7) COMENTÁRIO no estilo professor orientador em 4 movimentos OBRIGATÓRIOS — (i) 'A alternativa correta é a [X], pois...' + citação literal e curta do dispositivo; (ii) 'A pegadinha desta questão está em...' nomeando a técnica; (iii) análise INDIVIDUAL de cada alternativa errada no formato 'Alternativa [Y]: incorreta porque ... Vide [art. Z]'; (iv) 'Lembre-se: segundo o [art. X da Lei Y], [regra geral]'; (8) 600–1500 caracteres no comentário; (9) RESPEITE a hierarquia militar e atribua competências exatamente como a lei fixa; (10) se citar lei DIFERENTE da lei principal, mencione o diploma por extenso (ex.: 'art. 9º do CPM', 'art. 5º, LV, da CF'); (11) se a questão for IRRECUPERÁVEL juridicamente (sem alternativa correta possível à luz da lei, sem base legal etc.), devolva unrecoverable=true. Responda APENAS JSON válido com o patch.",
-          },
+          { role: "system", content: REWRITER_SYSTEM_PROMPT },
           { role: "user", content: prompt },
         ],
         temperature: 0.2,
@@ -177,7 +195,48 @@ async function callMaritaca(prompt: string, timeoutMs = 70000): Promise<string> 
       }),
       signal: ctrl.signal,
     });
-    if (!res.ok) throw new Error(`Maritaca HTTP ${res.status}`);
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      if (looksLikeNoCredits(res.status, body)) {
+        throw new NoCreditsError("Maritaca", res.status, body.slice(0, 200));
+      }
+      throw new Error(`Maritaca HTTP ${res.status} ${body.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    return stripThinkTags(data?.choices?.[0]?.message?.content ?? "");
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** DeepSeek REESCRITOR — FALLBACK quando Maritaca está sem créditos/indisponível. */
+async function callDeepSeekRewriter(prompt: string, timeoutMs = 70000): Promise<string> {
+  if (!DEEPSEEK_API_KEY) throw new Error("DEEPSEEK_API_KEY não configurada");
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          { role: "system", content: REWRITER_SYSTEM_PROMPT },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 4500,
+        response_format: { type: "json_object" },
+      }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`DeepSeek(rewriter) HTTP ${res.status} ${body.slice(0, 200)}`);
+    }
     const data = await res.json();
     return stripThinkTags(data?.choices?.[0]?.message?.content ?? "");
   } finally {
