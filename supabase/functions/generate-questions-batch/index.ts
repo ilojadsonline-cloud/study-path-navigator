@@ -1461,6 +1461,28 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: alternativas duplicadas`); continue;
       }
 
+      // ── Paridade de comprimento das alternativas (anti-padrão "correta = mais longa") ──
+      const gabIdx = Number(q.gabarito);
+      if (Number.isInteger(gabIdx) && gabIdx >= 0 && gabIdx <= 4) {
+        const lens = alts.map(a => (a || "").trim().length);
+        const minLen = Math.min(...lens);
+        const maxLen = Math.max(...lens);
+        const correctLen = lens[gabIdx];
+        const otherLens = lens.filter((_, i) => i !== gabIdx);
+        const otherAvg = otherLens.reduce((s, n) => s + n, 0) / Math.max(1, otherLens.length);
+        const spreadRatio = minLen > 0 ? (maxLen - minLen) / minLen : 99;
+        const correctIsLongest = correctLen === maxLen && correctLen > minLen;
+        const correctIsShortest = correctLen === minLen && correctLen < maxLen;
+        const correctTooLong = correctLen > otherAvg * 1.35;
+        const correctTooShort = correctLen < otherAvg * 0.65;
+        if (spreadRatio > 0.45 || (correctIsLongest && correctTooLong) || (correctIsShortest && correctTooShort)) {
+          discarded++;
+          console.log(`[GERAR] Q${idx+1} descartada: paridade de comprimento (lens=${lens.join(",")}, gab=${gabIdx}, spread=${spreadRatio.toFixed(2)})`);
+          continue;
+        }
+      }
+
+
       // ── Anti-decoreba ──
       const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
       if (decoreba.test(q.enunciado.toLowerCase())) {
