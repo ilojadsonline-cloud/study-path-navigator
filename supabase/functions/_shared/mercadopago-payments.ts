@@ -35,6 +35,39 @@ function normalizeEmail(value?: string | null): string | null {
   return normalized && normalized.includes("@") ? normalized : null;
 }
 
+// Corrige typos comuns em emails (TLDs e provedores populares) para
+// aumentar o match entre o email digitado errado no Mercado Pago e o
+// email correto usado no cadastro.
+const DOMAIN_TYPOS: Array<[RegExp, string]> = [
+  [/\.cmom$/, ".com"],
+  [/\.ocm$/, ".com"],
+  [/\.con$/, ".com"],
+  [/\.cm$/, ".com"],
+  [/\.comm$/, ".com"],
+  [/@gmial\./, "@gmail."],
+  [/@gmai\./, "@gmail."],
+  [/@gnail\./, "@gmail."],
+  [/@hotmial\./, "@hotmail."],
+  [/@hotmal\./, "@hotmail."],
+  [/@hotnail\./, "@hotmail."],
+  [/@yahooo\./, "@yahoo."],
+  [/@yaho\./, "@yahoo."],
+  [/@outlok\./, "@outlook."],
+  [/@outloo\./, "@outlook."],
+];
+
+function expandEmailWithTypoFixes(email: string | null): string[] {
+  if (!email) return [];
+  const set = new Set<string>([email]);
+  for (const [pattern, replacement] of DOMAIN_TYPOS) {
+    if (pattern.test(email)) {
+      const fixed = email.replace(pattern, replacement);
+      set.add(fixed);
+    }
+  }
+  return Array.from(set);
+}
+
 function coerceEmailCandidate(value?: string | null): string | null {
   const normalized = normalizeEmail(value);
   if (!normalized) return null;
@@ -104,16 +137,20 @@ async function fetchRecentMercadoPagoPayments(accessToken: string, nowMs = Date.
 }
 
 export function extractMercadoPagoPaymentEmails(payment: any): string[] {
-  return Array.from(
-    new Set(
-      [
-        normalizeEmail(payment?.metadata?.email),
-        coerceEmailCandidate(payment?.metadata?.email),
-        ...extractEmailsFromExternalReference(payment?.external_reference),
-        coerceEmailCandidate(payment?.payer?.email),
-      ].filter((email): email is string => Boolean(email))
-    )
-  );
+  const baseEmails = [
+    normalizeEmail(payment?.metadata?.email),
+    coerceEmailCandidate(payment?.metadata?.email),
+    ...extractEmailsFromExternalReference(payment?.external_reference),
+    coerceEmailCandidate(payment?.payer?.email),
+  ].filter((email): email is string => Boolean(email));
+
+  const expanded = new Set<string>();
+  for (const email of baseEmails) {
+    for (const variant of expandEmailWithTypoFixes(email)) {
+      expanded.add(variant);
+    }
+  }
+  return Array.from(expanded);
 }
 
 export function extractPrimaryMercadoPagoPaymentEmail(payment: any): string | null {
@@ -163,10 +200,13 @@ export async function findApprovedMercadoPagoPayment(
     const paidAtMs = parsePaymentDateMs(payment);
     if (!paidAtMs || paidAtMs < sinceMs) continue;
 
-    const matches = extractMercadoPagoPaymentEmails(payment).some((email) => normalizedEmails.has(email));
-    if (!matches) continue;
+    const paymentEmails = extractMercadoPagoPaymentEmails(payment);
+    const matchedEmail = paymentEmails.find((email) => normalizedEmails.has(email));
+    if (!matchedEmail) continue;
 
-    return buildSubscriptionMatch(payment);
+    const match = buildSubscriptionMatch(payment);
+    if (match) match.customer_email = matchedEmail;
+    return match;
   }
 
   return null;
