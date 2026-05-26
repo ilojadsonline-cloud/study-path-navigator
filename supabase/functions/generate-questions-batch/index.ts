@@ -1134,8 +1134,8 @@ ESTRUTURA OBRIGATÓRIA EM 4 MOVIMENTOS (PERFIL PROFESSOR ORIENTADOR — todos ob
 (3) Análise INDIVIDUAL de CADA alternativa incorreta no formato "Alternativa [Y]: incorreta porque [erro específico]. Vide [art. Z]." — nunca escreva "as demais estão erradas".
 (4) "Lembre-se: segundo o [art. X da Lei Y], [regra geral em uma frase]." — frase memorável de fixação.
 
-ANTI-PADRÃO 'ALTERNATIVA MAIS LONGA = CORRETA' (REGRA OBRIGATÓRIA):
-A alternativa correta NUNCA pode ser a de maior número de caracteres NEM a de menor número de caracteres do conjunto. Mantenha as 5 alternativas com paridade ±25% no comprimento. Antes de finalizar, MEÇA o comprimento de A, B, C, D, E e ajuste se a correta estiver no extremo.
+ANTI-PADRÃO 'ALTERNATIVA MAIS LONGA = CORRETA' (REGRA OBRIGATÓRIA — VIOLAÇÃO = QUESTÃO DESCARTADA):
+As 5 alternativas DEVEM ter comprimento equivalente (paridade ESTRITA de ±20% em número de caracteres entre a mais curta e a mais longa). A alternativa correta JAMAIS pode ser a mais longa nem a mais curta — isso entrega o gabarito a qualquer candidato treinado e é o erro mais grosseiro de banca amadora. PROCEDIMENTO OBRIGATÓRIO antes de fechar cada questão: (1) MEÇA len(A), len(B), len(C), len(D), len(E); (2) calcule (max - min) / min — se passar de 0,20, REESCREVA as alternativas curtas adicionando contexto jurídico plausível OU encurte a longa removendo redundâncias; (3) se a correta ainda for o extremo superior ou inferior, NIVELE-A com as demais (ex.: encurte qualificadores adjetivos da correta, ou adicione complementos pertinentes aos distratores). Distratores curtos e secos ao lado de uma correta verbosa são REPROVADOS automaticamente. Pense: "se eu cobrir o enunciado e olhar só as 5 letras, dá pra acertar pelo tamanho?" — se sim, REFAÇA.
 
 TÉCNICAS DE DISTRAÇÃO OBRIGATÓRIAS (use ≥2 técnicas DIFERENTES nas 4 alternativas incorretas de cada questão):
 - Inversão de sujeito/predicado | Troca de conectivo lógico (somente se↔sempre que; e↔ou; exceto↔inclusive)
