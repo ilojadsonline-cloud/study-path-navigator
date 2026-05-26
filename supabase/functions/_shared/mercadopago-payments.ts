@@ -137,16 +137,20 @@ async function fetchRecentMercadoPagoPayments(accessToken: string, nowMs = Date.
 }
 
 export function extractMercadoPagoPaymentEmails(payment: any): string[] {
-  return Array.from(
-    new Set(
-      [
-        normalizeEmail(payment?.metadata?.email),
-        coerceEmailCandidate(payment?.metadata?.email),
-        ...extractEmailsFromExternalReference(payment?.external_reference),
-        coerceEmailCandidate(payment?.payer?.email),
-      ].filter((email): email is string => Boolean(email))
-    )
-  );
+  const baseEmails = [
+    normalizeEmail(payment?.metadata?.email),
+    coerceEmailCandidate(payment?.metadata?.email),
+    ...extractEmailsFromExternalReference(payment?.external_reference),
+    coerceEmailCandidate(payment?.payer?.email),
+  ].filter((email): email is string => Boolean(email));
+
+  const expanded = new Set<string>();
+  for (const email of baseEmails) {
+    for (const variant of expandEmailWithTypoFixes(email)) {
+      expanded.add(variant);
+    }
+  }
+  return Array.from(expanded);
 }
 
 export function extractPrimaryMercadoPagoPaymentEmail(payment: any): string | null {
