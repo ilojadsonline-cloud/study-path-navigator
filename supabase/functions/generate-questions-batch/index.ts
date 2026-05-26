@@ -1228,7 +1228,17 @@ REGRAS TÉCNICAS:
 - Artigos existentes na lei: ${availableArticles}
 - Cite SOMENTE artigos que existam na lei acima.
 - gabarito = inteiro: 0=A, 1=B, 2=C, 3=D, 4=E.
-- Distribua dificuldade: ~15% Fácil, ~40% Médio, ~45% Difícil. PRIORIZE questões de nível Médio e Difícil.
+- Distribua dificuldade: ~5% Fácil, ~30% Médio, ~65% Difícil. O LOTE DEVE ser dominado por questões Difíceis de nível banca elite. Questões Fáceis só são aceitáveis se ainda exigirem leitura atenta de inciso/parágrafo (nada óbvio).
+
+ANTI-DUPLICAÇÃO (REGRA CRÍTICA — leia ANTES de gerar):
+- Os enunciados, aberturas e cenários listados acima ("ASSUNTOS MENOS EXPLORADOS", coverage e openings a evitar) representam o que JÁ EXISTE no banco. É TERMINANTEMENTE PROIBIDO produzir questão cujo enunciado, cenário ou estrutura repita o que já está coberto.
+- Cada questão do lote deve abordar um ARTIGO/INCISO/PARÁGRAFO DIFERENTE entre si E diferente do que já foi explorado no banco.
+- Antes de finalizar cada questão, faça o teste: "se eu resumir essa questão em uma frase de 10 palavras, ela coincide com alguma das aberturas/assuntos listados como já cobertos?" — se sim, MUDE de ângulo (outro inciso, outra exceção, outra autoridade competente, outro prazo, outro requisito).
+- Varie radicalmente o verbo de comando, a estrutura do cenário e o foco do dispositivo entre as questões do mesmo lote.
+
+FIDELIDADE EXCLUSIVA AO TEXTO LEGAL DO BANCO (REFORÇO):
+- O TEXTO LEGAL DE REFERÊNCIA e o TEXTO LEGAL COMPLETO PARA CONSULTA acima são a ÚNICA base válida. Não use conhecimento externo, jurisprudência, doutrina ou interpretações que não estejam no texto fornecido.
+- Toda alternativa correta deve ter um trecho LITERAL rastreável no texto fornecido. Toda alternativa incorreta deve contradizer um trecho LITERAL identificável no texto fornecido.
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
 
 OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
