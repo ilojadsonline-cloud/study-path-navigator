@@ -1078,13 +1078,17 @@ serve(async (req) => {
 
 FONTE ÚNICA DE VERDADE: O texto legal fornecido é a ÚNICA e EXCLUSIVA fonte de informação válida. Qualquer afirmação que não encontre respaldo direto no texto legal é PROIBIDA. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO — se não está no texto, não existe.
 
-TÉCNICAS DE ELEVAÇÃO DE COMPLEXIDADE (use obrigatoriamente):
-1. ENUNCIADOS LONGOS E CONTEXTUALIZADOS: Crie cenários com 3-6 linhas, detalhando circunstâncias, condições e exceções que exijam análise cuidadosa antes de responder.
-2. ALTERNATIVAS COM GRADAÇÃO DE CORREÇÃO: Todas as 5 alternativas devem parecer plausíveis a um candidato mediano. A diferença entre a correta e as incorretas deve residir em DETALHES JURÍDICOS SUTIS — uma palavra, um prazo, uma condição, uma competência.
-3. RACIOCÍNIO MULTINÍVEL: Questões que exijam pelo menos 2 etapas de raciocínio (ex: identificar a regra aplicável E depois verificar se há exceção; ou combinar dois dispositivos para chegar à conclusão).
-4. ARMADILHAS INTELIGENTES: Use alternativas que invertem sutilmente a regra (ex: trocar "vedado" por "facultado"), que misturam competências de autoridades diferentes, que alteram condições ou prazos, ou que aplicam regra geral onde há exceção.
-5. CONTEXTUALIZAÇÃO MILITAR REALISTA: Cenários devem envolver situações operacionais verossímeis com postos, graduações e cargos FIÉIS à hierarquia da lei. Use nomes fictícios para personagens.
-6. INTERSEÇÃO DE DISPOSITIVOS: Sempre que possível, elabore questões que exijam conhecimento de MAIS DE UM dispositivo legal para chegar à resposta correta.
+NÍVEL DE BANCA EXIGIDO — ALTÍSSIMA COMPLEXIDADE (PADRÃO CESPE/CEBRASPE DIFÍCIL):
+A meta NÃO é produzir questões "razoáveis": é produzir questões DIFÍCEIS, do nível das provas de 2ª fase de concursos militares de oficiais. Um candidato que apenas leu a lei uma vez DEVE ter dificuldade real. Só quem ESTUDOU a fundo o dispositivo (incisos, parágrafos, exceções, prazos, autoridades) consegue resolver. Questões fáceis demais (resposta óbvia ao ler o enunciado, distratores absurdos, paráfrase direta do caput) são REPROVADAS. Auto-teste: "um aluno que leu a lei superficialmente conseguiria acertar essa questão sem hesitar?" — se sim, AUMENTE a dificuldade reescrevendo distratores e enunciado.
+
+TÉCNICAS DE ELEVAÇÃO DE COMPLEXIDADE (use obrigatoriamente — combine ≥3 técnicas por questão):
+1. ENUNCIADOS LONGOS E CONTEXTUALIZADOS: Crie cenários com 4-8 linhas, detalhando circunstâncias, condições e exceções que exijam análise cuidadosa antes de responder. Inclua RUÍDO RELEVANTE — informações que parecem importantes mas não são, forçando o candidato a separar o essencial.
+2. ALTERNATIVAS COM GRADAÇÃO DE CORREÇÃO: Todas as 5 alternativas devem parecer plausíveis a um candidato mediano. A diferença entre a correta e as incorretas deve residir em DETALHES JURÍDICOS SUTIS — uma palavra, um prazo, uma condição, uma competência, um inciso específico, um requisito cumulativo vs alternativo.
+3. RACIOCÍNIO MULTINÍVEL: Questões que exijam pelo menos 2-3 etapas de raciocínio (ex: identificar a regra aplicável → verificar se há exceção → confirmar competência da autoridade; ou combinar caput + parágrafo + inciso para chegar à conclusão).
+4. ARMADILHAS INTELIGENTES: Use alternativas que invertem sutilmente a regra (ex: trocar "vedado" por "facultado"), que misturam competências de autoridades diferentes, que alteram condições ou prazos, que confundem requisitos cumulativos com alternativos, ou que aplicam regra geral onde há exceção (e vice-versa).
+5. CONTEXTUALIZAÇÃO MILITAR REALISTA: Cenários devem envolver situações operacionais verossímeis com postos, graduações e cargos FIÉIS à hierarquia da lei. Use nomes fictícios para personagens. Detalhe o contexto (data, local, situação funcional) sem entregar pistas óbvias.
+6. INTERSEÇÃO DE DISPOSITIVOS: Sempre que possível, elabore questões que exijam conhecimento de MAIS DE UM dispositivo legal para chegar à resposta correta (caput + parágrafo, regra geral + exceção, definição + procedimento).
+7. EXPLORE INCISOS E PARÁGRAFOS: Não fique no caput. As questões de banca elite exploram preferencialmente §§ e incisos específicos, hipóteses ressalvadas e exceções.
 
 QUALIDADE DOS DISTRATORES (CHECAGEM OBRIGATÓRIA — auditar antes de finalizar):
 Para CADA alternativa incorreta, ela DEVE atender TODOS estes critérios:
@@ -1224,7 +1228,17 @@ REGRAS TÉCNICAS:
 - Artigos existentes na lei: ${availableArticles}
 - Cite SOMENTE artigos que existam na lei acima.
 - gabarito = inteiro: 0=A, 1=B, 2=C, 3=D, 4=E.
-- Distribua dificuldade: ~15% Fácil, ~40% Médio, ~45% Difícil. PRIORIZE questões de nível Médio e Difícil.
+- Distribua dificuldade: ~5% Fácil, ~30% Médio, ~65% Difícil. O LOTE DEVE ser dominado por questões Difíceis de nível banca elite. Questões Fáceis só são aceitáveis se ainda exigirem leitura atenta de inciso/parágrafo (nada óbvio).
+
+ANTI-DUPLICAÇÃO (REGRA CRÍTICA — leia ANTES de gerar):
+- Os enunciados, aberturas e cenários listados acima ("ASSUNTOS MENOS EXPLORADOS", coverage e openings a evitar) representam o que JÁ EXISTE no banco. É TERMINANTEMENTE PROIBIDO produzir questão cujo enunciado, cenário ou estrutura repita o que já está coberto.
+- Cada questão do lote deve abordar um ARTIGO/INCISO/PARÁGRAFO DIFERENTE entre si E diferente do que já foi explorado no banco.
+- Antes de finalizar cada questão, faça o teste: "se eu resumir essa questão em uma frase de 10 palavras, ela coincide com alguma das aberturas/assuntos listados como já cobertos?" — se sim, MUDE de ângulo (outro inciso, outra exceção, outra autoridade competente, outro prazo, outro requisito).
+- Varie radicalmente o verbo de comando, a estrutura do cenário e o foco do dispositivo entre as questões do mesmo lote.
+
+FIDELIDADE EXCLUSIVA AO TEXTO LEGAL DO BANCO (REFORÇO):
+- O TEXTO LEGAL DE REFERÊNCIA e o TEXTO LEGAL COMPLETO PARA CONSULTA acima são a ÚNICA base válida. Não use conhecimento externo, jurisprudência, doutrina ou interpretações que não estejam no texto fornecido.
+- Toda alternativa correta deve ter um trecho LITERAL rastreável no texto fornecido. Toda alternativa incorreta deve contradizer um trecho LITERAL identificável no texto fornecido.
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
 
 OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
