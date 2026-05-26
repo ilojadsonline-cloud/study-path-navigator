@@ -200,10 +200,13 @@ export async function findApprovedMercadoPagoPayment(
     const paidAtMs = parsePaymentDateMs(payment);
     if (!paidAtMs || paidAtMs < sinceMs) continue;
 
-    const matches = extractMercadoPagoPaymentEmails(payment).some((email) => normalizedEmails.has(email));
-    if (!matches) continue;
+    const paymentEmails = extractMercadoPagoPaymentEmails(payment);
+    const matchedEmail = paymentEmails.find((email) => normalizedEmails.has(email));
+    if (!matchedEmail) continue;
 
-    return buildSubscriptionMatch(payment);
+    const match = buildSubscriptionMatch(payment);
+    if (match) match.customer_email = matchedEmail;
+    return match;
   }
 
   return null;
