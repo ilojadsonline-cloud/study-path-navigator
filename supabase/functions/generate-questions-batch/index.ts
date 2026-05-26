@@ -1243,13 +1243,34 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
     // Output token budget — Gemini Flash handles slightly larger budgets faster
     const maxTokens = batchSize === 1 ? 1800 : 3000;
 
-    const apiUrl = useMaritaca
+    const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
+
+    let currentProvider: "maritaca" | "lovable" | "deepseek" = useMaritaca ? "maritaca" : "lovable";
+    let apiUrl = currentProvider === "maritaca"
       ? "https://chat.maritaca.ai/api/chat/completions"
       : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    const apiModel = useMaritaca ? "sabia-4" : "google/gemini-2.5-flash";
-    const apiKey = useMaritaca ? MARITACA_API_KEY! : LOVABLE_API_KEY!;
+    let apiModel = currentProvider === "maritaca" ? "sabia-4" : "google/gemini-2.5-flash";
+    let apiKey = currentProvider === "maritaca" ? MARITACA_API_KEY! : LOVABLE_API_KEY!;
+    let providerSwitched = false;
 
-    console.log(`[GERAR] Provider: ${useMaritaca ? "Maritaca (sabia-4)" : "Lovable AI (gemini-2.5-flash)"}, batch=${batchSize}, maxTokens=${maxTokens}`);
+    console.log(`[GERAR] Provider: ${currentProvider}, batch=${batchSize}, maxTokens=${maxTokens}`);
+
+    const looksLikeNoCredits = (status: number, body: string) => {
+      if (status === 402) return true;
+      const b = (body || "").toLowerCase();
+      return /insufficient|no credits|saldo|sem cr[eé]dito|quota|billing|exhaust|insufficient_quota/.test(b);
+    };
+
+    const switchToDeepSeek = () => {
+      if (!DEEPSEEK_API_KEY) return false;
+      currentProvider = "deepseek";
+      apiUrl = "https://api.deepseek.com/v1/chat/completions";
+      apiModel = "deepseek-chat";
+      apiKey = DEEPSEEK_API_KEY;
+      providerSwitched = true;
+      console.log(`[GERAR] Maritaca sem créditos. Fallback ativado: DeepSeek (deepseek-chat)`);
+      return true;
+    };
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
       const controller = new AbortController();
@@ -1267,9 +1288,9 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
           temperature: 0.25,
           stream: false,
         };
-        // response_format json_object é suportado por Lovable; Maritaca ignora silenciosamente.
-        if (useLovable) requestBody.response_format = { type: "json_object" };
-        if (useMaritaca) requestBody.top_p = 0.92;
+        // response_format json_object supported by Lovable and DeepSeek; Maritaca ignores silently.
+        if (currentProvider !== "maritaca") requestBody.response_format = { type: "json_object" };
+        if (currentProvider === "maritaca") requestBody.top_p = 0.92;
 
         const response = await fetch(apiUrl, {
           method: "POST",
@@ -1282,8 +1303,17 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         });
         clearTimeout(timeoutId);
         aiStatus = response.status;
-        console.log(`[GERAR] AI status: ${aiStatus}, attempt ${attempt + 1}`);
+        console.log(`[GERAR] AI status: ${aiStatus}, attempt ${attempt + 1}, provider=${currentProvider}`);
         aiResponseText = await response.text();
+
+        // Maritaca sem créditos → swap para DeepSeek e tenta de novo
+        if (currentProvider === "maritaca" && !providerSwitched && looksLikeNoCredits(aiStatus, aiResponseText)) {
+          if (switchToDeepSeek()) {
+            aiResponseText = "";
+            aiStatus = 0;
+            continue;
+          }
+        }
 
         if (aiStatus === 429 && attempt < MAX_API_RETRIES - 1) {
           const retryDelay = 2500;
@@ -1332,10 +1362,12 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    if (aiStatus === 402) {
-      let creditMessage = useLovable
-        ? "Créditos insuficientes no Lovable AI. Adicione créditos em Settings → Workspace."
-        : "Créditos insuficientes no DeepSeek.";
+    if (aiStatus === 402 || (aiStatus >= 400 && looksLikeNoCredits(aiStatus, aiResponseText))) {
+      let creditMessage = currentProvider === "maritaca"
+        ? "Créditos insuficientes na Maritaca (e fallback DeepSeek indisponível). Configure DEEPSEEK_API_KEY."
+        : currentProvider === "deepseek"
+        ? "Créditos insuficientes no DeepSeek (fallback da Maritaca)."
+        : "Créditos insuficientes no Lovable AI. Adicione créditos em Settings → Workspace.";
       try {
         const parsed = JSON.parse(aiResponseText);
         creditMessage = parsed?.error?.message || creditMessage;
@@ -1346,6 +1378,7 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
 
     if (!aiStatus || aiStatus < 200 || aiStatus >= 300) {
       console.error(`[GERAR] AI error: ${aiStatus} ${aiResponseText.substring(0, 300)}`);
