@@ -35,6 +35,39 @@ function normalizeEmail(value?: string | null): string | null {
   return normalized && normalized.includes("@") ? normalized : null;
 }
 
+// Corrige typos comuns em emails (TLDs e provedores populares) para
+// aumentar o match entre o email digitado errado no Mercado Pago e o
+// email correto usado no cadastro.
+const DOMAIN_TYPOS: Array<[RegExp, string]> = [
+  [/\.cmom$/, ".com"],
+  [/\.ocm$/, ".com"],
+  [/\.con$/, ".com"],
+  [/\.cm$/, ".com"],
+  [/\.comm$/, ".com"],
+  [/@gmial\./, "@gmail."],
+  [/@gmai\./, "@gmail."],
+  [/@gnail\./, "@gmail."],
+  [/@hotmial\./, "@hotmail."],
+  [/@hotmal\./, "@hotmail."],
+  [/@hotnail\./, "@hotmail."],
+  [/@yahooo\./, "@yahoo."],
+  [/@yaho\./, "@yahoo."],
+  [/@outlok\./, "@outlook."],
+  [/@outloo\./, "@outlook."],
+];
+
+function expandEmailWithTypoFixes(email: string | null): string[] {
+  if (!email) return [];
+  const set = new Set<string>([email]);
+  for (const [pattern, replacement] of DOMAIN_TYPOS) {
+    if (pattern.test(email)) {
+      const fixed = email.replace(pattern, replacement);
+      set.add(fixed);
+    }
+  }
+  return Array.from(set);
+}
+
 function coerceEmailCandidate(value?: string | null): string | null {
   const normalized = normalizeEmail(value);
   if (!normalized) return null;
