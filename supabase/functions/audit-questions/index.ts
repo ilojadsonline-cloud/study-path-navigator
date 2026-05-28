@@ -647,7 +647,7 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
           type: "unrecoverable",
           severity: "high",
           field: "questao_inteira",
-          description: "Maritaca classificou a questão como irrecuperável após análise jurídica.",
+          description: "IA reescritora classificou a questão como irrecuperável após análise jurídica.",
           suggestion: "Exclusão recomendada.",
           fix_complexity: "complex",
         });
