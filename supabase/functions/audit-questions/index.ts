@@ -800,6 +800,25 @@ async function processQuestion(
     legalCache.set(q.disciplina, legal);
   }
 
+  // BLOQUEIO OPERACIONAL: sem texto legal cadastrado suficiente, NÃO usar conhecimento geral.
+  // Marca a questão como manual_review e devolve sem chamar IA.
+  if (!legal || legal.trim().length < 500) {
+    await supabase.from("question_audits").insert({
+      questao_id: q.id,
+      status: "manual_review",
+      confidence: 0,
+      risk_level: "high",
+      issues: [{
+        type: "NO_LEGAL_TEXT",
+        severity: "high",
+        description: "Auditoria bloqueada: não há texto legal oficial suficiente cadastrado em discipline_legal_texts para esta disciplina. PDFs, fontes externas e conhecimento geral do modelo são proibidos como fonte normativa.",
+      }],
+      ai_summary: "Auditoria não executada por ausência de fonte legal oficial estruturada.",
+    });
+    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.MANUAL);
+    return { status: "manual_review", auto_fixed: false, flagged: true, deleted: false };
+  }
+
   // Reportes de usuários pendentes — sinal forte de defeito real.
   const { data: repsData } = await supabase
     .from("question_reports")
