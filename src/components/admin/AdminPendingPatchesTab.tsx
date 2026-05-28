@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -11,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Loader2, RefreshCw, CheckCircle2, X, AlertTriangle,
-  Pencil, Eye, ShieldCheck, FileWarning, Wand2,
+  Pencil, Eye, ShieldCheck, FileWarning, Wand2, CheckSquare, Square,
 } from "lucide-react";
 
 type ProofMatrixEntry = {
@@ -35,6 +40,7 @@ type PendingPatch = {
 };
 
 const LETRAS = ["A", "B", "C", "D", "E"];
+type BulkAction = "approve" | "reject" | "unrecoverable";
 
 function extractProofMatrix(patch: any): ProofMatrixEntry[] {
   if (!patch || typeof patch !== "object") return [];
@@ -72,9 +78,16 @@ export function AdminPendingPatchesTab() {
   const [acting, setActing] = useState(false);
   const [repairingId, setRepairingId] = useState<number | null>(null);
 
+  // Bulk selection state
+  const [checked, setChecked] = useState<Set<number>>(new Set());
+  const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; ok: number; fail: number }>({
+    done: 0, total: 0, ok: 0, fail: 0,
+  });
+
   async function load() {
     setLoading(true);
-    // Pega auditorias em manual_review COM proposed_patch (repair gerou patch)
     const { data, error } = await supabase
       .from("question_audits")
       .select("*")
@@ -83,7 +96,16 @@ export function AdminPendingPatchesTab() {
       .order("created_at", { ascending: false })
       .limit(500);
     if (error) toast.error("Falha ao carregar patches: " + error.message);
-    else setRows((data ?? []) as PendingPatch[]);
+    else {
+      setRows((data ?? []) as PendingPatch[]);
+      // Limpa seleções que sumiram
+      setChecked(prev => {
+        const ids = new Set((data ?? []).map((d: any) => d.id));
+        const next = new Set<number>();
+        prev.forEach(id => { if (ids.has(id)) next.add(id); });
+        return next;
+      });
+    }
     setLoading(false);
   }
 
@@ -119,6 +141,7 @@ export function AdminPendingPatchesTab() {
       setSelected(null);
       setQuestao(null);
       setRows(prev => prev.filter(r => r.id !== audit_id));
+      setChecked(prev => { const n = new Set(prev); n.delete(audit_id); return n; });
     } catch (e: any) {
       toast.error("Falha: " + (e?.message ?? e));
     } finally {
@@ -143,6 +166,92 @@ export function AdminPendingPatchesTab() {
     }
   }
 
+  // ===== Bulk =====
+  const allVisibleIds = useMemo(() => rows.map(r => r.id), [rows]);
+  const allChecked = checked.size > 0 && allVisibleIds.every(id => checked.has(id));
+  const someChecked = checked.size > 0 && !allChecked;
+
+  function toggleOne(id: number, v: boolean) {
+    setChecked(prev => {
+      const n = new Set(prev);
+      if (v) n.add(id); else n.delete(id);
+      return n;
+    });
+  }
+  function toggleAll(v: boolean) {
+    setChecked(v ? new Set(allVisibleIds) : new Set());
+  }
+
+  async function runBulk(action: BulkAction) {
+    const ids = Array.from(checked);
+    if (ids.length === 0) return;
+    setBulkRunning(true);
+    setBulkProgress({ done: 0, total: ids.length, ok: 0, fail: 0 });
+
+    const CONC = 4;
+    let cursor = 0;
+    let ok = 0;
+    let fail = 0;
+    const okIds: number[] = [];
+
+    async function worker() {
+      while (cursor < ids.length) {
+        const idx = cursor++;
+        const audit_id = ids[idx];
+        try {
+          const { data, error } = await supabase.functions.invoke("apply-audit-patch", {
+            body: { audit_id, action },
+          });
+          if (error) throw error;
+          if ((data as any)?.error) throw new Error((data as any).error);
+          ok++; okIds.push(audit_id);
+        } catch (e: any) {
+          fail++;
+          console.error("bulk apply fail", audit_id, e?.message ?? e);
+        } finally {
+          setBulkProgress(p => ({ ...p, done: p.done + 1, ok, fail }));
+        }
+      }
+    }
+
+    await Promise.all(Array.from({ length: Math.min(CONC, ids.length) }, worker));
+
+    if (okIds.length > 0) {
+      const okSet = new Set(okIds);
+      setRows(prev => prev.filter(r => !okSet.has(r.id)));
+      setChecked(prev => {
+        const n = new Set(prev);
+        okIds.forEach(id => n.delete(id));
+        return n;
+      });
+    }
+    setBulkRunning(false);
+    setBulkAction(null);
+    toast[fail === 0 ? "success" : "warning"](
+      `Bulk ${action}: ${ok} aplicado(s), ${fail} falha(s).`
+    );
+  }
+
+  const bulkLabel: Record<BulkAction, string> = {
+    approve: "Aprovar selecionados",
+    reject: "Rejeitar selecionados",
+    unrecoverable: "Marcar como irrecuperáveis",
+  };
+  const bulkConfirm: Record<BulkAction, { title: string; desc: string }> = {
+    approve: {
+      title: "Aprovar patches em lote?",
+      desc: "Cada patch será aplicado à questão original. As versões anteriores ficam salvas em question_versions. Esta ação é em massa — confira a lista antes de continuar.",
+    },
+    reject: {
+      title: "Rejeitar patches em lote?",
+      desc: "As questões originais permanecem intactas e os patches serão descartados. As auditorias saem da fila de revisão.",
+    },
+    unrecoverable: {
+      title: "Marcar questões como irrecuperáveis?",
+      desc: "As questões serão soft-deletadas (audit_status = 'deleted') e ficam ocultas para os alunos. Use apenas quando o repair não é viável.",
+    },
+  };
+
   const proofMatrix = extractProofMatrix(selected?.proposed_patch);
   const repairMeta = extractRepairMeta(selected?.proposed_patch);
 
@@ -155,18 +264,67 @@ export function AdminPendingPatchesTab() {
               <FileWarning className="w-5 h-5 text-primary" />
               Patches pendentes (modo repair)
             </span>
-            <Button size="sm" variant="ghost" onClick={load} disabled={loading}>
+            <Button size="sm" variant="ghost" onClick={load} disabled={loading || bulkRunning}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             </Button>
           </CardTitle>
           <p className="text-xs text-muted-foreground">
             Reescritas geradas pela IA jurídica (DeepSeek Reasoner) que NÃO passaram nos critérios de auto-aplicação
-            (confidence ≥ 0.9, risk = low, proof_matrix válida). Revise o patch + a prova literal por alternativa
-            antes de aprovar, editar, rejeitar ou marcar como irrecuperável.
+            (confidence ≥ 0.9, risk = low, proof_matrix válida). Selecione várias para aplicar ações em lote.
           </p>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[600px]">
+          {/* Barra de ações em lote */}
+          <div className="flex flex-wrap items-center gap-2 mb-3 p-2 rounded-lg border border-border/40 bg-muted/20">
+            <button
+              type="button"
+              onClick={() => toggleAll(!allChecked)}
+              className="flex items-center gap-2 text-xs hover:text-primary"
+              disabled={bulkRunning || rows.length === 0}
+            >
+              {allChecked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+              {allChecked ? "Desmarcar todos" : someChecked ? `Selecionar todos (${rows.length})` : `Selecionar todos (${rows.length})`}
+            </button>
+            <Badge variant="outline" className="text-[10px]">
+              {checked.size} selecionado(s)
+            </Badge>
+            <div className="flex-1" />
+            <Button
+              size="sm"
+              disabled={checked.size === 0 || bulkRunning}
+              onClick={() => setBulkAction("approve")}
+              className="gap-1"
+            >
+              <ShieldCheck className="w-4 h-4" /> Aprovar ({checked.size})
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={checked.size === 0 || bulkRunning}
+              onClick={() => setBulkAction("reject")}
+              className="gap-1"
+            >
+              <X className="w-4 h-4" /> Rejeitar ({checked.size})
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={checked.size === 0 || bulkRunning}
+              onClick={() => setBulkAction("unrecoverable")}
+              className="gap-1"
+            >
+              <AlertTriangle className="w-4 h-4" /> Irrecuperáveis ({checked.size})
+            </Button>
+          </div>
+
+          {bulkRunning && (
+            <div className="mb-3 p-2 rounded-lg border border-primary/30 bg-primary/5 text-xs flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Processando lote: {bulkProgress.done}/{bulkProgress.total} (ok: {bulkProgress.ok}, falhas: {bulkProgress.fail})
+            </div>
+          )}
+
+          <ScrollArea className="h-[560px]">
             <div className="space-y-2">
               {rows.length === 0 && (
                 <p className="text-sm text-muted-foreground py-8 text-center">
@@ -177,11 +335,22 @@ export function AdminPendingPatchesTab() {
                 const matrix = extractProofMatrix(r.proposed_patch);
                 const provesOk = matrix.filter(m => m.verdict !== undefined).length;
                 const trueCount = matrix.filter(m => m.verdict === true).length;
+                const isChecked = checked.has(r.id);
                 return (
                   <div
                     key={r.id}
-                    className="flex items-start gap-2 p-3 rounded-lg border border-border/40 bg-card/50 hover:bg-card/80 transition"
+                    className={`flex items-start gap-2 p-3 rounded-lg border transition ${
+                      isChecked ? "border-primary/60 bg-primary/5" : "border-border/40 bg-card/50 hover:bg-card/80"
+                    }`}
                   >
+                    <div className="pt-1">
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={(v) => toggleOne(r.id, !!v)}
+                        disabled={bulkRunning}
+                        aria-label={`Selecionar patch ${r.id}`}
+                      />
+                    </div>
                     <button onClick={() => openDetail(r)} className="flex-1 text-left flex items-start justify-between gap-3 min-w-0">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -207,7 +376,7 @@ export function AdminPendingPatchesTab() {
         </CardContent>
       </Card>
 
-      {/* Botão livre para pedir repair em uma questão específica por ID */}
+      {/* Repair por ID */}
       <Card className="glass-card">
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
@@ -219,7 +388,31 @@ export function AdminPendingPatchesTab() {
         </CardContent>
       </Card>
 
-      {/* Dialog de detalhe */}
+      {/* Confirm bulk */}
+      <AlertDialog open={bulkAction !== null} onOpenChange={(o) => { if (!o && !bulkRunning) setBulkAction(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{bulkAction ? bulkConfirm[bulkAction].title : ""}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkAction ? bulkConfirm[bulkAction].desc : ""}
+              <br /><br />
+              <strong>{checked.size}</strong> patch(es) serão processados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkRunning}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkRunning}
+              onClick={(e) => { e.preventDefault(); if (bulkAction) runBulk(bulkAction); }}
+            >
+              {bulkRunning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {bulkAction ? bulkLabel[bulkAction] : ""}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Detalhe */}
       <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setQuestao(null); setEditing(false); } }}>
         <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
@@ -234,7 +427,6 @@ export function AdminPendingPatchesTab() {
 
           {selected && (
             <div className="space-y-4 text-sm">
-              {/* Diagnóstico e resumo */}
               <div className="p-3 rounded-lg bg-muted/30 border border-border/40 space-y-2">
                 <div>
                   <strong className="text-xs uppercase text-muted-foreground">Diagnóstico da IA:</strong>
@@ -262,7 +454,6 @@ export function AdminPendingPatchesTab() {
                 )}
               </div>
 
-              {/* Proof matrix */}
               <div className="p-3 rounded-lg border border-primary/30 bg-primary/5 space-y-2">
                 <div className="flex items-center justify-between">
                   <strong className="text-xs uppercase">Proof matrix (prova literal por alternativa)</strong>
@@ -291,7 +482,6 @@ export function AdminPendingPatchesTab() {
                 )}
               </div>
 
-              {/* Original vs Patch (lado a lado simplificado) */}
               {questao ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="p-3 rounded-lg border border-border/40 bg-muted/10">
