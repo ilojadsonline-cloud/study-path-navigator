@@ -1,98 +1,109 @@
-# Auditoria de Questões V4 — Plano de Implementação
+# Plano — Reforço do Pipeline de Questões (Método CHOA)
 
-Este plano cobre os 9 pontos do prompt. Nada fora de auditoria/geração será tocado.
+Implementação em ordem de prioridade (P0 → P2), sem operações destrutivas, preservando usuários, pagamentos e dados históricos.
 
-## 1. Migração de banco (additiva)
+## P0 — Proteção imediata aos alunos
 
-Adicionar coluna `audit_status` em `questoes`:
+### 1. Filtro público em `src/pages/Questoes.tsx` (e demais leituras públicas)
+- Definir constante `PUBLIC_AUDIT_STATUSES = ["approved", "auto_corrected", "admin_resolved"]`.
+- Aplicar `.in("audit_status", PUBLIC_AUDIT_STATUSES)` em TODAS as queries que servem questões ao aluno:
+  - `src/pages/Questoes.tsx` (banco de estudo)
+  - `src/pages/Simulados.tsx` (montagem de simulado)
+  - `src/pages/GerarQuestoes.tsx` (se aplicável)
+- Admin (`AdminQuestoesTab`, `AdminAuditoriaTab`) continua vendo tudo.
 
+### 2. Trigger SQL — reporte bloqueia questão
+Migração additiva:
 ```sql
-ALTER TABLE public.questoes
-  ADD COLUMN IF NOT EXISTS audit_status text NOT NULL DEFAULT 'pending',
-  ADD COLUMN IF NOT EXISTS audit_status_updated_at timestamptz DEFAULT now(),
-  ADD COLUMN IF NOT EXISTS audit_techniques jsonb DEFAULT '[]'::jsonb;
+CREATE OR REPLACE FUNCTION public.mark_question_manual_review_on_report()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  UPDATE public.questoes
+     SET audit_status = 'manual_review',
+         audit_status_updated_at = now()
+   WHERE id = NEW.questao_id
+     AND audit_status NOT IN ('manual_review','admin_resolved','deleted');
+  RETURN NEW;
+END; $$;
 
-CREATE INDEX IF NOT EXISTS idx_questoes_audit_status ON public.questoes(audit_status);
+DROP TRIGGER IF EXISTS trg_mark_question_manual_review_on_report ON public.question_reports;
+CREATE TRIGGER trg_mark_question_manual_review_on_report
+AFTER INSERT ON public.question_reports
+FOR EACH ROW EXECUTE FUNCTION public.mark_question_manual_review_on_report();
 ```
 
-Valores: `pending | approved | auto_corrected | manual_review | admin_resolved | deleted`.
+### 3. Fonte única em geração e auditoria
 
-## 2. Edge function `audit-questions` — reset e regras
+**`generate-questions-batch/index.ts`**
+- Bloquear geração quando `discipline_legal_texts.content` ausente ou `length < 500`: retornar erro `NO_LEGAL_TEXT` antes de chamar IA.
+- Acrescentar bloco "FONTE ÚNICA DE VERDADE" no system prompt proibindo PDFs, anexos, memória do modelo, outras leis fora do texto carregado.
+- Restringir citação cruzada: só citar diploma se literal no texto carregado.
 
-Antes de cada rodada:
-- `UPDATE questoes SET audit_status='pending' WHERE audit_status IN ('approved','auto_corrected')`
-- Selecionar para auditar: `WHERE audit_status='pending'` (manual_review e admin_resolved ficam de fora).
+**`audit-questions/index.ts`**
+- Remover qualquer instrução tipo "use conhecimento jurídico geral com cautela".
+- Antes de chamar IA por questão: se `legalText` vazio/`< 500` chars → registrar `question_audits` com `status=manual_review`, `risk_level=high`, issue `NO_LEGAL_TEXT`, setar `audit_status=manual_review` na questão e pular IA.
 
-Ao final de cada questão, gravar `audit_status` conforme veredicto da IA:
-- Sem issues → `approved`
-- Patch aplicado automaticamente (confiança ≥0.9 + risco low) → `auto_corrected`
-- Duplicata de menor qualidade ou irrecuperável → `DELETE` físico + log em `question_audits`
-- Caso contrário → `manual_review`
+## P1 — Correção assistida (repair) + matriz de prova
 
-Resumo final retornado ao frontend: `{ audited, approved, auto_corrected, manual_review, deleted, admin_resolved_skipped }`.
+### 4. Modo `repair` em `audit-questions/index.ts`
+- Novo parâmetro `mode: "audit" | "repair"` no payload do endpoint.
+- Prompt de repair instrui IA a devolver JSON exato (recoverable, confidence, risk_level, diagnosis, repair_type, source_articles, proof_matrix[5], patch{...}, needs_human_review).
+- Auto-aplicar patch só se: `recoverable && confidence >= 0.9 && risk_level == "low" && proof_matrix.length == 5 && exatamente 1 verdict=true`.
+- Casos sensíveis (troca de gabarito, múltipla correta, ou questão já tinha report) → grava patch em `question_audits.proposed_patch` + `audit_status=manual_review`, sem aplicar.
+- Snapshot da questão original em `question_versions` antes de qualquer patch.
 
-## 3. Novas verificações no auditor (prompt do DeepSeek)
+### 5. Matriz de prova obrigatória (geração + auditoria)
+- Validação programática pós-IA: rejeita questão sem 5 entradas na matriz, sem evidência literal (substring real no `discipline_legal_texts.content`), ou com !=1 verdadeira.
+- Em geração: descartar do lote. Em auditoria: marcar `manual_review`.
 
-Adicionar checks no system prompt + validações pós-IA:
+### 6. UI admin para revisar patches (`AdminAuditoriaTab.tsx`)
+- Nova sub-aba "Patches pendentes" listando `question_audits` com `proposed_patch IS NOT NULL` e `status='manual_review'`.
+- Cada linha → dialog com:
+  - questão original × patch (diff visual)
+  - diagnosis + proof_matrix renderizada
+  - botões: **Aprovar patch**, **Editar e aprovar**, **Rejeitar**, **Marcar irrecuperável**
+- Ao aprovar: chama edge function `apply-audit-patch` (nova, simples) que:
+  1. cria snapshot em `question_versions`
+  2. aplica patch em `questoes`
+  3. seta `audit_status='admin_resolved'`
+  4. atualiza `question_audits.applied_patch`, `reviewed_by`, `reviewed_at`
 
-**3a. Padrão "alternativa mais longa = correta"**
-- Pós-processamento: se `len(alt[gabarito])` é o máximo OU mínimo do conjunto, marcar issue `length_bias` (high) — auditor deve reescrever distratores ou sinalizar.
+## P2 — Não-destrutivo + execução em lotes
 
-**3b. Técnicas de distração (mínimo 2)**
-- Lista de 10 técnicas no prompt; IA deve registrar em `audit_techniques`.
-- Se <2 técnicas detectadas → issue `insufficient_distractors`.
+### 7. Substituir DELETE físico por status lógico
+- Em `audit-questions/index.ts`, qualquer caminho que hoje faz `supabase.from("questoes").delete()` passa a fazer `update audit_status='deleted'` (mantém histórico).
+- Admin "Excluir" manual (`AdminQuestoesTab`) permanece como hard-delete (ação humana explícita).
 
-**3c. Legislação desatualizada**
-- Carregar `discipline_legal_texts` da disciplina; pedir IA para flagrar termos não encontrados (ex: CPI → CRP). Auto-corrige se substituição preserva sentido; senão manual_review.
-
-**3d. Hierarquia funcional**
-- Prompt instrui validar postos/cargos vs texto legal. Issue `hierarchy_violation` quando aplicável.
-
-**3e. Múltiplas alternativas corretas**
-- Issue `multiple_correct`. Se IA consegue reescrever distratores com confiança ≥0.9 → auto_corrected; senão manual_review.
-
-**3f. Duplicatas**
-- Após IA produzir `assinatura_semantica` (já existe), comparar com últimas N questões da mesma disciplina via Jaccard ≥0.75 do enunciado normalizado. Manter a de maior qualidade (score = len(comentario) + len(distratores) + presença de citação legal). Excluir a outra com `audit_status='deleted'` + DELETE físico.
-
-**3g. Irrecuperáveis**
-- Issue `unrecoverable` (enunciado incoerente, sem alternativa correta, fora do banco) → DELETE físico, log.
-
-## 4. Comentário 4-partes (geração + auditoria)
-
-Atualizar prompts de `generate-questions-batch` e do reescritor de `audit-questions`:
-
-```
-COMENTÁRIO OBRIGATÓRIO em 4 partes separadas por linha em branco:
-1) "A alternativa correta é a [X], pois..." + citação literal do dispositivo.
-2) "A pegadinha desta questão está em..." + identifica técnica usada.
-3) Análise de cada alternativa errada com dispositivo que a contradiz.
-4) "Lembre-se: segundo o [art. X da Lei Y], [regra geral]."
+### 8. Migração additiva única (consolidada)
+```sql
+-- trigger do P0.2 (acima)
+-- nada mais; colunas audit_status/audit_status_updated_at/audit_techniques já existem
 ```
 
-Validador pós-IA: regex para garantir presença de "alternativa correta é", "pegadinha", "Lembre-se:". Caso falte → reroll (1x) ou manual_review.
+## Arquivos afetados
 
-## 5. Questões multidisciplinares (geração)
+| Arquivo | Mudança |
+|---|---|
+| `supabase/migrations/<nova>.sql` | Trigger de reporte |
+| `supabase/functions/generate-questions-batch/index.ts` | Bloqueio NO_LEGAL_TEXT, prompt fonte única, matriz de prova |
+| `supabase/functions/audit-questions/index.ts` | Bloqueio NO_LEGAL_TEXT, remoção de fallback, modo repair, sem DELETE físico |
+| `supabase/functions/apply-audit-patch/index.ts` | NOVA — aplica patch aprovado com versionamento |
+| `src/pages/Questoes.tsx` | Filtro PUBLIC_AUDIT_STATUSES |
+| `src/pages/Simulados.tsx` | Filtro PUBLIC_AUDIT_STATUSES |
+| `src/components/admin/AdminAuditoriaTab.tsx` | Sub-aba "Patches pendentes" + diálogo de revisão |
 
-Novo modo opcional no gerador: ao gerar lote, 20% das questões devem combinar 2 leis. Prompt diferenciado e citação obrigatória de dispositivos das duas leis no comentário.
+## Fora de escopo (não tocar)
 
-## 6. UI — `AdminAuditoriaTab.tsx`
+Pagamentos, login, perfis, ranking, assinaturas, MercadoPago, Stripe, trial, cronograma, mapas mentais, bizu-aulas.
 
-- Aba "Revisão Manual": adicionar checkbox por linha + "Selecionar todas" + barra de ação flutuante com "Excluir selecionadas (N)" + AlertDialog de confirmação.
-- Botão "Marcar como resolvida" muda `audit_status='admin_resolved'`.
-- Card de resumo no topo após auditoria com os contadores do passo 2.
-- Botão "Limpar histórico de resolvidas" (`UPDATE questoes SET audit_status='pending' WHERE audit_status='admin_resolved'`).
+## Critérios de aceite (validados após deploy)
 
-## 7. Arquivos afetados
+- Aluno só vê `approved | auto_corrected | admin_resolved`.
+- Reporte → questão sai do ar em <1s (trigger).
+- Geração sem texto legal cadastrado retorna `NO_LEGAL_TEXT` sem chamar IA.
+- Auditoria sem texto legal não usa conhecimento geral, vira `manual_review` com issue `NO_LEGAL_TEXT`.
+- Modo repair propõe patch com proof_matrix; auto-aplica só em confidence ≥0.9 + low risk + 1 correta.
+- Nenhum DELETE físico automático; apenas status `deleted` lógico.
+- UI admin permite aprovar/editar/rejeitar patches; versionamento preservado.
 
-- `supabase/migrations/<novo>.sql` — coluna `audit_status`.
-- `supabase/functions/audit-questions/index.ts` — reset, novos checks, duplicate/unrecoverable delete, status writes, summary.
-- `supabase/functions/generate-questions-batch/index.ts` — anti-length-bias, técnicas registradas, comentário 4-partes, modo multidisciplinar.
-- `src/components/admin/AdminAuditoriaTab.tsx` — checkboxes, seleção em lote, resumo, botão limpar resolvidas, botão "marcar resolvida".
-
-## 8. Fora de escopo (não tocar)
-
-Pagamentos, login, ranking, assinaturas, bloqueio/desbloqueio, demais abas admin.
-
-## 9. Critérios de aceite
-
-Conforme item 11 do prompt do usuário — validados manualmente após deploy.
+Confirme para eu iniciar pela ordem P0 → P1 → P2, ou indique ajustes.
