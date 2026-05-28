@@ -1137,6 +1137,7 @@ async function repairQuestion(
   };
 }
 
+async function processQuestion(
   supabase: ReturnType<typeof createClient>,
   q: Questao,
   legalCache: Map<string, string | null>,
