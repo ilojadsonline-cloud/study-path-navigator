@@ -268,8 +268,8 @@ function buildAuditPrompt(q: Questao, legalText: string | null): string {
     : "";
 
   const legalBlock = legalText
-    ? `${articleIndex}${relevantBlock}TEXTO LEGAL DE REFERÊNCIA (use como ÚNICA fonte de verdade; pode estar truncado por limite técnico, então o ÍNDICE acima prevalece para EXISTÊNCIA de artigo):\n"""${legalText.slice(0, 9000)}"""\n`
-    : "ATENÇÃO: Não há texto legal disponível para referência cruzada — audite com base em conhecimento jurídico geral mas marque qualquer afirmação não verificável como issue.\n";
+    ? `${articleIndex}${relevantBlock}TEXTO LEGAL DE REFERÊNCIA (FONTE ÚNICA E EXCLUSIVA de verdade; pode estar truncado por limite técnico, então o ÍNDICE acima prevalece para EXISTÊNCIA de artigo). PROIBIDO usar PDFs, anexos, sites, memória do modelo, conhecimento jurídico geral ou outras leis fora deste texto:\n"""${legalText.slice(0, 9000)}"""\n`
+    : "BLOQUEIO OPERACIONAL: Não há texto legal oficial cadastrado em discipline_legal_texts para esta disciplina. NÃO use conhecimento geral, PDFs, anexos ou memória do modelo. Sinalize NO_LEGAL_TEXT e marque para revisão manual.\n";
 
   return `${legalBlock}
 QUESTÃO #${q.id}
@@ -429,8 +429,8 @@ async function rewriteWithMaritaca(
   const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
   const relevantBlocks = cited.map((num) => blocks.find((b) => b.artNum === num)).filter(Boolean) as ArticleBlock[];
   const legalBlock = legalText
-    ? `${relevantBlocks.length ? `DISPOSITIVOS CITADOS E ENCONTRADOS NA LEI:\n${relevantBlocks.map((b) => b.text.slice(0, 2500)).join("\n\n")}\n` : ""}TEXTO LEGAL DE REFERÊNCIA (prévia; pode estar truncada):\n"""${legalText.slice(0, 10000)}"""\n`
-    : "ATENÇÃO: sem texto legal disponível. Use o conhecimento jurídico geral com cautela.\n";
+    ? `${relevantBlocks.length ? `DISPOSITIVOS CITADOS E ENCONTRADOS NA LEI:\n${relevantBlocks.map((b) => b.text.slice(0, 2500)).join("\n\n")}\n` : ""}TEXTO LEGAL DE REFERÊNCIA — FONTE ÚNICA E EXCLUSIVA. PROIBIDO usar PDFs, sites, memória do modelo, conhecimento geral ou outras leis fora deste texto:\n"""${legalText.slice(0, 10000)}"""\n`
+    : "BLOQUEIO OPERACIONAL: sem texto legal oficial cadastrado. NÃO reescreva — devolva unrecoverable=true.\n";
 
   const issuesTxt = (diagnosis.issues || []).map((i: any, idx: number) =>
     `${idx + 1}. [${i.type} | severity=${i.severity} | field=${i.field ?? "?"}] ${i.description ?? ""}${i.evidence ? ` | EVIDÊNCIA: "${String(i.evidence).slice(0, 200)}"` : ""}${i.suggestion ? ` | SUGESTÃO: ${i.suggestion}` : ""}`
