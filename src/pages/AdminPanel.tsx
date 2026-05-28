@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen, CreditCard, Brain, Youtube } from "lucide-react";
+import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen, CreditCard, Brain, Youtube, Wrench } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 
 // Lazy load das abas — reduz bundle inicial e evita cálculo simultâneo
@@ -14,6 +14,7 @@ const AdminNotificacoesTab = lazy(() => import("@/components/admin/AdminNotifica
 const AdminGerarTab = lazy(() => import("@/components/admin/AdminGerarTab").then(m => ({ default: m.AdminGerarTab })));
 
 const AdminAuditoriaTab = lazy(() => import("@/components/admin/AdminAuditoriaTab").then(m => ({ default: m.AdminAuditoriaTab })));
+const AdminPendingPatchesTab = lazy(() => import("@/components/admin/AdminPendingPatchesTab").then(m => ({ default: m.AdminPendingPatchesTab })));
 const AdminOnlineTab = lazy(() => import("@/components/admin/AdminOnlineTab").then(m => ({ default: m.AdminOnlineTab })));
 const AdminTextosLegaisContent = lazy(() => import("@/components/admin/AdminTextosLegaisTab"));
 const AdminAssinaturasTab = lazy(() => import("@/components/admin/AdminAssinaturasTab").then(m => ({ default: m.AdminAssinaturasTab })));
@@ -65,6 +66,7 @@ const AdminPanel = () => {
               <TabsTrigger value="notificacoes" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Bell className="w-3.5 h-3.5" />Notificações</TabsTrigger>
               <TabsTrigger value="gerar" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Zap className="w-3.5 h-3.5" />Gerar</TabsTrigger>
               <TabsTrigger value="auditoria" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><ShieldCheck className="w-3.5 h-3.5" />Validação IA</TabsTrigger>
+              <TabsTrigger value="patches" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Wrench className="w-3.5 h-3.5" />Patches pendentes</TabsTrigger>
               <TabsTrigger value="online" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Wifi className="w-3.5 h-3.5" />Online</TabsTrigger>
               <TabsTrigger value="textos" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><BookOpen className="w-3.5 h-3.5" />Textos Legais</TabsTrigger>
               <TabsTrigger value="assinaturas" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><CreditCard className="w-3.5 h-3.5" />Assinaturas</TabsTrigger>
@@ -81,6 +83,7 @@ const AdminPanel = () => {
           <TabsContent value="gerar" className="mt-6" forceMount={visited.has("gerar") ? true : undefined} hidden={activeTab !== "gerar"}>{renderTab("gerar", AdminGerarTab)}</TabsContent>
           
           <TabsContent value="auditoria" className="mt-6" forceMount={visited.has("auditoria") ? true : undefined} hidden={activeTab !== "auditoria"}>{renderTab("auditoria", AdminAuditoriaTab)}</TabsContent>
+          <TabsContent value="patches" className="mt-6" forceMount={visited.has("patches") ? true : undefined} hidden={activeTab !== "patches"}>{renderTab("patches", AdminPendingPatchesTab)}</TabsContent>
           <TabsContent value="online" className="mt-6" forceMount={visited.has("online") ? true : undefined} hidden={activeTab !== "online"}>{renderTab("online", AdminOnlineTab)}</TabsContent>
           <TabsContent value="textos" className="mt-6" forceMount={visited.has("textos") ? true : undefined} hidden={activeTab !== "textos"}>{renderTab("textos", AdminTextosLegaisContent)}</TabsContent>
           <TabsContent value="assinaturas" className="mt-6" forceMount={visited.has("assinaturas") ? true : undefined} hidden={activeTab !== "assinaturas"}>{renderTab("assinaturas", AdminAssinaturasTab)}</TabsContent>
