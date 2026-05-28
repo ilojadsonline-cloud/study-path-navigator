@@ -872,15 +872,17 @@ serve(async (req) => {
     const blocks = parseArticleBlocks(leiSeca);
     const availableArticles = blocks.map(b => `Art. ${b.artNum}`).join(", ");
 
-    // ── AI Provider: Maritaca Sabiá (gerador). DeepSeek permanece exclusivo para auditoria. ──
+    // ── AI Provider: DeepSeek Reasoner (gerador primário). Maritaca/Lovable como fallback. ──
+    const DEEPSEEK_API_KEY_PRIMARY = Deno.env.get("DEEPSEEK_API_KEY");
     const MARITACA_API_KEY = Deno.env.get("MARITACA_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const useMaritaca = !!MARITACA_API_KEY;
-    const useLovable = !useMaritaca && !!LOVABLE_API_KEY;
-    if (!MARITACA_API_KEY && !LOVABLE_API_KEY) {
+    const useDeepSeekPrimary = !!DEEPSEEK_API_KEY_PRIMARY;
+    const useMaritaca = !useDeepSeekPrimary && !!MARITACA_API_KEY;
+    const useLovable = !useDeepSeekPrimary && !useMaritaca && !!LOVABLE_API_KEY;
+    if (!DEEPSEEK_API_KEY_PRIMARY && !MARITACA_API_KEY && !LOVABLE_API_KEY) {
       return new Response(JSON.stringify({
         status: "erro", mensagem: "Nenhuma API key de IA configurada para o gerador.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Configure MARITACA_API_KEY (preferencial) ou LOVABLE_API_KEY" }] },
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Configure DEEPSEEK_API_KEY (preferencial — reasoner), MARITACA_API_KEY ou LOVABLE_API_KEY" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -1260,15 +1262,23 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
 
     const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
 
-    let currentProvider: "maritaca" | "lovable" | "deepseek" = useMaritaca ? "maritaca" : "lovable";
-    let apiUrl = currentProvider === "maritaca"
-      ? "https://chat.maritaca.ai/api/chat/completions"
+    let currentProvider: "deepseek" | "maritaca" | "lovable" =
+      useDeepSeekPrimary ? "deepseek" : useMaritaca ? "maritaca" : "lovable";
+    let apiUrl =
+      currentProvider === "deepseek" ? "https://api.deepseek.com/v1/chat/completions"
+      : currentProvider === "maritaca" ? "https://chat.maritaca.ai/api/chat/completions"
       : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    let apiModel = currentProvider === "maritaca" ? "sabia-4" : "google/gemini-2.5-flash";
-    let apiKey = currentProvider === "maritaca" ? MARITACA_API_KEY! : LOVABLE_API_KEY!;
+    let apiModel =
+      currentProvider === "deepseek" ? "deepseek-reasoner"
+      : currentProvider === "maritaca" ? "sabia-4"
+      : "google/gemini-2.5-flash";
+    let apiKey =
+      currentProvider === "deepseek" ? DEEPSEEK_API_KEY!
+      : currentProvider === "maritaca" ? MARITACA_API_KEY!
+      : LOVABLE_API_KEY!;
     let providerSwitched = false;
 
-    console.log(`[GERAR] Provider: ${currentProvider}, batch=${batchSize}, maxTokens=${maxTokens}`);
+    console.log(`[GERAR] Provider: ${currentProvider} (${apiModel}), batch=${batchSize}, maxTokens=${maxTokens}`);
 
     const looksLikeNoCredits = (status: number, body: string) => {
       if (status === 402) return true;
@@ -1276,15 +1286,36 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       return /insufficient|no credits|saldo|sem cr[eé]dito|quota|billing|exhaust|insufficient_quota/.test(b);
     };
 
-    const switchToDeepSeek = () => {
-      if (!DEEPSEEK_API_KEY) return false;
-      currentProvider = "deepseek";
-      apiUrl = "https://api.deepseek.com/v1/chat/completions";
-      apiModel = "deepseek-chat";
-      apiKey = DEEPSEEK_API_KEY;
-      providerSwitched = true;
-      console.log(`[GERAR] Maritaca sem créditos. Fallback ativado: DeepSeek (deepseek-chat)`);
-      return true;
+    // Fallback chain: deepseek → maritaca → lovable (skip steps without key)
+    const switchToFallback = (): boolean => {
+      if (currentProvider === "deepseek" && MARITACA_API_KEY) {
+        currentProvider = "maritaca";
+        apiUrl = "https://chat.maritaca.ai/api/chat/completions";
+        apiModel = "sabia-4";
+        apiKey = MARITACA_API_KEY;
+        providerSwitched = true;
+        console.log(`[GERAR] DeepSeek indisponível. Fallback: Maritaca (sabia-4)`);
+        return true;
+      }
+      if ((currentProvider === "deepseek" || currentProvider === "maritaca") && LOVABLE_API_KEY) {
+        currentProvider = "lovable";
+        apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+        apiModel = "google/gemini-2.5-flash";
+        apiKey = LOVABLE_API_KEY;
+        providerSwitched = true;
+        console.log(`[GERAR] Fallback: Lovable AI (gemini-2.5-flash)`);
+        return true;
+      }
+      if (currentProvider === "maritaca" && DEEPSEEK_API_KEY) {
+        currentProvider = "deepseek";
+        apiUrl = "https://api.deepseek.com/v1/chat/completions";
+        apiModel = "deepseek-reasoner";
+        apiKey = DEEPSEEK_API_KEY;
+        providerSwitched = true;
+        console.log(`[GERAR] Maritaca sem créditos. Fallback: DeepSeek Reasoner`);
+        return true;
+      }
+      return false;
     };
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
@@ -1293,19 +1324,23 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
 
       try {
+        const isReasoner = apiModel === "deepseek-reasoner";
         const requestBody: Record<string, unknown> = {
           model: apiModel,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt },
           ],
-          max_tokens: maxTokens,
-          temperature: 0.25,
+          // Reasoner usa orçamento maior por gerar cadeia de raciocínio.
+          max_tokens: isReasoner ? Math.max(maxTokens, 4096) : maxTokens,
           stream: false,
         };
-        // response_format json_object supported by Lovable and DeepSeek; Maritaca ignores silently.
-        if (currentProvider !== "maritaca") requestBody.response_format = { type: "json_object" };
-        if (currentProvider === "maritaca") requestBody.top_p = 0.92;
+        // deepseek-reasoner NÃO aceita temperature/top_p/response_format. Demais providers aceitam.
+        if (!isReasoner) {
+          requestBody.temperature = 0.25;
+          if (currentProvider !== "maritaca") requestBody.response_format = { type: "json_object" };
+          if (currentProvider === "maritaca") requestBody.top_p = 0.92;
+        }
 
         const response = await fetch(apiUrl, {
           method: "POST",
@@ -1318,12 +1353,12 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         });
         clearTimeout(timeoutId);
         aiStatus = response.status;
-        console.log(`[GERAR] AI status: ${aiStatus}, attempt ${attempt + 1}, provider=${currentProvider}`);
+        console.log(`[GERAR] AI status: ${aiStatus}, attempt ${attempt + 1}, provider=${currentProvider}/${apiModel}`);
         aiResponseText = await response.text();
 
-        // Maritaca sem créditos → swap para DeepSeek e tenta de novo
-        if (currentProvider === "maritaca" && !providerSwitched && looksLikeNoCredits(aiStatus, aiResponseText)) {
-          if (switchToDeepSeek()) {
+        // Provider sem créditos → tenta próximo fallback
+        if (!providerSwitched && looksLikeNoCredits(aiStatus, aiResponseText)) {
+          if (switchToFallback()) {
             aiResponseText = "";
             aiStatus = 0;
             continue;

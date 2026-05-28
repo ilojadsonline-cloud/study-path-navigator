@@ -214,8 +214,8 @@ async function callMaritaca(prompt: string, timeoutMs = 70000): Promise<string> 
   }
 }
 
-/** DeepSeek REESCRITOR — FALLBACK quando Maritaca está sem créditos/indisponível. */
-async function callDeepSeekRewriter(prompt: string, timeoutMs = 70000): Promise<string> {
+/** DeepSeek REASONER — REESCRITOR jurídico PRIMÁRIO (raciocínio profundo). */
+async function callDeepSeekRewriter(prompt: string, timeoutMs = 120000): Promise<string> {
   if (!DEEPSEEK_API_KEY) throw new Error("DEEPSEEK_API_KEY não configurada");
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -227,20 +227,22 @@ async function callDeepSeekRewriter(prompt: string, timeoutMs = 70000): Promise<
         "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        model: "deepseek-reasoner",
         messages: [
           { role: "system", content: REWRITER_SYSTEM_PROMPT },
           { role: "user", content: prompt },
         ],
-        temperature: 0.2,
-        max_tokens: 4500,
-        response_format: { type: "json_object" },
+        max_tokens: 6000,
+        // deepseek-reasoner NÃO aceita temperature/top_p/response_format
       }),
       signal: ctrl.signal,
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      throw new Error(`DeepSeek(rewriter) HTTP ${res.status} ${body.slice(0, 200)}`);
+      if (looksLikeNoCredits(res.status, body)) {
+        throw new NoCreditsError("DeepSeek", res.status, body.slice(0, 200));
+      }
+      throw new Error(`DeepSeek(reasoner) HTTP ${res.status} ${body.slice(0, 200)}`);
     }
     const data = await res.json();
     return stripThinkTags(data?.choices?.[0]?.message?.content ?? "");
@@ -488,23 +490,26 @@ Retorne JSON ESTRITO:
 }`;
 
   let raw = "";
-  let usedProvider: "Maritaca" | "DeepSeek (fallback)" = "Maritaca";
+  let usedProvider: "DeepSeek Reasoner" | "Maritaca (fallback)" = "DeepSeek Reasoner";
   let fallbackReason = "";
   try {
-    raw = await callMaritaca(prompt);
+    raw = await callDeepSeekRewriter(prompt);
   } catch (e) {
     const isNoCredits = e instanceof NoCreditsError;
-    if (isNoCredits) {
-      fallbackReason = `Maritaca sem créditos (${(e as NoCreditsError).status}). Acionando DeepSeek como reescritor alternativo.`;
+    if (isNoCredits || /HTTP\s+(401|402|403|429|5\d\d)/i.test(e instanceof Error ? e.message : "")) {
+      fallbackReason = `DeepSeek Reasoner indisponível (${e instanceof Error ? e.message : e}). Acionando Maritaca como reescritor alternativo.`;
       console.warn("[audit-questions]", fallbackReason);
+      if (!MARITACA_API_KEY) {
+        return { patch: null, unrecoverable: false, summary: `Falha DeepSeek Reasoner e Maritaca não configurada: ${e instanceof Error ? e.message : e}` };
+      }
       try {
-        raw = await callDeepSeekRewriter(prompt);
-        usedProvider = "DeepSeek (fallback)";
+        raw = await callMaritaca(prompt);
+        usedProvider = "Maritaca (fallback)";
       } catch (e2) {
-        return { patch: null, unrecoverable: false, summary: `Falha Maritaca (sem créditos) e DeepSeek fallback: ${e2 instanceof Error ? e2.message : e2}` };
+        return { patch: null, unrecoverable: false, summary: `Falha DeepSeek e Maritaca fallback: ${e2 instanceof Error ? e2.message : e2}` };
       }
     } else {
-      return { patch: null, unrecoverable: false, summary: `Falha Maritaca: ${e instanceof Error ? e.message : e}` };
+      return { patch: null, unrecoverable: false, summary: `Falha DeepSeek Reasoner: ${e instanceof Error ? e.message : e}` };
     }
   }
   const parsed = safeJsonParse(raw);
@@ -633,16 +638,16 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
         }
       }
       // Se DeepSeek não entregou patch utilizável, cai para revisão manual (não chama Maritaca à toa).
-    } else if (hasComplex && MARITACA_API_KEY) {
-      // ── Caminho jurídico: Maritaca Sabiá 4 reescreve. ──
+    } else if (hasComplex && (DEEPSEEK_API_KEY || MARITACA_API_KEY)) {
+      // ── Caminho jurídico: DeepSeek Reasoner (primário) reescreve; Maritaca fica como fallback. ──
       const r = await rewriteWithMaritaca(q, { issues, ai_summary: aiSummary }, legalText);
-      rewriteSummary = `Reescrita (Maritaca): ${r.summary}`;
+      rewriteSummary = `Reescrita: ${r.summary}`;
       if (r.unrecoverable) {
         issues.push({
           type: "unrecoverable",
           severity: "high",
           field: "questao_inteira",
-          description: "Maritaca classificou a questão como irrecuperável após análise jurídica.",
+          description: "IA reescritora classificou a questão como irrecuperável após análise jurídica.",
           suggestion: "Exclusão recomendada.",
           fix_complexity: "complex",
         });
@@ -670,7 +675,7 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
         type: "length_bias_persistente",
         severity: "high",
         field: "questao_inteira",
-        description: "Após reescrita da Maritaca o length_bias persistiu.",
+        description: "Após reescrita da IA o length_bias persistiu.",
         suggestion: "Revisar manualmente o equilíbrio das alternativas.",
       });
     }
