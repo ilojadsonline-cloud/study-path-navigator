@@ -675,7 +675,7 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
         type: "length_bias_persistente",
         severity: "high",
         field: "questao_inteira",
-        description: "Após reescrita da Maritaca o length_bias persistiu.",
+        description: "Após reescrita da IA o length_bias persistiu.",
         suggestion: "Revisar manualmente o equilíbrio das alternativas.",
       });
     }
