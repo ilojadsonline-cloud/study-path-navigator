@@ -490,23 +490,26 @@ Retorne JSON ESTRITO:
 }`;
 
   let raw = "";
-  let usedProvider: "Maritaca" | "DeepSeek (fallback)" = "Maritaca";
+  let usedProvider: "DeepSeek Reasoner" | "Maritaca (fallback)" = "DeepSeek Reasoner";
   let fallbackReason = "";
   try {
-    raw = await callMaritaca(prompt);
+    raw = await callDeepSeekRewriter(prompt);
   } catch (e) {
     const isNoCredits = e instanceof NoCreditsError;
-    if (isNoCredits) {
-      fallbackReason = `Maritaca sem créditos (${(e as NoCreditsError).status}). Acionando DeepSeek como reescritor alternativo.`;
+    if (isNoCredits || /HTTP\s+(401|402|403|429|5\d\d)/i.test(e instanceof Error ? e.message : "")) {
+      fallbackReason = `DeepSeek Reasoner indisponível (${e instanceof Error ? e.message : e}). Acionando Maritaca como reescritor alternativo.`;
       console.warn("[audit-questions]", fallbackReason);
+      if (!MARITACA_API_KEY) {
+        return { patch: null, unrecoverable: false, summary: `Falha DeepSeek Reasoner e Maritaca não configurada: ${e instanceof Error ? e.message : e}` };
+      }
       try {
-        raw = await callDeepSeekRewriter(prompt);
-        usedProvider = "DeepSeek (fallback)";
+        raw = await callMaritaca(prompt);
+        usedProvider = "Maritaca (fallback)";
       } catch (e2) {
-        return { patch: null, unrecoverable: false, summary: `Falha Maritaca (sem créditos) e DeepSeek fallback: ${e2 instanceof Error ? e2.message : e2}` };
+        return { patch: null, unrecoverable: false, summary: `Falha DeepSeek e Maritaca fallback: ${e2 instanceof Error ? e2.message : e2}` };
       }
     } else {
-      return { patch: null, unrecoverable: false, summary: `Falha Maritaca: ${e instanceof Error ? e.message : e}` };
+      return { patch: null, unrecoverable: false, summary: `Falha DeepSeek Reasoner: ${e instanceof Error ? e.message : e}` };
     }
   }
   const parsed = safeJsonParse(raw);
