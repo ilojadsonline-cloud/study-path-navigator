@@ -1262,15 +1262,23 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
 
     const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
 
-    let currentProvider: "maritaca" | "lovable" | "deepseek" = useMaritaca ? "maritaca" : "lovable";
-    let apiUrl = currentProvider === "maritaca"
-      ? "https://chat.maritaca.ai/api/chat/completions"
+    let currentProvider: "deepseek" | "maritaca" | "lovable" =
+      useDeepSeekPrimary ? "deepseek" : useMaritaca ? "maritaca" : "lovable";
+    let apiUrl =
+      currentProvider === "deepseek" ? "https://api.deepseek.com/v1/chat/completions"
+      : currentProvider === "maritaca" ? "https://chat.maritaca.ai/api/chat/completions"
       : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    let apiModel = currentProvider === "maritaca" ? "sabia-4" : "google/gemini-2.5-flash";
-    let apiKey = currentProvider === "maritaca" ? MARITACA_API_KEY! : LOVABLE_API_KEY!;
+    let apiModel =
+      currentProvider === "deepseek" ? "deepseek-reasoner"
+      : currentProvider === "maritaca" ? "sabia-4"
+      : "google/gemini-2.5-flash";
+    let apiKey =
+      currentProvider === "deepseek" ? DEEPSEEK_API_KEY!
+      : currentProvider === "maritaca" ? MARITACA_API_KEY!
+      : LOVABLE_API_KEY!;
     let providerSwitched = false;
 
-    console.log(`[GERAR] Provider: ${currentProvider}, batch=${batchSize}, maxTokens=${maxTokens}`);
+    console.log(`[GERAR] Provider: ${currentProvider} (${apiModel}), batch=${batchSize}, maxTokens=${maxTokens}`);
 
     const looksLikeNoCredits = (status: number, body: string) => {
       if (status === 402) return true;
@@ -1278,15 +1286,36 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       return /insufficient|no credits|saldo|sem cr[eé]dito|quota|billing|exhaust|insufficient_quota/.test(b);
     };
 
-    const switchToDeepSeek = () => {
-      if (!DEEPSEEK_API_KEY) return false;
-      currentProvider = "deepseek";
-      apiUrl = "https://api.deepseek.com/v1/chat/completions";
-      apiModel = "deepseek-chat";
-      apiKey = DEEPSEEK_API_KEY;
-      providerSwitched = true;
-      console.log(`[GERAR] Maritaca sem créditos. Fallback ativado: DeepSeek (deepseek-chat)`);
-      return true;
+    // Fallback chain: deepseek → maritaca → lovable (skip steps without key)
+    const switchToFallback = (): boolean => {
+      if (currentProvider === "deepseek" && MARITACA_API_KEY) {
+        currentProvider = "maritaca";
+        apiUrl = "https://chat.maritaca.ai/api/chat/completions";
+        apiModel = "sabia-4";
+        apiKey = MARITACA_API_KEY;
+        providerSwitched = true;
+        console.log(`[GERAR] DeepSeek indisponível. Fallback: Maritaca (sabia-4)`);
+        return true;
+      }
+      if ((currentProvider === "deepseek" || currentProvider === "maritaca") && LOVABLE_API_KEY) {
+        currentProvider = "lovable";
+        apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+        apiModel = "google/gemini-2.5-flash";
+        apiKey = LOVABLE_API_KEY;
+        providerSwitched = true;
+        console.log(`[GERAR] Fallback: Lovable AI (gemini-2.5-flash)`);
+        return true;
+      }
+      if (currentProvider === "maritaca" && DEEPSEEK_API_KEY) {
+        currentProvider = "deepseek";
+        apiUrl = "https://api.deepseek.com/v1/chat/completions";
+        apiModel = "deepseek-reasoner";
+        apiKey = DEEPSEEK_API_KEY;
+        providerSwitched = true;
+        console.log(`[GERAR] Maritaca sem créditos. Fallback: DeepSeek Reasoner`);
+        return true;
+      }
+      return false;
     };
 
     for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
