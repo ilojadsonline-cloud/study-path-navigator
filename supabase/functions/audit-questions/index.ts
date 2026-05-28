@@ -788,6 +788,355 @@ Retorne JSON ESTRITO:
   return { patch: combinedPatch, unrecoverable: false, summary: String(parsed.summary ?? "Distratores reescritos para equilibrar tamanho") };
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// P1.4 / P1.5 — MODO REPAIR DEDICADO + PROOF_MATRIX ESTRUTURADA + VALIDAÇÃO
+// ──────────────────────────────────────────────────────────────────────────
+
+/** Encontra a literal_evidence dentro do legalText normalizado.
+ *  Retorna {found, snippet} — snippet é o trecho casado (até 240 chars) no original. */
+function evidenceInLegalText(evidence: string, legalText: string): { found: boolean; snippet: string | null } {
+  const ev = String(evidence ?? "").trim();
+  if (ev.length < 20) return { found: false, snippet: null };
+  const normEv = normalizeLegalText(ev);
+  const normLaw = normalizeLegalText(legalText);
+  if (!normEv || !normLaw) return { found: false, snippet: null };
+  // Exato (após normalização)
+  if (normLaw.includes(normEv)) {
+    return { found: true, snippet: ev.slice(0, 240) };
+  }
+  // Tolerante: ao menos 40 chars seguidos da evidência (núcleo) aparecem na lei.
+  if (normEv.length >= 40) {
+    const core = normEv.slice(0, Math.min(120, normEv.length));
+    if (normLaw.includes(core)) return { found: true, snippet: ev.slice(0, 240) };
+  }
+  return { found: false, snippet: null };
+}
+
+type ProofMatrixEntry = {
+  letter: string;
+  text: string;
+  verdict: boolean;
+  literal_evidence: string;
+  source_article?: string | null;
+};
+
+type ProofMatrixValidation = {
+  valid: boolean;
+  errors: string[];
+  trueCount: number;
+  evidenceFound: number;
+  normalized: ProofMatrixEntry[];
+};
+
+/** P1.5 — Valida programaticamente a matriz de prova literal por alternativa. */
+function validateProofMatrix(matrix: unknown, legalText: string | null): ProofMatrixValidation {
+  const errors: string[] = [];
+  const normalized: ProofMatrixEntry[] = [];
+  if (!Array.isArray(matrix)) {
+    return { valid: false, errors: ["proof_matrix ausente ou não é array"], trueCount: 0, evidenceFound: 0, normalized: [] };
+  }
+  if (matrix.length !== 5) {
+    errors.push(`proof_matrix deve ter exatamente 5 entradas (recebeu ${matrix.length})`);
+  }
+  const seenLetters = new Set<string>();
+  let trueCount = 0;
+  let evidenceFound = 0;
+  for (let i = 0; i < matrix.length; i++) {
+    const raw = matrix[i] as any;
+    const letter = String(raw?.letter ?? "").trim().toUpperCase();
+    const text = String(raw?.text ?? "").trim();
+    const verdict = raw?.verdict === true;
+    const literal_evidence = String(raw?.literal_evidence ?? "").trim();
+    const source_article = raw?.source_article ? String(raw.source_article).trim() : null;
+    if (!["A","B","C","D","E"].includes(letter)) {
+      errors.push(`entrada #${i + 1}: letter inválida ("${letter}")`);
+    } else if (seenLetters.has(letter)) {
+      errors.push(`entrada #${i + 1}: letter "${letter}" duplicada`);
+    } else {
+      seenLetters.add(letter);
+    }
+    if (text.length < 3) errors.push(`entrada ${letter || `#${i + 1}`}: text vazio/curto`);
+    if (typeof raw?.verdict !== "boolean") errors.push(`entrada ${letter || `#${i + 1}`}: verdict deve ser booleano`);
+    if (literal_evidence.length < 20) {
+      errors.push(`entrada ${letter || `#${i + 1}`}: literal_evidence < 20 chars (sem prova literal suficiente)`);
+    } else if (legalText) {
+      const { found } = evidenceInLegalText(literal_evidence, legalText);
+      if (!found) {
+        errors.push(`entrada ${letter || `#${i + 1}`}: literal_evidence NÃO encontrada no texto legal cadastrado`);
+      } else {
+        evidenceFound++;
+      }
+    }
+    if (verdict) trueCount++;
+    normalized.push({ letter, text, verdict, literal_evidence, source_article });
+  }
+  if (trueCount !== 1) {
+    errors.push(`proof_matrix deve ter EXATAMENTE 1 entrada com verdict=true (recebeu ${trueCount})`);
+  }
+  return { valid: errors.length === 0, errors, trueCount, evidenceFound, normalized };
+}
+
+/** P1.4 — Constrói o prompt do modo REPAIR (rewriter exige proof_matrix literal). */
+function buildRepairPrompt(q: Questao, diagnosis: { issues: any[]; ai_summary: string } | null, legalText: string): string {
+  const alts = ["A","B","C","D","E"].map((l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
+  const correctaLetra = ["A","B","C","D","E"][q.gabarito] ?? "?";
+  const blocks = parseArticleBlocks(legalText);
+  const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
+  const relevantBlocks = cited.map((num) => blocks.find((b) => b.artNum === num)).filter(Boolean) as ArticleBlock[];
+  const legalBlock = `${relevantBlocks.length ? `DISPOSITIVOS CITADOS E ENCONTRADOS NA LEI:\n${relevantBlocks.map((b) => b.text.slice(0, 2500)).join("\n\n")}\n` : ""}TEXTO LEGAL DE REFERÊNCIA — FONTE ÚNICA E EXCLUSIVA. Toda literal_evidence DEVE ser um trecho LITERAL deste texto. PROIBIDO inventar, parafrasear como se fosse literal, usar PDFs, sites, memória ou outras leis:\n"""${legalText.slice(0, 10000)}"""\n`;
+
+  const issuesTxt = (diagnosis?.issues || []).map((i: any, idx: number) =>
+    `${idx + 1}. [${i.type} | severity=${i.severity} | field=${i.field ?? "?"}] ${i.description ?? ""}${i.evidence ? ` | EVIDÊNCIA: "${String(i.evidence).slice(0, 200)}"` : ""}${i.suggestion ? ` | SUGESTÃO: ${i.suggestion}` : ""}`
+  ).join("\n");
+
+  return `${legalBlock}
+QUESTÃO #${q.id}
+Disciplina: ${q.disciplina}
+Assunto: ${q.assunto}
+Artigo declarado: ${q.artigo_principal ?? "(não informado)"}
+
+Enunciado:
+${q.enunciado}
+
+Alternativas:
+${alts}
+
+Gabarito atual: ${correctaLetra} (índice ${q.gabarito})
+
+Comentário atual:
+${q.comentario}
+
+${diagnosis ? `DIAGNÓSTICO DO AUDITOR — RESUMO: ${diagnosis.ai_summary ?? "(sem resumo)"}\nISSUES IDENTIFICADAS:\n${issuesTxt || "(nenhuma)"}\n` : ""}
+
+MODO: REPAIR ESTRUTURADO. Você é um REESCRITOR jurídico de elite (concursos militares + CESPE/FGV). Produza um PATCH que corrija TODOS os defeitos E uma PROOF_MATRIX literal obrigatória.
+
+REGRAS DE REESCRITA:
+1. Corrija EXATAMENTE os campos apontados em "field" do diagnóstico (quando houver). Preserve o restante quando possível.
+2. ANTI-LENGTH-BIAS: a alternativa correta NUNCA pode ser a única mais longa nem a única mais curta. Paridade ±25%.
+3. CADA distrator usa uma técnica DIFERENTE de erro (≥2 técnicas no conjunto). Encurte distratores longos preservando o erro típico.
+4. PROIBIDO "todas/nenhuma das anteriores", "n.d.a.", duplicatas, alternativa que contradiz o enunciado.
+5. Gabarito = inteiro 0-4. Se trocar a correta, ajuste o gabarito coerentemente.
+6. HIERARQUIA militar fiel à lei. Cite lei externa por extenso quando inevitável.
+7. COMENTÁRIO em 4 movimentos OBRIGATÓRIOS, parágrafos fluidos, 600-1500 chars.
+
+PROOF_MATRIX (OBRIGATÓRIA, 5 entradas — uma por alternativa A,B,C,D,E na ordem):
+Cada entrada DEVE conter:
+- letter: "A" | "B" | "C" | "D" | "E"
+- text: o texto FINAL da alternativa após o patch (idêntico ao patch.alt_X correspondente)
+- verdict: true se for a alternativa CORRETA; false se for distrator. EXATAMENTE UMA entrada deve ter verdict=true.
+- literal_evidence: trecho LITERAL (≥40 chars) copiado do TEXTO LEGAL acima que prove o verdict (para a correta, prove por que é correta; para distrator, prove por que está errado/contradiz a lei). PROIBIDO parafrasear — deve ser cópia literal verificável.
+- source_article: "Art. X" (opcional mas recomendado) que contém a literal_evidence.
+
+REPAIR_TYPE: classifique a correção realizada em uma destas tags: "gabarito_swap" | "distrator_rewrite" | "comentario_rewrite" | "enunciado_rewrite" | "multi_field" | "none".
+
+RISCO: classifique o risco da reescrita: "low" (mudança mecânica/comprovada literalmente) | "medium" (reescrita de prosa com prova literal sólida) | "high" (mudança estrutural, troca de gabarito, ou qualquer dúvida).
+
+CONFIANÇA: 0.0-1.0. Use ≥0.9 SOMENTE quando toda alternativa tem literal_evidence verificável copiada da lei e não há ambiguidade.
+
+NEEDS_HUMAN_REVIEW: true se houver QUALQUER dúvida, se for trocar gabarito sem certeza absoluta, se a literal_evidence depender de interpretação extensiva, ou se você não conseguir cobrir as 5 alternativas com prova literal sólida. Caso contrário false.
+
+RECOVERABLE: false se a questão for IRRECUPERÁVEL à luz da lei (sem alternativa correta possível, sem base legal, premissa contraditória). Nesse caso patch=null e proof_matrix=[].
+
+Retorne JSON ESTRITO:
+{
+  "recoverable": true|false,
+  "confidence": 0.0-1.0,
+  "risk_level": "low" | "medium" | "high",
+  "diagnosis": "1-2 frases descrevendo o defeito principal corrigido",
+  "repair_type": "gabarito_swap|distrator_rewrite|comentario_rewrite|enunciado_rewrite|multi_field|none",
+  "source_articles": ["Art. X", "Art. Y"],
+  "proof_matrix": [
+    { "letter": "A", "text": "...", "verdict": false|true, "literal_evidence": "...", "source_article": "Art. X" },
+    { "letter": "B", ... }, { "letter": "C", ... }, { "letter": "D", ... }, { "letter": "E", ... }
+  ],
+  "patch": {
+    "enunciado"?: "...",
+    "alt_a"?: "...", "alt_b"?: "...", "alt_c"?: "...", "alt_d"?: "...", "alt_e"?: "...",
+    "gabarito"?: 0-4,
+    "comentario"?: "..."
+  } | null,
+  "needs_human_review": true|false,
+  "summary": "1-2 frases sobre o que foi corrigido"
+}`;
+}
+
+/** P1.4 — Executa o modo REPAIR completo para UMA questão. */
+async function repairQuestion(
+  supabase: ReturnType<typeof createClient>,
+  questionId: number,
+  opts?: { skipAudit?: boolean },
+): Promise<{
+  ok: boolean;
+  audit_id: number | null;
+  applied: boolean;
+  recoverable: boolean;
+  needs_human_review: boolean;
+  proof_validation: ProofMatrixValidation | null;
+  summary: string;
+  diagnosis?: any;
+  patch?: any;
+  proof_matrix?: ProofMatrixEntry[];
+  error?: string;
+}> {
+  // 1) Carrega questão
+  const { data: q, error: qErr } = await supabase.from("questoes").select("*").eq("id", questionId).single();
+  if (qErr || !q) {
+    return { ok: false, audit_id: null, applied: false, recoverable: false, needs_human_review: true, proof_validation: null, summary: "Questão não encontrada", error: qErr?.message ?? "not_found" };
+  }
+  const questao = q as Questao;
+
+  // 2) Carrega texto legal da disciplina
+  const { data: legalRows } = await supabase
+    .from("discipline_legal_texts")
+    .select("content")
+    .eq("disciplina", questao.disciplina)
+    .limit(5);
+  const legalText = (legalRows ?? []).map((r: any) => r.content).join("\n\n").slice(0, 18000);
+  if (!legalText || legalText.trim().length < 500) {
+    const { data: audIns } = await supabase.from("question_audits").insert({
+      questao_id: questionId,
+      status: "manual_review",
+      confidence: 0,
+      risk_level: "high",
+      issues: [{ type: "NO_LEGAL_TEXT", severity: "high", description: "Repair bloqueado: texto legal oficial insuficiente." }],
+      ai_summary: "Repair não executado por ausência de fonte legal estruturada.",
+    }).select("id").single();
+    await setQuestionAuditStatus(supabase, questionId, Q_STATUS.MANUAL);
+    return { ok: false, audit_id: audIns?.id ?? null, applied: false, recoverable: false, needs_human_review: true, proof_validation: null, summary: "Sem texto legal suficiente para repair." };
+  }
+
+  // 3) Diagnóstico opcional (reusa auditOne)
+  let diagnosis: { issues: any[]; ai_summary: string } | null = null;
+  if (!opts?.skipAudit) {
+    try {
+      const r = await auditOne(questao, legalText, []);
+      diagnosis = { issues: r.issues ?? [], ai_summary: r.ai_summary ?? "" };
+    } catch (e) {
+      console.warn("[repair] auditOne falhou, seguindo sem diagnóstico:", e instanceof Error ? e.message : e);
+    }
+  }
+
+  // 4) Chama o REASONER com prompt de repair estruturado
+  const prompt = buildRepairPrompt(questao, diagnosis, legalText);
+  let raw = "";
+  let usedProvider: "DeepSeek Reasoner" | "Maritaca (fallback)" = "DeepSeek Reasoner";
+  try {
+    raw = await callDeepSeekRewriter(prompt);
+  } catch (e) {
+    if (e instanceof NoCreditsError && MARITACA_API_KEY) {
+      try {
+        raw = await callMaritaca(prompt);
+        usedProvider = "Maritaca (fallback)";
+      } catch (e2) {
+        return { ok: false, audit_id: null, applied: false, recoverable: false, needs_human_review: true, proof_validation: null, summary: `Falha DeepSeek+Maritaca: ${e2 instanceof Error ? e2.message : e2}` };
+      }
+    } else {
+      return { ok: false, audit_id: null, applied: false, recoverable: false, needs_human_review: true, proof_validation: null, summary: `Falha repair: ${e instanceof Error ? e.message : e}` };
+    }
+  }
+  const parsed = safeJsonParse(raw);
+  if (!parsed || typeof parsed !== "object") {
+    return { ok: false, audit_id: null, applied: false, recoverable: false, needs_human_review: true, proof_validation: null, summary: `${usedProvider} retornou JSON inválido` };
+  }
+
+  // 5) Caso IA classifique como irrecuperável
+  if (parsed.recoverable === false) {
+    const { data: audIns } = await supabase.from("question_audits").insert({
+      questao_id: questionId,
+      status: "manual_review",
+      confidence: Number(parsed.confidence ?? 0),
+      risk_level: String(parsed.risk_level ?? "high"),
+      issues: [{ type: "unrecoverable", severity: "high", description: String(parsed.diagnosis ?? parsed.summary ?? "Classificada como irrecuperável") }],
+      proposed_patch: null,
+      ai_summary: `[REPAIR/${usedProvider}] IRRECUPERÁVEL: ${parsed.summary ?? parsed.diagnosis ?? ""}`,
+    }).select("id").single();
+    await setQuestionAuditStatus(supabase, questionId, Q_STATUS.MANUAL);
+    return { ok: true, audit_id: audIns?.id ?? null, applied: false, recoverable: false, needs_human_review: true, proof_validation: null, summary: String(parsed.summary ?? "Irrecuperável") };
+  }
+
+  // 6) Sanitiza patch
+  const rawPatch = (parsed.patch && typeof parsed.patch === "object") ? parsed.patch : null;
+  let patch: any = null;
+  if (rawPatch) {
+    const allowed = ["enunciado","alt_a","alt_b","alt_c","alt_d","alt_e","gabarito","comentario"];
+    patch = {};
+    for (const k of allowed) if (k in rawPatch) patch[k] = (rawPatch as any)[k];
+    if ("gabarito" in patch) {
+      const g = Number(patch.gabarito);
+      if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+    }
+    if (!Object.keys(patch).length) patch = null;
+  }
+
+  // 7) VALIDA proof_matrix (P1.5)
+  const validation = validateProofMatrix(parsed.proof_matrix, legalText);
+
+  // 8) Checagem cruzada: gabarito (efetivo após patch) bate com o índice cuja proof_matrix.verdict é true?
+  const effectiveGabarito = typeof patch?.gabarito === "number" ? patch.gabarito : questao.gabarito;
+  const trueEntry = validation.normalized.find((e) => e.verdict === true);
+  const trueIdx = trueEntry ? ["A","B","C","D","E"].indexOf(trueEntry.letter) : -1;
+  const gabaritoConsistente = trueIdx !== -1 && trueIdx === effectiveGabarito;
+  if (validation.valid && !gabaritoConsistente) {
+    validation.errors.push(`gabarito final (${effectiveGabarito}) não bate com a alternativa marcada verdict=true na proof_matrix (${trueEntry?.letter ?? "?"})`);
+    validation.valid = false;
+  }
+
+  // 9) Decisão de auto-aplicação
+  const confidence = Number(parsed.confidence ?? 0);
+  const riskLevel = String(parsed.risk_level ?? "medium");
+  const aiNeedsHuman = Boolean(parsed.needs_human_review);
+  const canAutoApply = validation.valid
+    && patch
+    && confidence >= 0.9
+    && riskLevel === "low"
+    && !aiNeedsHuman;
+
+  // 10) Persiste auditoria com proposed_patch + proof_matrix sempre
+  const auditPayload = {
+    questao_id: questionId,
+    status: canAutoApply ? "auto_fixed" : "manual_review",
+    confidence,
+    risk_level: riskLevel,
+    issues: [
+      ...(diagnosis?.issues ?? []),
+      ...validation.errors.map((msg) => ({ type: "proof_matrix_invalid", severity: "high", description: msg })),
+    ],
+    proposed_patch: patch ? { ...patch, __proof_matrix: validation.normalized, __repair_type: String(parsed.repair_type ?? "none"), __source_articles: Array.isArray(parsed.source_articles) ? parsed.source_articles : [] } : null,
+    applied_patch: null as any,
+    ai_summary: `[REPAIR/${usedProvider}] ${parsed.summary ?? parsed.diagnosis ?? ""} | proof_matrix=${validation.evidenceFound}/${validation.normalized.length} literal, ${validation.valid ? "OK" : "INVÁLIDA"}`,
+  };
+
+  if (canAutoApply) {
+    // snapshot + apply
+    const { data: audIns } = await supabase.from("question_audits").insert({ ...auditPayload, applied_patch: patch }).select("id").single();
+    await supabase.from("question_versions").insert({
+      questao_id: questionId,
+      snapshot: questao,
+      change_reason: "auto_apply_repair",
+      audit_id: audIns?.id ?? null,
+    } as any);
+    await supabase.from("questoes").update(patch).eq("id", questionId);
+    await setQuestionAuditStatus(supabase, questionId, Q_STATUS.AUTO_CORRECTED);
+    return {
+      ok: true, audit_id: audIns?.id ?? null, applied: true, recoverable: true,
+      needs_human_review: false, proof_validation: validation,
+      summary: `Auto-aplicado (confidence=${confidence}, risk=${riskLevel}, ${validation.evidenceFound}/5 provas literais).`,
+      diagnosis, patch, proof_matrix: validation.normalized,
+    };
+  }
+
+  const { data: audIns } = await supabase.from("question_audits").insert(auditPayload).select("id").single();
+  await setQuestionAuditStatus(supabase, questionId, Q_STATUS.MANUAL);
+  return {
+    ok: true, audit_id: audIns?.id ?? null, applied: false, recoverable: true,
+    needs_human_review: true, proof_validation: validation,
+    summary: validation.valid
+      ? `Patch enviado para revisão humana (confidence=${confidence}, risk=${riskLevel}).`
+      : `Proof_matrix inválida — revisão humana obrigatória: ${validation.errors.slice(0, 3).join("; ")}`,
+    diagnosis, patch, proof_matrix: validation.normalized,
+  };
+}
+
 async function processQuestion(
   supabase: ReturnType<typeof createClient>,
   q: Questao,
@@ -1093,6 +1442,21 @@ serve(async (req) => {
         counts[s] = count ?? 0;
       }
       return new Response(JSON.stringify({ counts }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // P1.4 — Modo REPAIR dedicado. Body: { action: "repair", question_id: number, skip_audit?: boolean }
+    if (action === "repair") {
+      const qid = Number(body.question_id);
+      if (!Number.isInteger(qid) || qid <= 0) {
+        return new Response(JSON.stringify({ error: "question_id obrigatório" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const result = await repairQuestion(supabase, qid, { skipAudit: Boolean(body.skip_audit) });
+      return new Response(JSON.stringify(result), {
+        status: result.ok ? 200 : 422,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

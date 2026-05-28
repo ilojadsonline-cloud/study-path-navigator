@@ -41,3 +41,7 @@ verify_jwt = false
 
 [functions.cancel-subscription]
 verify_jwt = false
+
+[functions.apply-audit-patch]
+verify_jwt = false
+
