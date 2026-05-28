@@ -1488,12 +1488,14 @@ serve(async (req) => {
             .in("id", ids);
         }
       } else if (mode === "all" || mode === "discipline") {
-        // RESET TOTAL do escopo: em nova auditoria ampla, TODA questão existente volta para 'pending'.
-        // O bug dos "300 e poucas" ocorria porque manual_review/error ficavam fora da contagem.
+        // Reauditoria preserva questões já validadas (approved / auto_corrected / admin_resolved):
+        // elas continuam visíveis aos alunos e NÃO são reprocessadas automaticamente.
+        // Apenas estados "em aberto" (pending / manual_review / error) entram na fila.
+        // Para forçar reauditoria de aprovadas pelo admin, use a ação "clear_resolved" explicitamente.
         let resetQ = supabase
           .from("questoes")
           .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
-          .neq("audit_status", Q_STATUS.DELETED);
+          .in("audit_status", [Q_STATUS.MANUAL, "error"]);
         if (scope.disciplinas?.length) resetQ = resetQ.in("disciplina", scope.disciplinas);
         await resetQ;
       }
