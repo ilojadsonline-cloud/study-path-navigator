@@ -214,8 +214,8 @@ async function callMaritaca(prompt: string, timeoutMs = 70000): Promise<string> 
   }
 }
 
-/** DeepSeek REESCRITOR — FALLBACK quando Maritaca está sem créditos/indisponível. */
-async function callDeepSeekRewriter(prompt: string, timeoutMs = 70000): Promise<string> {
+/** DeepSeek REASONER — REESCRITOR jurídico PRIMÁRIO (raciocínio profundo). */
+async function callDeepSeekRewriter(prompt: string, timeoutMs = 120000): Promise<string> {
   if (!DEEPSEEK_API_KEY) throw new Error("DEEPSEEK_API_KEY não configurada");
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -227,20 +227,22 @@ async function callDeepSeekRewriter(prompt: string, timeoutMs = 70000): Promise<
         "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        model: "deepseek-reasoner",
         messages: [
           { role: "system", content: REWRITER_SYSTEM_PROMPT },
           { role: "user", content: prompt },
         ],
-        temperature: 0.2,
-        max_tokens: 4500,
-        response_format: { type: "json_object" },
+        max_tokens: 6000,
+        // deepseek-reasoner NÃO aceita temperature/top_p/response_format
       }),
       signal: ctrl.signal,
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      throw new Error(`DeepSeek(rewriter) HTTP ${res.status} ${body.slice(0, 200)}`);
+      if (looksLikeNoCredits(res.status, body)) {
+        throw new NoCreditsError("DeepSeek", res.status, body.slice(0, 200));
+      }
+      throw new Error(`DeepSeek(reasoner) HTTP ${res.status} ${body.slice(0, 200)}`);
     }
     const data = await res.json();
     return stripThinkTags(data?.choices?.[0]?.message?.content ?? "");
