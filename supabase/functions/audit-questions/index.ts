@@ -1446,6 +1446,21 @@ serve(async (req) => {
       });
     }
 
+    // P1.4 — Modo REPAIR dedicado. Body: { action: "repair", question_id: number, skip_audit?: boolean }
+    if (action === "repair") {
+      const qid = Number(body.question_id);
+      if (!Number.isInteger(qid) || qid <= 0) {
+        return new Response(JSON.stringify({ error: "question_id obrigatório" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const result = await repairQuestion(supabase, qid, { skipAudit: Boolean(body.skip_audit) });
+      return new Response(JSON.stringify(result), {
+        status: result.ok ? 200 : 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "start") {
       // mode: 'all' | 'discipline' | 'unaudited' | 'reported'
       const mode: "all" | "discipline" | "unaudited" | "reported" =
