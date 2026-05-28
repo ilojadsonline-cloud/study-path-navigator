@@ -865,27 +865,30 @@ async function processQuestion(
   }
 
 
-  // AUTO-DELETE: duplicada ou irrecuperável.
+  // PRESERVAÇÃO DE DADOS: NUNCA apagar fisicamente em automático.
+  // Duplicatas e questões irrecuperáveis recebem audit_status='deleted' (lógico),
+  // preservando histórico e respostas dos usuários para auditoria humana posterior.
   const isDuplicate = result.issues.some((i: any) => i?.type === "duplicada");
   const isUnrecoverable = result.issues.some((i: any) => i?.type === "unrecoverable" || i?.type === "incoerente");
   const aiAutoDelete = /^AUTO_DELETE:/i.test(result.ai_summary || "");
   if (aiAutoDelete || isDuplicate || isUnrecoverable) {
     await supabase.from("question_audits").insert({
       questao_id: q.id,
-      status: "auto_deleted",
+      status: "soft_deleted",
       confidence: result.confidence,
       risk_level: result.risk_level,
       issues: result.issues,
       proposed_patch: null,
       applied_patch: null,
-      ai_summary: result.ai_summary || (isDuplicate ? "Duplicata de menor qualidade" : "Questão irrecuperável"),
+      ai_summary: result.ai_summary || (isDuplicate ? "Duplicata de menor qualidade (status lógico 'deleted', registro preservado)" : "Questão irrecuperável (status lógico 'deleted', registro preservado)"),
     });
     await supabase
       .from("question_audits")
       .update({ status: "superseded" })
       .eq("questao_id", q.id)
       .in("status", OPEN_AUDIT_STATUSES);
-    await supabase.from("questoes").delete().eq("id", q.id);
+    // Soft delete: marca status lógico 'deleted' em vez de remover do banco.
+    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.DELETED);
     return { status: "deleted", auto_fixed: false, flagged: false, deleted: true };
   }
 
