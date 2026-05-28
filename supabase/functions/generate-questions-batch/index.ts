@@ -859,10 +859,11 @@ serve(async (req) => {
     const { data: legalTextRow, error: ltError } = await supabase
       .from("discipline_legal_texts").select("content").eq("disciplina", disc.disciplina).single();
 
-    if (ltError || !legalTextRow?.content) {
+    if (ltError || !legalTextRow?.content || String(legalTextRow.content).trim().length < 500) {
       return new Response(JSON.stringify({
-        status: "erro", mensagem: `Texto legal não encontrado para "${disc.disciplina}".`,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_LEGAL_TEXT", descricao: `Faça upload para "${disc.disciplina}"` }] },
+        status: "erro",
+        mensagem: `Texto legal oficial insuficiente para "${disc.disciplina}". Geração bloqueada — discipline_legal_texts.content é a ÚNICA fonte permitida.`,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_LEGAL_TEXT", descricao: `Cadastre/expanda o texto legal oficial da disciplina "${disc.disciplina}" (mínimo 500 caracteres). PDFs, anexos e conhecimento geral do modelo são proibidos como fonte.` }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -1076,7 +1077,7 @@ serve(async (req) => {
     // System prompt: define the AI persona as an elite exam board
     const systemPrompt = `Você é um Auditor Jurídico Implacável e Professor Didático Experiente de direito militar, atuando como BANCA EXAMINADORA DE ALTÍSSIMO NÍVEL para concursos militares (CFO/CHOA), com o rigor das bancas CESPE/CEBRASPE, FGV e VUNESP.
 
-FONTE ÚNICA DE VERDADE: O texto legal fornecido é a ÚNICA e EXCLUSIVA fonte de informação válida. Qualquer afirmação que não encontre respaldo direto no texto legal é PROIBIDA. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO — se não está no texto, não existe.
+FONTE ÚNICA DE VERDADE: O texto legal cadastrado em discipline_legal_texts.content e fornecido nesta chamada é a ÚNICA e EXCLUSIVA fonte normativa válida. Ignore COMPLETAMENTE: PDFs, anexos, arquivos do projeto, sites externos, memória do modelo, conhecimento jurídico geral, versões alternativas da lei e qualquer inferência não sustentada pelo texto fornecido. Se um diploma diferente NÃO aparece literalmente neste texto, ele NÃO existe para esta questão e NÃO pode ser citado. PROIBIÇÃO ABSOLUTA DE ALUCINAÇÃO — se não está no texto, não existe.
 
 NÍVEL DE BANCA EXIGIDO — ALTÍSSIMA COMPLEXIDADE (PADRÃO CESPE/CEBRASPE DIFÍCIL):
 A meta NÃO é produzir questões "razoáveis": é produzir questões DIFÍCEIS, do nível das provas de 2ª fase de concursos militares de oficiais. Um candidato que apenas leu a lei uma vez DEVE ter dificuldade real. Só quem ESTUDOU a fundo o dispositivo (incisos, parágrafos, exceções, prazos, autoridades) consegue resolver. Questões fáceis demais (resposta óbvia ao ler o enunciado, distratores absurdos, paráfrase direta do caput) são REPROVADAS. Auto-teste: "um aluno que leu a lei superficialmente conseguiria acertar essa questão sem hesitar?" — se sim, AUMENTE a dificuldade reescrevendo distratores e enunciado.

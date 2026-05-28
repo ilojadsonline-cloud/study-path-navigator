@@ -268,8 +268,8 @@ function buildAuditPrompt(q: Questao, legalText: string | null): string {
     : "";
 
   const legalBlock = legalText
-    ? `${articleIndex}${relevantBlock}TEXTO LEGAL DE REFERÊNCIA (use como ÚNICA fonte de verdade; pode estar truncado por limite técnico, então o ÍNDICE acima prevalece para EXISTÊNCIA de artigo):\n"""${legalText.slice(0, 9000)}"""\n`
-    : "ATENÇÃO: Não há texto legal disponível para referência cruzada — audite com base em conhecimento jurídico geral mas marque qualquer afirmação não verificável como issue.\n";
+    ? `${articleIndex}${relevantBlock}TEXTO LEGAL DE REFERÊNCIA (FONTE ÚNICA E EXCLUSIVA de verdade; pode estar truncado por limite técnico, então o ÍNDICE acima prevalece para EXISTÊNCIA de artigo). PROIBIDO usar PDFs, anexos, sites, memória do modelo, conhecimento jurídico geral ou outras leis fora deste texto:\n"""${legalText.slice(0, 9000)}"""\n`
+    : "BLOQUEIO OPERACIONAL: Não há texto legal oficial cadastrado em discipline_legal_texts para esta disciplina. NÃO use conhecimento geral, PDFs, anexos ou memória do modelo. Sinalize NO_LEGAL_TEXT e marque para revisão manual.\n";
 
   return `${legalBlock}
 QUESTÃO #${q.id}
@@ -429,8 +429,8 @@ async function rewriteWithMaritaca(
   const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
   const relevantBlocks = cited.map((num) => blocks.find((b) => b.artNum === num)).filter(Boolean) as ArticleBlock[];
   const legalBlock = legalText
-    ? `${relevantBlocks.length ? `DISPOSITIVOS CITADOS E ENCONTRADOS NA LEI:\n${relevantBlocks.map((b) => b.text.slice(0, 2500)).join("\n\n")}\n` : ""}TEXTO LEGAL DE REFERÊNCIA (prévia; pode estar truncada):\n"""${legalText.slice(0, 10000)}"""\n`
-    : "ATENÇÃO: sem texto legal disponível. Use o conhecimento jurídico geral com cautela.\n";
+    ? `${relevantBlocks.length ? `DISPOSITIVOS CITADOS E ENCONTRADOS NA LEI:\n${relevantBlocks.map((b) => b.text.slice(0, 2500)).join("\n\n")}\n` : ""}TEXTO LEGAL DE REFERÊNCIA — FONTE ÚNICA E EXCLUSIVA. PROIBIDO usar PDFs, sites, memória do modelo, conhecimento geral ou outras leis fora deste texto:\n"""${legalText.slice(0, 10000)}"""\n`
+    : "BLOQUEIO OPERACIONAL: sem texto legal oficial cadastrado. NÃO reescreva — devolva unrecoverable=true.\n";
 
   const issuesTxt = (diagnosis.issues || []).map((i: any, idx: number) =>
     `${idx + 1}. [${i.type} | severity=${i.severity} | field=${i.field ?? "?"}] ${i.description ?? ""}${i.evidence ? ` | EVIDÊNCIA: "${String(i.evidence).slice(0, 200)}"` : ""}${i.suggestion ? ` | SUGESTÃO: ${i.suggestion}` : ""}`
@@ -800,6 +800,25 @@ async function processQuestion(
     legalCache.set(q.disciplina, legal);
   }
 
+  // BLOQUEIO OPERACIONAL: sem texto legal cadastrado suficiente, NÃO usar conhecimento geral.
+  // Marca a questão como manual_review e devolve sem chamar IA.
+  if (!legal || legal.trim().length < 500) {
+    await supabase.from("question_audits").insert({
+      questao_id: q.id,
+      status: "manual_review",
+      confidence: 0,
+      risk_level: "high",
+      issues: [{
+        type: "NO_LEGAL_TEXT",
+        severity: "high",
+        description: "Auditoria bloqueada: não há texto legal oficial suficiente cadastrado em discipline_legal_texts para esta disciplina. PDFs, fontes externas e conhecimento geral do modelo são proibidos como fonte normativa.",
+      }],
+      ai_summary: "Auditoria não executada por ausência de fonte legal oficial estruturada.",
+    });
+    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.MANUAL);
+    return { status: "manual_review", auto_fixed: false, flagged: true, deleted: false };
+  }
+
   // Reportes de usuários pendentes — sinal forte de defeito real.
   const { data: repsData } = await supabase
     .from("question_reports")
@@ -846,27 +865,30 @@ async function processQuestion(
   }
 
 
-  // AUTO-DELETE: duplicada ou irrecuperável.
+  // PRESERVAÇÃO DE DADOS: NUNCA apagar fisicamente em automático.
+  // Duplicatas e questões irrecuperáveis recebem audit_status='deleted' (lógico),
+  // preservando histórico e respostas dos usuários para auditoria humana posterior.
   const isDuplicate = result.issues.some((i: any) => i?.type === "duplicada");
   const isUnrecoverable = result.issues.some((i: any) => i?.type === "unrecoverable" || i?.type === "incoerente");
   const aiAutoDelete = /^AUTO_DELETE:/i.test(result.ai_summary || "");
   if (aiAutoDelete || isDuplicate || isUnrecoverable) {
     await supabase.from("question_audits").insert({
       questao_id: q.id,
-      status: "auto_deleted",
+      status: "soft_deleted",
       confidence: result.confidence,
       risk_level: result.risk_level,
       issues: result.issues,
       proposed_patch: null,
       applied_patch: null,
-      ai_summary: result.ai_summary || (isDuplicate ? "Duplicata de menor qualidade" : "Questão irrecuperável"),
+      ai_summary: result.ai_summary || (isDuplicate ? "Duplicata de menor qualidade (status lógico 'deleted', registro preservado)" : "Questão irrecuperável (status lógico 'deleted', registro preservado)"),
     });
     await supabase
       .from("question_audits")
       .update({ status: "superseded" })
       .eq("questao_id", q.id)
       .in("status", OPEN_AUDIT_STATUSES);
-    await supabase.from("questoes").delete().eq("id", q.id);
+    // Soft delete: marca status lógico 'deleted' em vez de remover do banco.
+    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.DELETED);
     return { status: "deleted", auto_fixed: false, flagged: false, deleted: true };
   }
 

@@ -133,7 +133,11 @@ const Simulados = () => {
       const ids: number[] = progress.questao_ids;
       if (!ids || ids.length === 0) { setResumeLoading(false); return; }
 
-      const { data } = await supabase.from("questoes").select("*").in("id", ids);
+      const { data } = await supabase
+        .from("questoes")
+        .select("*")
+        .in("id", ids)
+        .in("audit_status", ["approved", "auto_corrected", "admin_resolved"]);
       if (cancelled || !data) { setResumeLoading(false); return; }
 
       // Preserve saved order
@@ -241,7 +245,8 @@ const Simulados = () => {
     const { data, error } = await supabase
       .from("questoes")
       .select("id,disciplina,assunto,dificuldade,enunciado,alt_a,alt_b,alt_c,alt_d,alt_e,gabarito,comentario")
-      .in("disciplina", disciplinasAlvo);
+      .in("disciplina", disciplinasAlvo)
+      .in("audit_status", ["approved", "auto_corrected", "admin_resolved"]);
 
     if (error || !data) {
       toast.error("Erro ao carregar questões");
