@@ -638,10 +638,10 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
         }
       }
       // Se DeepSeek não entregou patch utilizável, cai para revisão manual (não chama Maritaca à toa).
-    } else if (hasComplex && MARITACA_API_KEY) {
-      // ── Caminho jurídico: Maritaca Sabiá 4 reescreve. ──
+    } else if (hasComplex && (DEEPSEEK_API_KEY || MARITACA_API_KEY)) {
+      // ── Caminho jurídico: DeepSeek Reasoner (primário) reescreve; Maritaca fica como fallback. ──
       const r = await rewriteWithMaritaca(q, { issues, ai_summary: aiSummary }, legalText);
-      rewriteSummary = `Reescrita (Maritaca): ${r.summary}`;
+      rewriteSummary = `Reescrita: ${r.summary}`;
       if (r.unrecoverable) {
         issues.push({
           type: "unrecoverable",
