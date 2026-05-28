@@ -1324,19 +1324,23 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
       const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
 
       try {
+        const isReasoner = apiModel === "deepseek-reasoner";
         const requestBody: Record<string, unknown> = {
           model: apiModel,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt },
           ],
-          max_tokens: maxTokens,
-          temperature: 0.25,
+          // Reasoner usa orçamento maior por gerar cadeia de raciocínio.
+          max_tokens: isReasoner ? Math.max(maxTokens, 4096) : maxTokens,
           stream: false,
         };
-        // response_format json_object supported by Lovable and DeepSeek; Maritaca ignores silently.
-        if (currentProvider !== "maritaca") requestBody.response_format = { type: "json_object" };
-        if (currentProvider === "maritaca") requestBody.top_p = 0.92;
+        // deepseek-reasoner NÃO aceita temperature/top_p/response_format. Demais providers aceitam.
+        if (!isReasoner) {
+          requestBody.temperature = 0.25;
+          if (currentProvider !== "maritaca") requestBody.response_format = { type: "json_object" };
+          if (currentProvider === "maritaca") requestBody.top_p = 0.92;
+        }
 
         const response = await fetch(apiUrl, {
           method: "POST",
@@ -1349,12 +1353,12 @@ OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
         });
         clearTimeout(timeoutId);
         aiStatus = response.status;
-        console.log(`[GERAR] AI status: ${aiStatus}, attempt ${attempt + 1}, provider=${currentProvider}`);
+        console.log(`[GERAR] AI status: ${aiStatus}, attempt ${attempt + 1}, provider=${currentProvider}/${apiModel}`);
         aiResponseText = await response.text();
 
-        // Maritaca sem créditos → swap para DeepSeek e tenta de novo
-        if (currentProvider === "maritaca" && !providerSwitched && looksLikeNoCredits(aiStatus, aiResponseText)) {
-          if (switchToDeepSeek()) {
+        // Provider sem créditos → tenta próximo fallback
+        if (!providerSwitched && looksLikeNoCredits(aiStatus, aiResponseText)) {
+          if (switchToFallback()) {
             aiResponseText = "";
             aiStatus = 0;
             continue;
