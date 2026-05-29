@@ -1323,7 +1323,7 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
       : currentProvider === "maritaca" ? "https://chat.maritaca.ai/api/chat/completions"
       : "https://ai.gateway.lovable.dev/v1/chat/completions";
     let apiModel =
-      currentProvider === "deepseek" ? "deepseek-reasoner"
+      currentProvider === "deepseek" ? "deepseek-chat"
       : currentProvider === "maritaca" ? "sabia-4"
       : "google/gemini-2.5-flash";
     let apiKey =
