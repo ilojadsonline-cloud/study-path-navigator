@@ -596,7 +596,7 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
     : "";
 
   // ── ETAPA 1: DeepSeek DIAGNOSTICA defeitos com field/evidence/suggestion. ──
-  const raw = await callDeepSeek(buildAuditPrompt(q, legalText) + reportsBlock);
+  const raw = await callDeepSeek(buildAuditPrompt(q, legalText) + reportsBlock, q.id ?? null);
   const parsed = safeJsonParse(raw);
   if (!parsed || typeof parsed !== "object") {
     return {
