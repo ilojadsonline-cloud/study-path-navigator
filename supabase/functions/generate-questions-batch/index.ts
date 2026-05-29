@@ -1084,13 +1084,18 @@ Gere questões difíceis, juridicamente precisas e pedagogicamente úteis. O obj
 Cada questão deve conter: enunciado claro; cinco alternativas autônomas, paralelas e plausíveis; apenas uma alternativa correta; quatro distratores juridicamente verossímeis; gabarito inequívoco; comentário didático; fundamentação expressa no texto legal; matriz interna de prova jurídica demonstrando que a questão foi extraída exclusivamente do texto cadastrado.
 
 ============================================================
-4. NÍVEL DE DIFICULDADE E ESTILO DE BANCA
+4. NÍVEL DE DIFICULDADE E ESTILO DE BANCA (PADRÃO ELITE OBRIGATÓRIO)
 ============================================================
-As questões devem ser de nível alto. Evite questões óbvias, infantis, puramente literais ou resolvíveis por eliminação grosseira. Um aluno que apenas leu rapidamente a lei não deve conseguir acertar com facilidade.
+As questões devem ter PADRÃO DE BANCA DE ALTÍSSIMO NÍVEL para o CHOA/PMTO. O alvo é "difficulty_level":"advanced" ou "hard". Questões fáceis, óbvias, infantis, puramente literais ou resolvíveis por eliminação grosseira são PROIBIDAS — só admita literalidade direta quando o próprio dispositivo legal EXIGIR literalidade (definições fechadas, enumerações taxativas, prazos numéricos expressos). Um aluno que apenas leu rapidamente a lei NÃO pode acertar com facilidade.
 
-Use, quando cabível, pelo menos três das técnicas abaixo em cada questão: combinação entre caput, parágrafo, inciso e exceção; distinção entre regra geral e hipótese especial; troca sutil de autoridade competente; alteração discreta de prazo, requisito, ordem procedimental ou consequência; confusão plausível entre órgão, função, posto, graduação ou competência; situação hipotética militar realista; comparação entre conduta proibida, permitida, condicionada ou excepcional; alternativa com verdade parcial e conclusão errada; inversão entre dever, faculdade, vedação, autorização e competência; omissão de condição essencial prevista no texto legal.
+PRIORIZE SEMPRE: interpretação fina do texto legal; exceções e ressalvas; competências e atribuições; prazos e marcos temporais; condições e requisitos cumulativos/alternativos; consequências jurídicas; distinção entre institutos semelhantes do próprio texto; e pegadinhas normativas realistas extraídas exclusivamente da lei carregada. Evite memorização rasa.
 
-Não transforme todas as questões em casos práticos. Varie os formatos entre literalidade direta, caso prático, exceção à regra, conceito legal, combinação de dispositivos, consequência jurídica, asserções e completar lacuna.
+Use, em cada questão, pelo menos TRÊS das técnicas a seguir: combinação entre caput, parágrafo, inciso e exceção; distinção entre regra geral e hipótese especial; troca sutil de autoridade competente; alteração discreta de prazo, requisito, ordem procedimental ou consequência; confusão plausível entre órgão, função, posto, graduação ou competência; situação hipotética militar realista; comparação entre conduta proibida, permitida, condicionada ou excepcional; alternativa com verdade parcial e conclusão errada; inversão entre dever, faculdade, vedação, autorização e competência; omissão de condição essencial prevista no texto legal.
+
+Cada questão deve registrar honestamente "cognitive_skill" (a habilidade dominante exigida) e "trap_type" (a pegadinha normativa central). Se a questão não tiver uma pegadinha real e verificável no texto legal, ela é fácil demais — reescreva antes de emitir.
+
+Não transforme todas as questões em casos práticos. Varie os formatos entre literalidade direta (apenas quando o dispositivo exigir), caso prático, exceção à regra, conceito legal, combinação de dispositivos, consequência jurídica, asserções e completar lacuna.
+
 
 ============================================================
 5. REGRAS ABSOLUTAS SOBRE HIERARQUIA, ÓRGÃOS E FUNÇÕES
@@ -1302,8 +1307,8 @@ FIDELIDADE EXCLUSIVA AO TEXTO LEGAL DO BANCO (REFORÇO):
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
 
 15. REGRAS DE SAÍDA — OBJETO JSON OBRIGATÓRIO (sem markdown, sem comentários, sem texto fora do objeto).
-Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" (use "Fácil|Médio|Difícil"), "enunciado", "alt_a".."alt_e" (sem prefixo de letra), "gabarito" (0=A,1=B,2=C,3=D,4=E), "comentario" (4 movimentos), "artigo_principal" ("Art. X"), "tipo_questao", "audit_techniques" (array). Antes de emitir cada questão, valide internamente a matriz de prova jurídica (fonte única confirmada, exatamente uma correta, artigos citados existentes, correta não é a mais longa nem a mais curta, hierarquia conferida, sem ambiguidade) — só inclua a questão se TODOS os itens passarem.
-{"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"...","artigo_principal":"Art. X","tipo_questao":"literalidade|caso_pratico|competencia_hierarquia|excecao_regra|consequencia_juridica|combinacao_dispositivos|conceito_legal|completar_lacuna|identificar_incorreta","audit_techniques":["troca_autoridade","omissao_requisito","inversao_regra_excecao"]}]}
+Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" (use "Fácil|Médio|Difícil"), "enunciado", "alt_a".."alt_e" (sem prefixo de letra), "gabarito" (0=A,1=B,2=C,3=D,4=E), "comentario" (4 movimentos), "artigo_principal" ("Art. X"), "tipo_questao", "audit_techniques" (array), "difficulty_level" (use PREFERENCIALMENTE "advanced" ou "hard"; só use "intermediate" se o dispositivo for de literalidade obrigatória), "cognitive_skill" (a habilidade dominante exigida: "interpretação normativa" | "aplicação prática" | "comparação entre dispositivos" | "identificação de exceção"), "trap_type" (frase curta explicando a pegadinha normativa central da questão — ex.: "ampliação indevida de competência do Comandante-Geral", "troca de prazo do art. X", "confusão entre regra geral e exceção do §"). Antes de emitir cada questão, valide internamente a matriz de prova jurídica (fonte única confirmada, exatamente uma correta, artigos citados existentes, correta não é a mais longa nem a mais curta, hierarquia conferida, sem ambiguidade, dificuldade de banca elite) — só inclua a questão se TODOS os itens passarem.
+{"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"...","artigo_principal":"Art. X","tipo_questao":"literalidade|caso_pratico|competencia_hierarquia|excecao_regra|consequencia_juridica|combinacao_dispositivos|conceito_legal|completar_lacuna|identificar_incorreta","audit_techniques":["troca_autoridade","omissao_requisito","inversao_regra_excecao"],"difficulty_level":"advanced","cognitive_skill":"interpretação normativa","trap_type":"..."}]}
 
 Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO LEGAL OFICIAL, retorne {"questions":[],"erro":"NAO_FOI_POSSIVEL_GERAR_COM_FONTE_UNICA","motivo":"explique objetivamente o requisito que falhou, sem fonte externa."}`;
 
@@ -1394,7 +1399,14 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
         enunciado: normalizeWhitespace(raw.enunciado),
         comentario: normalizeWhitespace(raw.comentario),
         gabarito: Math.min(Math.max(Number(raw.gabarito) || 0, 0), 4),
+        difficulty_level: (() => {
+          const v = normalizeWhitespace(raw.difficulty_level).toLowerCase();
+          return ["advanced", "hard", "intermediate"].includes(v) ? v : "advanced";
+        })(),
+        cognitive_skill: normalizeWhitespace(raw.cognitive_skill) || null,
+        trap_type: normalizeWhitespace(raw.trap_type) || null,
       };
+
 
       for (const k of ALT_KEYS) q[k] = stripAlternativePrefix(raw[k]);
 
@@ -1728,10 +1740,12 @@ REGRA CRÍTICA DE AUDITORIA:
 
 Verifique:
 1. Gabarito está correto pela letra do texto legal (quando o artigo aparece no recorte)?
-2. Existe outra alternativa também correta? Ou nenhuma correta?
-3. Algum distrator é absurdo / óbvio / vazio?
+2. Existe outra alternativa também correta / defensável? Ou nenhuma correta? (múltiplas defensáveis ⇒ severidade 'high')
+3. Algum distrator é absurdo / óbvio / vazio? Distratores devem ser tecnicamente próximos e plausíveis — distrator obviamente absurdo ⇒ 'high'.
 4. Comentário cita base legal coerente com o gabarito?
-5. Há afirmação claramente inventada (não apenas ausente do recorte)?
+5. Há afirmação claramente inventada (não apenas ausente do recorte)? Dependência de fonte externa (CF, doutrina, jurisprudência, outra lei não presente) ⇒ 'high'.
+6. NÍVEL DE DIFICULDADE: a questão é fácil demais, óbvia, de mera memorização ou resolvível por eliminação grosseira? O enunciado é apenas uma CÓPIA literal do texto legal sem exigir interpretação? Se sim ⇒ severidade 'high' (type='facil_demais' ou 'enunciado_copiado'). Só tolere literalidade quando o dispositivo EXIGIR literalidade (definição fechada, prazo numérico, enumeração taxativa).
+
 
 Responda APENAS JSON:
 {
