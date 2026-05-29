@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_provider_attempts: {
+        Row: {
+          attempt_index: number
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          fallback_reason: string | null
+          generation_job_id: string | null
+          id: string
+          input_tokens: number | null
+          metadata: Json | null
+          model: string
+          output_tokens: number | null
+          provider: string
+          question_id: number | null
+          routing_mode: string | null
+          stage: string
+          success: boolean
+        }
+        Insert: {
+          attempt_index?: number
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          fallback_reason?: string | null
+          generation_job_id?: string | null
+          id?: string
+          input_tokens?: number | null
+          metadata?: Json | null
+          model: string
+          output_tokens?: number | null
+          provider: string
+          question_id?: number | null
+          routing_mode?: string | null
+          stage: string
+          success?: boolean
+        }
+        Update: {
+          attempt_index?: number
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          fallback_reason?: string | null
+          generation_job_id?: string | null
+          id?: string
+          input_tokens?: number | null
+          metadata?: Json | null
+          model?: string
+          output_tokens?: number | null
+          provider?: string
+          question_id?: number | null
+          routing_mode?: string | null
+          stage?: string
+          success?: boolean
+        }
+        Relationships: []
+      }
       audit_jobs: {
         Row: {
           auto_fixed: number

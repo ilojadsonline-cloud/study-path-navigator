@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { runAiStage, type ChatMessage } from "../_shared/aiRouter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -469,12 +470,9 @@ function compareSignatures(a: SemanticSignature | null, b: SemanticSignature | n
   return artScore * 0.4 + conceitoScore * 0.4 + pegScore * 0.15 + sujScore * 0.05;
 }
 
-/** Chama DeepSeek (ou Lovable AI) para extrair a assinatura semântica de UMA questão. */
+/** Extrai a assinatura semântica de UMA questão (tarefa auxiliar de baixo risco → source_selection). */
 async function buildSemanticSignature(
   q: { enunciado: string; alt_correta: string; comentario: string },
-  apiUrl: string,
-  apiModel: string,
-  apiKey: string,
 ): Promise<SemanticSignature> {
   const sigPrompt = `Você é um analista jurídico. Extraia a "assinatura semântica" da questão abaixo em JSON estrito.
 
@@ -493,29 +491,12 @@ Regras:
 - "sujeito": entidade ou cargo/posto principal envolvido. Exemplos: "comandante-geral", "tenente-coronel", "cpo", "comissao-promocao".`;
 
   try {
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 25_000);
-    const resp = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: apiModel,
-        messages: [{ role: "user", content: sigPrompt }],
-        max_tokens: 300,
-        temperature: 0.0,
-        response_format: { type: "json_object" },
-      }),
-      signal: ctrl.signal,
-    });
-    clearTimeout(tid);
-    if (!resp.ok) {
-      console.warn(`[SIG] HTTP ${resp.status} — usando fallback`);
-      return fallbackSignature(q);
-    }
-    const json = await resp.json();
-    let content = json?.choices?.[0]?.message?.content || "";
-    content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-    const match = content.match(/\{[\s\S]*\}/);
+    const { content: rawContent } = await runAiStage(
+      "source_selection",
+      [{ role: "user", content: sigPrompt }],
+      { jsonResponse: true, maxOutputTokensOverride: 300, temperatureOverride: 0.0, timeoutMs: 25_000 },
+    );
+    const match = rawContent.match(/\{[\s\S]*\}/);
     if (!match) return fallbackSignature(q);
     const parsed = JSON.parse(match[0]);
     return {
@@ -529,6 +510,7 @@ Regras:
     return fallbackSignature(q);
   }
 }
+
 
 /** Fallback determinístico se a IA falhar: extrai do comentário e da alternativa correta. */
 function fallbackSignature(q: { enunciado: string; alt_correta: string; comentario: string }): SemanticSignature {
@@ -1331,208 +1313,47 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
     const MAX_API_RETRIES = 2;
     const PRIMARY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 35000 : 50000) : (batchSize === 1 ? 50000 : 58000);
     const RETRY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 30000 : 42000) : (batchSize === 1 ? 42000 : 50000);
-    let aiStatus: number | null = null;
-    let aiResponseText = "";
-    let lastFetchError: any = null;
-
     // Output token budget — Gemini Flash handles slightly larger budgets faster
     const maxTokens = batchSize === 1 ? 1800 : 3000;
 
-    const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
-
-    let currentProvider: "deepseek" | "maritaca" | "lovable" =
-      useDeepSeekPrimary ? "deepseek" : useMaritaca ? "maritaca" : "lovable";
-    let apiUrl =
-      currentProvider === "deepseek" ? "https://api.deepseek.com/v1/chat/completions"
-      : currentProvider === "maritaca" ? "https://chat.maritaca.ai/api/chat/completions"
-      : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    let apiModel =
-      currentProvider === "deepseek" ? "deepseek-reasoner"
-      : currentProvider === "maritaca" ? "sabia-4"
-      : "google/gemini-2.5-flash";
-    let apiKey =
-      currentProvider === "deepseek" ? DEEPSEEK_API_KEY!
-      : currentProvider === "maritaca" ? MARITACA_API_KEY!
-      : LOVABLE_API_KEY!;
-    let providerSwitched = false;
-
-    console.log(`[GERAR] Provider: ${currentProvider} (${apiModel}), batch=${batchSize}, maxTokens=${maxTokens}`);
-
-    const looksLikeNoCredits = (status: number, body: string) => {
-      if (status === 402) return true;
-      const b = (body || "").toLowerCase();
-      return /insufficient|no credits|saldo|sem cr[eé]dito|quota|billing|exhaust|insufficient_quota/.test(b);
-    };
-
-    // Fallback chain: deepseek → maritaca → lovable (skip steps without key)
-    const switchToFallback = (): boolean => {
-      if (currentProvider === "deepseek" && MARITACA_API_KEY) {
-        currentProvider = "maritaca";
-        apiUrl = "https://chat.maritaca.ai/api/chat/completions";
-        apiModel = "sabia-4";
-        apiKey = MARITACA_API_KEY;
-        providerSwitched = true;
-        console.log(`[GERAR] DeepSeek indisponível. Fallback: Maritaca (sabia-4)`);
-        return true;
-      }
-      if ((currentProvider === "deepseek" || currentProvider === "maritaca") && LOVABLE_API_KEY) {
-        currentProvider = "lovable";
-        apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
-        apiModel = "google/gemini-2.5-flash";
-        apiKey = LOVABLE_API_KEY;
-        providerSwitched = true;
-        console.log(`[GERAR] Fallback: Lovable AI (gemini-2.5-flash)`);
-        return true;
-      }
-      if (currentProvider === "maritaca" && DEEPSEEK_API_KEY) {
-        currentProvider = "deepseek";
-        apiUrl = "https://api.deepseek.com/v1/chat/completions";
-        apiModel = "deepseek-reasoner";
-        apiKey = DEEPSEEK_API_KEY;
-        providerSwitched = true;
-        console.log(`[GERAR] Maritaca sem créditos. Fallback: DeepSeek Reasoner`);
-        return true;
-      }
-      return false;
-    };
-
-    for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
-      const controller = new AbortController();
-      const perAttemptTimeout = attempt === 0 ? PRIMARY_TIMEOUT_MS : RETRY_TIMEOUT_MS;
-      const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
-
-      try {
-        const isReasoner = apiModel === "deepseek-reasoner";
-        const requestBody: Record<string, unknown> = {
-          model: apiModel,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: prompt },
-          ],
-          // Reasoner usa orçamento maior por gerar cadeia de raciocínio.
-          max_tokens: isReasoner ? Math.max(maxTokens, 4096) : maxTokens,
-          stream: false,
-        };
-        // deepseek-reasoner NÃO aceita temperature/top_p/response_format. Demais providers aceitam.
-        if (!isReasoner) {
-          requestBody.temperature = 0.25;
-          if (currentProvider !== "maritaca") requestBody.response_format = { type: "json_object" };
-          if (currentProvider === "maritaca") requestBody.top_p = 0.92;
-        }
-
-        const response = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-        aiStatus = response.status;
-        console.log(`[GERAR] AI status: ${aiStatus}, attempt ${attempt + 1}, provider=${currentProvider}/${apiModel}`);
-        aiResponseText = await response.text();
-
-        // Provider sem créditos → tenta próximo fallback
-        if (!providerSwitched && looksLikeNoCredits(aiStatus, aiResponseText)) {
-          if (switchToFallback()) {
-            aiResponseText = "";
-            aiStatus = 0;
-            continue;
-          }
-        }
-
-        if (aiStatus === 429 && attempt < MAX_API_RETRIES - 1) {
-          const retryDelay = 2500;
-          console.log(`[GERAR] Rate limit 429, retry em ${retryDelay}ms`);
-          await new Promise(r => setTimeout(r, retryDelay));
-          continue;
-        }
-
-        if (aiStatus && aiStatus >= 500 && attempt < MAX_API_RETRIES - 1) {
-          const retryDelay = 2000;
-          console.log(`[GERAR] Server error ${aiStatus}, retry em ${retryDelay}ms`);
-          await new Promise(r => setTimeout(r, retryDelay));
-          continue;
-        }
-
-        break;
-      } catch (fetchErr: any) {
-        clearTimeout(timeoutId);
-        lastFetchError = fetchErr;
-        const isTimeout = fetchErr.name === "AbortError";
-
-        if (attempt < MAX_API_RETRIES - 1) {
-          const retryDelay = isTimeout ? 0 : 1500;
-          console.log(`[GERAR] ${isTimeout ? "Timeout" : "Fetch error"}, retry em ${retryDelay}ms: ${String(fetchErr)}`);
-          if (retryDelay > 0) await new Promise(r => setTimeout(r, retryDelay));
-          continue;
-        }
-      }
-    }
-
-    if (!aiResponseText) {
-      const isTimeout = lastFetchError?.name === "AbortError";
-      console.error(`[GERAR] Todas as tentativas falharam:`, String(lastFetchError));
-      return new Response(JSON.stringify({
-        status: "erro", mensagem: isTimeout ? "A IA demorou demais para responder." : `Erro de conexão: ${lastFetchError?.message}`,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isTimeout ? "TIMEOUT" : "FETCH_ERROR", descricao: String(lastFetchError) }] },
-        error: String(lastFetchError), timestamp,
-      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    if (aiStatus === 429) {
-      return new Response(JSON.stringify({
-        status: "erro", mensagem: "Rate limit da IA.", paused: true,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "RATE_LIMIT", descricao: "Aguarde 1 minuto" }] },
-        timestamp,
-      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    if (aiStatus === 402 || (aiStatus >= 400 && looksLikeNoCredits(aiStatus, aiResponseText))) {
-      let creditMessage = currentProvider === "maritaca"
-        ? "Créditos insuficientes na Maritaca (e fallback DeepSeek indisponível). Configure DEEPSEEK_API_KEY."
-        : currentProvider === "deepseek"
-        ? "Créditos insuficientes no DeepSeek (fallback da Maritaca)."
-        : "Créditos insuficientes no Lovable AI. Adicione créditos em Settings → Workspace.";
-      try {
-        const parsed = JSON.parse(aiResponseText);
-        creditMessage = parsed?.error?.message || creditMessage;
-      } catch { /* ignore */ }
-      return new Response(JSON.stringify({
-        status: "erro", mensagem: "Provedor de IA sem saldo/limite disponível.", paused: true,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "AI_402", descricao: creditMessage }] },
-        timestamp,
-      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-
-    if (!aiStatus || aiStatus < 200 || aiStatus >= 300) {
-      console.error(`[GERAR] AI error: ${aiStatus} ${aiResponseText.substring(0, 300)}`);
-      return new Response(JSON.stringify({
-        status: "erro", mensagem: `Erro da IA (${aiStatus ?? "desconhecido"})`,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "API_ERROR", descricao: aiResponseText.substring(0, 200) }] },
-        timestamp,
-      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    let aiData: any;
+    // ===== Geração via camada de roteamento (aiRouter) =====
+    // Etapa de ALTO risco jurídico → Gemini 2.5 Flash (direto/gateway) como principal,
+    // OpenRouter Gemini como fallback. DeepSeek NÃO é usado na geração premium.
+    let content = '{"questions":[]}';
+    let finishReason = "stop";
     try {
-      aiData = JSON.parse(aiResponseText);
-    } catch {
-      console.error("[GERAR] JSON externo inválido:", aiResponseText.substring(0, 200));
+      const genMessages: ChatMessage[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ];
+      const aiResult = await runAiStage("question_generation", genMessages, {
+        jsonResponse: true,
+        maxOutputTokensOverride: maxTokens,
+        temperatureOverride: 0.25,
+        timeoutMs: PRIMARY_TIMEOUT_MS,
+        metadata: { batchSize, disciplina: disc.disciplina },
+      });
+      content = aiResult.content || '{"questions":[]}';
+      finishReason = aiResult.raw?.choices?.[0]?.finish_reason || "stop";
+      console.log(`[GERAR] OK via ${aiResult.provider}/${aiResult.model} (attempt ${aiResult.attemptIndex}) finish=${finishReason}`);
+    } catch (genErr: any) {
+      const msg = String(genErr?.message ?? genErr);
+      const isCredit = /HTTP 402|insufficient|no credits|saldo|sem cr[eé]dito|quota|billing|exhaust/i.test(msg);
+      const isRate = /HTTP 429|rate limit|too many requests/i.test(msg);
+      const isTimeout = /abort|timeout/i.test(msg);
+      console.error(`[GERAR] Falha em todas as tentativas de geração: ${msg}`);
       return new Response(JSON.stringify({
-        status: "erro", mensagem: "Resposta inválida do DeepSeek.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "DEEPSEEK_INVALID_JSON", descricao: "JSON externo inválido" }] },
+        status: "erro",
+        mensagem: isCredit ? "Provedor de IA sem saldo/limite disponível."
+          : isRate ? "Rate limit da IA."
+          : isTimeout ? "A IA demorou demais para responder."
+          : "Erro da IA na geração.",
+        paused: isCredit || isRate,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isCredit ? "AI_402" : isRate ? "RATE_LIMIT" : isTimeout ? "TIMEOUT" : "API_ERROR", descricao: msg.slice(0, 200) }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const finishReason = aiData.choices?.[0]?.finish_reason || "unknown";
-    console.log(`[GERAR] Finish reason: ${finishReason}`);
-
-    const content = aiData.choices?.[0]?.message?.content || '{"questions":[]}';
 
     let rawQuestions: any[];
     try {
@@ -1811,7 +1632,6 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
       // do mesmo artigo. Limiares: ≥0.80 descarta; 0.60–0.80 descarta com flag de reescrita; <0.60 aceita.
       const newSig = await buildSemanticSignature(
         { enunciado: q.enunciado, alt_correta: correctAltText, comentario: q.comentario },
-        apiUrl, apiModel, apiKey,
       );
       const artigoPrincipal = newSig.artigo || extractMainArticle(q.comentario);
       const artKey = normSigToken(artigoPrincipal) || "__sem_artigo__";
