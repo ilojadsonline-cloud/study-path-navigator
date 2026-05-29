@@ -1295,8 +1295,11 @@ FIDELIDADE EXCLUSIVA AO TEXTO LEGAL DO BANCO (REFORÇO):
 - Toda alternativa correta deve ter um trecho LITERAL rastreável no texto fornecido. Toda alternativa incorreta deve contradizer um trecho LITERAL identificável no texto fornecido.
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
 
-OBJETO JSON OBRIGATÓRIO (sem markdown e sem qualquer texto fora do objeto):
-{"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"..."}]}`;
+15. REGRAS DE SAÍDA — OBJETO JSON OBRIGATÓRIO (sem markdown, sem comentários, sem texto fora do objeto).
+Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" (use "Fácil|Médio|Difícil"), "enunciado", "alt_a".."alt_e" (sem prefixo de letra), "gabarito" (0=A,1=B,2=C,3=D,4=E), "comentario" (4 movimentos), "artigo_principal" ("Art. X"), "tipo_questao", "audit_techniques" (array). Antes de emitir cada questão, valide internamente a matriz de prova jurídica (fonte única confirmada, exatamente uma correta, artigos citados existentes, correta não é a mais longa nem a mais curta, hierarquia conferida, sem ambiguidade) — só inclua a questão se TODOS os itens passarem.
+{"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"...","artigo_principal":"Art. X","tipo_questao":"literalidade|caso_pratico|competencia_hierarquia|excecao_regra|consequencia_juridica|combinacao_dispositivos|conceito_legal|completar_lacuna|identificar_incorreta","audit_techniques":["troca_autoridade","omissao_requisito","inversao_regra_excecao"]}]}
+
+Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO LEGAL OFICIAL, retorne {"questions":[],"erro":"NAO_FOI_POSSIVEL_GERAR_COM_FONTE_UNICA","motivo":"explique objetivamente o requisito que falhou, sem fonte externa."}`;
 
     // API call with retry logic
     // Lovable AI Gateway with google/gemini-2.5-flash is dramatically faster
