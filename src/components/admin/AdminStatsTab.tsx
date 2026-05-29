@@ -22,7 +22,7 @@ export function AdminStatsTab() {
     setLoading(true);
     const [profilesRes, questoesRes, respostasRes, simuladosRes, studyRes, correctRes] = await Promise.all([
       supabase.from("profiles").select("*", { count: "exact", head: true }),
-      supabase.from("questoes").select("*", { count: "exact", head: true }),
+      supabase.from("questoes").select("*", { count: "exact", head: true }).in("audit_status", ["approved", "auto_corrected", "admin_resolved", "pending"]),
       supabase.from("respostas_usuario").select("*", { count: "exact", head: true }),
       supabase.from("simulados").select("*", { count: "exact", head: true }),
       supabase.from("study_sessions").select("duration_seconds"),

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  Trash2, Eye, Search, ChevronLeft, ChevronRight, Loader2, CheckCircle, Pencil, Save, ChevronsLeft, ChevronsRight, Hash,
+  Trash2, Eye, Search, ChevronLeft, ChevronRight, Loader2, CheckCircle, Pencil, Save, ChevronsLeft, ChevronsRight, Hash, RotateCcw,
 } from "lucide-react";
 import { QuestionViewDialog } from "./QuestionViewDialog";
 import { QuestionEditDialog } from "./QuestionEditDialog";
@@ -17,7 +17,20 @@ import { QuestionEditDialog } from "./QuestionEditDialog";
 export interface Questao {
   id: number; disciplina: string; assunto: string; dificuldade: string; enunciado: string;
   alt_a: string; alt_b: string; alt_c: string; alt_d: string; alt_e: string; gabarito: number; comentario: string;
+  audit_status?: string;
 }
+
+const STATUS_OPTIONS = [
+  { value: "todas", label: "Todos os status" },
+  { value: "publicaveis", label: "Publicáveis (aluno)" },
+  { value: "deleted", label: "Deletadas (duplicata/irrecuperável)" },
+  { value: "manual_review", label: "Revisão manual" },
+  { value: "approved", label: "Aprovadas" },
+  { value: "admin_resolved", label: "Resolvidas (admin)" },
+  { value: "pending", label: "Pendentes" },
+  { value: "auto_corrected", label: "Autocorrigidas" },
+];
+const PUBLISHABLE = ["approved", "auto_corrected", "admin_resolved", "pending"];
 
 const PAGE_SIZE = 20;
 
@@ -36,6 +49,8 @@ export function AdminQuestoesTab() {
   const [savingQuestion, setSavingQuestion] = useState(false);
   const [confirmDeleteQ, setConfirmDeleteQ] = useState<Questao | null>(null);
   const [goToPageInput, setGoToPageInput] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todas");
+  const [restoringId, setRestoringId] = useState<number | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -49,12 +64,18 @@ export function AdminQuestoesTab() {
     if (data) setDisciplinas((data as { disciplina: string }[]).map(d => d.disciplina));
   };
 
-  const loadQuestoes = async (p = 0) => {
+  const loadQuestoes = async (p = 0, statusOverride?: string) => {
     setLoading(true);
+    const status = statusOverride ?? statusFilter;
     const from = p * PAGE_SIZE;
     let countQuery = supabase.from("questoes").select("*", { count: "exact", head: true });
     let query = supabase.from("questoes").select("*").order("id", { ascending: false }).range(from, from + PAGE_SIZE - 1);
     if (disciplinaFilter !== "todas") { countQuery = countQuery.eq("disciplina", disciplinaFilter); query = query.eq("disciplina", disciplinaFilter); }
+    if (status === "publicaveis") {
+      countQuery = countQuery.in("audit_status", PUBLISHABLE); query = query.in("audit_status", PUBLISHABLE);
+    } else if (status !== "todas") {
+      countQuery = countQuery.eq("audit_status", status); query = query.eq("audit_status", status);
+    }
     if (search) { countQuery = countQuery.ilike("enunciado", `%${search}%`); query = query.ilike("enunciado", `%${search}%`); }
     const [{ count }, { data }] = await Promise.all([countQuery, query]);
     setTotal(count || 0);
@@ -90,6 +111,27 @@ export function AdminQuestoesTab() {
     const { error } = await supabase.from("questoes").delete().eq("id", id);
     if (error) toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
     else { toast({ title: "Questão excluída" }); setConfirmDeleteQ(null); setViewQuestion(null); loadQuestoes(page); }
+  };
+
+  const restoreQuestion = async (id: number) => {
+    setRestoringId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: {
+          action: "update_question",
+          question_id: id,
+          updates: { audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() },
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Questão restaurada", description: `#${id} agora está publicável para os alunos.` });
+      setViewQuestion(null);
+      loadQuestoes(page);
+    } catch (err: any) {
+      toast({ title: "Erro ao restaurar", description: err.message, variant: "destructive" });
+    }
+    setRestoringId(null);
   };
 
   const handleSaveQuestion = async () => {
@@ -163,6 +205,12 @@ export function AdminQuestoesTab() {
             {disciplinas.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); loadQuestoes(0, v); }}>
+          <SelectTrigger className="w-60"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar no enunciado..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && loadQuestoes(0)} className="pl-9" />
@@ -181,28 +229,39 @@ export function AdminQuestoesTab() {
                 <TableRow>
                   <TableHead className="w-16">ID</TableHead><TableHead>Enunciado</TableHead>
                   <TableHead className="w-32">Disciplina</TableHead><TableHead className="w-20">Dif.</TableHead>
-                  <TableHead className="w-16">Gab.</TableHead><TableHead className="w-28">Ações</TableHead>
+                  <TableHead className="w-16">Gab.</TableHead><TableHead className="w-28">Status</TableHead><TableHead className="w-32">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {questoes.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma questão</TableCell></TableRow>
-                ) : questoes.map((q) => (
-                  <TableRow key={q.id}>
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma questão</TableCell></TableRow>
+                ) : questoes.map((q) => {
+                  const hidden = q.audit_status === "deleted" || q.audit_status === "manual_review";
+                  return (
+                  <TableRow key={q.id} className={hidden ? "opacity-70" : undefined}>
                     <TableCell className="font-mono text-xs">{q.id}</TableCell>
                     <TableCell className="text-sm max-w-xs truncate">{q.enunciado}</TableCell>
                     <TableCell><Badge variant="secondary" className="text-[10px]">{q.disciplina}</Badge></TableCell>
                     <TableCell className="text-xs">{q.dificuldade}</TableCell>
                     <TableCell className="font-bold text-primary">{gabaritoLabel(q.gabarito)}</TableCell>
                     <TableCell>
+                      <Badge variant={hidden ? "destructive" : "secondary"} className="text-[10px]">{q.audit_status || "—"}</Badge>
+                    </TableCell>
+                    <TableCell>
                       <div className="flex gap-1">
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setViewQuestion(q)} title="Visualizar"><Eye className="w-3.5 h-3.5" /></Button>
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditQuestion({ ...q })} title="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
+                        {hidden && (
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-success hover:text-success" disabled={restoringId === q.id} onClick={() => restoreQuestion(q.id)} title="Restaurar (tornar publicável)">
+                            {restoringId === q.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                          </Button>
+                        )}
                         <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setConfirmDeleteQ(q)} title="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
