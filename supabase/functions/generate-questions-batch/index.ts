@@ -470,12 +470,9 @@ function compareSignatures(a: SemanticSignature | null, b: SemanticSignature | n
   return artScore * 0.4 + conceitoScore * 0.4 + pegScore * 0.15 + sujScore * 0.05;
 }
 
-/** Chama DeepSeek (ou Lovable AI) para extrair a assinatura semântica de UMA questão. */
+/** Extrai a assinatura semântica de UMA questão (tarefa auxiliar de baixo risco → source_selection). */
 async function buildSemanticSignature(
   q: { enunciado: string; alt_correta: string; comentario: string },
-  apiUrl: string,
-  apiModel: string,
-  apiKey: string,
 ): Promise<SemanticSignature> {
   const sigPrompt = `Você é um analista jurídico. Extraia a "assinatura semântica" da questão abaixo em JSON estrito.
 
@@ -494,29 +491,12 @@ Regras:
 - "sujeito": entidade ou cargo/posto principal envolvido. Exemplos: "comandante-geral", "tenente-coronel", "cpo", "comissao-promocao".`;
 
   try {
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 25_000);
-    const resp = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: apiModel,
-        messages: [{ role: "user", content: sigPrompt }],
-        max_tokens: 300,
-        temperature: 0.0,
-        response_format: { type: "json_object" },
-      }),
-      signal: ctrl.signal,
-    });
-    clearTimeout(tid);
-    if (!resp.ok) {
-      console.warn(`[SIG] HTTP ${resp.status} — usando fallback`);
-      return fallbackSignature(q);
-    }
-    const json = await resp.json();
-    let content = json?.choices?.[0]?.message?.content || "";
-    content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-    const match = content.match(/\{[\s\S]*\}/);
+    const { content: rawContent } = await runAiStage(
+      "source_selection",
+      [{ role: "user", content: sigPrompt }],
+      { jsonResponse: true, maxOutputTokensOverride: 300, temperatureOverride: 0.0, timeoutMs: 25_000 },
+    );
+    const match = rawContent.match(/\{[\s\S]*\}/);
     if (!match) return fallbackSignature(q);
     const parsed = JSON.parse(match[0]);
     return {
@@ -530,6 +510,7 @@ Regras:
     return fallbackSignature(q);
   }
 }
+
 
 /** Fallback determinístico se a IA falhar: extrai do comentário e da alternativa correta. */
 function fallbackSignature(q: { enunciado: string; alt_correta: string; comentario: string }): SemanticSignature {
