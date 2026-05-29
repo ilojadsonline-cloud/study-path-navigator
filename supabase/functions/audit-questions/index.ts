@@ -340,6 +340,10 @@ O. COMENTARIO_INCOMPLETO — não analisa cada alternativa errada individualment
 P. DESALINHAMENTO — comentário cita correta diferente do gabarito, ou enunciado pergunta X e alternativas respondem Y. type='desalinhamento'.
 Q. TEXTO_LEGAL_DESATUALIZADO — questão baseada em dispositivo revogado/alterado/substituído. type='texto_legal_desatualizado'.
 R. INCOERENTE — premissa contraditória, situação juridicamente inviável. type='incoerente' (irrecuperável).
+S. FÁCIL DEMAIS — questão óbvia, de mera memorização, resolvível por eliminação grosseira ou que não exige interpretação jurídica real. NÃO tem padrão de banca de alto nível (CHOA/PMTO). type='facil_demais' severity='high'. (Tolere literalidade apenas quando o dispositivo EXIGIR literalidade: definição fechada, prazo numérico, enumeração taxativa.)
+T. ENUNCIADO COPIADO — enunciado e/ou alternativa correta são cópia literal de longo trecho da lei sem transformação em pergunta de banca, entregando a resposta. type='enunciado_copiado' severity='high'.
+U. DISTRATOR ABSURDO — distratores não são tecnicamente próximos/plausíveis; algum é claramente absurdo, fora do tema ou eliminável sem ler a lei. type='distrator_absurdo' severity='high'.
+V. DEPENDÊNCIA DE FONTE EXTERNA — a questão só se sustenta com Constituição Federal, doutrina, jurisprudência, internet, PDF externo, outra lei não incluída no TEXTO LEGAL DE REFERÊNCIA ou conhecimento geral do modelo. type='dependencia_fonte_externa' severity='high'.
 
 REGRA INTERPRETATIVA: paráfrase, interpretação e combinação de dispositivos SÃO VÁLIDAS — só marque alucinação quando a afirmação CONTRARIAR a lei ou inventar requisito/prazo/autoridade.
 REGRA ANTI-FALSO-POSITIVO: se um artigo aparece no ÍNDICE DETERMINÍSTICO ou no bloco "DISPOSITIVOS CITADOS...", é PROIBIDO dizer que esse artigo não existe. Nesse caso, se houver problema, classifique como desalinhamento, gabarito_errado ou comentario_incompleto — nunca como alucinacao_juridica por inexistência do artigo.
