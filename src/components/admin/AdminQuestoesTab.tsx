@@ -204,7 +204,7 @@ export function AdminQuestoesTab() {
             {disciplinas.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setTimeout(() => loadQuestoes(0), 0); }}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); loadQuestoes(0, v); }}>
           <SelectTrigger className="w-60"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
