@@ -1313,14 +1313,47 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
     const MAX_API_RETRIES = 2;
     const PRIMARY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 35000 : 50000) : (batchSize === 1 ? 50000 : 58000);
     const RETRY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 30000 : 42000) : (batchSize === 1 ? 42000 : 50000);
-    let aiStatus: number | null = null;
-    let aiResponseText = "";
-    let lastFetchError: any = null;
-
     // Output token budget — Gemini Flash handles slightly larger budgets faster
     const maxTokens = batchSize === 1 ? 1800 : 3000;
 
-    const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
+    // ===== Geração via camada de roteamento (aiRouter) =====
+    // Etapa de ALTO risco jurídico → Gemini 2.5 Flash (direto/gateway) como principal,
+    // OpenRouter Gemini como fallback. DeepSeek NÃO é usado na geração premium.
+    let content = '{"questions":[]}';
+    let finishReason = "stop";
+    try {
+      const genMessages: ChatMessage[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ];
+      const aiResult = await runAiStage("question_generation", genMessages, {
+        jsonResponse: true,
+        maxOutputTokensOverride: maxTokens,
+        temperatureOverride: 0.25,
+        timeoutMs: PRIMARY_TIMEOUT_MS,
+        metadata: { batchSize, disciplina: disc.disciplina },
+      });
+      content = aiResult.content || '{"questions":[]}';
+      finishReason = aiResult.raw?.choices?.[0]?.finish_reason || "stop";
+      console.log(`[GERAR] OK via ${aiResult.provider}/${aiResult.model} (attempt ${aiResult.attemptIndex}) finish=${finishReason}`);
+    } catch (genErr: any) {
+      const msg = String(genErr?.message ?? genErr);
+      const isCredit = /HTTP 402|insufficient|no credits|saldo|sem cr[eé]dito|quota|billing|exhaust/i.test(msg);
+      const isRate = /HTTP 429|rate limit|too many requests/i.test(msg);
+      const isTimeout = /abort|timeout/i.test(msg);
+      console.error(`[GERAR] Falha em todas as tentativas de geração: ${msg}`);
+      return new Response(JSON.stringify({
+        status: "erro",
+        mensagem: isCredit ? "Provedor de IA sem saldo/limite disponível."
+          : isRate ? "Rate limit da IA."
+          : isTimeout ? "A IA demorou demais para responder."
+          : "Erro da IA na geração.",
+        paused: isCredit || isRate,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isCredit ? "AI_402" : isRate ? "RATE_LIMIT" : isTimeout ? "TIMEOUT" : "API_ERROR", descricao: msg.slice(0, 200) }] },
+        timestamp,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
 
     let currentProvider: "deepseek" | "maritaca" | "lovable" =
       useDeepSeekPrimary ? "deepseek" : useMaritaca ? "maritaca" : "lovable";
