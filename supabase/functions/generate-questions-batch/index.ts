@@ -1312,7 +1312,7 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
     let lastFetchError: any = null;
 
     // Output token budget — Gemini Flash handles slightly larger budgets faster
-    const maxTokens = batchSize === 1 ? 1800 : 3000;
+    const maxTokens = batchSize === 1 ? 2600 : 4500;
 
     const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
 
@@ -1323,7 +1323,7 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
       : currentProvider === "maritaca" ? "https://chat.maritaca.ai/api/chat/completions"
       : "https://ai.gateway.lovable.dev/v1/chat/completions";
     let apiModel =
-      currentProvider === "deepseek" ? "deepseek-reasoner"
+      currentProvider === "deepseek" ? "deepseek-chat"
       : currentProvider === "maritaca" ? "sabia-4"
       : "google/gemini-2.5-flash";
     let apiKey =
@@ -1363,10 +1363,10 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
       if (currentProvider === "maritaca" && DEEPSEEK_API_KEY) {
         currentProvider = "deepseek";
         apiUrl = "https://api.deepseek.com/v1/chat/completions";
-        apiModel = "deepseek-reasoner";
+        apiModel = "deepseek-chat";
         apiKey = DEEPSEEK_API_KEY;
         providerSwitched = true;
-        console.log(`[GERAR] Maritaca sem créditos. Fallback: DeepSeek Reasoner`);
+        console.log(`[GERAR] Maritaca sem créditos. Fallback: DeepSeek Chat`);
         return true;
       }
       return false;
