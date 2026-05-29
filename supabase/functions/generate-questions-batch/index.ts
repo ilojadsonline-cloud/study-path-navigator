@@ -1363,10 +1363,10 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
       if (currentProvider === "maritaca" && DEEPSEEK_API_KEY) {
         currentProvider = "deepseek";
         apiUrl = "https://api.deepseek.com/v1/chat/completions";
-        apiModel = "deepseek-reasoner";
+        apiModel = "deepseek-chat";
         apiKey = DEEPSEEK_API_KEY;
         providerSwitched = true;
-        console.log(`[GERAR] Maritaca sem créditos. Fallback: DeepSeek Reasoner`);
+        console.log(`[GERAR] Maritaca sem créditos. Fallback: DeepSeek Chat`);
         return true;
       }
       return false;
