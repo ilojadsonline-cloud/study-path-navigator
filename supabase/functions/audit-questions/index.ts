@@ -520,28 +520,52 @@ Retorne JSON ESTRITO:
 }`;
 
   let raw = "";
-  let usedProvider: "DeepSeek Reasoner" | "Maritaca (fallback)" = "DeepSeek Reasoner";
+  let usedProvider = "Router (heavy_reported_question_audit)";
   let fallbackReason = "";
+
+  // 1ª via — Router jurídico de ALTO risco: Gemini Pro → Gemini Flash → OpenRouter.
   try {
-    raw = await callDeepSeekRewriter(prompt);
-  } catch (e) {
-    const isNoCredits = e instanceof NoCreditsError;
-    if (isNoCredits || /HTTP\s+(401|402|403|429|5\d\d)/i.test(e instanceof Error ? e.message : "")) {
-      fallbackReason = `DeepSeek Reasoner indisponível (${e instanceof Error ? e.message : e}). Acionando Maritaca como reescritor alternativo.`;
-      console.warn("[audit-questions]", fallbackReason);
-      if (!MARITACA_API_KEY) {
-        return { patch: null, unrecoverable: false, summary: `Falha DeepSeek Reasoner e Maritaca não configurada: ${e instanceof Error ? e.message : e}` };
+    const r = await runAiStage(
+      "heavy_reported_question_audit",
+      [
+        { role: "system", content: REWRITER_SYSTEM_PROMPT },
+        { role: "user", content: prompt },
+      ],
+      {
+        jsonResponse: true,
+        questionId: q.id ?? null,
+        timeoutMs: 120_000,
+        metadata: { task: "audit_rewrite" },
+      },
+    );
+    raw = r.content;
+    usedProvider = `Router (${r.provider}:${r.model})`;
+  } catch (eRouter) {
+    fallbackReason = `Router de reescrita indisponível (${eRouter instanceof Error ? eRouter.message : eRouter}). Acionando DeepSeek Reasoner.`;
+    console.warn("[audit-questions]", fallbackReason);
+    // 2ª via — DeepSeek Reasoner direto.
+    try {
+      raw = await callDeepSeekRewriter(prompt);
+      usedProvider = "DeepSeek Reasoner (fallback)";
+    } catch (e) {
+      const isNoCredits = e instanceof NoCreditsError;
+      if (isNoCredits || /HTTP\s+(401|402|403|429|5\d\d)/i.test(e instanceof Error ? e.message : "")) {
+        // 3ª via — Maritaca.
+        if (!MARITACA_API_KEY) {
+          return { patch: null, unrecoverable: false, summary: `Falha router/DeepSeek Reasoner e Maritaca não configurada: ${e instanceof Error ? e.message : e}` };
+        }
+        try {
+          raw = await callMaritaca(prompt);
+          usedProvider = "Maritaca (fallback)";
+        } catch (e2) {
+          return { patch: null, unrecoverable: false, summary: `Falha router, DeepSeek e Maritaca: ${e2 instanceof Error ? e2.message : e2}` };
+        }
+      } else {
+        return { patch: null, unrecoverable: false, summary: `Falha router e DeepSeek Reasoner: ${e instanceof Error ? e.message : e}` };
       }
-      try {
-        raw = await callMaritaca(prompt);
-        usedProvider = "Maritaca (fallback)";
-      } catch (e2) {
-        return { patch: null, unrecoverable: false, summary: `Falha DeepSeek e Maritaca fallback: ${e2 instanceof Error ? e2.message : e2}` };
-      }
-    } else {
-      return { patch: null, unrecoverable: false, summary: `Falha DeepSeek Reasoner: ${e instanceof Error ? e.message : e}` };
     }
   }
+
   const parsed = safeJsonParse(raw);
   if (!parsed || typeof parsed !== "object") {
     return { patch: null, unrecoverable: false, summary: `${usedProvider} retornou JSON inválido${fallbackReason ? ` (${fallbackReason})` : ""}` };
