@@ -49,6 +49,8 @@ export function AdminQuestoesTab() {
   const [savingQuestion, setSavingQuestion] = useState(false);
   const [confirmDeleteQ, setConfirmDeleteQ] = useState<Questao | null>(null);
   const [goToPageInput, setGoToPageInput] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todas");
+  const [restoringId, setRestoringId] = useState<number | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
