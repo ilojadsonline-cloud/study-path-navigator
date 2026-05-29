@@ -1793,7 +1793,6 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
       // do mesmo artigo. Limiares: ≥0.80 descarta; 0.60–0.80 descarta com flag de reescrita; <0.60 aceita.
       const newSig = await buildSemanticSignature(
         { enunciado: q.enunciado, alt_correta: correctAltText, comentario: q.comentario },
-        apiUrl, apiModel, apiKey,
       );
       const artigoPrincipal = newSig.artigo || extractMainArticle(q.comentario);
       const artKey = normSigToken(artigoPrincipal) || "__sem_artigo__";
