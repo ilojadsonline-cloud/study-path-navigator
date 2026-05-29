@@ -1312,7 +1312,7 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
     let lastFetchError: any = null;
 
     // Output token budget — Gemini Flash handles slightly larger budgets faster
-    const maxTokens = batchSize === 1 ? 1800 : 3000;
+    const maxTokens = batchSize === 1 ? 2600 : 4500;
 
     const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
 
