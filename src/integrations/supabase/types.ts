@@ -620,13 +620,16 @@ export type Database = {
           audit_status: string
           audit_status_updated_at: string
           audit_techniques: Json
+          cognitive_skill: string | null
           comentario: string
           created_at: string
+          difficulty_level: string | null
           dificuldade: string
           disciplina: string
           enunciado: string
           gabarito: number
           id: number
+          trap_type: string | null
         }
         Insert: {
           alt_a: string
@@ -640,13 +643,16 @@ export type Database = {
           audit_status?: string
           audit_status_updated_at?: string
           audit_techniques?: Json
+          cognitive_skill?: string | null
           comentario: string
           created_at?: string
+          difficulty_level?: string | null
           dificuldade?: string
           disciplina: string
           enunciado: string
           gabarito: number
           id?: never
+          trap_type?: string | null
         }
         Update: {
           alt_a?: string
@@ -660,13 +666,16 @@ export type Database = {
           audit_status?: string
           audit_status_updated_at?: string
           audit_techniques?: Json
+          cognitive_skill?: string | null
           comentario?: string
           created_at?: string
+          difficulty_level?: string | null
           dificuldade?: string
           disciplina?: string
           enunciado?: string
           gabarito?: number
           id?: never
+          trap_type?: string | null
         }
         Relationships: []
       }
