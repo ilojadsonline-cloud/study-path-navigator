@@ -1740,10 +1740,12 @@ REGRA CRÍTICA DE AUDITORIA:
 
 Verifique:
 1. Gabarito está correto pela letra do texto legal (quando o artigo aparece no recorte)?
-2. Existe outra alternativa também correta? Ou nenhuma correta?
-3. Algum distrator é absurdo / óbvio / vazio?
+2. Existe outra alternativa também correta / defensável? Ou nenhuma correta? (múltiplas defensáveis ⇒ severidade 'high')
+3. Algum distrator é absurdo / óbvio / vazio? Distratores devem ser tecnicamente próximos e plausíveis — distrator obviamente absurdo ⇒ 'high'.
 4. Comentário cita base legal coerente com o gabarito?
-5. Há afirmação claramente inventada (não apenas ausente do recorte)?
+5. Há afirmação claramente inventada (não apenas ausente do recorte)? Dependência de fonte externa (CF, doutrina, jurisprudência, outra lei não presente) ⇒ 'high'.
+6. NÍVEL DE DIFICULDADE: a questão é fácil demais, óbvia, de mera memorização ou resolvível por eliminação grosseira? O enunciado é apenas uma CÓPIA literal do texto legal sem exigir interpretação? Se sim ⇒ severidade 'high' (type='facil_demais' ou 'enunciado_copiado'). Só tolere literalidade quando o dispositivo EXIGIR literalidade (definição fechada, prazo numérico, enumeração taxativa).
+
 
 Responda APENAS JSON:
 {
