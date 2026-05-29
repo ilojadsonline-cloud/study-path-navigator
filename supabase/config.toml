@@ -45,6 +45,3 @@ verify_jwt = false
 [functions.apply-audit-patch]
 verify_jwt = false
 
-
-[functions.regenerate-comment]
-verify_jwt = false

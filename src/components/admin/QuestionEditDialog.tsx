@@ -2,11 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Sparkles } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Loader2, Save } from "lucide-react";
 import type { Questao } from "./AdminQuestoesTab";
 
 interface Props {
@@ -18,32 +15,7 @@ interface Props {
 }
 
 export function QuestionEditDialog({ question, onClose, onSave, saving, onChange }: Props) {
-  const [regenerating, setRegenerating] = useState(false);
   if (!question) return null;
-
-  const handleRegenerateComment = async () => {
-    setRegenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("regenerate-comment", {
-        body: { question_id: question.id, apply: false },
-      });
-      if (error) throw error;
-      if (data?.status === "comentario_validado" && data?.comentario) {
-        onChange({ ...question, comentario: data.comentario });
-        toast.success("Comentário pedagógico gerado. Revise e salve.");
-      } else if (data?.status === "revisao_necessaria") {
-        toast.error(`Revisão necessária: ${data.motivo ?? data.tipo_problema ?? "problema na questão"}`);
-      } else if (data?.error) {
-        toast.error(data.error);
-      } else {
-        toast.error("Não foi possível gerar o comentário.");
-      }
-    } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao regenerar comentário.");
-    } finally {
-      setRegenerating(false);
-    }
-  };
 
   return (
     <Dialog open={!!question} onOpenChange={onClose}>
@@ -86,14 +58,8 @@ export function QuestionEditDialog({ question, onClose, onSave, saving, onChange
             </div>
           ))}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs text-muted-foreground">Comentário</label>
-              <Button type="button" variant="outline" size="sm" onClick={handleRegenerateComment} disabled={regenerating}>
-                {regenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
-                {regenerating ? "Gerando..." : "Regenerar (professor)"}
-              </Button>
-            </div>
-            <Textarea value={question.comentario} onChange={(e) => onChange({ ...question, comentario: e.target.value })} rows={6} />
+            <label className="text-xs text-muted-foreground">Comentário</label>
+            <Textarea value={question.comentario} onChange={(e) => onChange({ ...question, comentario: e.target.value })} rows={3} />
           </div>
         </div>
         <DialogFooter>
