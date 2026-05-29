@@ -228,28 +228,39 @@ export function AdminQuestoesTab() {
                 <TableRow>
                   <TableHead className="w-16">ID</TableHead><TableHead>Enunciado</TableHead>
                   <TableHead className="w-32">Disciplina</TableHead><TableHead className="w-20">Dif.</TableHead>
-                  <TableHead className="w-16">Gab.</TableHead><TableHead className="w-28">Ações</TableHead>
+                  <TableHead className="w-16">Gab.</TableHead><TableHead className="w-28">Status</TableHead><TableHead className="w-32">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {questoes.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma questão</TableCell></TableRow>
-                ) : questoes.map((q) => (
-                  <TableRow key={q.id}>
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma questão</TableCell></TableRow>
+                ) : questoes.map((q) => {
+                  const hidden = q.audit_status === "deleted" || q.audit_status === "manual_review";
+                  return (
+                  <TableRow key={q.id} className={hidden ? "opacity-70" : undefined}>
                     <TableCell className="font-mono text-xs">{q.id}</TableCell>
                     <TableCell className="text-sm max-w-xs truncate">{q.enunciado}</TableCell>
                     <TableCell><Badge variant="secondary" className="text-[10px]">{q.disciplina}</Badge></TableCell>
                     <TableCell className="text-xs">{q.dificuldade}</TableCell>
                     <TableCell className="font-bold text-primary">{gabaritoLabel(q.gabarito)}</TableCell>
                     <TableCell>
+                      <Badge variant={hidden ? "destructive" : "secondary"} className="text-[10px]">{q.audit_status || "—"}</Badge>
+                    </TableCell>
+                    <TableCell>
                       <div className="flex gap-1">
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setViewQuestion(q)} title="Visualizar"><Eye className="w-3.5 h-3.5" /></Button>
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditQuestion({ ...q })} title="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
+                        {hidden && (
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-success hover:text-success" disabled={restoringId === q.id} onClick={() => restoreQuestion(q.id)} title="Restaurar (tornar publicável)">
+                            {restoringId === q.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                          </Button>
+                        )}
                         <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setConfirmDeleteQ(q)} title="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
