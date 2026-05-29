@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  Trash2, Eye, Search, ChevronLeft, ChevronRight, Loader2, CheckCircle, Pencil, Save, ChevronsLeft, ChevronsRight, Hash,
+  Trash2, Eye, Search, ChevronLeft, ChevronRight, Loader2, CheckCircle, Pencil, Save, ChevronsLeft, ChevronsRight, Hash, RotateCcw,
 } from "lucide-react";
 import { QuestionViewDialog } from "./QuestionViewDialog";
 import { QuestionEditDialog } from "./QuestionEditDialog";
