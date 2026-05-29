@@ -1399,7 +1399,14 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
         enunciado: normalizeWhitespace(raw.enunciado),
         comentario: normalizeWhitespace(raw.comentario),
         gabarito: Math.min(Math.max(Number(raw.gabarito) || 0, 0), 4),
+        difficulty_level: (() => {
+          const v = normalizeWhitespace(raw.difficulty_level).toLowerCase();
+          return ["advanced", "hard", "intermediate"].includes(v) ? v : "advanced";
+        })(),
+        cognitive_skill: normalizeWhitespace(raw.cognitive_skill) || null,
+        trap_type: normalizeWhitespace(raw.trap_type) || null,
       };
+
 
       for (const k of ALT_KEYS) q[k] = stripAlternativePrefix(raw[k]);
 
