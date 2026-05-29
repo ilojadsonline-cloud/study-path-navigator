@@ -64,16 +64,17 @@ export function AdminQuestoesTab() {
     if (data) setDisciplinas((data as { disciplina: string }[]).map(d => d.disciplina));
   };
 
-  const loadQuestoes = async (p = 0) => {
+  const loadQuestoes = async (p = 0, statusOverride?: string) => {
     setLoading(true);
+    const status = statusOverride ?? statusFilter;
     const from = p * PAGE_SIZE;
     let countQuery = supabase.from("questoes").select("*", { count: "exact", head: true });
     let query = supabase.from("questoes").select("*").order("id", { ascending: false }).range(from, from + PAGE_SIZE - 1);
     if (disciplinaFilter !== "todas") { countQuery = countQuery.eq("disciplina", disciplinaFilter); query = query.eq("disciplina", disciplinaFilter); }
-    if (statusFilter === "publicaveis") {
+    if (status === "publicaveis") {
       countQuery = countQuery.in("audit_status", PUBLISHABLE); query = query.in("audit_status", PUBLISHABLE);
-    } else if (statusFilter !== "todas") {
-      countQuery = countQuery.eq("audit_status", statusFilter); query = query.eq("audit_status", statusFilter);
+    } else if (status !== "todas") {
+      countQuery = countQuery.eq("audit_status", status); query = query.eq("audit_status", status);
     }
     if (search) { countQuery = countQuery.ilike("enunciado", `%${search}%`); query = query.ilike("enunciado", `%${search}%`); }
     const [{ count }, { data }] = await Promise.all([countQuery, query]);
