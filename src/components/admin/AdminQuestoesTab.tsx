@@ -133,7 +133,7 @@ export function AdminQuestoesTab() {
     setRestoringId(null);
   };
 
-
+  const handleSaveQuestion = async () => {
     if (!editQuestion) return;
     setSavingQuestion(true);
     try {
