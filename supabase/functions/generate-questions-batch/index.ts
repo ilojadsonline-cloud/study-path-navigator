@@ -1204,6 +1204,30 @@ Para cada questão, construa internamente uma matriz de validação que demonstr
 Se qualquer item da matriz falhar, reescreva a questão antes de responder.
 
 ============================================================
+13b. TERMOS PROIBIDOS E CATÁLOGO DE DISTRATORES (REFORÇO)
+============================================================
+TERMOS ABSOLUTOS: não use "sempre", "nunca", "somente", "apenas", "exclusivamente", "em qualquer hipótese" ou equivalentes — SALVO quando o próprio TEXTO LEGAL OFICIAL empregar expressamente essa restrição. Esses termos costumam denunciar alternativa falsa ou tornar a correta artificial.
+
+NÃO COPIE LITERALMENTE longos trechos da lei nem no enunciado nem nas alternativas. Transforme o conteúdo em pergunta de banca preservando fielmente o sentido jurídico; a citação literal só é admitida em trecho curto dentro do comentário.
+
+Cada uma das quatro alternativas incorretas deve ser errada por um MOTIVO OBJETIVO E VERIFICÁVEL no texto legal, usando OBRIGATORIAMENTE técnicas distintas escolhidas entre:
+- troca da autoridade/órgão competente por outro plausível, porém errado;
+- omissão de requisito essencial previsto no texto;
+- acréscimo de requisito, hipótese ou consequência NÃO prevista no texto;
+- inversão entre regra geral e exceção;
+- alteração de prazo, condição, sujeito ou consequência jurídica;
+- confusão entre dever, faculdade, vedação e permissão ("deverá/poderá/é vedado/é facultado");
+- transformação de hipótese específica em regra geral (ou vice-versa);
+- verdade parcial com conclusão incorreta;
+- mistura de conceitos próximos do próprio texto legal, sem recorrer a fonte externa.
+NUNCA crie alternativa absurda, infantil, genérica ou obviamente falsa. NUNCA repita a mesma técnica de erro em duas alternativas da mesma questão.
+
+============================================================
+14. CONTROLE DE QUALIDADE SILENCIOSO (ANTES DE RESPONDER)
+============================================================
+Antes de emitir cada questão, confira internamente, sem expor o raciocínio: (1) a questão depende APENAS do TEXTO LEGAL OFICIAL; (2) existe EXATAMENTE uma alternativa correta; (3) cada alternativa incorreta tem erro objetivo identificável no texto; (4) o gabarito corresponde de fato à alternativa correta; (5) não há menção a Constituição, doutrina, jurisprudência, edital, PDF, internet ou conhecimento externo; (6) todos os artigos citados existem no texto fornecido; (7) a correta não está denunciada por tamanho, detalhamento ou linguagem diferente; (8) o enunciado é claro e não admite dupla interpretação; (9) não há repetição evidente de questões semelhantes; (10) o nível de dificuldade está compatível com o solicitado. Se qualquer item falhar, reescreva a questão antes de respondê-la.
+
+============================================================
 5b. REGRA PARA LEIS EXTERNAS (CITAÇÃO CRUZADA)
 ============================================================
 A lei principal desta questão é "${disc.leiNome}". Só cite outro diploma se ele estiver LITERALMENTE incluído no TEXTO LEGAL OFICIAL. Nesse caso, mencione o diploma POR EXTENSO no enunciado/alternativa/comentário e nunca cite apenas "Art. X" sem qualificar quando o artigo não pertence à lei principal.
