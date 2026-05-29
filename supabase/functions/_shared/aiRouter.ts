@@ -398,6 +398,21 @@ async function callProvider(
     if (attempt.jsonResponse) body.response_format = { type: "json_object" };
   }
 
+  // -------------------------------------------------------------------------
+  // Controle de "thinking" do Gemini (CRÍTICO p/ Google DIRETO).
+  // Os modelos Gemini 2.5 gastam parte do orçamento de tokens em raciocínio
+  // interno ("thinking"). Com max_tokens baixo (ex.: 1800-3000 na geração),
+  // o thinking consome quase tudo e o JSON sai truncado (finish_reason=length)
+  // → "IA retornou JSON inválido". O endpoint OpenAI-compat do Google aceita
+  // `reasoning_effort` para limitar/desligar isso. Modelos *-pro sempre pensam
+  // (não aceitam "none"), então usamos "low" para eles.
+  if (attempt.provider === "google" && googleIsDirect()) {
+    const isPro = /(-pro\b|pro$)/i.test(model);
+    const def = isPro ? "low" : "none";
+    const effort = (env("AI_GOOGLE_REASONING_EFFORT") ?? def).toLowerCase();
+    if (effort !== "default") body.reasoning_effort = effort;
+  }
+
   const controller = new AbortController();
   const tid = setTimeout(() => controller.abort(), opts.timeoutMs ?? 120_000);
   try {
