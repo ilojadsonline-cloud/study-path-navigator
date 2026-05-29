@@ -112,7 +112,28 @@ export function AdminQuestoesTab() {
     else { toast({ title: "Questão excluída" }); setConfirmDeleteQ(null); setViewQuestion(null); loadQuestoes(page); }
   };
 
-  const handleSaveQuestion = async () => {
+  const restoreQuestion = async (id: number) => {
+    setRestoringId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: {
+          action: "update_question",
+          question_id: id,
+          updates: { audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() },
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Questão restaurada", description: `#${id} agora está publicável para os alunos.` });
+      setViewQuestion(null);
+      loadQuestoes(page);
+    } catch (err: any) {
+      toast({ title: "Erro ao restaurar", description: err.message, variant: "destructive" });
+    }
+    setRestoringId(null);
+  };
+
+
     if (!editQuestion) return;
     setSavingQuestion(true);
     try {
