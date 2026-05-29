@@ -1221,15 +1221,24 @@ Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto for
     const legalContextBudget = batchSize === 1 ? 14000 : 11000;
     const legalContextTruncated = truncateLegalText(leiSeca, legalContextBudget);
 
-    const prompt = `Gere exatamente ${batchSize} questões de múltipla escolha para "${disc.disciplina}" (${disc.leiNome}).
+    const prompt = `============================================================
+2. DADOS DA GERAÇÃO
+============================================================
+Disciplina: ${disc.disciplina}
+Diploma legal principal: ${disc.leiNome}
+Quantidade exata de questões a gerar: ${batchSize}
+Artigos disponíveis no texto legal: ${availableArticles}
+Artigos-alvo prioritários: ${targetArticleNumbers.map(a => `Art. ${a}`).join(", ")}
+Assuntos menos explorados: ${leastCoveredAssuntos}
+Distribuição desejada de gabaritos no lote: varie entre A(0), B(1), C(2), D(3) e E(4) — não concentre na mesma letra.
 
-ARTIGOS-ALVO PRIORITÁRIOS (use como base principal, mas pode referenciar outros artigos da mesma lei quando necessário para contexto):
+ARTIGOS-ALVO PRIORITÁRIOS (use como base principal de cada questão, mas pode referenciar outros artigos da mesma lei quando necessário para contexto):
 ${selectedTargets.map(({ block }, idx) => `${idx + 1}) Questão ${idx + 1}: base no Art. ${block.artNum}`).join("\n")}
 
-TEXTO LEGAL DE REFERÊNCIA (artigos-alvo com contexto):
+TEXTO LEGAL OFICIAL — FONTE ÚNICA (artigos-alvo com contexto):
 ${targetArticlesBlock}
 
-TEXTO LEGAL COMPLETO PARA CONSULTA (use para garantir coerência sistêmica):
+TEXTO LEGAL OFICIAL — COMPLETO PARA CONSULTA (coerência sistêmica; mesma fonte única, nada externo):
 ${legalContextTruncated}
 ${coverageGuidanceBlock}
 ${openingsAvoidBlock}
