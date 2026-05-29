@@ -70,6 +70,11 @@ export function AdminQuestoesTab() {
     let countQuery = supabase.from("questoes").select("*", { count: "exact", head: true });
     let query = supabase.from("questoes").select("*").order("id", { ascending: false }).range(from, from + PAGE_SIZE - 1);
     if (disciplinaFilter !== "todas") { countQuery = countQuery.eq("disciplina", disciplinaFilter); query = query.eq("disciplina", disciplinaFilter); }
+    if (statusFilter === "publicaveis") {
+      countQuery = countQuery.in("audit_status", PUBLISHABLE); query = query.in("audit_status", PUBLISHABLE);
+    } else if (statusFilter !== "todas") {
+      countQuery = countQuery.eq("audit_status", statusFilter); query = query.eq("audit_status", statusFilter);
+    }
     if (search) { countQuery = countQuery.ilike("enunciado", `%${search}%`); query = query.ilike("enunciado", `%${search}%`); }
     const [{ count }, { data }] = await Promise.all([countQuery, query]);
     setTotal(count || 0);
