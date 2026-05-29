@@ -1084,13 +1084,18 @@ Gere questões difíceis, juridicamente precisas e pedagogicamente úteis. O obj
 Cada questão deve conter: enunciado claro; cinco alternativas autônomas, paralelas e plausíveis; apenas uma alternativa correta; quatro distratores juridicamente verossímeis; gabarito inequívoco; comentário didático; fundamentação expressa no texto legal; matriz interna de prova jurídica demonstrando que a questão foi extraída exclusivamente do texto cadastrado.
 
 ============================================================
-4. NÍVEL DE DIFICULDADE E ESTILO DE BANCA
+4. NÍVEL DE DIFICULDADE E ESTILO DE BANCA (PADRÃO ELITE OBRIGATÓRIO)
 ============================================================
-As questões devem ser de nível alto. Evite questões óbvias, infantis, puramente literais ou resolvíveis por eliminação grosseira. Um aluno que apenas leu rapidamente a lei não deve conseguir acertar com facilidade.
+As questões devem ter PADRÃO DE BANCA DE ALTÍSSIMO NÍVEL para o CHOA/PMTO. O alvo é "difficulty_level":"advanced" ou "hard". Questões fáceis, óbvias, infantis, puramente literais ou resolvíveis por eliminação grosseira são PROIBIDAS — só admita literalidade direta quando o próprio dispositivo legal EXIGIR literalidade (definições fechadas, enumerações taxativas, prazos numéricos expressos). Um aluno que apenas leu rapidamente a lei NÃO pode acertar com facilidade.
 
-Use, quando cabível, pelo menos três das técnicas abaixo em cada questão: combinação entre caput, parágrafo, inciso e exceção; distinção entre regra geral e hipótese especial; troca sutil de autoridade competente; alteração discreta de prazo, requisito, ordem procedimental ou consequência; confusão plausível entre órgão, função, posto, graduação ou competência; situação hipotética militar realista; comparação entre conduta proibida, permitida, condicionada ou excepcional; alternativa com verdade parcial e conclusão errada; inversão entre dever, faculdade, vedação, autorização e competência; omissão de condição essencial prevista no texto legal.
+PRIORIZE SEMPRE: interpretação fina do texto legal; exceções e ressalvas; competências e atribuições; prazos e marcos temporais; condições e requisitos cumulativos/alternativos; consequências jurídicas; distinção entre institutos semelhantes do próprio texto; e pegadinhas normativas realistas extraídas exclusivamente da lei carregada. Evite memorização rasa.
 
-Não transforme todas as questões em casos práticos. Varie os formatos entre literalidade direta, caso prático, exceção à regra, conceito legal, combinação de dispositivos, consequência jurídica, asserções e completar lacuna.
+Use, em cada questão, pelo menos TRÊS das técnicas a seguir: combinação entre caput, parágrafo, inciso e exceção; distinção entre regra geral e hipótese especial; troca sutil de autoridade competente; alteração discreta de prazo, requisito, ordem procedimental ou consequência; confusão plausível entre órgão, função, posto, graduação ou competência; situação hipotética militar realista; comparação entre conduta proibida, permitida, condicionada ou excepcional; alternativa com verdade parcial e conclusão errada; inversão entre dever, faculdade, vedação, autorização e competência; omissão de condição essencial prevista no texto legal.
+
+Cada questão deve registrar honestamente "cognitive_skill" (a habilidade dominante exigida) e "trap_type" (a pegadinha normativa central). Se a questão não tiver uma pegadinha real e verificável no texto legal, ela é fácil demais — reescreva antes de emitir.
+
+Não transforme todas as questões em casos práticos. Varie os formatos entre literalidade direta (apenas quando o dispositivo exigir), caso prático, exceção à regra, conceito legal, combinação de dispositivos, consequência jurídica, asserções e completar lacuna.
+
 
 ============================================================
 5. REGRAS ABSOLUTAS SOBRE HIERARQUIA, ÓRGÃOS E FUNÇÕES
