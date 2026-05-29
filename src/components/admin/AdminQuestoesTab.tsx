@@ -17,7 +17,20 @@ import { QuestionEditDialog } from "./QuestionEditDialog";
 export interface Questao {
   id: number; disciplina: string; assunto: string; dificuldade: string; enunciado: string;
   alt_a: string; alt_b: string; alt_c: string; alt_d: string; alt_e: string; gabarito: number; comentario: string;
+  audit_status?: string;
 }
+
+const STATUS_OPTIONS = [
+  { value: "todas", label: "Todos os status" },
+  { value: "publicaveis", label: "Publicáveis (aluno)" },
+  { value: "deleted", label: "Deletadas (duplicata/irrecuperável)" },
+  { value: "manual_review", label: "Revisão manual" },
+  { value: "approved", label: "Aprovadas" },
+  { value: "admin_resolved", label: "Resolvidas (admin)" },
+  { value: "pending", label: "Pendentes" },
+  { value: "auto_corrected", label: "Autocorrigidas" },
+];
+const PUBLISHABLE = ["approved", "auto_corrected", "admin_resolved", "pending"];
 
 const PAGE_SIZE = 20;
 
