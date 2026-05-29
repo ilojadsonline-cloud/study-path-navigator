@@ -807,7 +807,7 @@ Retorne JSON ESTRITO:
 }`;
 
   let raw = "";
-  try { raw = await callDeepSeek(prompt, 45000); } catch (e) {
+  try { raw = await callDeepSeek(prompt, q.id ?? null); } catch (e) {
     return { patch: null, unrecoverable: false, summary: `Falha rewrite IA: ${e instanceof Error ? e.message : e}` };
   }
   const parsed = safeJsonParse(raw);
