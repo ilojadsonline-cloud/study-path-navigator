@@ -115,8 +115,12 @@ function safeJsonParse(s: string): any {
   return null;
 }
 
-/** DeepSeek — DIAGNÓSTICO ESTRUTURADO (sem patch). Identifica defeitos e indica campo/evidência/sugestão. */
-async function callDeepSeek(prompt: string, timeoutMs = 55000): Promise<string> {
+/** Prompt de sistema do AUDITOR-DIAGNOSTICADOR (apenas diagnóstico, sem reescrita). */
+const DIAGNOSTIC_SYSTEM_PROMPT =
+  "Você é AUDITOR-DIAGNOSTICADOR de questões objetivas para concursos militares (PMTO, CFO/CHOA) e jurídicos (FGV/CESPE/VUNESP). Sua FUNÇÃO ÚNICA é DIAGNOSTICAR defeitos — NÃO REESCREVA conteúdo. A reescrita será feita por outra IA jurídica especializada. Leia enunciado, A–E, gabarito e comentário INTEGRALMENTE e confronte com o TEXTO LEGAL DE REFERÊNCIA. Detecte SEM AMOSTRAGEM: (a) questões repetidas/duplicadas que abordam exatamente o mesmo assunto/dispositivo; (b) DUAS OU MAIS alternativas corretas à luz da lei; (c) NENHUMA alternativa correta (gabarito aponta errada e nenhuma outra serve); (d) ALUCINAÇÃO JURÍDICA — artigo/inciso/§ inexistente, fundamento inventado, dispositivo revogado; (e) violação de hierarquia funcional (posto/graduação/competência incompatível); (f) função incompatível com o posto citado; (g) gabarito visualmente identificável (única longa/curta/técnica/com ressalva); (h) padrão antiético length_bias (correta é a mais longa OU mais curta — único caso); (i) distratores fracos/óbvios/absurdos; (j) DISTRATORES LONGOS DEMAIS (algum distrator com mais de 1.7× o tamanho médio dos demais — type='distrator_longo'); (k) comentário ausente, em loop, ou que não analisa cada alternativa errada individualmente; (l) enunciado/alternativas/comentário desalinhados; (m) texto legal desatualizado/revogado; (n) bug estrutural (alt vazia, duplicada, formatação corrompida); (o) duas técnicas de distração insuficientes (<2 — insufficient_distractors). Para CADA issue obrigatoriamente preencha: type, severity, field ('enunciado'|'alt_a'|'alt_b'|'alt_c'|'alt_d'|'alt_e'|'gabarito'|'comentario'|'questao_inteira'), evidence (trecho EXATO do conteúdo problemático em ≤200 chars) e suggestion (instrução curta e ACIONÁVEL para a IA reescritora: 'reescrever distrator B mais curto preservando erro de prazo', 'corrigir gabarito para C porque art. 12 prevê...', 'remover citação de Art. 999 inexistente', 'reescrever comentário no estilo professor 4 movimentos'). Em duplicata e em irrecuperável, defina needs_human_review=false e indique no ai_summary 'AUTO_DELETE: <motivo>'. NUNCA emita proposed_patch — sempre null. NÃO reescreva nada. Sua saída é apenas DIAGNÓSTICO. Responda APENAS JSON válido.";
+
+/** DeepSeek direto — fallback de baixo nível para o DIAGNÓSTICO (sem router). */
+async function callDeepSeekDirect(prompt: string, timeoutMs = 55000): Promise<string> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -129,11 +133,7 @@ async function callDeepSeek(prompt: string, timeoutMs = 55000): Promise<string> 
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [
-          {
-            role: "system",
-            content:
-              "Você é AUDITOR-DIAGNOSTICADOR de questões objetivas para concursos militares (PMTO, CFO/CHOA) e jurídicos (FGV/CESPE/VUNESP). Sua FUNÇÃO ÚNICA é DIAGNOSTICAR defeitos — NÃO REESCREVA conteúdo. A reescrita será feita por outra IA jurídica especializada. Leia enunciado, A–E, gabarito e comentário INTEGRALMENTE e confronte com o TEXTO LEGAL DE REFERÊNCIA. Detecte SEM AMOSTRAGEM: (a) questões repetidas/duplicadas que abordam exatamente o mesmo assunto/dispositivo; (b) DUAS OU MAIS alternativas corretas à luz da lei; (c) NENHUMA alternativa correta (gabarito aponta errada e nenhuma outra serve); (d) ALUCINAÇÃO JURÍDICA — artigo/inciso/§ inexistente, fundamento inventado, dispositivo revogado; (e) violação de hierarquia funcional (posto/graduação/competência incompatível); (f) função incompatível com o posto citado; (g) gabarito visualmente identificável (única longa/curta/técnica/com ressalva); (h) padrão antiético length_bias (correta é a mais longa OU mais curta — único caso); (i) distratores fracos/óbvios/absurdos; (j) DISTRATORES LONGOS DEMAIS (algum distrator com mais de 1.7× o tamanho médio dos demais — type='distrator_longo'); (k) comentário ausente, em loop, ou que não analisa cada alternativa errada individualmente; (l) enunciado/alternativas/comentário desalinhados; (m) texto legal desatualizado/revogado; (n) bug estrutural (alt vazia, duplicada, formatação corrompida); (o) duas técnicas de distração insuficientes (<2 — insufficient_distractors). Para CADA issue obrigatoriamente preencha: type, severity, field ('enunciado'|'alt_a'|'alt_b'|'alt_c'|'alt_d'|'alt_e'|'gabarito'|'comentario'|'questao_inteira'), evidence (trecho EXATO do conteúdo problemático em ≤200 chars) e suggestion (instrução curta e ACIONÁVEL para a IA reescritora: 'reescrever distrator B mais curto preservando erro de prazo', 'corrigir gabarito para C porque art. 12 prevê...', 'remover citação de Art. 999 inexistente', 'reescrever comentário no estilo professor 4 movimentos'). Em duplicata e em irrecuperável, defina needs_human_review=false e indique no ai_summary 'AUTO_DELETE: <motivo>'. NUNCA emita proposed_patch — sempre null. NÃO reescreva nada. Sua saída é apenas DIAGNÓSTICO. Responda APENAS JSON válido.",
-          },
+          { role: "system", content: DIAGNOSTIC_SYSTEM_PROMPT },
           { role: "user", content: prompt },
         ],
         temperature: 0.1,
@@ -149,6 +149,35 @@ async function callDeepSeek(prompt: string, timeoutMs = 55000): Promise<string> 
     clearTimeout(t);
   }
 }
+
+/**
+ * DIAGNÓSTICO ESTRUTURADO via router (etapa 'legal_audit'): Gemini Flash → Gemini
+ * Pro → OpenRouter Gemini. DeepSeek direto só como último recurso determinístico.
+ */
+async function callDeepSeek(
+  prompt: string,
+  questionId?: number | null,
+): Promise<string> {
+  const messages: ChatMessage[] = [
+    { role: "system", content: DIAGNOSTIC_SYSTEM_PROMPT },
+    { role: "user", content: prompt },
+  ];
+  try {
+    const r = await runAiStage("legal_audit", messages, {
+      jsonResponse: true,
+      questionId: questionId ?? null,
+      timeoutMs: 90_000,
+      metadata: { task: "audit_diagnostic" },
+    });
+    return stripThinkTags(r.content);
+  } catch (e) {
+    console.warn("[audit-questions] router legal_audit falhou, usando DeepSeek direto:", e instanceof Error ? e.message : e);
+    if (!DEEPSEEK_API_KEY) throw e;
+    return await callDeepSeekDirect(prompt);
+  }
+}
+
+
 
 /** Erro lançado quando o provedor sinaliza falta de créditos/saldo. */
 class NoCreditsError extends Error {
