@@ -85,7 +85,7 @@ const Cadastro = () => {
     };
 
     verifyPayment();
-  }, [sessionId, mpPaymentId, mpStatus]);
+  }, [sessionId, mpPaymentId, mpPreapprovalId, mpStatus]);
 
   const handleRecoverPayment = async () => {
     if (!recoveryEmail.trim()) {
