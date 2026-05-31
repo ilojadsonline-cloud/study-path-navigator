@@ -74,10 +74,29 @@ serve(async (req) => {
       );
     }
 
-    // Modo 2: recuperação por email — busca último pagamento aprovado nos últimos 90 dias
+    // Modo 2: recuperação por email
     if (recovery_email) {
       const email = String(recovery_email).trim().toLowerCase();
       logStep("Recuperação por email", { email });
+
+      // 2a) Assinatura recorrente de cartão (preapproval autorizado) — inclui o caso
+      // em que ainda não houve cobrança (mas há assinatura ativa/autorizada).
+      const preapproval = await findActiveMercadoPagoPreapproval(accessToken, [email]);
+      if (preapproval) {
+        logStep("Preapproval ativo encontrado", { id: preapproval.preapproval_id, isTrial: preapproval.is_trial });
+        return new Response(
+          JSON.stringify({
+            paid: true,
+            customer_email: email,
+            recovered: true,
+            preapproval_id: preapproval.preapproval_id,
+            is_trial: preapproval.is_trial,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+        );
+      }
+
+      // 2b) Pagamento avulso aprovado (Pix/Boleto) nos últimos 90 dias
       const approved = await findApprovedMercadoPagoPayment(accessToken, [email]);
       if (approved) {
         return new Response(
@@ -97,7 +116,7 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: "payment_id, collection_id ou recovery_email é obrigatório" }), {
+    return new Response(JSON.stringify({ error: "payment_id, collection_id, preapproval_id ou recovery_email é obrigatório" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });
