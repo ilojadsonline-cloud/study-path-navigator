@@ -34,12 +34,14 @@ const Cadastro = () => {
 
   useEffect(() => {
     const verifyPayment = async () => {
-      // Mercado Pago — usuário voltou do checkout MP (Preference: Pix/Cartão/Boleto)
-      if (mpPaymentId || mpStatus === "success" || mpStatus === "approved") {
+      // Mercado Pago — usuário voltou do checkout MP (Preference: Pix/Cartão/Boleto ou assinatura recorrente)
+      if (mpPaymentId || mpPreapprovalId || mpStatus === "success" || mpStatus === "approved") {
         try {
-          if (mpPaymentId) {
+          if (mpPaymentId || mpPreapprovalId) {
             const { data, error } = await supabase.functions.invoke("verify-mp-payment", {
-              body: { payment_id: mpPaymentId, status: mpStatus },
+              body: mpPreapprovalId
+                ? { preapproval_id: mpPreapprovalId, status: mpStatus }
+                : { payment_id: mpPaymentId, status: mpStatus },
             });
             if (error) throw error;
             if (data?.paid) {
