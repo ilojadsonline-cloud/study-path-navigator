@@ -28,6 +28,8 @@ const Cadastro = () => {
   const sessionId = searchParams.get("session_id");
   // Mercado Pago Preference retorna: payment_id, collection_id, status, preference_id
   const mpPaymentId = searchParams.get("payment_id") || searchParams.get("collection_id");
+  // Mercado Pago Preapproval (assinatura recorrente de cartão) retorna: preapproval_id
+  const mpPreapprovalId = searchParams.get("preapproval_id");
   const mpStatus = searchParams.get("mp_status") || searchParams.get("status") || searchParams.get("collection_status");
 
   useEffect(() => {
