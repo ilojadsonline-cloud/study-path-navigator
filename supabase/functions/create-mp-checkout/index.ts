@@ -11,7 +11,6 @@ const logStep = (step: string, details?: any) => {
 };
 
 const PLAN_AMOUNT = 89.90;
-const TRIAL_DAYS = 1;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
