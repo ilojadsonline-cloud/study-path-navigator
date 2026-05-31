@@ -21,7 +21,31 @@ serve(async (req) => {
     if (!accessToken) throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado");
 
     const body = await req.json();
-    const { payment_id, preference_id, recovery_email, collection_id, status: queryStatus } = body || {};
+    const { payment_id, preference_id, preapproval_id, recovery_email, collection_id, status: queryStatus } = body || {};
+
+    // Modo 0: preapproval_id direto (assinatura recorrente de cartão via back_url do MP)
+    if (preapproval_id) {
+      logStep("Verificando preapproval direto", { preapproval_id });
+      const res = await fetch(`https://api.mercadopago.com/preapproval/${preapproval_id}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) {
+        const pre = await res.json();
+        const paid = pre?.status === "authorized";
+        logStep("Preapproval status", { id: pre?.id, status: pre?.status, email: pre?.payer_email });
+        if (paid) {
+          return new Response(
+            JSON.stringify({
+              paid: true,
+              customer_email: pre?.payer_email || null,
+              status: pre?.status,
+              preapproval_id: pre?.id,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+          );
+        }
+      }
+    }
 
     // Modo 1: payment_id ou collection_id direto (vem do back_url do MP após aprovação)
     const directPaymentId = payment_id || collection_id;
