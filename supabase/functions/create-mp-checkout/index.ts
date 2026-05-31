@@ -11,7 +11,6 @@ const logStep = (step: string, details?: any) => {
 };
 
 const PLAN_AMOUNT = 89.90;
-const TRIAL_DAYS = 1;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -49,9 +48,8 @@ serve(async (req) => {
     const externalReference = `choa-sub-${Date.now()}-${payerEmail}`;
 
     // ===== Assinatura recorrente via MP (preapproval) =====
-    // - 1 dia de teste gratuito (free_trial nativo)
-    // - Cobrança automática de R$ 89,90 a cada 3 meses após o trial
-    // - Cancelamento durante o trial: usuário não é cobrado
+    // - SEM período de teste gratuito (cobrança imediata na adesão)
+    // - Cobrança automática de R$ 89,90 a cada 3 meses
     const preapprovalBody: any = {
       reason: "Método CHOA — Assinatura Trimestral",
       external_reference: externalReference,
@@ -63,10 +61,6 @@ serve(async (req) => {
         frequency_type: "months",
         transaction_amount: PLAN_AMOUNT,
         currency_id: "BRL",
-        free_trial: {
-          frequency: TRIAL_DAYS,
-          frequency_type: "days",
-        },
       },
     };
 

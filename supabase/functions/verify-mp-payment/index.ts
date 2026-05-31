@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { findApprovedMercadoPagoPayment } from "../_shared/mercadopago-payments.ts";
+import { findApprovedMercadoPagoPayment, findActiveMercadoPagoPreapproval } from "../_shared/mercadopago-payments.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +21,31 @@ serve(async (req) => {
     if (!accessToken) throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado");
 
     const body = await req.json();
-    const { payment_id, preference_id, recovery_email, collection_id, status: queryStatus } = body || {};
+    const { payment_id, preference_id, preapproval_id, recovery_email, collection_id, status: queryStatus } = body || {};
+
+    // Modo 0: preapproval_id direto (assinatura recorrente de cartão via back_url do MP)
+    if (preapproval_id) {
+      logStep("Verificando preapproval direto", { preapproval_id });
+      const res = await fetch(`https://api.mercadopago.com/preapproval/${preapproval_id}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) {
+        const pre = await res.json();
+        const paid = pre?.status === "authorized";
+        logStep("Preapproval status", { id: pre?.id, status: pre?.status, email: pre?.payer_email });
+        if (paid) {
+          return new Response(
+            JSON.stringify({
+              paid: true,
+              customer_email: pre?.payer_email || null,
+              status: pre?.status,
+              preapproval_id: pre?.id,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+          );
+        }
+      }
+    }
 
     // Modo 1: payment_id ou collection_id direto (vem do back_url do MP após aprovação)
     const directPaymentId = payment_id || collection_id;
@@ -50,10 +74,29 @@ serve(async (req) => {
       );
     }
 
-    // Modo 2: recuperação por email — busca último pagamento aprovado nos últimos 90 dias
+    // Modo 2: recuperação por email
     if (recovery_email) {
       const email = String(recovery_email).trim().toLowerCase();
       logStep("Recuperação por email", { email });
+
+      // 2a) Assinatura recorrente de cartão (preapproval autorizado) — inclui o caso
+      // em que ainda não houve cobrança (mas há assinatura ativa/autorizada).
+      const preapproval = await findActiveMercadoPagoPreapproval(accessToken, [email]);
+      if (preapproval) {
+        logStep("Preapproval ativo encontrado", { id: preapproval.preapproval_id, isTrial: preapproval.is_trial });
+        return new Response(
+          JSON.stringify({
+            paid: true,
+            customer_email: email,
+            recovered: true,
+            preapproval_id: preapproval.preapproval_id,
+            is_trial: preapproval.is_trial,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+        );
+      }
+
+      // 2b) Pagamento avulso aprovado (Pix/Boleto) nos últimos 90 dias
       const approved = await findApprovedMercadoPagoPayment(accessToken, [email]);
       if (approved) {
         return new Response(
@@ -73,7 +116,7 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: "payment_id, collection_id ou recovery_email é obrigatório" }), {
+    return new Response(JSON.stringify({ error: "payment_id, collection_id, preapproval_id ou recovery_email é obrigatório" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });
