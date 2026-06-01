@@ -8,8 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import {
-  Trash2, Eye, Search, ChevronLeft, ChevronRight, Loader2, CheckCircle, Pencil, Save, ChevronsLeft, ChevronsRight, Hash, RotateCcw,
+  Trash2, Eye, Search, ChevronLeft, ChevronRight, Loader2, CheckCircle, Pencil, Save, ChevronsLeft, ChevronsRight, Hash, RotateCcw, MoreHorizontal, X,
 } from "lucide-react";
 import { QuestionViewDialog } from "./QuestionViewDialog";
 import { QuestionEditDialog } from "./QuestionEditDialog";
@@ -51,6 +53,9 @@ export function AdminQuestoesTab() {
   const [goToPageInput, setGoToPageInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("todas");
   const [restoringId, setRestoringId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkAction, setBulkAction] = useState<null | "restore" | "soft_delete" | "hard_delete">(null);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -81,7 +86,59 @@ export function AdminQuestoesTab() {
     setTotal(count || 0);
     setQuestoes((data as Questao[]) || []);
     setPage(p);
+    setSelectedIds(new Set());
     setLoading(false);
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      if (questoes.every(q => prev.has(q.id))) return new Set();
+      return new Set(questoes.map(q => q.id));
+    });
+  };
+
+  const runBulkAction = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0 || !bulkAction) return;
+    setBulkLoading(true);
+    try {
+      if (bulkAction === "soft_delete") {
+        const { error } = await supabase.rpc("excluir_questoes_por_ids", { p_ids: ids });
+        if (error) throw error;
+        toast({ title: "Questões marcadas como deletadas", description: `${ids.length} questão(ões) removida(s) do banco dos alunos (reversível).` });
+      } else if (bulkAction === "restore") {
+        let ok = 0;
+        for (const id of ids) {
+          const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+            body: {
+              action: "update_question",
+              question_id: id,
+              updates: { audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() },
+            },
+          });
+          if (!error && !data?.error) ok++;
+        }
+        toast({ title: "Questões restauradas", description: `${ok}/${ids.length} agora publicável(eis) para os alunos.` });
+      } else if (bulkAction === "hard_delete") {
+        await supabase.from("respostas_usuario").delete().in("questao_id", ids);
+        const { error } = await supabase.from("questoes").delete().in("id", ids);
+        if (error) throw error;
+        toast({ title: "Questões excluídas", description: `${ids.length} questão(ões) excluída(s) permanentemente.` });
+      }
+      setBulkAction(null);
+      loadQuestoes(page);
+    } catch (err: any) {
+      toast({ title: "Erro na ação em lote", description: err.message, variant: "destructive" });
+    }
+    setBulkLoading(false);
   };
 
   const searchById = async () => {
@@ -222,11 +279,48 @@ export function AdminQuestoesTab() {
         <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
       ) : (
         <>
-          <p className="text-xs text-muted-foreground">{total} questões encontradas</p>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-xs text-muted-foreground">{total} questões encontradas</p>
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5">
+                <span className="text-xs font-medium">{selectedIds.size} selecionada(s)</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="secondary" className="h-7 text-xs" disabled={bulkLoading}>
+                      {bulkLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <MoreHorizontal className="w-3.5 h-3.5 mr-1" />}
+                      Ações em lote
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setBulkAction("restore")}>
+                      <RotateCcw className="w-4 h-4 mr-2 text-success" /> Restaurar (tornar publicável)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setBulkAction("soft_delete")}>
+                      <Trash2 className="w-4 h-4 mr-2" /> Marcar como deletadas (reversível)
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setBulkAction("hard_delete")} className="text-destructive focus:text-destructive">
+                      <Trash2 className="w-4 h-4 mr-2" /> Excluir permanentemente
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setSelectedIds(new Set())} title="Limpar seleção">
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
           <div className="glass-card rounded-xl overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={questoes.length > 0 && questoes.every(q => selectedIds.has(q.id))}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Selecionar todas"
+                    />
+                  </TableHead>
                   <TableHead className="w-16">ID</TableHead><TableHead>Enunciado</TableHead>
                   <TableHead className="w-32">Disciplina</TableHead><TableHead className="w-20">Dif.</TableHead>
                   <TableHead className="w-16">Gab.</TableHead><TableHead className="w-28">Status</TableHead><TableHead className="w-32">Ações</TableHead>
@@ -234,11 +328,18 @@ export function AdminQuestoesTab() {
               </TableHeader>
               <TableBody>
                 {questoes.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma questão</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhuma questão</TableCell></TableRow>
                 ) : questoes.map((q) => {
                   const hidden = q.audit_status === "deleted" || q.audit_status === "manual_review";
                   return (
-                  <TableRow key={q.id} className={hidden ? "opacity-70" : undefined}>
+                  <TableRow key={q.id} className={`${hidden ? "opacity-70" : ""} ${selectedIds.has(q.id) ? "bg-primary/5" : ""}`}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(q.id)}
+                        onCheckedChange={() => toggleSelect(q.id)}
+                        aria-label={`Selecionar questão ${q.id}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-mono text-xs">{q.id}</TableCell>
                     <TableCell className="text-sm max-w-xs truncate">{q.enunciado}</TableCell>
                     <TableCell><Badge variant="secondary" className="text-[10px]">{q.disciplina}</Badge></TableCell>
@@ -354,6 +455,35 @@ export function AdminQuestoesTab() {
             <Button variant="outline" onClick={() => setConfirmDeleteQ(null)}>Cancelar</Button>
             <Button variant="destructive" onClick={() => confirmDeleteQ && deleteQuestion(confirmDeleteQ.id)}>
               <Trash2 className="w-4 h-4 mr-1" /> Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Bulk Action Dialog */}
+      <Dialog open={!!bulkAction} onOpenChange={() => !bulkLoading && setBulkAction(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {bulkAction === "restore" && "Restaurar questões selecionadas"}
+              {bulkAction === "soft_delete" && "Marcar selecionadas como deletadas"}
+              {bulkAction === "hard_delete" && "Excluir selecionadas permanentemente"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {bulkAction === "restore" && <>As <strong>{selectedIds.size}</strong> questões selecionadas voltarão a ficar publicáveis para os alunos.</>}
+            {bulkAction === "soft_delete" && <>As <strong>{selectedIds.size}</strong> questões selecionadas serão removidas do banco dos alunos. A ação é <strong>reversível</strong> (podem ser restauradas depois).</>}
+            {bulkAction === "hard_delete" && <>As <strong>{selectedIds.size}</strong> questões e as respostas dos usuários serão excluídas <strong>permanentemente</strong>. Esta ação não pode ser desfeita.</>}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkAction(null)} disabled={bulkLoading}>Cancelar</Button>
+            <Button
+              variant={bulkAction === "restore" ? "default" : "destructive"}
+              onClick={runBulkAction}
+              disabled={bulkLoading}
+            >
+              {bulkLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+              Confirmar
             </Button>
           </DialogFooter>
         </DialogContent>
