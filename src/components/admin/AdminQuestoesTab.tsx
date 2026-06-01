@@ -279,11 +279,48 @@ export function AdminQuestoesTab() {
         <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
       ) : (
         <>
-          <p className="text-xs text-muted-foreground">{total} questões encontradas</p>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-xs text-muted-foreground">{total} questões encontradas</p>
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5">
+                <span className="text-xs font-medium">{selectedIds.size} selecionada(s)</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="secondary" className="h-7 text-xs" disabled={bulkLoading}>
+                      {bulkLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <MoreHorizontal className="w-3.5 h-3.5 mr-1" />}
+                      Ações em lote
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setBulkAction("restore")}>
+                      <RotateCcw className="w-4 h-4 mr-2 text-success" /> Restaurar (tornar publicável)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setBulkAction("soft_delete")}>
+                      <Trash2 className="w-4 h-4 mr-2" /> Marcar como deletadas (reversível)
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setBulkAction("hard_delete")} className="text-destructive focus:text-destructive">
+                      <Trash2 className="w-4 h-4 mr-2" /> Excluir permanentemente
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setSelectedIds(new Set())} title="Limpar seleção">
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
           <div className="glass-card rounded-xl overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={questoes.length > 0 && questoes.every(q => selectedIds.has(q.id))}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Selecionar todas"
+                    />
+                  </TableHead>
                   <TableHead className="w-16">ID</TableHead><TableHead>Enunciado</TableHead>
                   <TableHead className="w-32">Disciplina</TableHead><TableHead className="w-20">Dif.</TableHead>
                   <TableHead className="w-16">Gab.</TableHead><TableHead className="w-28">Status</TableHead><TableHead className="w-32">Ações</TableHead>
@@ -291,11 +328,18 @@ export function AdminQuestoesTab() {
               </TableHeader>
               <TableBody>
                 {questoes.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma questão</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhuma questão</TableCell></TableRow>
                 ) : questoes.map((q) => {
                   const hidden = q.audit_status === "deleted" || q.audit_status === "manual_review";
                   return (
-                  <TableRow key={q.id} className={hidden ? "opacity-70" : undefined}>
+                  <TableRow key={q.id} className={`${hidden ? "opacity-70" : ""} ${selectedIds.has(q.id) ? "bg-primary/5" : ""}`}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(q.id)}
+                        onCheckedChange={() => toggleSelect(q.id)}
+                        aria-label={`Selecionar questão ${q.id}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-mono text-xs">{q.id}</TableCell>
                     <TableCell className="text-sm max-w-xs truncate">{q.enunciado}</TableCell>
                     <TableCell><Badge variant="secondary" className="text-[10px]">{q.disciplina}</Badge></TableCell>
