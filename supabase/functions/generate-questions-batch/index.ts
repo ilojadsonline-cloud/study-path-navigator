@@ -1423,6 +1423,9 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
       }
 
       // ── Paridade de comprimento das alternativas (anti-padrão "correta = mais longa") ──
+      // Só descarta quando a CORRETA é o outlier evidente (a mais longa e desproporcional,
+      // ou a mais curta e desproporcional). NÃO descartamos por mera variação de comprimento
+      // entre alternativas — isso eliminava questões válidas e zerava o lote.
       const gabIdx = Number(q.gabarito);
       if (Number.isInteger(gabIdx) && gabIdx >= 0 && gabIdx <= 4) {
         const lens = alts.map(a => (a || "").trim().length);
@@ -1431,14 +1434,14 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
         const correctLen = lens[gabIdx];
         const otherLens = lens.filter((_, i) => i !== gabIdx);
         const otherAvg = otherLens.reduce((s, n) => s + n, 0) / Math.max(1, otherLens.length);
-        const spreadRatio = minLen > 0 ? (maxLen - minLen) / minLen : 99;
         const correctIsLongest = correctLen === maxLen && correctLen > minLen;
         const correctIsShortest = correctLen === minLen && correctLen < maxLen;
-        const correctTooLong = correctLen > otherAvg * 1.35;
-        const correctTooShort = correctLen < otherAvg * 0.65;
-        if (spreadRatio > 0.45 || (correctIsLongest && correctTooLong) || (correctIsShortest && correctTooShort)) {
+        // Limiar mais tolerante: só é "tell" se a correta destoar fortemente da média das demais.
+        const correctTooLong = correctLen > otherAvg * 1.8;
+        const correctTooShort = correctLen < otherAvg * 0.45;
+        if ((correctIsLongest && correctTooLong) || (correctIsShortest && correctTooShort)) {
           discarded++;
-          console.log(`[GERAR] Q${idx+1} descartada: paridade de comprimento (lens=${lens.join(",")}, gab=${gabIdx}, spread=${spreadRatio.toFixed(2)})`);
+          console.log(`[GERAR] Q${idx+1} descartada: correta é outlier de comprimento (lens=${lens.join(",")}, gab=${gabIdx})`);
           continue;
         }
       }
