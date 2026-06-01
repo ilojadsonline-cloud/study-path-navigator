@@ -53,6 +53,9 @@ export function AdminQuestoesTab() {
   const [goToPageInput, setGoToPageInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("todas");
   const [restoringId, setRestoringId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkAction, setBulkAction] = useState<null | "restore" | "soft_delete" | "hard_delete">(null);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
