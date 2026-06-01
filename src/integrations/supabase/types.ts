@@ -867,6 +867,22 @@ export type Database = {
     }
     Functions: {
       check_cpf_exists: { Args: { p_cpf: string }; Returns: boolean }
+      dedup_questoes: {
+        Args: {
+          p_dry_run?: boolean
+          p_threshold_alts?: number
+          p_threshold_enun?: number
+        }
+        Returns: {
+          disciplina: string
+          kept_enun: string
+          kept_id: number
+          removed_enun: string
+          removed_id: number
+          sim_alts: number
+          sim_enun: number
+        }[]
+      }
       get_email_by_cpf: { Args: { p_cpf: string }; Returns: string }
       get_my_trial_status: {
         Args: never
