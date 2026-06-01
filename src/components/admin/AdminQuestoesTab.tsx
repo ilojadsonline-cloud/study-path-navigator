@@ -459,6 +459,35 @@ export function AdminQuestoesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Bulk Action Dialog */}
+      <Dialog open={!!bulkAction} onOpenChange={() => !bulkLoading && setBulkAction(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {bulkAction === "restore" && "Restaurar questões selecionadas"}
+              {bulkAction === "soft_delete" && "Marcar selecionadas como deletadas"}
+              {bulkAction === "hard_delete" && "Excluir selecionadas permanentemente"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {bulkAction === "restore" && <>As <strong>{selectedIds.size}</strong> questões selecionadas voltarão a ficar publicáveis para os alunos.</>}
+            {bulkAction === "soft_delete" && <>As <strong>{selectedIds.size}</strong> questões selecionadas serão removidas do banco dos alunos. A ação é <strong>reversível</strong> (podem ser restauradas depois).</>}
+            {bulkAction === "hard_delete" && <>As <strong>{selectedIds.size}</strong> questões e as respostas dos usuários serão excluídas <strong>permanentemente</strong>. Esta ação não pode ser desfeita.</>}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkAction(null)} disabled={bulkLoading}>Cancelar</Button>
+            <Button
+              variant={bulkAction === "restore" ? "default" : "destructive"}
+              onClick={runBulkAction}
+              disabled={bulkLoading}
+            >
+              {bulkLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
