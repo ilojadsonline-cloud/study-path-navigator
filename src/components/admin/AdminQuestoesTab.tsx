@@ -86,7 +86,59 @@ export function AdminQuestoesTab() {
     setTotal(count || 0);
     setQuestoes((data as Questao[]) || []);
     setPage(p);
+    setSelectedIds(new Set());
     setLoading(false);
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      if (questoes.every(q => prev.has(q.id))) return new Set();
+      return new Set(questoes.map(q => q.id));
+    });
+  };
+
+  const runBulkAction = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0 || !bulkAction) return;
+    setBulkLoading(true);
+    try {
+      if (bulkAction === "soft_delete") {
+        const { error } = await supabase.rpc("excluir_questoes_por_ids", { p_ids: ids });
+        if (error) throw error;
+        toast({ title: "Questões marcadas como deletadas", description: `${ids.length} questão(ões) removida(s) do banco dos alunos (reversível).` });
+      } else if (bulkAction === "restore") {
+        let ok = 0;
+        for (const id of ids) {
+          const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+            body: {
+              action: "update_question",
+              question_id: id,
+              updates: { audit_status: "admin_resolved", audit_status_updated_at: new Date().toISOString() },
+            },
+          });
+          if (!error && !data?.error) ok++;
+        }
+        toast({ title: "Questões restauradas", description: `${ok}/${ids.length} agora publicável(eis) para os alunos.` });
+      } else if (bulkAction === "hard_delete") {
+        await supabase.from("respostas_usuario").delete().in("questao_id", ids);
+        const { error } = await supabase.from("questoes").delete().in("id", ids);
+        if (error) throw error;
+        toast({ title: "Questões excluídas", description: `${ids.length} questão(ões) excluída(s) permanentemente.` });
+      }
+      setBulkAction(null);
+      loadQuestoes(page);
+    } catch (err: any) {
+      toast({ title: "Erro na ação em lote", description: err.message, variant: "destructive" });
+    }
+    setBulkLoading(false);
   };
 
   const searchById = async () => {
