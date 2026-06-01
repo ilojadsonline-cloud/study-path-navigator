@@ -642,7 +642,9 @@ export function AdminAuditoriaTab() {
 
   return (
     <div className="space-y-6">
+      <DedupQuestoesCard />
       <Card className="glass-card">
+
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-primary" />
