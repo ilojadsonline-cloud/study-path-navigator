@@ -1272,8 +1272,11 @@ MÉTODO DE CRIAÇÃO:
      * NUNCA crie alternativa incorreta que reproduza FIELMENTE outro dispositivo da mesma lei — isso gera ambiguidade.
    - CADA alternativa incorreta deve ter um erro DIFERENTE e referir-se a um aspecto DIFERENTE.
    - TESTE MENTAL: para cada alternativa incorreta, pergunte-se "consigo apontar QUAL trecho da lei ela contradiz?" Se não, reescreva.
+   - EQUILÍBRIO DE COMPRIMENTO (OBRIGATÓRIO): as cinco alternativas devem ter comprimento SEMELHANTE. A alternativa CORRETA NÃO pode ser a visivelmente mais longa nem a visivelmente mais curta — isso entrega a resposta. Ajuste as alternativas (encurtando a correta ou detalhando as incorretas) até que todas fiquem com tamanho próximo.
 5) DISTRIBUA o gabarito: não concentre todas as respostas na mesma letra.
 6) O COMENTÁRIO segue a estrutura obrigatória definida no sistema.
+7) COBERTURA INTEGRAL DA LEI: NÃO se limite aos dispositivos "famosos" ou mais cobrados. Conteúdos aparentemente secundários — disposições gerais, finais e transitórias, definições, prazos, vedações, atribuições acessórias, parágrafos e incisos de menor destaque — TAMBÉM podem cair na prova e DEVEM virar questões. Sempre que o artigo-alvo tiver trechos pouco explorados, priorize-os. Toda parte do texto legal é cobrável.
+
 
 PROIBIÇÕES ABSOLUTAS NO ENUNCIADO:
 - "O que diz o Art. X?", "Qual artigo trata de...", "Segundo o Art. X, ...", "De acordo com o Art. X, ..."
@@ -1423,6 +1426,9 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
       }
 
       // ── Paridade de comprimento das alternativas (anti-padrão "correta = mais longa") ──
+      // Só descarta quando a CORRETA é o outlier evidente (a mais longa e desproporcional,
+      // ou a mais curta e desproporcional). NÃO descartamos por mera variação de comprimento
+      // entre alternativas — isso eliminava questões válidas e zerava o lote.
       const gabIdx = Number(q.gabarito);
       if (Number.isInteger(gabIdx) && gabIdx >= 0 && gabIdx <= 4) {
         const lens = alts.map(a => (a || "").trim().length);
@@ -1431,14 +1437,14 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
         const correctLen = lens[gabIdx];
         const otherLens = lens.filter((_, i) => i !== gabIdx);
         const otherAvg = otherLens.reduce((s, n) => s + n, 0) / Math.max(1, otherLens.length);
-        const spreadRatio = minLen > 0 ? (maxLen - minLen) / minLen : 99;
         const correctIsLongest = correctLen === maxLen && correctLen > minLen;
         const correctIsShortest = correctLen === minLen && correctLen < maxLen;
-        const correctTooLong = correctLen > otherAvg * 1.35;
-        const correctTooShort = correctLen < otherAvg * 0.65;
-        if (spreadRatio > 0.45 || (correctIsLongest && correctTooLong) || (correctIsShortest && correctTooShort)) {
+        // Limiar mais tolerante: só é "tell" se a correta destoar fortemente da média das demais.
+        const correctTooLong = correctLen > otherAvg * 1.8;
+        const correctTooShort = correctLen < otherAvg * 0.45;
+        if ((correctIsLongest && correctTooLong) || (correctIsShortest && correctTooShort)) {
           discarded++;
-          console.log(`[GERAR] Q${idx+1} descartada: paridade de comprimento (lens=${lens.join(",")}, gab=${gabIdx}, spread=${spreadRatio.toFixed(2)})`);
+          console.log(`[GERAR] Q${idx+1} descartada: correta é outlier de comprimento (lens=${lens.join(",")}, gab=${gabIdx})`);
           continue;
         }
       }
