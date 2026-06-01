@@ -1404,7 +1404,7 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
         gabarito: Math.min(Math.max(Number(raw.gabarito) || 0, 0), 4),
         difficulty_level: (() => {
           const v = normalizeWhitespace(raw.difficulty_level).toLowerCase();
-          return ["advanced", "hard", "intermediate"].includes(v) ? v : "advanced";
+          return ["advanced", "hard", "intermediate"].includes(v) ? v : "hard";
         })(),
         cognitive_skill: normalizeWhitespace(raw.cognitive_skill) || null,
         trap_type: normalizeWhitespace(raw.trap_type) || null,
