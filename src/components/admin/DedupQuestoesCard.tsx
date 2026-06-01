@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -13,151 +15,209 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Copy, Loader2, Search, Trash2 } from "lucide-react";
 
-type DedupRow = {
-  removed_id: number;
-  kept_id: number;
-  disciplina: string;
+type Pair = {
+  dup_id: number;
+  keep_id: number;
   sim_enun: number;
   sim_alts: number;
-  removed_enun: string;
-  kept_enun: string;
+  dup_enun: string;
+  keep_enun: string;
 };
 
 export function DedupQuestoesCard() {
-  const [rows, setRows] = useState<DedupRow[] | null>(null);
+  const [disciplinas, setDisciplinas] = useState<string[]>([]);
+  const [disciplina, setDisciplina] = useState<string>("");
+  const [pairs, setPairs] = useState<Pair[] | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
-  const [applying, setApplying] = useState(false);
-  const [threshEnun, setThreshEnun] = useState(0.82);
-  const [threshAlts, setThreshAlts] = useState(0.78);
+  const [deleting, setDeleting] = useState(false);
 
-  const run = async (dryRun: boolean) => {
-    dryRun ? setLoading(true) : setApplying(true);
+  // Carrega a lista de disciplinas uma vez
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.rpc("list_disciplinas");
+      if (error) {
+        toast.error("Erro ao carregar disciplinas", { description: error.message });
+        return;
+      }
+      const list = ((data as { disciplina: string }[]) || []).map((d) => d.disciplina).filter(Boolean);
+      setDisciplinas(list);
+    })();
+  }, []);
+
+  const analisar = async () => {
+    if (!disciplina) {
+      toast.error("Escolha uma disciplina primeiro.");
+      return;
+    }
+    setLoading(true);
+    setPairs(null);
+    setSelected(new Set());
     try {
-      const { data, error } = await supabase.rpc("dedup_questoes", {
-        p_dry_run: dryRun,
-        p_threshold_enun: threshEnun,
-        p_threshold_alts: threshAlts,
+      const { data, error } = await supabase.rpc("dedup_disciplina_preview", {
+        p_disciplina: disciplina,
+        p_threshold_enun: 0.82,
+        p_threshold_alts: 0.78,
       });
       if (error) throw error;
-      const result = (data as DedupRow[]) || [];
-      setRows(result);
-      if (dryRun) {
-        toast.success(`${result.length} questões redundantes encontradas`, {
-          description: result.length ? "Revise a lista e clique em Aplicar para ocultá-las." : "Nenhuma duplicata acima dos limiares atuais.",
-        });
-      } else {
-        toast.success(`${result.length} questões ocultadas`, {
-          description: "Marcadas como 'deleted'. Reversível na aba Questões (filtro Deletadas → Restaurar).",
-        });
-      }
+      const result = (data as Pair[]) || [];
+      setPairs(result);
+      // Por padrão, marca a questão "repetida" (dup_id) de cada par para exclusão
+      setSelected(new Set(result.map((p) => p.dup_id)));
+      toast.success(
+        result.length ? `${result.length} possível(is) repetida(s) encontrada(s)` : "Nenhuma repetida encontrada",
+        {
+          description: result.length
+            ? "Revise os pares e desmarque o que quiser manter."
+            : `A disciplina "${disciplina}" não tem questões similares acima do limiar.`,
+        },
+      );
     } catch (err: any) {
-      toast.error("Erro na deduplicação", { description: err.message });
+      toast.error("Erro ao analisar", { description: err.message });
     } finally {
-      dryRun ? setLoading(false) : setApplying(false);
+      setLoading(false);
     }
   };
 
-  const disciplinasAfetadas = rows ? [...new Set(rows.map((r) => r.disciplina))] : [];
+  const toggle = (id: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const excluir = async () => {
+    const ids = [...selected];
+    if (ids.length === 0) {
+      toast.error("Nenhuma questão selecionada.");
+      return;
+    }
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.rpc("excluir_questoes_por_ids", { p_ids: ids });
+      if (error) throw error;
+      toast.success(`${data ?? ids.length} questão(ões) excluída(s)`, {
+        description: "Marcadas como deletadas (reversível na aba Questões → filtro Deletadas → Restaurar).",
+      });
+      // Remove os pares cujas questões foram excluídas
+      setPairs((prev) => (prev ? prev.filter((p) => !selected.has(p.dup_id)) : prev));
+      setSelected(new Set());
+    } catch (err: any) {
+      toast.error("Erro ao excluir", { description: err.message });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const selectedCount = selected.size;
+  const hasPairs = useMemo(() => (pairs?.length ?? 0) > 0, [pairs]);
 
   return (
     <Card className="glass-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Copy className="w-5 h-5 text-primary" />
-          Deduplicação do banco (questões repetidas / similares)
+          Questões repetidas por disciplina
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
-          A auditoria por IA analisa uma questão por vez e não detecta repetição entre questões. Esta ferramenta
-          compara TODAS as questões publicáveis de cada disciplina, mantém a melhor de cada grupo e oculta as
-          redundantes (status <strong>deleted</strong>, reversível). Uma cópia de segurança é guardada antes de qualquer alteração.
+          Escolha uma disciplina e clique em <strong>Analisar</strong>. O sistema compara as questões entre si
+          e mostra os pares parecidos. As repetidas já vêm marcadas — desmarque o que quiser manter e clique em
+          <strong> Excluir selecionadas</strong>. A exclusão é reversível.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="space-y-1">
-            <Label className="text-xs">Similaridade do enunciado (0–1)</Label>
-            <Input
-              type="number" step="0.01" min={0.5} max={1}
-              value={threshEnun}
-              onChange={(e) => setThreshEnun(Number(e.target.value))}
-              className="w-28"
-            />
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1 min-w-[240px]">
+            <label className="text-xs text-muted-foreground">Disciplina</label>
+            <Select value={disciplina} onValueChange={setDisciplina}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a disciplina" />
+              </SelectTrigger>
+              <SelectContent>
+                {disciplinas.map((d) => (
+                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Similaridade das alternativas (0–1)</Label>
-            <Input
-              type="number" step="0.01" min={0.5} max={1}
-              value={threshAlts}
-              onChange={(e) => setThreshAlts(Number(e.target.value))}
-              className="w-28"
-            />
-          </div>
-          <p className="text-[11px] text-muted-foreground max-w-xs">
-            Limiar menor = mais agressivo (remove mais). 0,82 é seguro para pegar quase-idênticas.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => run(true)} disabled={loading || applying} variant="secondary" className="gap-2">
+          <Button onClick={analisar} disabled={loading || deleting || !disciplina} className="gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            Simular (não altera nada)
+            Analisar
           </Button>
-
-          {rows && rows.length > 0 && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button disabled={applying || loading} variant="destructive" className="gap-2">
-                  {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                  Aplicar — ocultar {rows.length} redundantes
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Ocultar {rows.length} questões redundantes?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    As questões selecionadas serão marcadas como <strong>deleted</strong> e deixarão de aparecer para os
-                    alunos. A melhor questão de cada grupo é mantida. Esta ação é reversível: na aba Questões, filtro
-                    "Deletadas", você pode restaurar qualquer uma.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => run(false)}>Aplicar deduplicação</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
         </div>
 
-        {rows && (
-          <div className="space-y-2 pt-2 border-t border-border/40">
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              <Badge variant="secondary">{rows.length} redundantes</Badge>
-              {disciplinasAfetadas.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {disciplinasAfetadas.length} disciplina(s) afetada(s)
-                </span>
+        {pairs && (
+          <div className="space-y-3 pt-2 border-t border-border/40">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="secondary">{pairs.length} par(es) parecido(s)</Badge>
+              <Badge variant={selectedCount ? "destructive" : "outline"}>{selectedCount} selecionada(s)</Badge>
+
+              {hasPairs && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button disabled={deleting || selectedCount === 0} variant="destructive" size="sm" className="gap-2 ml-auto">
+                      {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      Excluir selecionadas ({selectedCount})
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir {selectedCount} questão(ões)?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        As questões selecionadas serão marcadas como <strong>deletadas</strong> e deixarão de
+                        aparecer para os alunos. Isso é reversível: na aba Questões, filtro "Deletadas", você
+                        pode restaurar qualquer uma.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={excluir}>Excluir</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
 
-            {rows.length > 0 && (
-              <ScrollArea className="h-72 rounded-lg border border-border/40 p-2">
+            {hasPairs ? (
+              <ScrollArea className="h-96 rounded-lg border border-border/40 p-2">
                 <div className="space-y-2">
-                  {rows.map((r) => (
-                    <div key={`${r.removed_id}-${r.kept_id}`} className="text-xs p-2 rounded bg-muted/30">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <Badge variant="outline" className="text-[10px]">{r.disciplina}</Badge>
-                        <span className="text-destructive">remove #{r.removed_id}</span>
-                        <span className="text-muted-foreground">→ mantém #{r.kept_id}</span>
-                        <span className="text-muted-foreground">
-                          (enun {(r.sim_enun * 100).toFixed(0)}% · alt {(r.sim_alts * 100).toFixed(0)}%)
-                        </span>
+                  {pairs.map((p) => {
+                    const checked = selected.has(p.dup_id);
+                    return (
+                      <div
+                        key={`${p.dup_id}-${p.keep_id}`}
+                        className={`text-xs p-3 rounded border transition-colors ${
+                          checked ? "border-destructive/50 bg-destructive/5" : "border-border/40 bg-muted/20"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-2 text-[11px] text-muted-foreground">
+                          <span>Similaridade: enunciado {(p.sim_enun * 100).toFixed(0)}% · alternativas {(p.sim_alts * 100).toFixed(0)}%</span>
+                        </div>
+
+                        {/* Questão candidata a remover */}
+                        <label className="flex items-start gap-2 cursor-pointer">
+                          <Checkbox checked={checked} onCheckedChange={() => toggle(p.dup_id)} className="mt-0.5" />
+                          <span>
+                            <span className="text-destructive font-medium">Excluir #{p.dup_id}:</span>{" "}
+                            <span className="text-foreground/90">{p.dup_enun}</span>
+                          </span>
+                        </label>
+
+                        {/* Questão mantida */}
+                        <div className="flex items-start gap-2 mt-2 pl-6">
+                          <span>
+                            <span className="text-emerald-500 font-medium">Mantém #{p.keep_id}:</span>{" "}
+                            <span className="text-muted-foreground">{p.keep_enun}</span>
+                          </span>
+                        </div>
                       </div>
-                      <p className="text-muted-foreground line-clamp-2">{r.removed_enun}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ScrollArea>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhuma questão repetida encontrada nesta disciplina. 🎉</p>
             )}
           </div>
         )}
