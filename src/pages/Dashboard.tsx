@@ -9,7 +9,7 @@ import {
   Sparkles, Youtube, Brain, X, ClipboardCheck, ArrowUpRight, BarChart3
 } from "lucide-react";
 import { RankingCard } from "@/components/dashboard/RankingCard";
-import { RankingConsentModal } from "@/components/dashboard/RankingConsentModal";
+import { MaintenanceNoticeModal } from "@/components/dashboard/MaintenanceNoticeModal";
 import { getLocalStudyTimerSnapshot, type TimerState } from "@/hooks/useStudyTimer";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -751,7 +751,7 @@ const Dashboard = () => {
             </div>
 
             <RankingCard />
-            <RankingConsentModal />
+            <MaintenanceNoticeModal />
           </>
         )}
       </div>
