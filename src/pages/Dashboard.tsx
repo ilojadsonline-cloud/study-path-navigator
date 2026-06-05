@@ -8,7 +8,7 @@ import {
   Trophy, Calendar, Flame, Shield, Loader2, FileText, PlayCircle,
   Sparkles, Youtube, Brain, X, ClipboardCheck, ArrowUpRight, BarChart3
 } from "lucide-react";
-import { RankingCard } from "@/components/dashboard/RankingCard";
+import { CalendarioInteligente } from "@/components/dashboard/CalendarioInteligente";
 import { MaintenanceNoticeModal } from "@/components/dashboard/MaintenanceNoticeModal";
 import { getLocalStudyTimerSnapshot, type TimerState } from "@/hooks/useStudyTimer";
 import { useNavigate, Link } from "react-router-dom";
