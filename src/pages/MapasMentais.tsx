@@ -97,7 +97,10 @@ export default function MapasMentais() {
                       <Brain className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h2 className="font-bold text-sm md:text-base text-foreground leading-tight">{d.title}</h2>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="font-bold text-sm md:text-base text-foreground leading-tight">{d.title}</h2>
+                        {d.restricted && <PopSigilosoBadge />}
+                      </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{d.subtitle}</p>
                     </div>
                     <div className="shrink-0 text-muted-foreground">
