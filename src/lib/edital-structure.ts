@@ -109,3 +109,6 @@ export const disciplinasLite: DisciplinaLite[] = [
 export function findDisciplina(id: string) {
   return disciplinasLite.find((d) => d.id === id);
 }
+
+// Disciplinas que podem receber conteúdo (exclui documentos sigilosos como o POP)
+export const disciplinasSelecionaveis = disciplinasLite.filter((d) => !d.restricted);
