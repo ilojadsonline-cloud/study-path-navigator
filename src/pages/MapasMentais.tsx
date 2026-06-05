@@ -119,7 +119,10 @@ export default function MapasMentais() {
                         className="overflow-hidden"
                       >
                         <div className="px-5 pb-5 space-y-2">
-                          {d.topics.map((t) => {
+                          {d.restricted ? (
+                            <PopSigilosoNotice />
+                          ) : (
+                            d.topics.map((t) => {
                             const row = mapByDiscTopic.get(`${d.id}::${t}`);
                             return (
                               <div
@@ -150,7 +153,8 @@ export default function MapasMentais() {
                                 )}
                               </div>
                             );
-                          })}
+                          })
+                          )}
                         </div>
                       </motion.div>
                     )}
