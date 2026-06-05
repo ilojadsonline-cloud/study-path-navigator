@@ -7,6 +7,7 @@ export type DisciplinaLite = {
   subtitle: string;
   topics: string[];
   comingSoon?: boolean;
+  restricted?: boolean;
 };
 
 export const disciplinasLite: DisciplinaLite[] = [
@@ -71,8 +72,8 @@ export const disciplinasLite: DisciplinaLite[] = [
   {
     id: "pop",
     title: "POP — Uso Seletivo da Força e Abordagens Policiais",
-    subtitle: "Procedimento Operacional Padrão",
-    comingSoon: true,
+    subtitle: "Procedimento Operacional Padrão • Documento sigiloso",
+    restricted: true,
     topics: [
       "Módulo I — Processo 108",
       "Módulo II — Processos 201 a 214",
@@ -108,3 +109,6 @@ export const disciplinasLite: DisciplinaLite[] = [
 export function findDisciplina(id: string) {
   return disciplinasLite.find((d) => d.id === id);
 }
+
+// Disciplinas que podem receber conteúdo (exclui documentos sigilosos como o POP)
+export const disciplinasSelecionaveis = disciplinasLite.filter((d) => !d.restricted);

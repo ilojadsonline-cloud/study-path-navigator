@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { disciplinasLite } from "@/lib/edital-structure";
+import { PopSigilosoNotice, PopSigilosoBadge } from "@/components/PopSigilosoNotice";
 import { toast } from "sonner";
 
 type MapaRow = {
@@ -97,7 +98,10 @@ export default function MapasMentais() {
                       <Brain className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h2 className="font-bold text-sm md:text-base text-foreground leading-tight">{d.title}</h2>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="font-bold text-sm md:text-base text-foreground leading-tight">{d.title}</h2>
+                        {d.restricted && <PopSigilosoBadge />}
+                      </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{d.subtitle}</p>
                     </div>
                     <div className="shrink-0 text-muted-foreground">
@@ -115,7 +119,10 @@ export default function MapasMentais() {
                         className="overflow-hidden"
                       >
                         <div className="px-5 pb-5 space-y-2">
-                          {d.topics.map((t) => {
+                          {d.restricted ? (
+                            <PopSigilosoNotice />
+                          ) : (
+                            d.topics.map((t) => {
                             const row = mapByDiscTopic.get(`${d.id}::${t}`);
                             return (
                               <div
@@ -146,7 +153,8 @@ export default function MapasMentais() {
                                 )}
                               </div>
                             );
-                          })}
+                          })
+                          )}
                         </div>
                       </motion.div>
                     )}

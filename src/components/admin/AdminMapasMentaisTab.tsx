@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { disciplinasLite } from "@/lib/edital-structure";
+import { disciplinasLite, disciplinasSelecionaveis } from "@/lib/edital-structure";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -125,7 +125,7 @@ export function AdminMapasMentaisTab() {
             <Select value={discId} onValueChange={setDiscId}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {disciplinasLite.map((d) => (
+                {disciplinasSelecionaveis.map((d) => (
                   <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>
                 ))}
               </SelectContent>

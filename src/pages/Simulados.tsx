@@ -18,7 +18,8 @@ const DISCIPLINAS_OFICIAIS = [
 ];
 
 // Disciplinas do novo edital ainda sem banco de questões (exibidas como "em breve")
-const DISCIPLINAS_EM_BREVE = ["POP", "Língua Portuguesa", "Redação Oficial"];
+// Obs.: POP não entra (documento sigiloso — Portaria nº 021/2015-Gab. PMTO)
+const DISCIPLINAS_EM_BREVE = ["Língua Portuguesa", "Redação Oficial"];
 
 const disciplinasOpcoes = ["Todas as Disciplinas", ...DISCIPLINAS_OFICIAIS];
 
