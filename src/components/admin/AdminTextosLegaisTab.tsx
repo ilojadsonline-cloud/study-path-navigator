@@ -18,7 +18,6 @@ const DISCIPLINES = [
   { disciplina: "CPPM", lei_nome: "Código de Processo Penal Militar (Arts. 8-28 e 243-253)" },
   { disciplina: "RDMETO", lei_nome: "Regulamento Disciplinar Militar do TO (Decreto 4.994/2014)" },
   { disciplina: "Direito Penal Militar", lei_nome: "Código Penal Militar - Parte Geral (Arts. 1-135)" },
-  { disciplina: "Lei Orgânica PM", lei_nome: "Lei Orgânica Nacional das Polícias Militares (Lei 14.751/2023)" },
 ];
 
 export default function AdminTextosLegaisContent() {

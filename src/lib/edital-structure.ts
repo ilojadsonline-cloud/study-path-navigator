@@ -81,19 +81,6 @@ export const disciplinasLite: DisciplinaLite[] = [
       "Penas e Medidas de Segurança",
     ],
   },
-  {
-    id: "lei-organica-pm",
-    title: "Lei Orgânica das Polícias Militares",
-    subtitle: "Lei nº 14.751/2023",
-    topics: [
-      "Disposições Gerais e Princípios",
-      "Organização e Estrutura",
-      "Carreira e Direitos",
-      "Regime Disciplinar e Deveres",
-      "Atividade de Policiamento Ostensivo",
-      "Disposições Finais e Transitórias",
-    ],
-  },
 ];
 
 export function findDisciplina(id: string) {

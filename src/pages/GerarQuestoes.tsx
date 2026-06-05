@@ -11,7 +11,6 @@ const disciplinas = [
   "CPPM",
   "RDMETO",
   "Direito Penal Militar",
-  "Lei Orgânica PM",
 ];
 
 interface BatchResult {
