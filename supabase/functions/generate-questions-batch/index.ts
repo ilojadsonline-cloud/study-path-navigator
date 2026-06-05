@@ -591,16 +591,6 @@ const DISCIPLINES = [
       "Efeitos da condenação e reabilitação", "Extinção da punibilidade e prescrição",
     ],
   },
-  {
-    disciplina: "Lei Orgânica PM",
-    leiNome: "Lei Orgânica Nacional das Polícias Militares (Lei nº 14.751/2023)",
-    assuntos: [
-      "Disposições gerais e princípios", "Definição e natureza das PMs e CBMs",
-      "Competências e atribuições", "Hierarquia e disciplina",
-      "Gestão de pessoal e carreira", "Formação e capacitação",
-      "Remuneração e benefícios", "Disposições finais e transitórias",
-    ],
-  },
 ];
 
 // 10 approach types for maximum diversity — cycled based on existing question count

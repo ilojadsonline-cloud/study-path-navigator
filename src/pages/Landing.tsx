@@ -92,23 +92,6 @@ const exampleQuestions = [
       "A questão trata das medidas que a autoridade competente pode adotar ao julgar recurso de apelação contra decisão de Conselho, conforme o Art. 164 do RDMETO. O inciso III do referido artigo autoriza expressamente a anulação da medida disciplinar e o arquivamento do processo, desde que analisados os pressupostos de admissibilidade. A alternativa C reproduz exatamente essa possibilidade. Cuidado com a alternativa A: a produção de novas provas é possível (inciso I), mas sempre com observância do contraditório e ampla defesa, não podendo suprimi-los. A alternativa B é falsa, pois a autoridade pode modificar a sanção (agravar ou atenuar). A alternativa D é incorreta, pois a nova tipificação não obriga sanção mais grave. A alternativa E também erra, pois a produção de provas pode ser determinada de ofício.",
   },
   {
-    disciplina: "Lei Orgânica da PM (Lei 14.751/2023)",
-    assunto: "Diretrizes",
-    dificuldade: "Difícil",
-    enunciado:
-      "Com base na Lei nº 14.751/2023, assinale a alternativa que apresenta uma diretriz a ser observada pelas Polícias Militares e Corpos de Bombeiros Militares dos Estados, do Distrito Federal e dos Territórios.",
-    alternativas: [
-      "Planejamento e distribuição do efetivo proporcionalmente ao número de habitantes na circunscrição, obedecidos indicadores, peculiaridades e critérios técnicos regionais, salvo o caso de unidades especializadas quando houver apenas uma unidade para determinada área geográfica.",
-      "Subordinação direta e exclusiva aos comandos das Forças Armadas, em razão da condição de forças auxiliares e reserva do Exército.",
-      "Sigilo absoluto em todos os procedimentos operacionais, formais e administrativos, ressalvados aqueles para os quais a lei determine publicidade.",
-      "Priorização de ações repressivas em detrimento de ações preventivas, como forma de garantir a eficiência na preservação da ordem pública.",
-      "Vinculação obrigatória a partidos políticos para definição de estratégias de segurança pública, em observância ao princípio democrático.",
-    ],
-    gabarito: 0,
-    comentario:
-      "A questão cobra as diretrizes do art. 4º da Lei nº 14.751/2023. A alternativa A reproduz fielmente o inciso IV, que estabelece o planejamento e distribuição do efetivo proporcionalmente ao número de habitantes, com a ressalva de unidades especializadas. As demais alternativas distorcem o texto legal: a B confunde a condição de força auxiliar com subordinação direta (inexistente); a C inverte a regra do sigilo (art. 4º, VII: publicidade, ressalvado sigilo legal); a D contraria a diretriz de prevenção (art. 4º, VIII); e a E é incompatível com os princípios da impessoalidade e moralidade (art. 3º, V e VII). Atenção à pegadinha da letra B: a subordinação é apenas como força auxiliar, não direta e exclusiva.",
-  },
-  {
     disciplina: "LC nº 128/2021 (PMTO)",
     assunto: "Unidades administrativas de direção",
     dificuldade: "Médio",

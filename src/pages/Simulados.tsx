@@ -16,7 +16,6 @@ const DISCIPLINAS_OFICIAIS = [
   "CPPM",
   "RDMETO",
   "Direito Penal Militar",
-  "Lei Orgânica PM",
 ];
 
 const disciplinasOpcoes = ["Todas as Disciplinas", ...DISCIPLINAS_OFICIAIS];
