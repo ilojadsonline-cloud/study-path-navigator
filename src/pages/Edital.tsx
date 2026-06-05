@@ -605,7 +605,28 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 space-y-4">
-              {d.comingSoon ? (
+              {d.restricted ? (
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive">
+                  <Lock className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div className="text-xs leading-relaxed space-y-2">
+                    <p>
+                      <strong>Disciplina não disponibilizada na plataforma.</strong> Em respeito ao
+                      caráter sigiloso do documento, esta disciplina não será adicionada (texto de
+                      referência, questões ou materiais), em conformidade com a normativa interna da PMTO.
+                    </p>
+                    <p className="text-muted-foreground">
+                      Fundamento: <strong>Portaria nº 021/2015-Gab.</strong> (PMTO — Quartel do Comando
+                      Geral), que atribui grau sigiloso <strong>RESERVADO</strong> ao Manual do
+                      Procedimento Operacional Padrão (POP) e regula sua divulgação, com base no art. 10
+                      da Lei Complementar nº 79/2012 e nos arts. 24 e 27, III c/c art. 45 da Lei nº
+                      12.527/2011. Toda publicação ou reprodução, total ou parcial, depende de
+                      autorização do Comandante-Geral, restringindo-se o acesso à comunidade policial
+                      militar e setores afins. O conteúdo programático abaixo é apenas referência do
+                      edital; o estudo do POP deve ser feito por canais oficiais da Corporação.
+                    </p>
+                  </div>
+                </div>
+              ) : d.comingSoon ? (
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
                   <Clock className="w-5 h-5 shrink-0 mt-0.5" />
                   <p className="text-xs leading-relaxed">
