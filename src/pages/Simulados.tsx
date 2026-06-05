@@ -15,8 +15,10 @@ const DISCIPLINAS_OFICIAIS = [
   "Lei nº 2.575/2012",
   "CPPM",
   "RDMETO",
-  "Direito Penal Militar",
 ];
+
+// Disciplinas do novo edital ainda sem banco de questões (exibidas como "em breve")
+const DISCIPLINAS_EM_BREVE = ["POP", "Língua Portuguesa", "Redação Oficial"];
 
 const disciplinasOpcoes = ["Todas as Disciplinas", ...DISCIPLINAS_OFICIAIS];
 

@@ -10,7 +10,9 @@ const disciplinas = [
   "Lei nº 2.575/2012",
   "CPPM",
   "RDMETO",
-  "Direito Penal Militar",
+  "POP",
+  "Língua Portuguesa",
+  "Redação Oficial",
 ];
 
 interface BatchResult {

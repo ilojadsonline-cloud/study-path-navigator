@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const DISCIPLINES = [
   "Lei nº 2.578/2012", "LC nº 128/2021", "Lei nº 2.575/2012",
-  "CPPM", "RDMETO", "Direito Penal Militar",
+  "CPPM", "RDMETO", "POP", "Língua Portuguesa", "Redação Oficial",
 ];
 
 interface BatchResult {

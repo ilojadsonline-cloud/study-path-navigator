@@ -5,7 +5,7 @@ import { BackButton } from "@/components/BackButton";
 import {
   BookOpen, ChevronDown, ChevronUp, ExternalLink, PlayCircle, FileText,
   Shield, Gavel, BookMarked, Landmark, BadgeCheck,
-  ClipboardList, AlertTriangle, FileCheck, Brain
+  ClipboardList, FileCheck, Brain, Target, Clock
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -26,78 +26,189 @@ type Disciplina = {
   videoAulaUrl: string;
   videoAulaLabel: string;
   disciplinaFilter: string;
+  comingSoon?: boolean;
 };
 
 const disciplinas: Disciplina[] = [
   {
     id: "estatuto",
     icon: <Shield className="w-5 h-5" />,
-    title: "Estatuto dos Policiais Militares e Bombeiros Militares do TO",
-    subtitle: "Lei nº 2.578/2012",
+    title: "Estatuto dos Militares Estaduais do TO",
+    subtitle: "Lei nº 2.578/2012 • Peso 18",
     color: "from-blue-500/20 to-blue-600/20",
     disciplinaFilter: "Lei nº 2.578/2012",
+    comingSoon: false,
     leiSecaUrl: "https://drive.google.com/file/d/1xoxeNbtnlYTLoNzTaFsmQ8O0nfFBuYY8/view?usp=sharing",
     leiSecaLabel: "Lei nº 2.578/2012 — AL-TO",
-    videoAulaUrl: "https://www.youtube.com/watch?v=M6BBI1WBjlY",
-    videoAulaLabel: "Estatuto PMTO — Aula Completa",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
     items: [
       {
-        topic: "Disposições Preliminares",
+        topic: "Parte geral e ingresso",
         details: [
-          "Conceito de policial militar e bombeiro militar",
-          "Definição de cargo, posto e graduação",
-          "Situações de atividade e inatividade",
-          "Princípios da hierarquia e disciplina",
+          "Abrangência da lei: ingresso, relação jurídica funcional, direitos, obrigações, ética e prerrogativas.",
+          "Natureza da PM e CBM como instituições permanentes, reserva do Exército e subordinação ao Governador.",
+          "Competências institucionais: polícia ostensiva, preservação da ordem pública, defesa civil e atribuições correlatas.",
+          "Situações do militar estadual: ativa, reserva remunerada, reforma, agregação e hipóteses correlatas.",
+          "Conceitos legais do art. 10: Comandante, Organização Militar, sede, cargo, função e expressões equivalentes.",
+          "Ingresso na Corporação e requisitos gerais exigidos em concurso público.",
         ],
       },
       {
-        topic: "Ingresso, Hierarquia e Disciplina",
+        topic: "Hierarquia e disciplina",
         details: [
-          "Condições de ingresso na corporação",
-          "Círculos hierárquicos e ordem de precedência",
-          "Graus hierárquicos: postos e graduações",
-          "Conceito de disciplina militar e manifestações essenciais",
-          "Atos disciplinares e ordens militares",
+          "Hierarquia e disciplina como bases institucionais; autoridade e responsabilidade por grau hierárquico.",
+          "Círculos hierárquicos e escala hierárquica de oficiais, praças especiais e praças.",
+          "Antiguidade, precedência e critérios de ordenação dentro do mesmo posto ou graduação.",
+          "Precedência entre praças especiais, subtenentes, sargentos, cabos e soldados.",
+          "Comando, subordinação, responsabilidade por ordens, decisões e atos praticados.",
         ],
       },
       {
-        topic: "Deveres, Obrigações e Direitos",
+        topic: "Obrigações dos militares",
         details: [
-          "Compromisso e juramento militar",
-          "Deveres militares e valor militar",
-          "Ética e decoro da classe",
-          "Direitos dos policiais e bombeiros militares",
-          "Remuneração, alimentação, fardamento e assistência",
-          "Estabilidade, férias, licenças e afastamentos",
+          "Cargo militar, cargo vago e função militar: diferenças conceituais e consequências jurídicas.",
+          "Encargo, incumbência, comissão, serviço e atividade militar ou de natureza militar.",
+          "Valor militar: sentimento de servir, civismo, fé na missão, espírito de corpo, amor à profissão e aprimoramento técnico-profissional.",
+          "Ética militar: verdade, responsabilidade, autoridade, eficiência, probidade, respeito à dignidade humana e zelo institucional.",
+          "Vedações: sindicalização, greve, filiação partidária na atividade e comércio/gerência empresarial pelo militar da ativa.",
+          "Compromisso de honra e efeitos da violação das obrigações e deveres militares.",
         ],
       },
       {
-        topic: "Regime Disciplinar",
+        topic: "Disciplina e transgressões",
         details: [
-          "Transgressões disciplinares e classificação",
-          "Sanções disciplinares e sua aplicação",
-          "Processo administrativo disciplinar",
-          "Conselho de Disciplina e Conselho de Justificação",
-          "Comportamento militar e notas conceituais",
+          "Competências para instaurar sindicância e aplicar sanções disciplinares.",
+          "Competências para Conselho de Justificação, Conselho de Disciplina e afastamento imediato.",
+          "Conceito de transgressão disciplinar e prazos prescricionais por natureza.",
+          "Critérios de julgamento: antecedentes, causas determinantes, natureza dos fatos e consequências.",
+          "Transgressões leves: identificação e comparação com médias e graves.",
+          "Transgressões médias: identificação e comparação com leves e graves.",
+          "Transgressões graves: condutas centrais, efeitos e relação com honra, pundonor e decoro.",
+          "Possibilidade de alteração motivada da classificação da transgressão.",
         ],
       },
       {
-        topic: "Movimentação e Lotação",
+        topic: "Processos administrativos disciplinares",
         details: [
-          "Classificação e reclassificação",
-          "Transferências e permutas",
-          "Movimentação por necessidade do serviço",
+          "Espécies de processos administrativos disciplinares: sindicância, Conselho de Justificação e Conselho de Disciplina.",
+          "Sindicância: conceito, finalidade, contraditório e ampla defesa.",
+          "Ordem cronológica da sindicância: instauração, autuação, citação, interrogatório, defesa preliminar, instrução, alegações finais, relatório, solução e enquadramento.",
+          "Prazos da sindicância: 30 dias, prorrogação por 20 dias e prazos de defesa.",
+          "Conselhos: finalidade, aplicação a oficiais e praças, composição, rito, prazo de 50 dias e prorrogação.",
+          "Medidas propostas no relatório dos Conselhos e decisão da autoridade nomeante.",
+          "Comportamento da praça: excepcional, ótimo, bom, insuficiente e mau; efeitos práticos para carreira e promoção.",
         ],
       },
       {
-        topic: "Afastamento e Licenciamento",
+        topic: "Direitos e remuneração",
         details: [
-          "Agregação e suas hipóteses",
-          "Licenciamento a pedido e ex officio",
-          "Exclusão a bem da disciplina",
-          "Demissão e exoneração",
-          "Reforma administrativa e compulsória",
-          "Reserva remunerada",
+          "Reposições, indenizações ao erário e limite mínimo mensal de subsídio.",
+          "Direitos dos militares: garantias do posto/patente ou graduação, promoção, férias, licenças e demais direitos estatutários.",
+          "Sistema de Proteção Social dos militares estaduais.",
+          "Auxílio-natalidade, pecúlio militar, auxílio-funeral e transporte de corpo.",
+          "Remuneração por subsídio, suspensão, cessação, desaparecimento e extravio.",
+          "Inatividade: reserva remunerada, reforma, proventos e incapacidades.",
+          "Vantagens pecuniárias: diárias, ajuda de custo, bolsa de estudo e pró-labore.",
+        ],
+      },
+      {
+        topic: "Situações funcionais e prerrogativas",
+        details: [
+          "Promoção no Estatuto: acesso seletivo, gradual e sucessivo; relação com legislação específica.",
+          "Férias, afastamentos temporários e licenças: hipóteses, efeitos e limitações.",
+          "Agregação: conceito, hipóteses e efeitos no serviço ativo.",
+          "Reversão, excedente, ausência, desaparecimento, extravio e deserção.",
+          "Exclusão do serviço ativo: transferência para reserva, reforma, demissão, perda de posto/patente, licenciamento e anulação de inclusão.",
+          "Reforma e incapacidade: causas, inspeção de saúde e efeitos funcionais.",
+          "Prerrogativas, uso de uniformes, porte de arma, honras e assistência jurídica quando cabível.",
+          "Disposições finais e transitórias com impacto funcional.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "promocoes",
+    icon: <BadgeCheck className="w-5 h-5" />,
+    title: "Lei de Promoções da PMTO",
+    subtitle: "Lei nº 2.575/2012 • Peso 16",
+    color: "from-amber-500/20 to-amber-600/20",
+    disciplinaFilter: "Lei nº 2.575/2012",
+    comingSoon: false,
+    leiSecaUrl: "https://drive.google.com/file/d/1Muwaef2e-iAsZwh0uIZAne8RqfF0P6F1/view?usp=sharing",
+    leiSecaLabel: "Lei nº 2.575/2012 — Compilada",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
+    items: [
+      {
+        topic: "Disposições iniciais",
+        details: [
+          "Finalidade da promoção: reconhecimento de mérito e habilitação para posto ou graduação superior.",
+          "Datas de promoção e alterações legislativas; promoções que independem de data.",
+          "Responsabilidade do militar pela não inclusão em quadro de acesso quando não satisfaz requisitos por escolhas pessoais.",
+          "Impedimento por comportamento inferior a bom.",
+          "Comunicação de fato grave que possa influir na avaliação do colega.",
+          "Vagas: critérios, abertura, cômputo e situação de excedente.",
+        ],
+      },
+      {
+        topic: "Comissões de promoção",
+        details: [
+          "CPO: composição, presidência, membros natos e efetivos.",
+          "CPP: composição, presidência e membros.",
+          "Reuniões, quórum, decisão por maioria simples e voto de qualidade.",
+          "Competências da CPO e aplicação à CPP: organizar quadros de acesso, publicar, conhecer recursos e propor exclusões.",
+          "Trabalhos de secretaria e regimentos internos.",
+        ],
+      },
+      {
+        topic: "Critérios de promoção",
+        details: [
+          "Critérios de promoção: antiguidade, merecimento, escolha, bravura, post mortem, tempo de contribuição/serviço e invalidez permanente.",
+          "Antiguidade: precedência hierárquica.",
+          "Merecimento: conjunto de qualidades, atributos, desempenho e avaliação da carreira.",
+          "Escolha: promoção de Tenente-Coronel a Coronel.",
+          "Bravura: ato incomum de coragem, audácia e abnegação; sindicância e decadência.",
+          "Post mortem: hipóteses, comprovação e finalidade.",
+          "Tempo de contribuição/serviço: requisitos e regras transitórias.",
+          "Invalidez permanente: requisitos, Junta Militar Central de Saúde e independência de vaga/interstício/curso quando aplicável.",
+        ],
+      },
+      {
+        topic: "Quadros de acesso",
+        details: [
+          "Quadro de Acesso: conceito, organização por critério, grau hierárquico e quadro da carreira.",
+          "Requisitos essenciais para ingresso em QA: interstício, saúde, requisitos peculiares e avaliação profissional/moral.",
+          "Ordem nominal nos quadros por antiguidade, merecimento e escolha.",
+          "Hipóteses de não inclusão e exclusão de QA.",
+          "Publicação dos quadros e precedência de recursos.",
+          "Inclusão sob condição e preenchimento de requisitos até a data da promoção.",
+          "Interstícios por posto/graduação e possibilidade de redução.",
+          "Higidez e inspeção médica oficial.",
+          "Atividades peculiares: cursos, serviço arregimentado e função específica.",
+        ],
+      },
+      {
+        topic: "Avaliação profissional e moral",
+        details: [
+          "Pontuação final do QAM: diferença entre pontos positivos e negativos.",
+          "Valores numéricos positivos: tempo de serviço, tempo na graduação/posto, cursos e demais títulos.",
+          "Valores numéricos negativos: punições, sentenças e demais fatores depreciativos.",
+          "Conceito profissional e moral: escala, avaliador e requisitos morais/profissionais.",
+          "Mínimo de 65 pontos para figurar no QAM, conforme redação vigente.",
+          "Justificativa de conceitos inferiores a 65 ou superiores a 120.",
+        ],
+      },
+      {
+        topic: "Recursos, cursos e CHOA",
+        details: [
+          "Recursos contra composição de QA e preterição à promoção.",
+          "Endereçamento de recursos em promoção de Praças e Oficiais.",
+          "Prazo de 10 dias para recorrer da composição do QA e solução em 90 dias.",
+          "Ressarcimento de preterição: hipóteses e efeitos.",
+          "Matrícula em cursos de habilitação e aperfeiçoamento: comportamento, condenações e aptidão médica.",
+          "Vagas para CHOA/CHOM/CHOAS e regras de preenchimento.",
+          "Concorrência às vagas por quadro e disposições gerais sobre excedentes.",
         ],
       },
     ],
@@ -106,151 +217,66 @@ const disciplinas: Disciplina[] = [
     id: "organizacao",
     icon: <Landmark className="w-5 h-5" />,
     title: "Organização Básica da PMTO",
-    subtitle: "Lei Complementar nº 128/2021",
+    subtitle: "Lei Complementar nº 128/2021 • Peso 12",
     color: "from-emerald-500/20 to-emerald-600/20",
     disciplinaFilter: "LC nº 128/2021",
+    comingSoon: false,
     leiSecaUrl: "https://drive.google.com/file/d/1LBi7Vba51gSZLR-kWmbcMw3KTfsntfq4/view?usp=sharing",
     leiSecaLabel: "LC nº 128/2021 — AL-TO",
-    videoAulaUrl: "https://www.youtube.com/watch?v=3A9pGFTdMDw",
-    videoAulaLabel: "LC 128/2021 — Organização Básica",
-    items: [
-      {
-        topic: "Estrutura e Missão Institucional",
-        details: [
-          "Missão constitucional da PMTO",
-          "Competências e atribuições gerais",
-          "Subordinação ao Governador do Estado",
-          "Relação com a Segurança Pública estadual",
-        ],
-      },
-      {
-        topic: "Órgãos de Direção Geral",
-        details: [
-          "Comando-Geral e suas atribuições",
-          "Subcomando-Geral",
-          "Estado-Maior da PMTO",
-          "Gabinete do Comandante-Geral",
-        ],
-      },
-      {
-        topic: "Órgãos de Direção Setorial",
-        details: [
-          "Diretoria de Pessoal (DP)",
-          "Diretoria de Ensino (DE)",
-          "Diretoria de Apoio Logístico (DAL)",
-          "Diretoria de Finanças (DF)",
-          "Diretoria de Saúde (DS)",
-        ],
-      },
-      {
-        topic: "Órgãos de Execução",
-        details: [
-          "Comandos de Policiamento de Área (CPA)",
-          "Batalhões de Polícia Militar (BPM)",
-          "Companhias e Pelotões PM",
-          "Unidades especializadas (BOPE, BPRv, BPAmb)",
-        ],
-      },
-      {
-        topic: "Disposições Gerais e Transitórias",
-        details: [
-          "Quadro de organização e efetivo",
-          "Adequação da estrutura organizacional",
-          "Revogações e vigência",
-        ],
-      },
-    ],
-  },
-  {
-    id: "promocoes",
-    icon: <BadgeCheck className="w-5 h-5" />,
-    title: "Promoções na PMTO",
-    subtitle: "Lei nº 2.575/2012 (com alterações até a Lei nº 4.434/2024)",
-    color: "from-amber-500/20 to-amber-600/20",
-    disciplinaFilter: "Lei nº 2.575/2012",
-    leiSecaUrl: "https://drive.google.com/file/d/1Muwaef2e-iAsZwh0uIZAne8RqfF0P6F1/view?usp=sharing",
-    leiSecaLabel: "Lei nº 2.575/2012 — Compilada",
     videoAulaUrl: "",
     videoAulaLabel: "",
     items: [
       {
-        topic: "Disposições Preliminares (Arts. 1º a 10)",
+        topic: "Disposições gerais",
         details: [
-          "Conceito de promoção e sua finalidade (Art. 1º)",
-          "Datas de promoção: 21 de abril e 15 de novembro (Art. 3º)",
-          "Promoções independentes de data: bravura, post mortem, ressarcimento, invalidez e tempo de serviço (Art. 3º-A, Lei 3.829/2021)",
-          "Proporção antiguidade/merecimento para Oficiais; antiguidade para Praças (Art. 7º, Lei 3.829/2021)",
-          "Abertura de vagas: promoção, agregação, inatividade, demissão, falecimento, aumento de efetivo (Art. 8º)",
-          "Conceito de excedente e suas hipóteses (Art. 10, Lei 3.829/2021)",
+          "Natureza da PMTO: instituição permanente, força auxiliar e reserva do Exército.",
+          "Finalidade: preservação da ordem pública e policiamento ostensivo no território tocantinense.",
+          "Competências: planejamento, coordenação, execução da polícia ostensiva e ações correlatas.",
+          "Subordinação direta ao Chefe do Poder Executivo.",
         ],
       },
       {
-        topic: "Comissões de Promoção (Arts. 11 a 20)",
+        topic: "Estrutura geral",
         details: [
-          "CPO: composição, presidência pelo Comandante-Geral, membros natos e efetivos (Art. 11)",
-          "CPP: presidida pelo Chefe do Estado-Maior, composição e membros (Art. 12)",
-          "Homologação das decisões da CPP pelo Comandante-Geral (Art. 13)",
-          "Quórum: totalidade dos membros; decisão por maioria simples (Arts. 14 e 15)",
-          "Competências da CPO: organizar QA, apreciar recursos, promoções por bravura/invalidez/post mortem (Art. 19)",
-          "Competências da CPP: aplicação subsidiária do Art. 19 (Art. 20)",
+          "Estrutura geral: unidades administrativas de direção, apoio, execução e especiais.",
+          "Unidades de direção: comando, planejamento e administração.",
+          "Unidades de apoio: atividade-meio e assessoramento.",
+          "Unidades de execução: atividade-fim e cumprimento de diretrizes.",
+          "Unidades especiais: Colégios Militares e vinculações.",
         ],
       },
       {
-        topic: "Critérios de Promoção (Arts. 21 a 28)",
+        topic: "Unidades de direção",
         details: [
-          "Sete critérios: antiguidade, merecimento, escolha, bravura, post mortem, tempo de serviço e invalidez (Art. 21)",
-          "Promoção por antiguidade: precedência hierárquica (Art. 22)",
-          "Promoção por merecimento: qualidades e atributos que distinguem o PM entre pares (Art. 23)",
-          "Promoção por escolha: Tenente-Coronel a Coronel, por ato do Governador (Art. 24)",
-          "Promoção por bravura: atos não comuns de coragem e abnegação (Art. 25)",
-          "Promoção post mortem: falecimento no cumprimento do dever (Art. 26)",
-          "Promoção por tempo de serviço: mínimo 25 anos de atividade militar (Art. 27, Lei 3.805/2021)",
-          "Promoção por invalidez: incapacidade definitiva por laudo da JMCS (Art. 28, Lei 3.885/2022)",
+          "Comando-Geral: CG, CHEM, SCHEM, CORREG, EMG, EME e Comandos de Policiamento.",
+          "Comandante-Geral: nomeação, requisitos e responsabilidade superior pelo comando/administração/emprego.",
+          "Chefe do Estado Maior: direção, orientação, coordenação e substituição do Comandante-Geral.",
+          "Subchefe do Estado Maior: nomeação, precedência e substituições.",
+          "Corregedoria-Geral: natureza técnica, subordinação e atuação estadual.",
+          "Estado Maior Geral: planejamento, estudo, orientação, coordenação, fiscalização e controle.",
+          "Estado Maior Especial e Diretorias: logística, ensino, pessoal, saúde, finanças, tecnologia e áreas correlatas.",
+          "Comandos de Policiamento: capital, especializado, interior e demais estruturas definidas.",
         ],
       },
       {
-        topic: "Quadros de Acesso e Interstício (Arts. 29 a 40)",
+        topic: "Unidades de apoio",
         details: [
-          "Requisitos para ingresso no QA: interstício, saúde, condições peculiares, avaliação (Art. 31)",
-          "QAA (antiguidade), QAM (merecimento) e QAE (escolha) — ordem e organização (Art. 32)",
-          "Exclusão do QA: sub judice, desertor, condenado, licenciado, incapaz definitivo (Art. 33)",
-          "Interstício de Praças: Soldado 96 meses, Cabo 48, 3ºSgt 36, 2ºSgt 36, 1ºSgt 12 meses (Art. 36, Lei 4.167/2023)",
-          "Interstício de Oficiais: Asp 6, 2ºTen 24, 1ºTen 36, Cap 48, Maj 48, TC 48 meses (Art. 36)",
-          "Cursos exigidos para cada posto/graduação: CFP, CAP, CAS, CAO, CSP, CHOA (Art. 39, §1º)",
-          "Serviço arregimentado: mínimo 1/3 do interstício em função militar (Art. 39, §6º)",
+          "Gabinete do Comandante-Geral: assistência direta, triagem e assuntos institucionais.",
+          "Academia Policial Militar Tiradentes: formação, aperfeiçoamento e especialização.",
+          "Ajudância-Geral e QCG: administração, bandas de música e coordenação.",
+          "Assessoria Jurídica e assessorias institucionais.",
+          "Assessoria Técnica de Engenharia e Finanças/Patrimônio conforme competências legais.",
         ],
       },
       {
-        topic: "Avaliação Profissional e Moral (Arts. 41 a 46)",
+        topic: "Execução, efetivo e disposições finais",
         details: [
-          "Pontuação positiva: tempo de serviço, curso, titulação civil, elogios, comportamento (Art. 42)",
-          "Pontuação por lotação em municípios do interior — bonificação por porte e distância (Art. 42, XIV, Lei 3.829/2021)",
-          "Pontuação negativa: punições disciplinares, condenação penal, desligamento de curso (Art. 43)",
-          "Conceito Profissional e Moral: 13 quesitos, escala de 0 a 130 pontos (Art. 44)",
-          "Mínimo de 65 pontos no Conceito para figurar no QAA e QAM (Art. 45, Lei 3.829/2021)",
-          "Promoção de TC a Coronel: critério de escolha pelo Chefe do Executivo (Arts. 47-48)",
-        ],
-      },
-      {
-        topic: "Promoção por Bravura, Post Mortem, Tempo de Serviço e Invalidez (Arts. 49 a 57)",
-        details: [
-          "Comprovação do ato de bravura por sindicância; decadência em 1 ano (Art. 49)",
-          "Promovido por bravura sem vaga: ocupa a primeira que surgir (Art. 50)",
-          "Obrigatoriedade de realizar cursos após promoção por bravura/preterição (Art. 3º-A, §3º, Lei 4.060/2022)",
-          "Post mortem: óbito em ação, a serviço ou com condições de acesso cumpridas (Art. 52)",
-          "Tempo de serviço: ingresso até 17/12/2019, mínimo 25 anos de atividade militar (Art. 54, Lei 3.805/2021)",
-          "Invalidez: incapacidade definitiva conforme Arts. 82 e 127 da Lei 2.578/2012 (Art. 55, Lei 3.885/2022)",
-        ],
-      },
-      {
-        topic: "Recursos e Cursos de Habilitação (Arts. 58 a 66)",
-        details: [
-          "Recurso contra composição de QA: prazo de 10 dias da publicação (Art. 60)",
-          "Ressarcimento de preterição: erro administrativo, absolvição, cessação de impedimento (Art. 61)",
-          "CHOA: Subtenente QPPM com CAS e graduação superior (Art. 62, III, Lei 3.829/2021)",
-          "Vagas CHOA a partir de 2026: somente por seleção interna (Art. 63, II, Lei 3.829/2021)",
-          "CAP: vagas preenchidas por antiguidade, após convocação por edital (Art. 64, Lei 3.829/2021)",
-          "CAS: 1º Sargento QPPM, designação por antiguidade (Art. 62, VI, Lei 3.829/2021)",
+          "Unidades Policiais Militares e Especializadas: execução da atividade-fim.",
+          "Plano de Articulação: desdobramento, atribuições e aprovação.",
+          "Profissionais da PMTO: pessoal ativo, oficiais, praças, quadros e formação superior.",
+          "Efetivo fixado em lei e QOD aprovado pelo Chefe do Poder Executivo.",
+          "Meios de comunicação oficiais: Boletim Geral, Boletim Reservado, Boletim Interno e Boletim Interno Reservado.",
+          "Competência regulamentar do Comandante-Geral e exclusividade de funções de comando/chefia.",
         ],
       },
     ],
@@ -258,48 +284,50 @@ const disciplinas: Disciplina[] = [
   {
     id: "cppm",
     icon: <Gavel className="w-5 h-5" />,
-    title: "Código de Processo Penal Militar (CPPM)",
-    subtitle: "Decreto-Lei nº 1.002/1969 — Arts. 8º a 28º e 243º a 253º",
+    title: "CPPM — Polícia Judiciária Militar, IPM e APF",
+    subtitle: "Decreto-Lei nº 1.002/1969 (arts. 8º-28 e 243-253) • Peso 10",
     color: "from-red-500/20 to-red-600/20",
     disciplinaFilter: "CPPM",
+    comingSoon: false,
     leiSecaUrl: "http://www.planalto.gov.br/ccivil_03/decreto-lei/del1002.htm",
     leiSecaLabel: "Decreto-Lei nº 1.002/69 — Planalto",
-    videoAulaUrl: "https://www.youtube.com/results?search_query=cppm+compet%C3%AAncia+e+jurisdi%C3%A7%C3%A3o",
-    videoAulaLabel: "CPPM — Competência e Jurisdição",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
     items: [
       {
-        topic: "Da Polícia Judiciária Militar (Arts. 8º a 11)",
+        topic: "IPM — arts. 8º a 28",
         details: [
-          "Conceito e atribuições da Polícia Judiciária Militar",
-          "Exercício da Polícia Judiciária Militar",
-          "Competência para apuração de infrações penais militares",
-          "Delegação de atribuições",
+          "Competência da Polícia Judiciária Militar: apuração de crimes militares e apoio à Justiça Militar e ao Ministério Público.",
+          "Inquérito Policial Militar: conceito, finalidade, natureza de instrução provisória e peças instrutórias.",
+          "Início do IPM por portaria: de ofício, determinação/delegação, requisição do MP, decisão judicial e requerimento do ofendido.",
+          "Designação e compromisso do escrivão.",
+          "Providências imediatas ao tomar conhecimento da infração: preservação do local, apreensões, prisão do infrator e colheita de provas.",
+          "Atribuições do encarregado: ouvir ofendido, indiciado e testemunhas; reconhecimento; acareações; perícias; busca e apreensão.",
+          "Assistência do procurador em fato de excepcional importância ou difícil elucidação.",
+          "Requisitos do encarregado do inquérito e atenção à hierarquia do indiciado.",
+          "Sigilo do inquérito e acesso do advogado.",
+          "Incomunicabilidade do indiciado preso e detenção durante investigações.",
+          "Horário das inquirições e lavratura das assentadas.",
+          "Prazos do IPM: 20 dias com indiciado preso, 40 dias com indiciado solto e prorrogação.",
+          "Organização das peças, numeração, rubrica, juntada documental e relatório minucioso.",
+          "Remessa dos autos, vedação de arquivamento pela autoridade militar e hipóteses de novo inquérito.",
+          "Devolução dos autos para diligências e dispensa do IPM.",
         ],
       },
       {
-        topic: "Do Inquérito Policial Militar — IPM (Arts. 12 a 28)",
+        topic: "APF — arts. 243 a 253",
         details: [
-          "Conceito e finalidade do IPM",
-          "Instauração do IPM: de ofício, por delegação, por requisição",
-          "Encarregado do IPM e suas atribuições",
-          "Diligências investigatórias: oitivas, perícias, acareações",
-          "Prazo para conclusão do IPM (20 dias preso / 40 dias solto)",
-          "Prorrogação de prazo e justificativa",
-          "Relatório final e encaminhamento ao Ministério Público Militar",
-          "Arquivamento do IPM: hipóteses legais",
-        ],
-      },
-      {
-        topic: "Da Prisão Provisória (Arts. 243 a 253)",
-        details: [
-          "Espécies de prisão provisória no processo penal militar",
-          "Prisão em flagrante delito: conceito e hipóteses",
-          "Auto de prisão em flagrante: formalidades",
-          "Prisão preventiva: requisitos e fundamentos",
-          "Decretação e revogação da prisão preventiva",
-          "Menagem: conceito e aplicação",
-          "Liberdade provisória: possibilidades e restrições",
-          "Relaxamento de prisão ilegal",
+          "Dever de prender: qualquer pessoa poderá e militares deverão prender insubmisso, desertor ou quem esteja em flagrante.",
+          "Hipóteses de flagrante: está cometendo, acaba de cometer, perseguição logo após e encontrado com instrumentos/objetos.",
+          "Infração permanente e flagrância enquanto não cessar permanência.",
+          "Apresentação do preso à autoridade competente e oitivas iniciais.",
+          "Lavratura do auto de prisão em flagrante e assinatura por autoridade, condutor, testemunhas e preso.",
+          "Fundadas suspeitas, recolhimento à prisão, corpo de delito, busca e apreensão e diligências necessárias.",
+          "Nota de culpa em 24 horas, recibo e consequência do descumprimento.",
+          "Fato praticado em presença da autoridade ou contra ela.",
+          "Prisão em local não sujeito à administração militar e autoridade competente para lavrar auto.",
+          "Remessa do APF ao juiz, prazo máximo em caso de diligência e passagem à disposição judicial.",
+          "Devolução do auto para diligências e liberdade provisória nas hipóteses legais.",
         ],
       },
     ],
@@ -307,113 +335,218 @@ const disciplinas: Disciplina[] = [
   {
     id: "rdmeto",
     icon: <ClipboardList className="w-5 h-5" />,
-    title: "Regulamento Disciplinar Militar do TO (RDMETO)",
-    subtitle: "Decreto nº 4.994/2014",
+    title: "Regulamento Disciplinar (RDMETO)",
+    subtitle: "Decreto nº 4.994/2014 e Anexo Único • Peso 10",
     color: "from-purple-500/20 to-purple-600/20",
     disciplinaFilter: "RDMETO",
+    comingSoon: false,
     leiSecaUrl: "https://drive.google.com/file/d/1y1HuU8iuIaRgRbYju8NLUErmxolgf8W6/view?usp=sharing",
     leiSecaLabel: "Decreto nº 4.994/2014 — Governo TO",
     videoAulaUrl: "",
     videoAulaLabel: "",
     items: [
       {
-        topic: "Disposições Gerais e Princípios",
+        topic: "Parte geral e deontologia",
         details: [
-          "Finalidade do regulamento disciplinar",
-          "Princípios da hierarquia e disciplina",
-          "Conceito de transgressão disciplinar",
-          "Classificação das transgressões: leves, médias e graves",
+          "Finalidade do RDMETO e processos administrativos disciplinares regulados.",
+          "Âmbito subjetivo: militares da ativa, reserva, agregados, reformados e alunos de cursos.",
+          "Conceitos de honra pessoal, pundonor militar e decoro da classe.",
+          "Deontologia militar e valores/deveres éticos.",
+          "Código de Conduta para Funcionários Responsáveis pela Aplicação da Lei.",
+          "Dignidade humana, direitos fundamentais, legalidade, necessidade e proporcionalidade no uso da força.",
+          "Vedação à tortura e tratamento cruel, desumano ou degradante.",
+          "Não discriminação e respeito às limitações individuais.",
+          "Manifestações essenciais da disciplina militar.",
+          "Ordens, camaradagem, comunicação de fato contrário à disciplina e parte.",
         ],
       },
       {
-        topic: "Transgressões Disciplinares",
+        topic: "Sindicância",
         details: [
-          "Relação das transgressões disciplinares previstas",
-          "Circunstâncias atenuantes e agravantes",
-          "Causas de justificação",
-          "Cumulatividade de transgressões",
-          "Prescrição disciplinar",
+          "Instauração, competência e autuação: Sindicância: finalidade, direitos de defesa e uso para promoções post mortem, invalidez e bravura.",
+          "Instauração, competência e autuação: Sindicâncias especiais de promoção e representação de interessado.",
+          "Instauração, competência e autuação: Autoridades competentes para instauração e aplicação de punições.",
+          "Instauração, competência e autuação: Impedimentos do comandante, chefe, diretor ou sindicante.",
+          "Instauração, competência e autuação: Arguição de impedimento, incidente e decisão.",
+          "Instauração, competência e autuação: Portaria de instauração, publicação e aditamento.",
+          "Instauração, competência e autuação: Autuação e elementos formais dos autos.",
+          "Instauração, competência e autuação: Escrivão: nomeação, compromisso e atribuições.",
+          "Defesa, instrução e provas: Citação do sindicado, mandado, citação pessoal e por edital.",
+          "Defesa, instrução e provas: Interrogatório: ciência da acusação, direito ao silêncio e duas partes do ato.",
+          "Defesa, instrução e provas: Defesa preliminar em 3 dias úteis, vista dos autos e arrolamento de até 3 testemunhas.",
+          "Defesa, instrução e provas: Instrução: depoimentos, acareações, reconhecimentos, investigações, diligências e perícias.",
+          "Defesa, instrução e provas: Juntada de documentos até alegações finais, com contraditório.",
+          "Defesa, instrução e provas: Oitiva do ofendido e testemunhas; ordem e requisitos formais.",
+          "Defesa, instrução e provas: Perguntas da defesa, indeferimento motivado e retirada do sindicado do recinto.",
+          "Defesa, instrução e provas: Acareação e reconhecimento de pessoas/coisas.",
+          "Defesa, instrução e provas: Incidente de insanidade mental, suspensão do processo e atuação da JMCS.",
+          "Defesa, instrução e provas: Diligências, perícias, carta precatória, revelia e defensor dativo/ad hoc.",
         ],
       },
       {
-        topic: "Sanções Disciplinares",
+        topic: "Sindicância e recursos",
         details: [
-          "Advertência",
-          "Repreensão",
-          "Detenção",
-          "Prisão disciplinar",
-          "Licenciamento e exclusão a bem da disciplina",
-          "Aplicação e cumprimento das sanções",
-          "Competência para aplicação das sanções",
-        ],
-      },
-      {
-        topic: "Comportamento Militar",
-        details: [
-          "Classificação do comportamento: excepcional, ótimo, bom, regular, insuficiente e mau",
-          "Critérios para mudança de classificação",
-          "Ficha de alterações e registros disciplinares",
-          "Reabilitação disciplinar",
-          "Elogios e dispensas de punição",
-        ],
-      },
-      {
-        topic: "Processo Disciplinar",
-        details: [
-          "Sindicância disciplinar: conceito e procedimento",
-          "Processo Administrativo Disciplinar (PAD)",
-          "Garantias do contraditório e da ampla defesa",
-          "Recursos disciplinares",
-          "Revisão e anulação de punições",
+          "Alegações finais em 5 dias úteis.",
+          "Relatório circunstanciado: parte expositiva, diligências, argumentos da defesa, análise e conclusão.",
+          "Prazo de conclusão: 30 dias, prorrogação por 20 dias, interrupção e suspensão.",
+          "Solução: decisão motivada, publicação e conteúdo mínimo.",
+          "Despacho saneador e correção de vícios.",
+          "Enquadramento: identificação, descrição, capitulação, circunstâncias e punição.",
+          "Recursos disciplinares: pedido de reconsideração e recurso hierárquico.",
+          "Efeito suspensivo do recurso tempestivo e preclusão administrativa.",
+          "Demais processos: Conselho de Justificação, Conselho de Disciplina, rito, decisão e medidas.",
+          "Sanções, comportamento, reabilitação, recompensas e disposições finais do regulamento.",
         ],
       },
     ],
   },
   {
-    id: "dir-penal-militar",
-    icon: <AlertTriangle className="w-5 h-5" />,
-    title: "Noções de Direito Penal Militar",
-    subtitle: "Código Penal Militar — Parte Geral",
-    color: "from-rose-500/20 to-rose-600/20",
-    disciplinaFilter: "Direito Penal Militar",
-    leiSecaUrl: "http://www.planalto.gov.br/ccivil_03/decreto-lei/del1001.htm",
-    leiSecaLabel: "Decreto-Lei nº 1.001/69 — Planalto",
-    videoAulaUrl: "https://www.youtube.com/results?search_query=direito+penal+militar+concurso",
-    videoAulaLabel: "Direito Penal Militar — Aulas",
+    id: "pop",
+    icon: <Target className="w-5 h-5" />,
+    title: "POP — Uso Seletivo da Força e Abordagens Policiais",
+    subtitle: "Procedimento Operacional Padrão • Peso 14",
+    color: "from-cyan-500/20 to-cyan-600/20",
+    disciplinaFilter: "POP",
+    comingSoon: true,
+    leiSecaUrl: "",
+    leiSecaLabel: "",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
     items: [
       {
-        topic: "Aplicação da Lei Penal Militar",
+        topic: "Módulo I — Processo 108",
         details: [
-          "Crime propriamente militar e impropriamente militar",
-          "Crime militar em tempo de paz e em tempo de guerra",
-          "Aplicação no espaço e no tempo",
-          "Militares e civis sujeitos à jurisdição militar",
+          "Processo 108: conceito operacional de uso seletivo da força policial.",
+          "Princípios do uso da força: legalidade, necessidade, proporcionalidade, moderação, conveniência e responsabilização.",
+          "Níveis de resistência do abordado e correspondência com níveis de resposta policial.",
+          "Presença policial, verbalização, controle de contato, técnicas de menor potencial ofensivo e força potencialmente letal.",
+          "Avaliação de risco, progressão e regressão do uso da força.",
+          "Preservação da vida, proteção de terceiros, segurança da equipe e comunicação operacional.",
+          "Registro pós-ocorrência, cadeia de responsabilidade e relato técnico.",
         ],
       },
       {
-        topic: "Crime Militar: Conceito e Elementos",
+        topic: "Módulo II — Processos 201 a 214",
         details: [
-          "Tipicidade, ilicitude e culpabilidade",
-          "Dolo e culpa no Código Penal Militar",
-          "Tentativa e consumação",
-          "Concurso de agentes",
+          "Processos 201 a 214: lógica geral das abordagens policiais.",
+          "Preparação da abordagem: observação, planejamento, função dos integrantes e segurança perimetral.",
+          "Abordagem a pessoa em atitude suspeita.",
+          "Busca pessoal: fundamentos, verbalização, posicionamento, segurança e respeito à dignidade.",
+          "Abordagem a veículo: parada, aproximação, desembarque, busca veicular e controle de ocupantes.",
+          "Abordagem a motocicleta, bicicleta e pedestre, conforme processos aplicáveis.",
+          "Abordagem em estabelecimentos, residências ou ambientes específicos quando prevista no manual.",
+          "Conduta com grupos, multidões, pessoas vulneráveis e situações de risco elevado.",
+          "Uso de algemas, condução, preservação de objetos e documentação da ocorrência.",
+          "Erros operacionais comuns: perda de controle visual, verbalização insuficiente, negligência de cobertura e busca sem técnica.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "portugues",
+    icon: <BookOpen className="w-5 h-5" />,
+    title: "Língua Portuguesa",
+    subtitle: "Interpretação e compreensão de texto • Peso 10",
+    color: "from-teal-500/20 to-teal-600/20",
+    disciplinaFilter: "Língua Portuguesa",
+    comingSoon: true,
+    leiSecaUrl: "",
+    leiSecaLabel: "",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
+    items: [
+      {
+        topic: "Interpretação de texto",
+        details: [
+          "Diferença entre interpretação e compreensão: informações explícitas e inferências.",
+          "Ideia central, tema, tese, argumentos e finalidade comunicativa.",
+          "Coesão referencial: pronomes, sinônimos, hipônimos, hiperônimos e elipses.",
+          "Coesão sequencial: conectivos, relações lógico-semânticas e progressão textual.",
+          "Inferência, pressupostos, subentendidos e implícitos.",
+          "Sentido denotativo e conotativo; ironia e efeitos de sentido.",
+          "Tipologia textual: narrativo, descritivo, dissertativo, injuntivo e expositivo.",
+          "Gêneros textuais institucionais e administrativos.",
+          "Reescritura sem alteração de sentido e identificação de alternativa extrapolativa.",
+          "Estratégia de prova: leitura do comando, marcação de palavras-chave e eliminação de distratores.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "redacao",
+    icon: <FileCheck className="w-5 h-5" />,
+    title: "Manual de Redação Oficial da PMTO",
+    subtitle: "Itens 6.1 a 6.8 • Peso 10",
+    color: "from-slate-500/20 to-slate-600/20",
+    disciplinaFilter: "Redação Oficial",
+    comingSoon: true,
+    leiSecaUrl: "",
+    leiSecaLabel: "",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
+    items: [
+      {
+        topic: "6.1 — Atos de correspondência",
+        details: [
+          "Definição dos atos de correspondência.",
+          "Finalidade institucional e hipóteses de utilização.",
+          "Diferenciação conceitual entre expedientes de comunicação interna e externa.",
         ],
       },
       {
-        topic: "Excludentes e Circunstâncias",
+        topic: "6.2 — Atos normativos",
         details: [
-          "Causas de exclusão da ilicitude: legítima defesa, estado de necessidade, estrito cumprimento do dever legal",
-          "Causas de exclusão da culpabilidade: obediência hierárquica, coação irresistível",
-          "Circunstâncias agravantes e atenuantes",
+          "Definição dos atos normativos.",
+          "Finalidade de disciplinar situações gerais e abstratas.",
+          "Hipóteses de uso no âmbito da PMTO.",
         ],
       },
       {
-        topic: "Penas e Medidas de Segurança",
+        topic: "6.3 — Atos ordinatórios",
         details: [
-          "Espécies de pena: morte, reclusão, detenção, prisão, impedimento, suspensão, reforma",
-          "Penas principais e acessórias",
-          "Medidas de segurança: internação e tratamento ambulatorial",
-          "Extinção da punibilidade",
+          "Definição dos atos ordinatórios.",
+          "Finalidade de ordenar rotinas internas e execução administrativa.",
+          "Hipóteses de utilização por autoridade competente.",
+        ],
+      },
+      {
+        topic: "6.4 — Atos enunciativos",
+        details: [
+          "Definição dos atos enunciativos.",
+          "Finalidade de certificar, atestar, opinar ou declarar situação.",
+          "Hipóteses de uso conforme natureza declaratória.",
+        ],
+      },
+      {
+        topic: "6.5 — Atos negociais",
+        details: [
+          "Definição dos atos negociais.",
+          "Finalidade de autorização, permissão, licença ou anuência administrativa.",
+          "Hipóteses de uso quando há manifestação administrativa específica.",
+        ],
+      },
+      {
+        topic: "6.6 — Atos comprobatórios",
+        details: [
+          "Definição dos atos comprobatórios.",
+          "Finalidade de comprovar fato, situação, registro ou ato administrativo.",
+          "Hipóteses de utilização documental.",
+        ],
+      },
+      {
+        topic: "6.7 — Atos de divulgação",
+        details: [
+          "Definição dos atos de divulgação.",
+          "Finalidade de publicidade, comunicação ampla e conhecimento geral.",
+          "Hipóteses de emprego institucional.",
+        ],
+      },
+      {
+        topic: "6.8 — Atos de serviço",
+        details: [
+          "Definição dos atos de serviço.",
+          "Finalidade operacional/administrativa ligada à execução de serviço.",
+          "Hipóteses de utilização no cotidiano da Corporação.",
         ],
       },
     ],
@@ -439,7 +572,15 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
           {d.icon}
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="font-bold text-sm md:text-base text-foreground leading-tight">{d.title}</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="font-bold text-sm md:text-base text-foreground leading-tight">{d.title}</h2>
+            {d.comingSoon && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wide shrink-0">
+                <Clock className="w-3 h-3" />
+                Em breve
+              </span>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">{d.subtitle}</p>
         </div>
         <div className="shrink-0 text-muted-foreground">
@@ -457,43 +598,53 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href={d.leiSecaUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
-                >
-                  <FileText className="w-4 h-4" />
-                  {d.leiSecaLabel}
-                  <ExternalLink className="w-3 h-3 opacity-60" />
-                </a>
+              {d.comingSoon ? (
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
+                  <Clock className="w-5 h-5 shrink-0 mt-0.5" />
+                  <p className="text-xs leading-relaxed">
+                    <strong>Conteúdo em preparação.</strong> Esta disciplina já consta no novo edital
+                    do CHOA 2026. Estamos produzindo o texto de referência, as questões e os materiais.
+                    O conteúdo programático abaixo já está disponível para você se planejar.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={d.leiSecaUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    {d.leiSecaLabel}
+                    <ExternalLink className="w-3 h-3 opacity-60" />
+                  </a>
 
-                <button
-                  onClick={() => navigate(`/questoes?disciplina=${encodeURIComponent(d.disciplinaFilter)}`)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-gold text-gold-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
-                >
-                  <BookOpen className="w-4 h-4" />
-                  Banco de Questões
-                </button>
+                  <button
+                    onClick={() => navigate(`/questoes?disciplina=${encodeURIComponent(d.disciplinaFilter)}`)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-gold text-gold-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    Banco de Questões
+                  </button>
 
-                <button
-                  onClick={() => navigate(`/mapas-mentais?disciplina=${encodeURIComponent(d.id)}`)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
-                >
-                  <Brain className="w-4 h-4" />
-                  Mapas Mentais
-                </button>
+                  <button
+                    onClick={() => navigate(`/mapas-mentais?disciplina=${encodeURIComponent(d.id)}`)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                  >
+                    <Brain className="w-4 h-4" />
+                    Mapas Mentais
+                  </button>
 
-                <button
-                  onClick={() => navigate(`/bizuaula?disciplina=${encodeURIComponent(d.id)}`)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
-                >
-                  <PlayCircle className="w-4 h-4" />
-                  BizuAula
-                </button>
-
-              </div>
+                  <button
+                    onClick={() => navigate(`/bizuaula?disciplina=${encodeURIComponent(d.id)}`)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
+                  >
+                    <PlayCircle className="w-4 h-4" />
+                    BizuAula
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-3">
                 {d.items.map((item, i) => (
@@ -529,7 +680,7 @@ export default function Edital() {
         <header className="space-y-1">
           <h1 className="text-2xl font-black text-gradient-primary">📋 Edital Verticalizado</h1>
           <p className="text-sm text-muted-foreground">
-            Conteúdo programático detalhado por disciplina — Método CHOA
+            Conteúdo programático detalhado por disciplina — CHOA 2026 (novo edital)
           </p>
         </header>
 
