@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, BookOpen, HelpCircle, Shuffle, CalendarDays,
   CreditCard, LogOut, Shield, MessageSquare, Flag,
-  Brain, Youtube,
+  Brain, Youtube, Trophy,
 } from "lucide-react";
 import {
   Tooltip,
