@@ -28,6 +28,7 @@ import MeusReportes from "./pages/MeusReportes";
 import MapasMentais from "./pages/MapasMentais";
 import BizuAula from "./pages/BizuAula";
 import Cronograma from "./pages/Cronograma";
+import Ranking from "./pages/Ranking";
 import PagamentoSucesso from "./pages/PagamentoSucesso";
 import PagamentoPendente from "./pages/PagamentoPendente";
 import PagamentoFalha from "./pages/PagamentoFalha";
