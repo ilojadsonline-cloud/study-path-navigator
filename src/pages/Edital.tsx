@@ -5,7 +5,7 @@ import { BackButton } from "@/components/BackButton";
 import {
   BookOpen, ChevronDown, ChevronUp, ExternalLink, PlayCircle, FileText,
   Shield, Gavel, BookMarked, Landmark, BadgeCheck,
-  ClipboardList, FileCheck, Brain, Target, Clock
+  ClipboardList, FileCheck, Brain, Target, Clock, Lock
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -27,6 +27,7 @@ type Disciplina = {
   videoAulaLabel: string;
   disciplinaFilter: string;
   comingSoon?: boolean;
+  restricted?: boolean;
 };
 
 const disciplinas: Disciplina[] = [
