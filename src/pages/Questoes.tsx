@@ -325,7 +325,28 @@ const Questoes = () => {
 
   const handleAnswer = (questaoId: number, altIndex: number) => {
     if (revealed[questaoId]) return;
+    // Não permite selecionar uma alternativa que foi riscada
+    if ((crossedOut[questaoId] || []).includes(altIndex)) return;
     setSelectedAnswer(prev => ({ ...prev, [questaoId]: altIndex }));
+  };
+
+  const toggleCrossed = (questaoId: number, altIndex: number) => {
+    if (revealed[questaoId]) return;
+    setCrossedOut(prev => {
+      const current = prev[questaoId] || [];
+      const next = current.includes(altIndex)
+        ? current.filter(i => i !== altIndex)
+        : [...current, altIndex];
+      return { ...prev, [questaoId]: next };
+    });
+    // Se riscou a alternativa atualmente selecionada, desfaz a seleção
+    setSelectedAnswer(prev => {
+      if (prev[questaoId] === altIndex && !(crossedOut[questaoId] || []).includes(altIndex)) {
+        const { [questaoId]: _omit, ...rest } = prev;
+        return rest;
+      }
+      return prev;
+    });
   };
 
   const handleReveal = async (questaoId: number) => {
