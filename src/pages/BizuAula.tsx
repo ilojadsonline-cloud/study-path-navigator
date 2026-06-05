@@ -160,9 +160,14 @@ export default function BizuAula() {
                       <Youtube className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h2 className="font-bold text-sm md:text-base text-foreground leading-tight">{d.title}</h2>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="font-bold text-sm md:text-base text-foreground leading-tight">{d.title}</h2>
+                        {d.restricted && <PopSigilosoBadge />}
+                      </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {videos.length > 0 ? `${videos.length} vídeo${videos.length > 1 ? "s" : ""}` : "Em breve"}
+                        {d.restricted
+                          ? "Documento sigiloso"
+                          : videos.length > 0 ? `${videos.length} vídeo${videos.length > 1 ? "s" : ""}` : "Em breve"}
                       </p>
                     </div>
                     <div className="shrink-0 text-muted-foreground">
