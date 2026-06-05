@@ -7,6 +7,7 @@ export type DisciplinaLite = {
   subtitle: string;
   topics: string[];
   comingSoon?: boolean;
+  restricted?: boolean;
 };
 
 export const disciplinasLite: DisciplinaLite[] = [
@@ -71,8 +72,8 @@ export const disciplinasLite: DisciplinaLite[] = [
   {
     id: "pop",
     title: "POP — Uso Seletivo da Força e Abordagens Policiais",
-    subtitle: "Procedimento Operacional Padrão",
-    comingSoon: true,
+    subtitle: "Procedimento Operacional Padrão • Documento sigiloso",
+    restricted: true,
     topics: [
       "Módulo I — Processo 108",
       "Módulo II — Processos 201 a 214",
