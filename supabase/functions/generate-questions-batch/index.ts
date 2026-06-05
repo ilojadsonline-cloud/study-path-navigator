@@ -580,16 +580,6 @@ const DISCIPLINES = [
     ],
   },
   {
-    disciplina: "POP",
-    leiNome: "POP — Uso Seletivo da Força e Abordagens Policiais (Processo 108 e Processos 201 a 214)",
-    assuntos: [
-      "Uso seletivo e progressivo da força policial", "Níveis de força e proporcionalidade",
-      "Legalidade, necessidade e moderação no uso da força", "Abordagem a pessoas a pé",
-      "Abordagem a veículos", "Abordagem em estabelecimentos", "Busca pessoal e procedimentos de segurança",
-      "Verbalização, controle e técnicas de abordagem", "Condutas vedadas na abordagem",
-    ],
-  },
-  {
     disciplina: "Língua Portuguesa",
     leiNome: "Língua Portuguesa — Interpretação e Compreensão de Texto",
     assuntos: [

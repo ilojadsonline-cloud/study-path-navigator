@@ -10,7 +10,6 @@ const disciplinas = [
   "Lei nº 2.575/2012",
   "CPPM",
   "RDMETO",
-  "POP",
   "Língua Portuguesa",
   "Redação Oficial",
 ];
