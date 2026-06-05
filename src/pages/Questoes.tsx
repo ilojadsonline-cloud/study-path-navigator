@@ -26,6 +26,9 @@ interface Questao {
   alt_e: string;
   gabarito: number;
   comentario: string;
+  banca?: string | null;
+  ano?: number | null;
+  prova?: string | null;
 }
 
 function getAlternativas(q: Questao) {
