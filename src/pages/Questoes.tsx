@@ -595,13 +595,13 @@ const Questoes = () => {
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
-                      className="p-4 rounded-lg bg-primary/5 border border-primary/20"
+                      className="rounded-lg bg-primary/[0.03] border border-primary/20 p-4 space-y-3"
                     >
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 border-b border-primary/15 pb-2">
                         <HelpCircle className="w-4 h-4 text-primary" />
-                        <span className="text-xs font-semibold text-primary">Comentário</span>
+                        <span className="text-sm font-bold text-primary">Comentário do professor</span>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{q.comentario}</p>
+                      <QuestaoComentario comentario={q.comentario} />
                     </motion.div>
                   )}
                 </AnimatePresence>
