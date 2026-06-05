@@ -551,9 +551,24 @@ const Simulados = () => {
                 );
               })}
             </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+              {DISCIPLINAS_EM_BREVE.map((d) => (
+                <div
+                  key={d}
+                  className="px-3 py-2.5 rounded-lg text-xs font-medium text-left bg-secondary/40 text-muted-foreground border border-dashed border-border/60 cursor-not-allowed flex items-center justify-between gap-1"
+                  title="Disciplina do novo edital — banco de questões em breve"
+                >
+                  <span className="truncate">{d}</span>
+                  <span className="text-[9px] uppercase font-bold text-amber-500 shrink-0">Em breve</span>
+                </div>
+              ))}
+            </div>
             <p className="text-[11px] text-muted-foreground mt-2">
               Selecione 2 ou mais para personalizar. Vazio = todas as disciplinas (distribuição proporcional).
+              As disciplinas marcadas como <span className="text-amber-500 font-semibold">Em breve</span> ainda
+              não possuem banco de questões.
             </p>
+
           </div>
 
           <div>
