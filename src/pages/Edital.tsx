@@ -581,6 +581,12 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
                 Em breve
               </span>
             )}
+            {d.restricted && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/15 border border-destructive/30 text-destructive text-[10px] font-bold uppercase tracking-wide shrink-0">
+                <Lock className="w-3 h-3" />
+                Sigiloso
+              </span>
+            )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">{d.subtitle}</p>
         </div>
