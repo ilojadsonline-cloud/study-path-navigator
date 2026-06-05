@@ -580,15 +580,31 @@ const DISCIPLINES = [
     ],
   },
   {
-    disciplina: "Direito Penal Militar",
-    leiNome: "Código Penal Militar (DL 1.001/1969) - Parte Geral, Arts. 1 a 135",
+    disciplina: "POP",
+    leiNome: "POP — Uso Seletivo da Força e Abordagens Policiais (Processo 108 e Processos 201 a 214)",
     assuntos: [
-      "Aplicação da lei penal militar (princípio de legalidade)", "Crimes militares em tempo de paz",
-      "Crime (fato típico, antijuridicidade, culpabilidade)", "Tentativa e consumação",
-      "Concurso de agentes e de crimes", "Penas e suas espécies",
-      "Aplicação e cálculo da pena", "Suspensão condicional da pena",
-      "Livramento condicional", "Medidas de segurança",
-      "Efeitos da condenação e reabilitação", "Extinção da punibilidade e prescrição",
+      "Uso seletivo e progressivo da força policial", "Níveis de força e proporcionalidade",
+      "Legalidade, necessidade e moderação no uso da força", "Abordagem a pessoas a pé",
+      "Abordagem a veículos", "Abordagem em estabelecimentos", "Busca pessoal e procedimentos de segurança",
+      "Verbalização, controle e técnicas de abordagem", "Condutas vedadas na abordagem",
+    ],
+  },
+  {
+    disciplina: "Língua Portuguesa",
+    leiNome: "Língua Portuguesa — Interpretação e Compreensão de Texto",
+    assuntos: [
+      "Compreensão e interpretação de texto", "Inferência e informação implícita",
+      "Coesão e coerência textual", "Ideia central, tese e argumentos",
+      "Sentido das palavras no contexto", "Relações lógico-discursivas",
+    ],
+  },
+  {
+    disciplina: "Redação Oficial",
+    leiNome: "Manual de Redação Oficial da PMTO (itens 6.1 a 6.8)",
+    assuntos: [
+      "Atos de correspondência (6.1)", "Atos normativos (6.2)", "Atos ordinatórios (6.3)",
+      "Atos enunciativos (6.4)", "Atos negociais (6.5)", "Atos comprobatórios (6.6)",
+      "Atos de divulgação (6.7)", "Atos de serviço (6.8)",
     ],
   },
 ];
