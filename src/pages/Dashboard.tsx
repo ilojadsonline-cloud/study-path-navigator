@@ -724,7 +724,6 @@ const Dashboard = () => {
               <CalendarioInteligente />
             </div>
 
-            <RankingCard />
             <MaintenanceNoticeModal />
           </>
         )}
