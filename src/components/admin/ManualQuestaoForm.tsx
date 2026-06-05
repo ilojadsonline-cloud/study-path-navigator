@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Loader2, ChevronDown, Save } from "lucide-react";
 import { z } from "zod";
+import { FormattingToolbar } from "./FormattingToolbar";
+import { FormattedText } from "@/components/FormattedText";
 
 const ALT_LETTERS = ["A", "B", "C", "D", "E"] as const;
 const DIFICULDADES = ["Fácil", "Médio", "Difícil"];
