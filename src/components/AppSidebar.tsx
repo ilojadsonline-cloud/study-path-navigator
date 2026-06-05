@@ -23,6 +23,7 @@ const menuItems = [
   { title: "Banco de Questões", url: "/questoes", icon: HelpCircle },
   { title: "Simulados", url: "/simulados", icon: Shuffle },
   { title: "Cronograma", url: "/cronograma", icon: CalendarDays },
+  { title: "Ranking", url: "/ranking", icon: Trophy },
   { title: "Mapas Mentais", url: "/mapas-mentais", icon: Brain },
   { title: "BizuAula", url: "/bizuaula", icon: Youtube },
   { title: "Assinatura", url: "/assinatura", icon: CreditCard },
