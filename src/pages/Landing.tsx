@@ -58,21 +58,21 @@ const exampleQuestions = [
       "A questão trata da reabertura do inquérito policial militar após arquivamento, prevista no art. 25 do CPPM. O dispositivo estabelece que 'o arquivamento de inquérito não obsta a instauração de outro, se novas provas aparecerem em relação ao fato, ao indiciado ou a terceira pessoa, ressalvados o caso julgado e os casos de extinção da punibilidade'. A alternativa E reproduz fielmente essa regra. Cuidado com a alternativa A: o princípio da indisponibilidade não impede o arquivamento definitivo; ele apenas veda que o Ministério Público desista da ação penal já proposta. As alternativas B e C erram ao dispensar a exigência de novas provas, e a D cria uma figura de 'arquivamento condicionado' inexistente no CPPM. Portanto, a reabertura depende do surgimento de novas provas e respeita os limites do caso julgado e da prescrição.",
   },
   {
-    disciplina: "Direito Penal Militar",
-    assunto: "Causas de exclusão do crime — Obediência hierárquica",
+    disciplina: "Lei nº 2.578/2012",
+    assunto: "Hierarquia e disciplina — Círculos hierárquicos",
     dificuldade: "Médio",
     enunciado:
-      "O Soldado Silva, durante uma operação, recebeu uma ordem direta e imediata de seu superior hierárquico, o Sargento Oliveira, para destruir um equipamento de comunicação que pertencia a um civil. Silva, temendo represálias, cumpriu a ordem, mesmo sabendo que o ato era ilícito. Posteriormente, o Sargento Oliveira alegou que a ordem era manifestamente criminosa. Sobre a responsabilidade penal de Silva, a lei penal militar estabelece que:",
+      "O Estatuto dos Militares Estaduais do Tocantins (Lei nº 2.578/2012) estabelece a hierarquia e a disciplina como bases institucionais da Corporação. Sobre os círculos hierárquicos e a precedência entre os militares estaduais, assinale a alternativa correta:",
     alternativas: [
-      "Não é culpado quem comete o crime em estrita obediência a ordem, não manifestamente ilegal, de superior hierárquico.",
-      "Não é culpado quem comete o crime em estrita obediência a ordem, manifestamente ilegal, de superior hierárquico.",
-      "É culpado quem comete o crime em estrita obediência a ordem, não manifestamente ilegal, de superior hierárquico.",
-      "Não é culpado quem comete o crime em estrita obediência a qualquer ordem de superior hierárquico, independentemente de sua legalidade.",
-      "É culpado quem comete o crime em estrita obediência a ordem, manifestamente criminosa, de superior hierárquico.",
+      "A antiguidade entre militares de mesmo posto ou graduação é definida exclusivamente pela idade do militar.",
+      "Os círculos hierárquicos são âmbitos de convivência entre militares da mesma categoria, visando ao desenvolvimento do espírito de camaradagem e do respeito à hierarquia.",
+      "A precedência entre praças especiais e demais praças independe do grau hierárquico, prevalecendo apenas o tempo de serviço.",
+      "A hierarquia militar não comporta a noção de subordinação, limitando-se à ordenação da autoridade em graus.",
+      "O comando é uma prerrogativa transferível a qualquer militar, independentemente do posto ou da função exercida.",
     ],
-    gabarito: 0,
+    gabarito: 1,
     comentario:
-      "A questão trata da excludente de culpabilidade por obediência hierárquica, prevista no art. 38, alínea b, do Código Penal Militar (Decreto-Lei nº 1.001/1969). Para que o subordinado não seja culpado, é necessário que a ordem não seja manifestamente ilegal. No caso, a ordem era manifestamente criminosa (destruir bem de civil), portanto Silva não pode invocar a excludente, sendo culpado. A alternativa A está correta ao reproduzir o texto legal. Cuidado com a alternativa E: ela afirma que é culpado quem obedece a ordem manifestamente criminosa, o que é verdade, mas a questão pergunta o que a lei estabelece, e a lei estabelece a excludente para ordem não manifestamente ilegal. A alternativa A é a transcrição exata do dispositivo.",
+      "A questão aborda os fundamentos da hierarquia militar previstos no Estatuto (Lei nº 2.578/2012). Os círculos hierárquicos são âmbitos de convivência entre militares da mesma categoria, com o objetivo de desenvolver o espírito de camaradagem e o respeito mútuo, dentro da estrutura de hierarquia e disciplina — por isso a alternativa B está correta. A alternativa A erra ao reduzir a antiguidade à idade, pois ela decorre da precedência hierárquica e dos critérios legais de ordenação. A C contraria a regra de precedência por grau hierárquico. A D é incorreta porque a hierarquia pressupõe subordinação. A E desvirtua o conceito de comando, que é exercido em razão do posto/graduação e da função, não sendo prerrogativa livremente transferível.",
   },
   {
     disciplina: "RDMETO",
