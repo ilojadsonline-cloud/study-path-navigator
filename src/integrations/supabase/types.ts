@@ -614,12 +614,14 @@ export type Database = {
           alt_c: string
           alt_d: string
           alt_e: string
+          ano: number | null
           artigo_principal: string | null
           assinatura_semantica: Json | null
           assunto: string
           audit_status: string
           audit_status_updated_at: string
           audit_techniques: Json
+          banca: string | null
           cognitive_skill: string | null
           comentario: string
           created_at: string
@@ -629,6 +631,8 @@ export type Database = {
           enunciado: string
           gabarito: number
           id: number
+          origem: string | null
+          prova: string | null
           trap_type: string | null
         }
         Insert: {
@@ -637,12 +641,14 @@ export type Database = {
           alt_c: string
           alt_d: string
           alt_e: string
+          ano?: number | null
           artigo_principal?: string | null
           assinatura_semantica?: Json | null
           assunto: string
           audit_status?: string
           audit_status_updated_at?: string
           audit_techniques?: Json
+          banca?: string | null
           cognitive_skill?: string | null
           comentario: string
           created_at?: string
@@ -652,6 +658,8 @@ export type Database = {
           enunciado: string
           gabarito: number
           id?: never
+          origem?: string | null
+          prova?: string | null
           trap_type?: string | null
         }
         Update: {
@@ -660,12 +668,14 @@ export type Database = {
           alt_c?: string
           alt_d?: string
           alt_e?: string
+          ano?: number | null
           artigo_principal?: string | null
           assinatura_semantica?: Json | null
           assunto?: string
           audit_status?: string
           audit_status_updated_at?: string
           audit_techniques?: Json
+          banca?: string | null
           cognitive_skill?: string | null
           comentario?: string
           created_at?: string
@@ -675,6 +685,8 @@ export type Database = {
           enunciado?: string
           gabarito?: number
           id?: never
+          origem?: string | null
+          prova?: string | null
           trap_type?: string | null
         }
         Relationships: []
