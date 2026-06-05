@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { QuestaoComentario } from "@/components/QuestaoComentario";
+import { FormattedText } from "@/components/FormattedText";
 
 interface Questao {
   id: number;
@@ -520,7 +521,7 @@ const Questoes = () => {
                   </div>
                 )}
 
-                <p className="text-sm leading-relaxed text-foreground">{q.enunciado}</p>
+                <FormattedText text={q.enunciado} className="text-sm text-foreground" />
 
                 <div className="space-y-2">
                   {q.alternativas.map((alt, ai) => {
