@@ -500,6 +500,26 @@ const Questoes = () => {
                   </button>
                 </div>
 
+                {(q.banca || q.ano || q.prova) && (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground border-b border-border/50 pb-3">
+                    {q.ano && (
+                      <span>
+                        <span className="font-semibold text-foreground/70">Ano:</span> {q.ano}
+                      </span>
+                    )}
+                    {q.banca && (
+                      <span>
+                        <span className="font-semibold text-foreground/70">Banca:</span> {q.banca}
+                      </span>
+                    )}
+                    {q.prova && (
+                      <span>
+                        <span className="font-semibold text-foreground/70">Prova:</span> {q.prova}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <p className="text-sm leading-relaxed text-foreground">{q.enunciado}</p>
 
                 <div className="space-y-2">
