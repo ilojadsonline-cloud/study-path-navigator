@@ -18,7 +18,7 @@ const DISCIPLINES = [
   { disciplina: "Lei nº 2.575/2012", lei_nome: "Promoções na PMTO" },
   { disciplina: "CPPM", lei_nome: "Código de Processo Penal Militar (Arts. 8-28 e 243-253)" },
   { disciplina: "RDMETO", lei_nome: "Regulamento Disciplinar Militar do TO (Decreto 4.994/2014)" },
-  { disciplina: "POP", lei_nome: "POP — Uso Seletivo da Força e Abordagens Policiais (Processos 108 e 201-214)" },
+  
   { disciplina: "Língua Portuguesa", lei_nome: "Língua Portuguesa — Interpretação e Compreensão de Texto" },
   { disciplina: "Redação Oficial", lei_nome: "Manual de Redação Oficial da PMTO (itens 6.1 a 6.8)" },
 ];
