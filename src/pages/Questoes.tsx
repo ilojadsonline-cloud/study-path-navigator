@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
-import { Filter, CheckCircle, XCircle, Star, ChevronDown, HelpCircle, Loader2, Flag } from "lucide-react";
+import { Filter, CheckCircle, XCircle, Star, ChevronDown, HelpCircle, Loader2, Flag, Scissors, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/BackButton";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { QuestaoComentario } from "@/components/QuestaoComentario";
 
 interface Questao {
   id: number;
@@ -25,6 +26,9 @@ interface Questao {
   alt_e: string;
   gabarito: number;
   comentario: string;
+  banca?: string | null;
+  ano?: number | null;
+  prova?: string | null;
 }
 
 function getAlternativas(q: Questao) {
@@ -73,6 +77,7 @@ const Questoes = () => {
   const [loading, setLoading] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<Record<number, number>>({});
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+  const [crossedOut, setCrossedOut] = useState<Record<number, number[]>>({});
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterDisciplina, setFilterDisciplina] = useState(initialDisciplina);
   const [filterDificuldade, setFilterDificuldade] = useState("Todos");
@@ -320,7 +325,28 @@ const Questoes = () => {
 
   const handleAnswer = (questaoId: number, altIndex: number) => {
     if (revealed[questaoId]) return;
+    // Não permite selecionar uma alternativa que foi riscada
+    if ((crossedOut[questaoId] || []).includes(altIndex)) return;
     setSelectedAnswer(prev => ({ ...prev, [questaoId]: altIndex }));
+  };
+
+  const toggleCrossed = (questaoId: number, altIndex: number) => {
+    if (revealed[questaoId]) return;
+    setCrossedOut(prev => {
+      const current = prev[questaoId] || [];
+      const next = current.includes(altIndex)
+        ? current.filter(i => i !== altIndex)
+        : [...current, altIndex];
+      return { ...prev, [questaoId]: next };
+    });
+    // Se riscou a alternativa atualmente selecionada, desfaz a seleção
+    setSelectedAnswer(prev => {
+      if (prev[questaoId] === altIndex && !(crossedOut[questaoId] || []).includes(altIndex)) {
+        const { [questaoId]: _omit, ...rest } = prev;
+        return rest;
+      }
+      return prev;
+    });
   };
 
   const handleReveal = async (questaoId: number) => {
@@ -474,6 +500,26 @@ const Questoes = () => {
                   </button>
                 </div>
 
+                {(q.banca || q.ano || q.prova) && (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground border-b border-border/50 pb-3">
+                    {q.ano && (
+                      <span>
+                        <span className="font-semibold text-foreground/70">Ano:</span> {q.ano}
+                      </span>
+                    )}
+                    {q.banca && (
+                      <span>
+                        <span className="font-semibold text-foreground/70">Banca:</span> {q.banca}
+                      </span>
+                    )}
+                    {q.prova && (
+                      <span>
+                        <span className="font-semibold text-foreground/70">Prova:</span> {q.prova}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <p className="text-sm leading-relaxed text-foreground">{q.enunciado}</p>
 
                 <div className="space-y-2">
@@ -481,32 +527,59 @@ const Questoes = () => {
                     const isSelected = selectedAnswer[q.id] === ai;
                     const isCorrect = q.gabaritoShuffled === ai;
                     const isRevealed = revealed[q.id];
+                    const isCrossed = !isRevealed && (crossedOut[q.id] || []).includes(ai);
 
-                    let altClass = "bg-secondary/50 hover:bg-secondary border-transparent";
+                    let altClass = "bg-secondary/50 border-transparent";
                     if (isRevealed && isCorrect) {
                       altClass = "bg-success/10 border-success/40 text-success";
                     } else if (isRevealed && isSelected && !isCorrect) {
                       altClass = "bg-destructive/10 border-destructive/40 text-destructive";
                     } else if (isSelected) {
-                      altClass = "bg-primary/10 border-primary/40 text-primary";
+                      altClass = "bg-primary/10 border-primary/40 text-primary ring-1 ring-primary/40";
+                    } else if (isCrossed) {
+                      altClass = "bg-secondary/20 border-transparent";
+                    } else {
+                      altClass = "bg-secondary/50 hover:bg-secondary border-transparent";
                     }
 
                     return (
-                      <button
+                      <div
                         key={ai}
-                        onClick={() => handleAnswer(q.id, ai)}
-                        className={`w-full text-left flex items-start gap-3 p-3 rounded-lg border text-sm transition-all duration-200 ${altClass}`}
+                        className={`flex items-stretch gap-2 rounded-lg border text-sm transition-all duration-200 ${altClass}`}
                       >
-                        <span className="w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5" translate="no">
-                          {String.fromCharCode(65 + ai)}
-                        </span>
-                        <span className="flex-1">{alt}</span>
-                        {isRevealed && isCorrect && <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-success" />}
-                        {isRevealed && isSelected && !isCorrect && <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />}
-                      </button>
+                        {!isRevealed && !isSelected && (
+                          <button
+                            onClick={() => toggleCrossed(q.id, ai)}
+                            title={isCrossed ? "Restaurar alternativa" : "Riscar alternativa"}
+                            aria-label={isCrossed ? "Restaurar alternativa" : "Riscar alternativa"}
+                            className={`shrink-0 self-center ml-1.5 w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
+                              isCrossed
+                                ? "text-primary hover:bg-primary/10"
+                                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                            }`}
+                          >
+                            {isCrossed ? <RotateCcw className="w-4 h-4" /> : <Scissors className="w-4 h-4" />}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleAnswer(q.id, ai)}
+                          disabled={isCrossed}
+                          className={`flex-1 text-left flex items-start gap-3 p-3 ${
+                            isCrossed ? "opacity-40 cursor-default" : "cursor-pointer"
+                          }`}
+                        >
+                          <span className="w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5" translate="no">
+                            {String.fromCharCode(65 + ai)}
+                          </span>
+                          <span className={`flex-1 ${isCrossed ? "line-through" : ""}`}>{alt}</span>
+                          {isRevealed && isCorrect && <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-success" />}
+                          {isRevealed && isSelected && !isCorrect && <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />}
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
+
 
                 {selectedAnswer[q.id] !== undefined && !revealed[q.id] && (
                   <button
@@ -522,13 +595,13 @@ const Questoes = () => {
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
-                      className="p-4 rounded-lg bg-primary/5 border border-primary/20"
+                      className="rounded-lg bg-primary/[0.03] border border-primary/20 p-4 space-y-3"
                     >
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 border-b border-primary/15 pb-2">
                         <HelpCircle className="w-4 h-4 text-primary" />
-                        <span className="text-xs font-semibold text-primary">Comentário</span>
+                        <span className="text-sm font-bold text-primary">Comentário do professor</span>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{q.comentario}</p>
+                      <QuestaoComentario comentario={q.comentario} />
                     </motion.div>
                   )}
                 </AnimatePresence>
