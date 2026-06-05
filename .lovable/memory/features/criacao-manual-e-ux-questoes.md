@@ -17,5 +17,9 @@ type: feature
 - Ícone de tesoura por alternativa: clicar risca (line-through + opacity-40) e troca p/ ícone de desfazer (RotateCcw); alternativa riscada não pode ser selecionada. Estado em `crossedOut: Record<questaoId, number[]>`.
 - Ao selecionar uma alternativa, a tesoura some e ela fica destacada (ring primary) até confirmar.
 
+## Formatação do enunciado (`src/components/FormattedText.tsx`)
+- Markdown-lite inline: `**negrito**`, `*itálico*`, `__sublinhado__`, `~~tachado~~`. Espaços/quebras preservados via whitespace-pre-wrap. Usado para renderizar `q.enunciado` no banco (essencial p/ Língua Portuguesa).
+- `src/components/admin/FormattingToolbar.tsx`: barra que envolve a seleção do textarea com a marcação. Form manual usa toolbar + pré-visualização ao vivo no campo Enunciado (textarea font-mono).
+
 ## Comentário estruturado (`src/components/QuestaoComentario.tsx`)
 - Faz parse do comentário gerado em seções: gabarito (verde), pegadinha (âmbar), distratores incorretos (vermelho), "Lembre-se" (primary). Fallback: parágrafo único se não casar o padrão.

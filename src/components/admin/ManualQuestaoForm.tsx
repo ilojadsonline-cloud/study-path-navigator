@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Loader2, ChevronDown, Save } from "lucide-react";
 import { z } from "zod";
+import { FormattingToolbar } from "./FormattingToolbar";
+import { FormattedText } from "@/components/FormattedText";
 
 const ALT_LETTERS = ["A", "B", "C", "D", "E"] as const;
 const DIFICULDADES = ["Fácil", "Médio", "Difícil"];
@@ -35,6 +37,7 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const enunciadoRef = useRef<HTMLTextAreaElement>(null);
 
   const [disciplina, setDisciplina] = useState(disciplinas[0] || "");
   const [assunto, setAssunto] = useState("");
@@ -185,15 +188,25 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
             </div>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label className="text-xs">Enunciado</Label>
+            <FormattingToolbar textareaRef={enunciadoRef} value={enunciado} onChange={setEnunciado} />
             <Textarea
+              ref={enunciadoRef}
               value={enunciado}
               onChange={(e) => setEnunciado(e.target.value)}
-              rows={4}
-              placeholder="Texto da questão..."
+              rows={5}
+              className="font-mono text-sm whitespace-pre-wrap"
+              placeholder="Texto da questão... Use **negrito**, *itálico* e quebras de linha para facilitar a leitura."
             />
+            {enunciado.trim() && (
+              <div className="rounded-lg border border-border/60 bg-secondary/30 p-3">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Pré-visualização</span>
+                <FormattedText text={enunciado} className="text-sm text-foreground mt-1" />
+              </div>
+            )}
           </div>
+
 
           <div className="space-y-2">
             <Label className="text-xs">Alternativas (marque a correta)</Label>
