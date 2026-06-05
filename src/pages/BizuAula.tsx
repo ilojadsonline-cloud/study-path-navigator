@@ -185,7 +185,9 @@ export default function BizuAula() {
                         className="overflow-hidden"
                       >
                         <div className="px-5 pb-5">
-                          {videos.length === 0 ? (
+                          {d.restricted ? (
+                            <PopSigilosoNotice />
+                          ) : videos.length === 0 ? (
                             <div className="flex items-center justify-center gap-2 py-6 rounded-xl bg-muted/20 text-muted-foreground text-sm">
                               <Inbox className="w-4 h-4" /> Em breve
                             </div>
