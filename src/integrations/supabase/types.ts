@@ -900,12 +900,31 @@ export type Database = {
       }
       excluir_questoes_por_ids: { Args: { p_ids: number[] }; Returns: number }
       get_email_by_cpf: { Args: { p_cpf: string }; Returns: string }
+      get_my_ranking_position: {
+        Args: { p_period?: string }
+        Returns: {
+          rank: number
+          taxa_acertos: number
+          total_corretas: number
+          total_respondidas: number
+        }[]
+      }
       get_my_trial_status: {
         Args: never
         Returns: {
           converted_to_paid: boolean
           has_trial: boolean
           trial_ends_at: string
+        }[]
+      }
+      get_ranking: {
+        Args: { p_period?: string }
+        Returns: {
+          nome: string
+          taxa_acertos: number
+          total_corretas: number
+          total_respondidas: number
+          user_id: string
         }[]
       }
       get_top10_ranking: {

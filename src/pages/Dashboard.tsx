@@ -8,7 +8,7 @@ import {
   Trophy, Calendar, Flame, Shield, Loader2, FileText, PlayCircle,
   Sparkles, Youtube, Brain, X, ClipboardCheck, ArrowUpRight, BarChart3
 } from "lucide-react";
-import { RankingCard } from "@/components/dashboard/RankingCard";
+import { CalendarioInteligente } from "@/components/dashboard/CalendarioInteligente";
 import { MaintenanceNoticeModal } from "@/components/dashboard/MaintenanceNoticeModal";
 import { getLocalStudyTimerSnapshot, type TimerState } from "@/hooks/useStudyTimer";
 import { useNavigate, Link } from "react-router-dom";
@@ -720,37 +720,10 @@ const Dashboard = () => {
                 </Link>
               </motion.div>
 
-              {/* Atividades recentes */}
-              <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }}
-                className="glass-card rounded-xl p-4 sm:p-5 min-w-0">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-gold shrink-0" />
-                    <h2 className="font-semibold text-sm sm:text-base">Atividades Recentes</h2>
-                  </div>
-                </div>
-                {atividades.length === 0 ? (
-                  <div className="text-center py-8">
-                    <FileText className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Sem atividades ainda.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {atividades.map((a, i) => (
-                      <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-secondary/40 transition-colors">
-                        <div className="p-1.5 rounded-lg bg-primary/10 shrink-0">{a.icon}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{a.text}</p>
-                        </div>
-                        <span className="text-[10px] text-muted-foreground shrink-0">{a.time}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
+              {/* Calendário Inteligente CHOA */}
+              <CalendarioInteligente />
             </div>
 
-            <RankingCard />
             <MaintenanceNoticeModal />
           </>
         )}

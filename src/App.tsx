@@ -28,6 +28,7 @@ import MeusReportes from "./pages/MeusReportes";
 import MapasMentais from "./pages/MapasMentais";
 import BizuAula from "./pages/BizuAula";
 import Cronograma from "./pages/Cronograma";
+import Ranking from "./pages/Ranking";
 import PagamentoSucesso from "./pages/PagamentoSucesso";
 import PagamentoPendente from "./pages/PagamentoPendente";
 import PagamentoFalha from "./pages/PagamentoFalha";
@@ -68,6 +69,7 @@ const App = () => (
             <Route path="/questoes" element={<ProtectedRoute><Questoes /></ProtectedRoute>} />
             <Route path="/simulados" element={<ProtectedRoute><Simulados /></ProtectedRoute>} />
             <Route path="/cronograma" element={<ProtectedRoute><Cronograma /></ProtectedRoute>} />
+            <Route path="/ranking" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
             <Route path="/admin/gerar-questoes" element={<ProtectedRoute><GerarQuestoes /></ProtectedRoute>} />
             <Route path="/admin/textos-legais" element={<ProtectedRoute><AdminTextosLegais /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
