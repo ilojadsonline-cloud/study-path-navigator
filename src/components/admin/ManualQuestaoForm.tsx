@@ -188,15 +188,25 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
             </div>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label className="text-xs">Enunciado</Label>
+            <FormattingToolbar textareaRef={enunciadoRef} value={enunciado} onChange={setEnunciado} />
             <Textarea
+              ref={enunciadoRef}
               value={enunciado}
               onChange={(e) => setEnunciado(e.target.value)}
-              rows={4}
-              placeholder="Texto da questão..."
+              rows={5}
+              className="font-mono text-sm whitespace-pre-wrap"
+              placeholder="Texto da questão... Use **negrito**, *itálico* e quebras de linha para facilitar a leitura."
             />
+            {enunciado.trim() && (
+              <div className="rounded-lg border border-border/60 bg-secondary/30 p-3">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Pré-visualização</span>
+                <FormattedText text={enunciado} className="text-sm text-foreground mt-1" />
+              </div>
+            )}
           </div>
+
 
           <div className="space-y-2">
             <Label className="text-xs">Alternativas (marque a correta)</Label>
