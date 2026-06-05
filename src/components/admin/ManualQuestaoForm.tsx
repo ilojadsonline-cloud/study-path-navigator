@@ -37,6 +37,7 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const enunciadoRef = useRef<HTMLTextAreaElement>(null);
 
   const [disciplina, setDisciplina] = useState(disciplinas[0] || "");
   const [assunto, setAssunto] = useState("");
