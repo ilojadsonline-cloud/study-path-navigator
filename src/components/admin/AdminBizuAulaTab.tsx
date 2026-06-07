@@ -19,7 +19,7 @@ type VideoRow = {
 export function AdminBizuAulaTab() {
   const [rows, setRows] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [discId, setDiscId] = useState<string>(disciplinasLite[0].id);
+  const [discId, setDiscId] = useState<string>(bizuAulaDisciplinas[0].id);
   const [titulo, setTitulo] = useState("");
   const [url, setUrl] = useState("");
   const [saving, setSaving] = useState(false);
@@ -139,7 +139,7 @@ export function AdminBizuAulaTab() {
             <Select value={discId} onValueChange={setDiscId}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {disciplinasSelecionaveis.map((d) => (
+                {bizuAulaSelecionaveis.map((d) => (
                   <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>
                 ))}
               </SelectContent>
@@ -170,7 +170,7 @@ export function AdminBizuAulaTab() {
           <p className="text-sm text-muted-foreground">Nenhum vídeo cadastrado ainda.</p>
         ) : (
           <div className="space-y-5">
-            {disciplinasLite.map((d) => {
+            {bizuAulaDisciplinas.map((d) => {
               const items = (byDisc.get(d.id) || []).slice().sort((a, b) => a.ordem - b.ordem);
               if (items.length === 0) return null;
               return (
