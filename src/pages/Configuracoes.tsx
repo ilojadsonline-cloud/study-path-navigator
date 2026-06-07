@@ -239,7 +239,7 @@ const Configuracoes = () => {
             <h2 className="font-bold text-foreground">Ranking Público</h2>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Ao ativar, seu nome aparecerá no ranking <strong>Top 10 Guerreiros</strong> do Dashboard,
+            Ao ativar, seu nome aparecerá no ranking <strong>Top 10 Guerreiros</strong> do Meu Desempenho,
             visível para todos os usuários da plataforma.
           </p>
           <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border/50">

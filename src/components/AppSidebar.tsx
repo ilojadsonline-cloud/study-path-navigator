@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const menuItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Meu Desempenho", url: "/dashboard", icon: LayoutDashboard },
   { title: "Edital Verticalizado", url: "/edital", icon: BookOpen },
   { title: "Banco de Questões", url: "/questoes", icon: HelpCircle },
   { title: "Simulados", url: "/simulados", icon: Shuffle },
