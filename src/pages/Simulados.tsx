@@ -15,11 +15,12 @@ const DISCIPLINAS_OFICIAIS = [
   "Lei nº 2.575/2012",
   "CPPM",
   "RDMETO",
+  "Língua Portuguesa",
+  "Redação Oficial",
 ];
 
-// Disciplinas do novo edital ainda sem banco de questões (exibidas como "em breve")
 // Obs.: POP não entra (documento sigiloso — Portaria nº 021/2015-Gab. PMTO)
-const DISCIPLINAS_EM_BREVE = ["Língua Portuguesa", "Redação Oficial"];
+const DISCIPLINAS_EM_BREVE: string[] = [];
 
 const disciplinasOpcoes = ["Todas as Disciplinas", ...DISCIPLINAS_OFICIAIS];
 
