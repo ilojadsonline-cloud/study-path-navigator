@@ -29,6 +29,7 @@ const STATUS_FILTERS: { key: string; label: string }[] = [
 const CATEGORY_FILTERS: { key: string; label: string; description: string }[] = [
   { key: "all", label: "Todas categorias", description: "Sem filtro de categoria" },
   { key: "alucinacao", label: "🧠 Alucinações jurídicas", description: "Fundamento legal inventado ou sem base na lei" },
+  { key: "edital", label: "📋 Fora do edital / nº de artigo", description: "Cobrança de número de artigo, fora do recorte do edital ou disciplina trocada" },
   { key: "invalida", label: "⛔ Inválidas / Irrecuperáveis", description: "Duplicadas, sem alternativa correta, incoerentes" },
   { key: "com_erros", label: "⚠ Com erros graves", description: "Defeitos de gabarito, hierarquia, múltiplas corretas" },
   { key: "aprimoravel", label: "✨ Válidas, com aprimoramento", description: "Corretas mas com distratores/comentário fracos" },
@@ -51,8 +52,11 @@ const STATUS_LABEL: Record<string, string> = {
 function categorizeAudit(a: { issues: any[]; proposed_patch: any }): string {
   const types = new Set((a.issues ?? []).map((i: any) => i?.type));
   const severities = (a.issues ?? []).map((i: any) => i?.severity);
-  if (types.has("alucinacao_juridica") || types.has("extra_legal") || types.has("texto_legal_desatualizado")) {
+  if (types.has("alucinacao_juridica") || types.has("extra_legal") || types.has("texto_legal_desatualizado") || types.has("dependencia_fonte_externa")) {
     return "alucinacao";
+  }
+  if (types.has("cobranca_numero_artigo") || types.has("fora_do_edital") || types.has("disciplina_incorreta")) {
+    return "edital";
   }
   if (types.has("unrecoverable") || types.has("incoerente") || types.has("duplicada") || types.has("sem_correta")) {
     return "invalida";
