@@ -112,3 +112,18 @@ export function findDisciplina(id: string) {
 
 // Disciplinas que podem receber conteúdo (exclui documentos sigilosos como o POP)
 export const disciplinasSelecionaveis = disciplinasLite.filter((d) => !d.restricted);
+
+// Tópico especial exclusivo das BizuAulas: análise estratégica do edital.
+// Fica em destaque (primeiro da lista) e não aparece no Edital/Mapas Mentais.
+export const ANALISE_EDITAL_DISC: DisciplinaLite = {
+  id: "analise-edital",
+  title: "Análise do Edital",
+  subtitle: "Visão geral e estratégia do CHOA/2026 PMTO",
+  topics: ["Análise completa do edital"],
+};
+
+// Lista de disciplinas usada nas BizuAulas (Análise do Edital sempre em primeiro).
+export const bizuAulaDisciplinas: DisciplinaLite[] = [ANALISE_EDITAL_DISC, ...disciplinasLite];
+
+// Selecionáveis no admin das BizuAulas (exclui sigilosos como o POP).
+export const bizuAulaSelecionaveis = bizuAulaDisciplinas.filter((d) => !d.restricted);
