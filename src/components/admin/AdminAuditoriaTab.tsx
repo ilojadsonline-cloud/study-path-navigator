@@ -177,11 +177,14 @@ export function AdminAuditoriaTab() {
   useEffect(() => { loadDisciplinas(); loadLatestRunningJob(); }, []);
   useEffect(() => { loadAudits(); }, [filterStatus, job?.id]);
 
-  async function startJob() {
+  async function startJob(override?: { mode?: typeof scopeMode; disciplinas?: string[]; limit?: number }) {
+    const mode = override?.mode ?? scopeMode;
+    const disc = override?.disciplinas ?? selDisc;
+    const lim = override?.limit ?? limit;
     stopRef.current = false;
     setRunning(true);
     try {
-      if (scopeMode === "discipline" && selDisc.length === 0) {
+      if (mode === "discipline" && disc.length === 0) {
         toast.error("Selecione ao menos uma disciplina para o modo 'Disciplina específica'.");
         setRunning(false);
         return;
@@ -189,18 +192,18 @@ export function AdminAuditoriaTab() {
       const { data, error } = await supabase.functions.invoke("audit-questions", {
         body: {
           action: "start",
-          mode: scopeMode,
-          disciplinas: scopeMode === "discipline" ? selDisc : (selDisc.length ? selDisc : null),
-          limit,
+          mode,
+          disciplinas: mode === "discipline" ? disc : (disc.length ? disc : null),
+          limit: lim,
         },
       });
       if (error) throw error;
       const j = data.job as AuditJob;
       setJob(j);
       setFilterStatus("session");
-      const scopeLabel = scopeMode === "all" ? "todo o banco"
-        : scopeMode === "discipline" ? `disciplina(s): ${selDisc.join(", ")}`
-        : scopeMode === "unaudited" ? "apenas nunca revisadas"
+      const scopeLabel = mode === "all" ? "todo o banco"
+        : mode === "discipline" ? `disciplina(s): ${disc.join(", ")}`
+        : mode === "unaudited" ? "apenas nunca revisadas"
         : "apenas com reportes pendentes";
       toast.success(`Auditoria iniciada — ${scopeLabel} (${j.total} questões)`);
       runLoop(j.id);
@@ -209,6 +212,15 @@ export function AdminAuditoriaTab() {
       setRunning(false);
     }
   }
+
+  // Atalho 1-clique: aplica as regras do Edital CHOA/2026 a todo o banco.
+  function startRecommendedAudit() {
+    setScopeMode("all");
+    setSelDisc([]);
+    setLimit(100000);
+    startJob({ mode: "all", disciplinas: [], limit: 100000 });
+  }
+
 
   async function runLoop(jobId: string) {
     let consecutiveFailures = 0;
