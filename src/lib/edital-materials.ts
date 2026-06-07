@@ -6,7 +6,7 @@ export const EDITAL_MATERIALS_BUCKET = "mapas-mentais";
 export const EDITAL_MATERIALS_CONFIG_PATH = "edital/materials-config.json";
 export const EDITAL_MATERIALS_UPLOAD_PREFIX = "edital/materials";
 
-export type EditalMaterialMode = "none" | "link" | "pdf";
+export type EditalMaterialMode = "none" | "link" | "pdf" | "lei_seca";
 
 export type EditalMaterialEntry = {
   disciplinaId: string;
