@@ -623,7 +623,7 @@ function TopicItem({ item }: { item: EditalItem }) {
 function MaterialButton({ entry }: { entry: EditalMaterialEntry | null }) {
   const handleOpen = async () => {
     if (!entry) return;
-    if (entry.mode === "link" && entry.externalUrl) {
+    if ((entry.mode === "link" || entry.mode === "lei_seca") && entry.externalUrl) {
       window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
       return;
     }
@@ -646,13 +646,15 @@ function MaterialButton({ entry }: { entry: EditalMaterialEntry | null }) {
     );
   }
 
+  const Icon = entry.mode === "pdf" ? Download : entry.mode === "lei_seca" ? Scroll : ExternalLink;
+
   return (
     <button
       onClick={handleOpen}
       className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
     >
-      {entry.mode === "pdf" ? <Download className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
-      {entry.buttonLabel || "Material de estudo"}
+      <Icon className="w-4 h-4" />
+      {entry.buttonLabel || (entry.mode === "lei_seca" ? "Lei Seca atualizada" : "Material de estudo")}
     </button>
   );
 }
