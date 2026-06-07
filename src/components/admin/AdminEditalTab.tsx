@@ -409,12 +409,14 @@ export default function AdminEditalTab() {
 
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Arquivo PDF</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {form.mode === "lei_seca" ? "PDF da Lei Seca (opcional)" : "Arquivo PDF"}
+                  </label>
                   <Input
                     id={`edital-file-${disc.id}`}
                     type="file"
                     accept="application/pdf"
-                    disabled={isRestricted || form.mode !== "pdf"}
+                    disabled={isRestricted || (form.mode !== "pdf" && form.mode !== "lei_seca")}
                     onChange={(e) =>
                       setFiles((prev) => ({
                         ...prev,
