@@ -443,6 +443,42 @@ function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_
   return isUniqueMax || isUniqueMin;
 }
 
+/**
+ * Detecta COBRANÇA DE NÚMERO DE ARTIGO (Regra Especial do Edital CHOA/2026):
+ *  - enunciado cujo objeto central é decorar a localização formal da norma; ou
+ *  - alternativas formadas SOMENTE por "Art. N" / "inciso" / "§" sem conteúdo.
+ */
+function detectArticleNumberCobranca(
+  q: Pick<Questao, "enunciado" | "alt_a" | "alt_b" | "alt_c" | "alt_d" | "alt_e">,
+): { hit: boolean; reason: string } {
+  const enun = String(q.enunciado ?? "");
+  const enunNorm = enun.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const enunciadoPatterns = [
+    /\bqual\s+artigo\b/, /\bem\s+qual\s+artigo\b/, /\bqual\s+o\s+artigo\b/,
+    /\bassinale\s+o\s+(?:numero|n[º°]?)\s+do\s+artigo\b/, /\bqual\s+(?:o\s+)?inciso\b/,
+    /\bem\s+qual\s+(?:inciso|paragrafo|item|processo)\b/,
+    /\bo\s+art(?:igo|\.)?\s*\d+\s+(?:trata|disp[oõ]e|prev[êe])\b/,
+    /\b(?:artigo|art\.?)\s+correspondente\s+(?:e|é)\b/,
+    /\bapresenta\s+(?:corretamente\s+)?o\s+artigo\b/,
+    /\bindica\s+(?:corretamente\s+)?o\s+(?:numero\s+do\s+)?artigo\b/,
+  ];
+  if (enunciadoPatterns.some((re) => re.test(enunNorm))) {
+    return { hit: true, reason: "enunciado cobra a localização/número do dispositivo como objeto central" };
+  }
+  // Alternativas formadas apenas por referência seca (Art. N, inciso, §) — sem conteúdo jurídico.
+  const alts = [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].map((a) => String(a ?? "").trim());
+  const isBareRef = (s: string) =>
+    s.length > 0 && /^(?:art(?:igo|\.)?\s*\d+[ºo°a]?\s*)+(?:[,;e/]+\s*(?:inciso|§|paragrafo|alinea|item)?\s*[ivxlcdm\d]*\.?\s*)*$/i.test(
+      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+    );
+  const bare = alts.filter(isBareRef).length;
+  if (bare >= 4) {
+    return { hit: true, reason: `${bare} de 5 alternativas são apenas referências de artigo/inciso sem conteúdo` };
+  }
+  return { hit: false, reason: "" };
+}
+
+
 function articleExists(legalText: string | null, artNum: string): boolean {
   if (!legalText) return false;
   return parseArticleBlocks(legalText).some((b) => b.artNum === artNum);
