@@ -567,8 +567,6 @@ const Simulados = () => {
             </div>
             <p className="text-[11px] text-muted-foreground mt-2">
               Selecione 2 ou mais para personalizar. Vazio = todas as disciplinas (distribuição proporcional).
-              As disciplinas marcadas como <span className="text-amber-500 font-semibold">Em breve</span> ainda
-              não possuem banco de questões.
             </p>
 
           </div>
