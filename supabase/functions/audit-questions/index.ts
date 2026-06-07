@@ -729,15 +729,17 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
       });
     }
   }
+
+  // ── ETAPA 2: ROTEAMENTO POR COMPLEXIDADE ──
   // Issues SIMPLES (mecânicas) → DeepSeek já entregou o patch.
   // Issues COMPLEXAS (prosa jurídica) → Maritaca Sabiá 4 reescreve.
-  const SIMPLE_TYPES = new Set(["gabarito_errado", "bug_estrutural", "formatacao"]);
+  const SIMPLE_TYPES = new Set(["gabarito_errado", "bug_estrutural", "formatacao", "disciplina_incorreta"]);
   const FORCED_COMPLEX_TYPES = new Set([
     "length_bias", "distrator_longo", "distrator_fraco", "alucinacao_juridica",
     "multiplas_corretas", "sem_correta", "hierarquia_violada", "funcao_inconsistente",
     "desalinhamento", "sem_comentario", "comentario_loop", "comentario_incompleto",
     "texto_legal_desatualizado", "insufficient_distractors", "incoerente", "duplicada",
-    "reporte_usuario",
+    "reporte_usuario", "cobranca_numero_artigo", "fora_do_edital",
   ]);
   // Normaliza fix_complexity de cada issue (DeepSeek pode errar — código tem a palavra final).
   for (const i of issues) {
