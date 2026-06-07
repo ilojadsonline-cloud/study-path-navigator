@@ -1016,6 +1016,10 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
     if (hasDuplicateAlts(alts)) { discarded++; continue; }
     if (!q.comentario || q.comentario.length < 30) { discarded++; continue; }
 
+    // Redação Oficial: descarta questões fora do escopo conceitual (estrutura/formatação/partes).
+    if (redacaoForaDeEscopo(q.disciplina, q.enunciado, alts)) { discarded++; continue; }
+
+
     // Paridade de comprimento (anti "correta = outlier")
     const gabIdx = Number(q.gabarito);
     const lens = alts.map(a => (a || "").trim().length);
