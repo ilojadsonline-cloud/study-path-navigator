@@ -620,19 +620,59 @@ function TopicItem({ item }: { item: EditalItem }) {
   );
 }
 
+function MaterialButton({ entry }: { entry: EditalMaterialEntry | null }) {
+  const handleOpen = async () => {
+    if (!entry) return;
+    if (entry.mode === "link" && entry.externalUrl) {
+      window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (entry.mode === "pdf" && entry.storagePath) {
+      try {
+        const url = await createEditalMaterialSignedUrl(entry.storagePath);
+        window.open(url, "_blank", "noopener,noreferrer");
+      } catch {
+        /* falha silenciosa: o material não pôde ser aberto agora */
+      }
+    }
+  };
+
+  if (!entry) {
+    return (
+      <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-dashed border-amber-500/30 text-amber-500 text-xs font-semibold cursor-default">
+        <Clock className="w-4 h-4" />
+        Material em breve
+      </span>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleOpen}
+      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+    >
+      {entry.mode === "pdf" ? <Download className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
+      {entry.buttonLabel || "Material de estudo"}
+    </button>
+  );
+}
+
 function DisciplinaBlock({
   d,
   index,
   open,
   onToggle,
+  material,
 }: {
   d: Disciplina;
   index: number;
   open: boolean;
   onToggle: () => void;
+  material: EditalMaterialEntry | null;
 }) {
   const navigate = useNavigate();
   const { peso, clean } = parseSubtitle(d.subtitle);
+
 
   return (
     <motion.div
