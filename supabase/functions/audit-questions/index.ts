@@ -295,7 +295,7 @@ const CHOA_EDITAL_AUDIT_RULES = `### MATRIZ OFICIAL DO EDITAL CHOA/2026 PMTO (8 
 05 RDMETO — Decreto nº 4.994/2014 e Anexo Único (transgressão disciplinar, sindicância, autoridade, prazos, sanções, comportamento, tabela de punições).
 06 POP — Portaria Normativa nº 001/2024 (Processo 108 e Processos 201 a 214). Processo fora desse recorte = fora do edital.
 07 Língua Portuguesa — interpretação e compreensão de texto. EXIGE texto-base; resposta deve estar sustentada pelo texto. Gramática pura = fora do foco.
-08 Manual de Redação Oficial da PMTO — Item 6, subitens 6.1 a 6.8, SÓ definição, finalidade e hipóteses de uso dos documentos. Formatação/margem/fonte/modelos = fora do edital.
+08 Manual de Redação Oficial da PMTO — Item 6, subitens 6.1 a 6.8. ESCOPO ESTRITO: SÓ aspectos CONCEITUAIS — definição, finalidade e hipóteses de utilização dos atos de correspondência (6.1), normativos (6.2), ordinatórios (6.3), enunciativos (6.4), negociais (6.5), comprobatórios (6.6), de divulgação (6.7) e de serviço (6.8). É PROIBIDO cobrar estrutura, formatação, partes constitutivas, cabeçalho, fonte, margens, espaçamento, epígrafe, vocativo, fecho, ementa, diagramação, assinatura, modelos ou pronomes de tratamento. Questão de Redação que cobre estrutura/formatação/partes do documento é IRRECUPERÁVEL (não há como reescrever sem trocar o tema) → AUTO_DELETE.
 
 ### REGRA ZERO (roteamento): identifique a disciplina REAL pelo conteúdo cobrado, mesmo que o campo "Disciplina" esteja errado. Se a disciplina declarada divergir da real e o conteúdo for juridicamente correto, emita issue type='disciplina_incorreta' (severity='medium', fix simples: sugira a disciplina certa). Se houver mistura indevida de duas disciplinas sem base para correção → revisão manual.
 
@@ -303,7 +303,7 @@ const CHOA_EDITAL_AUDIT_RULES = `### MATRIZ OFICIAL DO EDITAL CHOA/2026 PMTO (8 
 
 ### PROIBIÇÃO DE COBRANÇA DE NÚMERO DE ARTIGO: questões cujo OBJETO central é decorar número de artigo/inciso/§/alínea/processo ("em qual artigo", "qual artigo trata de", alternativas formadas só por "Art. N") devem ser sinalizadas type='cobranca_numero_artigo' (severity='high'). Citar o artigo na base normativa/comentário é permitido e desejável — proibido é cobrar o NÚMERO como resposta. Correção preferencial: reescrever para cobrar o CONTEÚDO jurídico do dispositivo.
 
-### FILOSOFIA: CORRIGIR ANTES DE EXCLUIR. Preserve o banco sempre que houver base normativa para reescrever. Só classifique como irrecuperável (AUTO_DELETE) quando: totalmente fora do edital, incoerente a ponto de impedir reescrita, ou duplicata literal sem ganho pedagógico. Havendo dúvida jurídica (alucinação, conflito de vigência, sem base na lei carregada) → needs_human_review=true (revisão manual), NUNCA exclusão automática.
+### FILOSOFIA: CORRIGIR ANTES DE EXCLUIR. Preserve o banco sempre que houver base normativa para reescrever. Só classifique como irrecuperável (AUTO_DELETE) quando: totalmente fora do edital, incoerente a ponto de impedir reescrita, duplicata literal sem ganho pedagógico, OU questão de Redação Oficial que cobra estrutura/formatação/partes constitutivas/cabeçalho/margem/fonte/espaçamento/epígrafe/vocativo/fecho/diagramação/assinatura/modelo/pronome de tratamento (essas NÃO podem ser reescritas para o viés conceitual sem inventar a questão — devem ser EXCLUÍDAS, ai_summary começando com 'AUTO_DELETE: Redação fora do escopo conceitual'). Havendo dúvida jurídica (alucinação, conflito de vigência, sem base na lei carregada) → needs_human_review=true (revisão manual), NUNCA exclusão automática.
 
 `;
 
@@ -478,6 +478,58 @@ function detectArticleNumberCobranca(
   return { hit: false, reason: "" };
 }
 
+/**
+ * Detecta questões de REDAÇÃO OFICIAL fora do escopo CONCEITUAL do edital.
+ * O edital (Item 6, 6.1–6.8) cobra APENAS definição, finalidade e hipóteses de
+ * utilização dos documentos. Questões que cobram estrutura, formatação, partes
+ * constitutivas, cabeçalho, margem, fonte, espaçamento, epígrafe, vocativo, fecho,
+ * diagramação, assinatura, modelos ou pronomes de tratamento são IRRECUPERÁVEIS
+ * (não há como reescrever para o viés conceitual sem mudar o tema) → AUTO_DELETE.
+ */
+function isRedacaoOficial(disciplina: string | null | undefined): boolean {
+  const d = String(disciplina ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return d.includes("redacao oficial") || d.includes("redacao") || d.includes("manual de redacao");
+}
+
+function detectRedacaoForaDeEscopo(
+  q: Pick<Questao, "disciplina" | "enunciado" | "alt_a" | "alt_b" | "alt_c" | "alt_d" | "alt_e">,
+): { hit: boolean; reason: string } {
+  if (!isRedacaoOficial(q.disciplina)) return { hit: false, reason: "" };
+  const norm = (s: unknown) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const enun = norm(q.enunciado);
+  const alts = [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].map(norm).join(" \u2022 ");
+  const haystack = `${enun} \u2022 ${alts}`;
+
+  // Termos que caracterizam cobrança de estrutura/formatação (fora do escopo conceitual).
+  const formatTerms: Array<[RegExp, string]> = [
+    [/\bpartes?\s+(?:constitutivas?|integrantes?|componentes?|que\s+comp[oõ]em|do\s+(?:oficio|memorando|documento|ato|texto|expediente))/, "partes constitutivas do documento"],
+    [/\bestrutura\s+(?:do|da|de|correta|formal|interna|basica|de\s+um|de\s+uma)/, "estrutura do documento"],
+    [/\bcomo\s+(?:se\s+)?(?:estrutura|estruturar|formata|formatar|diagrama|organiza\s+graficamente)\b/, "como se estrutura/formata"],
+    [/\bordem\s+(?:correta\s+)?(?:das\s+partes|dos\s+elementos|de\s+apresentacao)\b/, "ordem das partes"],
+    [/\bformatac/, "formatação"],
+    [/\bdiagramac/, "diagramação"],
+    [/\bcabecalho\b/, "cabeçalho"],
+    [/\bespacamento\b/, "espaçamento"],
+    [/\bentrelinhas?\b/, "entrelinhas"],
+    [/\bepigrafe\b/, "epígrafe"],
+    [/\bvocativo\b/, "vocativo"],
+    [/\bementa\b/, "ementa"],
+    [/\bfecho\b/, "fecho"],
+    [/\bmargens?\b/, "margens"],
+    [/\brodape\b/, "rodapé"],
+    [/\balinhamento\b/, "alinhamento"],
+    [/\bnumeracao\s+(?:de\s+paragrafos?|das?\s+pagina|dos?\s+itens)\b/, "numeração de parágrafos/páginas"],
+    [/\b(?:tipo|tamanho|corpo)\s+(?:de\s+)?(?:da\s+)?fonte\b/, "tipo/tamanho de fonte"],
+    [/\bfonte\s+(?:arial|times|calibri|tipografica|sem\s+serifa)\b/, "fonte tipográfica"],
+    [/\bpronomes?\s+de\s+tratamento\b/, "pronomes de tratamento"],
+    [/\bdisposicao\s+grafica\b/, "disposição gráfica"],
+    [/\b(?:modelo|leiaute|layout|padrao\s+grafico)\s+(?:do|de|correto)\b/, "modelo/leiaute do documento"],
+  ];
+  for (const [re, label] of formatTerms) {
+    if (re.test(haystack)) return { hit: true, reason: `cobra ${label} (fora do escopo conceitual do edital 6.1–6.8)` };
+  }
+  return { hit: false, reason: "" };
+}
 
 function articleExists(legalText: string | null, artNum: string): boolean {
   if (!legalText) return false;
@@ -730,7 +782,29 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
     }
   }
 
-  // ── ETAPA 2: ROTEAMENTO POR COMPLEXIDADE ──
+  // Redação Oficial fora do escopo conceitual (estrutura/formatação/partes) — detecção
+  // determinística que força AUTO_DELETE (irrecuperável: não dá para reescrever para o
+  // viés conceitual sem trocar o tema da questão).
+  {
+    const red = detectRedacaoForaDeEscopo(q);
+    if (red.hit) {
+      if (!issues.some((i: any) => i?.type === "fora_do_edital")) {
+        issues.push({
+          type: "fora_do_edital",
+          severity: "high",
+          field: "questao_inteira",
+          evidence: red.reason,
+          description: "Questão de Redação Oficial cobra estrutura/formatação/partes do documento — fora do escopo conceitual (definição, finalidade e hipóteses de uso) do edital CHOA/2026, Item 6 (6.1–6.8).",
+          suggestion: "Excluir: não é possível reescrever para o viés conceitual sem inventar nova questão.",
+        });
+      }
+      if (!/^AUTO_DELETE:/i.test(aiSummary)) {
+        aiSummary = `AUTO_DELETE: Redação fora do escopo conceitual — ${red.reason}.${aiSummary ? " " + aiSummary : ""}`;
+      }
+    }
+  }
+
+
   // Issues SIMPLES (mecânicas) → DeepSeek já entregou o patch.
   // Issues COMPLEXAS (prosa jurídica) → Maritaca Sabiá 4 reescreve.
   const SIMPLE_TYPES = new Set(["gabarito_errado", "bug_estrutural", "formatacao", "disciplina_incorreta"]);

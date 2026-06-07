@@ -642,6 +642,39 @@ const DISCIPLINES = [
   },
 ] as const;
 
+/**
+ * Redação Oficial: o edital (Item 6, 6.1–6.8) cobra APENAS aspectos conceituais
+ * (definição, finalidade e hipóteses de uso). Questões geradas que escorregarem para
+ * estrutura/formatação/partes constitutivas/cabeçalho/margem/fonte/etc. devem ser
+ * DESCARTADAS antes da inserção.
+ */
+function isRedacaoOficialDisc(disciplina: string | null | undefined): boolean {
+  const d = String(disciplina ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return d.includes("redacao");
+}
+
+function redacaoForaDeEscopo(disciplina: string, enunciado: string, alts: string[]): boolean {
+  if (!isRedacaoOficialDisc(disciplina)) return false;
+  const norm = (s: unknown) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const haystack = `${norm(enunciado)} \u2022 ${alts.map(norm).join(" \u2022 ")}`;
+  const formatRes: RegExp[] = [
+    /\bpartes?\s+(?:constitutivas?|integrantes?|componentes?|que\s+comp[oõ]em|do\s+(?:oficio|memorando|documento|ato|texto|expediente))/,
+    /\bestrutura\s+(?:do|da|de|correta|formal|interna|basica|de\s+um|de\s+uma)/,
+    /\bcomo\s+(?:se\s+)?(?:estrutura|estruturar|formata|formatar|diagrama|organiza\s+graficamente)\b/,
+    /\bordem\s+(?:correta\s+)?(?:das\s+partes|dos\s+elementos|de\s+apresentacao)\b/,
+    /\bformatac/, /\bdiagramac/, /\bcabecalho\b/, /\bespacamento\b/, /\bentrelinhas?\b/,
+    /\bepigrafe\b/, /\bvocativo\b/, /\bementa\b/, /\bfecho\b/, /\bmargens?\b/, /\brodape\b/,
+    /\balinhamento\b/, /\bnumeracao\s+(?:de\s+paragrafos?|das?\s+pagina|dos?\s+itens)\b/,
+    /\b(?:tipo|tamanho|corpo)\s+(?:de\s+)?(?:da\s+)?fonte\b/,
+    /\bfonte\s+(?:arial|times|calibri|tipografica|sem\s+serifa)\b/,
+    /\bpronomes?\s+de\s+tratamento\b/, /\bdisposicao\s+grafica\b/,
+    /\b(?:modelo|leiaute|layout|padrao\s+grafico)\s+(?:do|de|correto)\b/,
+  ];
+  return formatRes.some((re) => re.test(haystack));
+}
+
+
+
 // 10 approach types for maximum diversity — cycled based on existing question count
 // Mix of direct law-text questions AND scenario-based questions
 const APPROACH_TYPES = [
@@ -983,6 +1016,10 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
     if (hasDuplicateAlts(alts)) { discarded++; continue; }
     if (!q.comentario || q.comentario.length < 30) { discarded++; continue; }
 
+    // Redação Oficial: descarta questões fora do escopo conceitual (estrutura/formatação/partes).
+    if (redacaoForaDeEscopo(q.disciplina, q.enunciado, alts)) { discarded++; continue; }
+
+
     // Paridade de comprimento (anti "correta = outlier")
     const gabIdx = Number(q.gabarito);
     const lens = alts.map(a => (a || "").trim().length);
@@ -1037,7 +1074,7 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
   }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
-
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const timestamp = new Date().toISOString();
