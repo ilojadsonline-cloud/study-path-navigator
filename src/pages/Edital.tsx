@@ -750,13 +750,18 @@ function DisciplinaBlock({
                   </div>
                 </div>
               ) : d.comingSoon ? (
-                <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
-                  <Clock className="w-5 h-5 shrink-0 mt-0.5" />
-                  <p className="text-xs leading-relaxed">
-                    <strong>Conteúdo em preparação.</strong> Esta disciplina já consta no novo edital
-                    do CHOA 2026. Estamos produzindo o texto de referência, as questões e os materiais.
-                    O conteúdo programático abaixo já está disponível para você se planejar.
-                  </p>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
+                    <Clock className="w-5 h-5 shrink-0 mt-0.5" />
+                    <p className="text-xs leading-relaxed">
+                      <strong>Conteúdo em preparação.</strong> Esta disciplina já consta no novo edital
+                      do CHOA 2026. Estamos produzindo o texto de referência, as questões e os materiais.
+                      O conteúdo programático abaixo já está disponível para você se planejar.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <MaterialButton entry={material} />
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -770,6 +775,9 @@ function DisciplinaBlock({
                     {d.leiSecaLabel}
                     <ExternalLink className="w-3 h-3 opacity-60" />
                   </a>
+
+                  <MaterialButton entry={material} />
+
 
                   <button
                     onClick={() => navigate(`/questoes?disciplina=${encodeURIComponent(d.disciplinaFilter)}`)}
