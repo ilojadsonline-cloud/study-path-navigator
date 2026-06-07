@@ -295,7 +295,7 @@ const CHOA_EDITAL_AUDIT_RULES = `### MATRIZ OFICIAL DO EDITAL CHOA/2026 PMTO (8 
 05 RDMETO — Decreto nº 4.994/2014 e Anexo Único (transgressão disciplinar, sindicância, autoridade, prazos, sanções, comportamento, tabela de punições).
 06 POP — Portaria Normativa nº 001/2024 (Processo 108 e Processos 201 a 214). Processo fora desse recorte = fora do edital.
 07 Língua Portuguesa — interpretação e compreensão de texto. EXIGE texto-base; resposta deve estar sustentada pelo texto. Gramática pura = fora do foco.
-08 Manual de Redação Oficial da PMTO — Item 6, subitens 6.1 a 6.8, SÓ definição, finalidade e hipóteses de uso dos documentos. Formatação/margem/fonte/modelos = fora do edital.
+08 Manual de Redação Oficial da PMTO — Item 6, subitens 6.1 a 6.8. ESCOPO ESTRITO: SÓ aspectos CONCEITUAIS — definição, finalidade e hipóteses de utilização dos atos de correspondência (6.1), normativos (6.2), ordinatórios (6.3), enunciativos (6.4), negociais (6.5), comprobatórios (6.6), de divulgação (6.7) e de serviço (6.8). É PROIBIDO cobrar estrutura, formatação, partes constitutivas, cabeçalho, fonte, margens, espaçamento, epígrafe, vocativo, fecho, ementa, diagramação, assinatura, modelos ou pronomes de tratamento. Questão de Redação que cobre estrutura/formatação/partes do documento é IRRECUPERÁVEL (não há como reescrever sem trocar o tema) → AUTO_DELETE.
 
 ### REGRA ZERO (roteamento): identifique a disciplina REAL pelo conteúdo cobrado, mesmo que o campo "Disciplina" esteja errado. Se a disciplina declarada divergir da real e o conteúdo for juridicamente correto, emita issue type='disciplina_incorreta' (severity='medium', fix simples: sugira a disciplina certa). Se houver mistura indevida de duas disciplinas sem base para correção → revisão manual.
 
