@@ -673,6 +673,23 @@ export function AdminAuditoriaTab() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Atalho recomendado — 1 clique, regras do Edital CHOA/2026 */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border border-primary/40 bg-gradient-to-r from-primary/10 to-transparent">
+            <div className="flex-1">
+              <p className="text-sm font-semibold flex items-center gap-1">
+                <Wand2 className="w-4 h-4 text-primary" /> Auditoria recomendada (Edital CHOA/2026)
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Roda em todo o banco aplicando a matriz do edital, roteamento por disciplina,
+                proibição de cobrança de número de artigo e a regra "corrigir antes de excluir".
+              </p>
+            </div>
+            <Button onClick={startRecommendedAudit} disabled={running} className="gap-2 shrink-0">
+              {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              Auditar todo o banco
+            </Button>
+          </div>
+
           {/* ESCOPO da nova auditoria — admin define exatamente o que vai rodar */}
           <div className="space-y-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
             <p className="text-sm font-semibold text-primary">Escopo desta auditoria</p>
