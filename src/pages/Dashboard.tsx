@@ -153,6 +153,7 @@ const Dashboard = () => {
   );
   const [studySessions, setStudySessions] = useState<StudySession[]>([]);
   const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
+  const [bizuAulas, setBizuAulas] = useState<BizuAulaItem[]>([]);
 
   useEffect(() => {
     if (!user) return;
