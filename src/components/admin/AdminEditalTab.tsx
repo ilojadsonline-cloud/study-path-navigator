@@ -314,6 +314,7 @@ export default function AdminEditalTab() {
                       <SelectItem value="none">Em breve (sem material)</SelectItem>
                       <SelectItem value="link">Link de redirecionamento</SelectItem>
                       <SelectItem value="pdf">PDF para download</SelectItem>
+                      <SelectItem value="lei_seca">Lei Seca atualizada</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
