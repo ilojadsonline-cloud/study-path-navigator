@@ -13,6 +13,7 @@ import {
   createEditalMaterialSignedUrl,
   loadEditalMaterialsConfig,
 } from "@/lib/edital-materials";
+import { ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
 
 type EditalItem = {
   topic: string;
