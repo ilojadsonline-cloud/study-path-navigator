@@ -29,6 +29,7 @@ const STATUS_FILTERS: { key: string; label: string }[] = [
 const CATEGORY_FILTERS: { key: string; label: string; description: string }[] = [
   { key: "all", label: "Todas categorias", description: "Sem filtro de categoria" },
   { key: "alucinacao", label: "🧠 Alucinações jurídicas", description: "Fundamento legal inventado ou sem base na lei" },
+  { key: "edital", label: "📋 Fora do edital / nº de artigo", description: "Cobrança de número de artigo, fora do recorte do edital ou disciplina trocada" },
   { key: "invalida", label: "⛔ Inválidas / Irrecuperáveis", description: "Duplicadas, sem alternativa correta, incoerentes" },
   { key: "com_erros", label: "⚠ Com erros graves", description: "Defeitos de gabarito, hierarquia, múltiplas corretas" },
   { key: "aprimoravel", label: "✨ Válidas, com aprimoramento", description: "Corretas mas com distratores/comentário fracos" },
@@ -51,8 +52,11 @@ const STATUS_LABEL: Record<string, string> = {
 function categorizeAudit(a: { issues: any[]; proposed_patch: any }): string {
   const types = new Set((a.issues ?? []).map((i: any) => i?.type));
   const severities = (a.issues ?? []).map((i: any) => i?.severity);
-  if (types.has("alucinacao_juridica") || types.has("extra_legal") || types.has("texto_legal_desatualizado")) {
+  if (types.has("alucinacao_juridica") || types.has("extra_legal") || types.has("texto_legal_desatualizado") || types.has("dependencia_fonte_externa")) {
     return "alucinacao";
+  }
+  if (types.has("cobranca_numero_artigo") || types.has("fora_do_edital") || types.has("disciplina_incorreta")) {
+    return "edital";
   }
   if (types.has("unrecoverable") || types.has("incoerente") || types.has("duplicada") || types.has("sem_correta")) {
     return "invalida";
@@ -173,11 +177,14 @@ export function AdminAuditoriaTab() {
   useEffect(() => { loadDisciplinas(); loadLatestRunningJob(); }, []);
   useEffect(() => { loadAudits(); }, [filterStatus, job?.id]);
 
-  async function startJob() {
+  async function startJob(override?: { mode?: typeof scopeMode; disciplinas?: string[]; limit?: number }) {
+    const mode = override?.mode ?? scopeMode;
+    const disc = override?.disciplinas ?? selDisc;
+    const lim = override?.limit ?? limit;
     stopRef.current = false;
     setRunning(true);
     try {
-      if (scopeMode === "discipline" && selDisc.length === 0) {
+      if (mode === "discipline" && disc.length === 0) {
         toast.error("Selecione ao menos uma disciplina para o modo 'Disciplina específica'.");
         setRunning(false);
         return;
@@ -185,18 +192,18 @@ export function AdminAuditoriaTab() {
       const { data, error } = await supabase.functions.invoke("audit-questions", {
         body: {
           action: "start",
-          mode: scopeMode,
-          disciplinas: scopeMode === "discipline" ? selDisc : (selDisc.length ? selDisc : null),
-          limit,
+          mode,
+          disciplinas: mode === "discipline" ? disc : (disc.length ? disc : null),
+          limit: lim,
         },
       });
       if (error) throw error;
       const j = data.job as AuditJob;
       setJob(j);
       setFilterStatus("session");
-      const scopeLabel = scopeMode === "all" ? "todo o banco"
-        : scopeMode === "discipline" ? `disciplina(s): ${selDisc.join(", ")}`
-        : scopeMode === "unaudited" ? "apenas nunca revisadas"
+      const scopeLabel = mode === "all" ? "todo o banco"
+        : mode === "discipline" ? `disciplina(s): ${disc.join(", ")}`
+        : mode === "unaudited" ? "apenas nunca revisadas"
         : "apenas com reportes pendentes";
       toast.success(`Auditoria iniciada — ${scopeLabel} (${j.total} questões)`);
       runLoop(j.id);
@@ -205,6 +212,15 @@ export function AdminAuditoriaTab() {
       setRunning(false);
     }
   }
+
+  // Atalho 1-clique: aplica as regras do Edital CHOA/2026 a todo o banco.
+  function startRecommendedAudit() {
+    setScopeMode("all");
+    setSelDisc([]);
+    setLimit(100000);
+    startJob({ mode: "all", disciplinas: [], limit: 100000 });
+  }
+
 
   async function runLoop(jobId: string) {
     let consecutiveFailures = 0;
@@ -657,6 +673,23 @@ export function AdminAuditoriaTab() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Atalho recomendado — 1 clique, regras do Edital CHOA/2026 */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border border-primary/40 bg-gradient-to-r from-primary/10 to-transparent">
+            <div className="flex-1">
+              <p className="text-sm font-semibold flex items-center gap-1">
+                <Wand2 className="w-4 h-4 text-primary" /> Auditoria recomendada (Edital CHOA/2026)
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Roda em todo o banco aplicando a matriz do edital, roteamento por disciplina,
+                proibição de cobrança de número de artigo e a regra "corrigir antes de excluir".
+              </p>
+            </div>
+            <Button onClick={startRecommendedAudit} disabled={running} className="gap-2 shrink-0">
+              {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              Auditar todo o banco
+            </Button>
+          </div>
+
           {/* ESCOPO da nova auditoria — admin define exatamente o que vai rodar */}
           <div className="space-y-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
             <p className="text-sm font-semibold text-primary">Escopo desta auditoria</p>
@@ -731,7 +764,7 @@ export function AdminAuditoriaTab() {
                     <Play className="w-4 h-4" />Continuar auditoria
                   </Button>
                 )}
-                <Button onClick={startJob} className="gap-2">
+                <Button onClick={() => startJob()} className="gap-2">
                   <Play className="w-4 h-4" />Iniciar nova auditoria
                 </Button>
               </>

@@ -281,6 +281,32 @@ async function callDeepSeekRewriter(prompt: string, timeoutMs = 120000): Promise
   }
 }
 
+/**
+ * Bloco-mestre de auditoria conforme o Edital nº 001/2026 — CHOA/2026 PMTO.
+ * Define a matriz oficial, o roteamento por disciplina (Regra Zero), os recortes
+ * de escopo e a filosofia "corrigir antes de excluir". Viaja junto da mensagem
+ * do usuário (não no system prompt) para manter o roteamento por questão.
+ */
+const CHOA_EDITAL_AUDIT_RULES = `### MATRIZ OFICIAL DO EDITAL CHOA/2026 PMTO (8 disciplinas) — use para identificar a disciplina REAL e o recorte permitido:
+01 Lei nº 2.578/2012 — Estatuto dos Militares Estaduais (ingresso, direitos, deveres, hierarquia/disciplina, cargo×função, movimentação, licenciamento, reserva, reforma).
+02 Lei nº 2.575/2012 — Lei de Promoções (CPO×CPP, QA/QAA/QAM/QAE, interstício, merecimento×antiguidade, requisitos do CHOA, seleção interna).
+03 Lei Complementar nº 128/2021 — Organização Básica da PMTO (estrutura, Comando-Geral, Estado-Maior, diretorias, quadros, competências de órgãos).
+04 CPPM — Polícia Judiciária Militar, IPM, prisão em flagrante e APF, LIMITADO aos arts. 8º a 28 e 243 a 253. Conteúdo fora desse recorte = fora do edital.
+05 RDMETO — Decreto nº 4.994/2014 e Anexo Único (transgressão disciplinar, sindicância, autoridade, prazos, sanções, comportamento, tabela de punições).
+06 POP — Portaria Normativa nº 001/2024 (Processo 108 e Processos 201 a 214). Processo fora desse recorte = fora do edital.
+07 Língua Portuguesa — interpretação e compreensão de texto. EXIGE texto-base; resposta deve estar sustentada pelo texto. Gramática pura = fora do foco.
+08 Manual de Redação Oficial da PMTO — Item 6, subitens 6.1 a 6.8, SÓ definição, finalidade e hipóteses de uso dos documentos. Formatação/margem/fonte/modelos = fora do edital.
+
+### REGRA ZERO (roteamento): identifique a disciplina REAL pelo conteúdo cobrado, mesmo que o campo "Disciplina" esteja errado. Se a disciplina declarada divergir da real e o conteúdo for juridicamente correto, emita issue type='disciplina_incorreta' (severity='medium', fix simples: sugira a disciplina certa). Se houver mistura indevida de duas disciplinas sem base para correção → revisão manual.
+
+### RECORTE DO EDITAL: se a questão cobrar dispositivo/processo/assunto FORA do recorte da sua disciplina (ex.: CPPM fora de 8-28/243-253; POP fora de 108/201-214; Redação fora de 6.1-6.8 ou cobrando formatação; Português sem texto-base ou exigindo gramática), emita issue type='fora_do_edital' (severity='high').
+
+### PROIBIÇÃO DE COBRANÇA DE NÚMERO DE ARTIGO: questões cujo OBJETO central é decorar número de artigo/inciso/§/alínea/processo ("em qual artigo", "qual artigo trata de", alternativas formadas só por "Art. N") devem ser sinalizadas type='cobranca_numero_artigo' (severity='high'). Citar o artigo na base normativa/comentário é permitido e desejável — proibido é cobrar o NÚMERO como resposta. Correção preferencial: reescrever para cobrar o CONTEÚDO jurídico do dispositivo.
+
+### FILOSOFIA: CORRIGIR ANTES DE EXCLUIR. Preserve o banco sempre que houver base normativa para reescrever. Só classifique como irrecuperável (AUTO_DELETE) quando: totalmente fora do edital, incoerente a ponto de impedir reescrita, ou duplicata literal sem ganho pedagógico. Havendo dúvida jurídica (alucinação, conflito de vigência, sem base na lei carregada) → needs_human_review=true (revisão manual), NUNCA exclusão automática.
+
+`;
+
 function buildAuditPrompt(q: Questao, legalText: string | null): string {
   const alts = ["A", "B", "C", "D", "E"].map(
     (l, i) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`
@@ -303,7 +329,7 @@ function buildAuditPrompt(q: Questao, legalText: string | null): string {
     ? `${articleIndex}${relevantBlock}TEXTO LEGAL DE REFERÊNCIA (FONTE ÚNICA E EXCLUSIVA de verdade; pode estar truncado por limite técnico, então o ÍNDICE acima prevalece para EXISTÊNCIA de artigo). PROIBIDO usar PDFs, anexos, sites, memória do modelo, conhecimento jurídico geral ou outras leis fora deste texto:\n"""${legalText.slice(0, 9000)}"""\n`
     : "BLOQUEIO OPERACIONAL: Não há texto legal oficial cadastrado em discipline_legal_texts para esta disciplina. NÃO use conhecimento geral, PDFs, anexos ou memória do modelo. Sinalize NO_LEGAL_TEXT e marque para revisão manual.\n";
 
-  return `${legalBlock}
+  return `${CHOA_EDITAL_AUDIT_RULES}${legalBlock}
 QUESTÃO #${q.id}
 Disciplina: ${q.disciplina}
 Assunto: ${q.assunto}
@@ -344,6 +370,10 @@ S. FÁCIL DEMAIS — questão óbvia, de mera memorização, resolvível por eli
 T. ENUNCIADO COPIADO — enunciado e/ou alternativa correta são cópia literal de longo trecho da lei sem transformação em pergunta de banca, entregando a resposta. type='enunciado_copiado' severity='high'.
 U. DISTRATOR ABSURDO — distratores não são tecnicamente próximos/plausíveis; algum é claramente absurdo, fora do tema ou eliminável sem ler a lei. type='distrator_absurdo' severity='high'.
 V. DEPENDÊNCIA DE FONTE EXTERNA — a questão só se sustenta com Constituição Federal, doutrina, jurisprudência, internet, PDF externo, outra lei não incluída no TEXTO LEGAL DE REFERÊNCIA ou conhecimento geral do modelo. type='dependencia_fonte_externa' severity='high'.
+W. COBRANÇA DE NÚMERO DE ARTIGO — o objeto CENTRAL é decorar número de artigo/inciso/§/alínea/processo ("em qual artigo", "qual artigo trata de", alternativas formadas só por "Art. N"). type='cobranca_numero_artigo' severity='high'. Correção: reescrever para cobrar o CONTEÚDO jurídico do dispositivo (citar o número só na base/comentário).
+X. DISCIPLINA INCORRETA — a disciplina declarada NÃO corresponde à disciplina real identificada pelo conteúdo (Regra Zero/matriz do edital). type='disciplina_incorreta' severity='medium'; em suggestion indique a disciplina correta.
+Y. FORA DO EDITAL/RECORTE — conteúdo fora das 8 disciplinas oficiais ou fora do recorte permitido (CPPM 8-28/243-253; POP 108/201-214; Redação 6.1-6.8 só definição/finalidade/uso; Português exige texto-base). type='fora_do_edital' severity='high'.
+
 
 REGRA INTERPRETATIVA: paráfrase, interpretação e combinação de dispositivos SÃO VÁLIDAS — só marque alucinação quando a afirmação CONTRARIAR a lei ou inventar requisito/prazo/autoridade.
 REGRA ANTI-FALSO-POSITIVO: se um artigo aparece no ÍNDICE DETERMINÍSTICO ou no bloco "DISPOSITIVOS CITADOS...", é PROIBIDO dizer que esse artigo não existe. Nesse caso, se houver problema, classifique como desalinhamento, gabarito_errado ou comentario_incompleto — nunca como alucinacao_juridica por inexistência do artigo.
@@ -412,6 +442,42 @@ function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_
   const isUniqueMin = lens[g] === min && lens.filter((l) => l === min).length === 1;
   return isUniqueMax || isUniqueMin;
 }
+
+/**
+ * Detecta COBRANÇA DE NÚMERO DE ARTIGO (Regra Especial do Edital CHOA/2026):
+ *  - enunciado cujo objeto central é decorar a localização formal da norma; ou
+ *  - alternativas formadas SOMENTE por "Art. N" / "inciso" / "§" sem conteúdo.
+ */
+function detectArticleNumberCobranca(
+  q: Pick<Questao, "enunciado" | "alt_a" | "alt_b" | "alt_c" | "alt_d" | "alt_e">,
+): { hit: boolean; reason: string } {
+  const enun = String(q.enunciado ?? "");
+  const enunNorm = enun.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const enunciadoPatterns = [
+    /\bqual\s+artigo\b/, /\bem\s+qual\s+artigo\b/, /\bqual\s+o\s+artigo\b/,
+    /\bassinale\s+o\s+(?:numero|n[º°]?)\s+do\s+artigo\b/, /\bqual\s+(?:o\s+)?inciso\b/,
+    /\bem\s+qual\s+(?:inciso|paragrafo|item|processo)\b/,
+    /\bo\s+art(?:igo|\.)?\s*\d+\s+(?:trata|disp[oõ]e|prev[êe])\b/,
+    /\b(?:artigo|art\.?)\s+correspondente\s+(?:e|é)\b/,
+    /\bapresenta\s+(?:corretamente\s+)?o\s+artigo\b/,
+    /\bindica\s+(?:corretamente\s+)?o\s+(?:numero\s+do\s+)?artigo\b/,
+  ];
+  if (enunciadoPatterns.some((re) => re.test(enunNorm))) {
+    return { hit: true, reason: "enunciado cobra a localização/número do dispositivo como objeto central" };
+  }
+  // Alternativas formadas apenas por referência seca (Art. N, inciso, §) — sem conteúdo jurídico.
+  const alts = [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].map((a) => String(a ?? "").trim());
+  const isBareRef = (s: string) =>
+    s.length > 0 && /^(?:art(?:igo|\.)?\s*\d+[ºo°a]?\s*)+(?:[,;e/]+\s*(?:inciso|§|paragrafo|alinea|item)?\s*[ivxlcdm\d]*\.?\s*)*$/i.test(
+      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+    );
+  const bare = alts.filter(isBareRef).length;
+  if (bare >= 4) {
+    return { hit: true, reason: `${bare} de 5 alternativas são apenas referências de artigo/inciso sem conteúdo` };
+  }
+  return { hit: false, reason: "" };
+}
+
 
 function articleExists(legalText: string | null, artNum: string): boolean {
   if (!legalText) return false;
@@ -649,17 +715,31 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
       });
     }
   }
+  // Cobrança de número de artigo (Regra Especial do edital) — detecção determinística.
+  {
+    const art = detectArticleNumberCobranca(q);
+    if (art.hit && !issues.some((i: any) => i?.type === "cobranca_numero_artigo")) {
+      issues.push({
+        type: "cobranca_numero_artigo",
+        severity: "high",
+        field: "questao_inteira",
+        evidence: art.reason,
+        description: "Questão cobra memorização do número do dispositivo como objeto central — proibido pelo edital CHOA/2026.",
+        suggestion: "Reescrever para cobrar o CONTEÚDO jurídico do dispositivo; citar o número apenas na base normativa/comentário.",
+      });
+    }
+  }
 
   // ── ETAPA 2: ROTEAMENTO POR COMPLEXIDADE ──
   // Issues SIMPLES (mecânicas) → DeepSeek já entregou o patch.
   // Issues COMPLEXAS (prosa jurídica) → Maritaca Sabiá 4 reescreve.
-  const SIMPLE_TYPES = new Set(["gabarito_errado", "bug_estrutural", "formatacao"]);
+  const SIMPLE_TYPES = new Set(["gabarito_errado", "bug_estrutural", "formatacao", "disciplina_incorreta"]);
   const FORCED_COMPLEX_TYPES = new Set([
     "length_bias", "distrator_longo", "distrator_fraco", "alucinacao_juridica",
     "multiplas_corretas", "sem_correta", "hierarquia_violada", "funcao_inconsistente",
     "desalinhamento", "sem_comentario", "comentario_loop", "comentario_incompleto",
     "texto_legal_desatualizado", "insufficient_distractors", "incoerente", "duplicada",
-    "reporte_usuario",
+    "reporte_usuario", "cobranca_numero_artigo", "fora_do_edital",
   ]);
   // Normaliza fix_complexity de cada issue (DeepSeek pode errar — código tem a palavra final).
   for (const i of issues) {
