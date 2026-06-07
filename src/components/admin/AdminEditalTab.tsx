@@ -334,6 +334,11 @@ export default function AdminEditalTab() {
                         Link externo
                       </span>
                     )}
+                    {current?.mode === "lei_seca" && (
+                      <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                        Lei Seca
+                      </span>
+                    )}
                     {!current && !disc.restricted && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-500">
                         <Clock className="h-3 w-3" />
