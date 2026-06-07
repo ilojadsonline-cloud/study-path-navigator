@@ -767,7 +767,7 @@ const Dashboard = () => {
                     to={`/bizuaula?disciplina=${b.id}`}
                     className={`flex items-center gap-3 p-3 rounded-lg border transition-colors min-w-0 ${
                       b.destaque
-                        ? "gradient-gold-subtle border-gold/40 hover:border-gold/70"
+                        ? "bg-gold/10 border-gold/40 hover:border-gold/70"
                         : "bg-secondary/30 border-border/40 hover:border-primary/40"
                     }`}
                   >
