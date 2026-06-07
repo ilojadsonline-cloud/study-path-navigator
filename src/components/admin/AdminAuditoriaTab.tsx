@@ -747,7 +747,7 @@ export function AdminAuditoriaTab() {
                     <Play className="w-4 h-4" />Continuar auditoria
                   </Button>
                 )}
-                <Button onClick={startJob} className="gap-2">
+                <Button onClick={() => startJob()} className="gap-2">
                   <Play className="w-4 h-4" />Iniciar nova auditoria
                 </Button>
               </>
