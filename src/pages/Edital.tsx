@@ -826,6 +826,17 @@ function DisciplinaBlock({
 
 export default function Edital() {
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set([disciplinas[0].id]));
+  const [materials, setMaterials] = useState<Record<string, EditalMaterialEntry>>({});
+
+  useEffect(() => {
+    let alive = true;
+    loadEditalMaterialsConfig().then((config) => {
+      if (alive) setMaterials(config.materials);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const allOpen = openIds.size === disciplinas.length;
 
