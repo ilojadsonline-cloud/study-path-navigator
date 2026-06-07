@@ -782,7 +782,29 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
     }
   }
 
-  // ── ETAPA 2: ROTEAMENTO POR COMPLEXIDADE ──
+  // Redação Oficial fora do escopo conceitual (estrutura/formatação/partes) — detecção
+  // determinística que força AUTO_DELETE (irrecuperável: não dá para reescrever para o
+  // viés conceitual sem trocar o tema da questão).
+  {
+    const red = detectRedacaoForaDeEscopo(q);
+    if (red.hit) {
+      if (!issues.some((i: any) => i?.type === "fora_do_edital")) {
+        issues.push({
+          type: "fora_do_edital",
+          severity: "high",
+          field: "questao_inteira",
+          evidence: red.reason,
+          description: "Questão de Redação Oficial cobra estrutura/formatação/partes do documento — fora do escopo conceitual (definição, finalidade e hipóteses de uso) do edital CHOA/2026, Item 6 (6.1–6.8).",
+          suggestion: "Excluir: não é possível reescrever para o viés conceitual sem inventar nova questão.",
+        });
+      }
+      if (!/^AUTO_DELETE:/i.test(aiSummary)) {
+        aiSummary = `AUTO_DELETE: Redação fora do escopo conceitual — ${red.reason}.${aiSummary ? " " + aiSummary : ""}`;
+      }
+    }
+  }
+
+
   // Issues SIMPLES (mecânicas) → DeepSeek já entregou o patch.
   // Issues COMPLEXAS (prosa jurídica) → Maritaca Sabiá 4 reescreve.
   const SIMPLE_TYPES = new Set(["gabarito_errado", "bug_estrutural", "formatacao", "disciplina_incorreta"]);
