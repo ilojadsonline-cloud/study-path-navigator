@@ -120,17 +120,22 @@ export default function AdminEditalTab() {
           await removeEditalMaterialFile(current.storagePath);
         }
         delete nextMaterials[disciplinaId];
-      } else if (form.mode === "link") {
+      } else if (form.mode === "link" || form.mode === "lei_seca") {
         if (!form.externalUrl.trim()) {
-          throw new Error("Informe o link que será usado no botão da disciplina.");
+          throw new Error(
+            form.mode === "lei_seca"
+              ? "Informe o link da Lei Seca atualizada."
+              : "Informe o link que será usado no botão da disciplina.",
+          );
         }
         if (current?.mode === "pdf" && current.storagePath) {
           await removeEditalMaterialFile(current.storagePath);
         }
+        const fallbackLabel = form.mode === "lei_seca" ? "Lei Seca atualizada" : DEFAULT_BUTTON_LABEL;
         nextMaterials[disciplinaId] = {
           disciplinaId,
-          mode: "link",
-          buttonLabel: form.buttonLabel.trim() || DEFAULT_BUTTON_LABEL,
+          mode: form.mode,
+          buttonLabel: form.buttonLabel.trim() || fallbackLabel,
           externalUrl: form.externalUrl.trim(),
           updatedAt: new Date().toISOString(),
         };
