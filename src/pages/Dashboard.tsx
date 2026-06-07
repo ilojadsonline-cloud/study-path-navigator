@@ -9,6 +9,7 @@ import {
   Sparkles, Youtube, Brain, X, ClipboardCheck, ArrowUpRight, BarChart3
 } from "lucide-react";
 import { CalendarioInteligente } from "@/components/dashboard/CalendarioInteligente";
+import { bizuAulaDisciplinas, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
 import { MaintenanceNoticeModal } from "@/components/dashboard/MaintenanceNoticeModal";
 import { getLocalStudyTimerSnapshot, type TimerState } from "@/hooks/useStudyTimer";
 import { useNavigate, Link } from "react-router-dom";
