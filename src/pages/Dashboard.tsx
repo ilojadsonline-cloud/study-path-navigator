@@ -9,6 +9,7 @@ import {
   Sparkles, Youtube, Brain, X, ClipboardCheck, ArrowUpRight, BarChart3
 } from "lucide-react";
 import { CalendarioInteligente } from "@/components/dashboard/CalendarioInteligente";
+import { bizuAulaDisciplinas, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
 import { MaintenanceNoticeModal } from "@/components/dashboard/MaintenanceNoticeModal";
 import { getLocalStudyTimerSnapshot, type TimerState } from "@/hooks/useStudyTimer";
 import { useNavigate, Link } from "react-router-dom";
@@ -20,6 +21,7 @@ import {
 type DisciplinaProgress = { name: string; total: number; corretas: number };
 type AtividadeRecente = { text: string; time: string; icon: React.ReactNode; sortDate: Date };
 type StudySession = { id: number; duration_seconds: number; started_at: string | null; created_at: string | null };
+type BizuAulaItem = { id: string; title: string; subtitle: string; count: number; restricted?: boolean; destaque?: boolean };
 
 function localDateKey(d: Date | string): string {
   const dt = typeof d === "string" ? new Date(d) : d;
@@ -151,6 +153,7 @@ const Dashboard = () => {
   );
   const [studySessions, setStudySessions] = useState<StudySession[]>([]);
   const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
+  const [bizuAulas, setBizuAulas] = useState<BizuAulaItem[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -370,6 +373,26 @@ const Dashboard = () => {
         catch { respostas = {}; }
         setIncompleteSimulado({ disciplina: progressData.disciplina, respondidas: Object.keys(respostas).length, total: progressData.total });
       }
+
+      // BizuAulas: contagem de vídeos por disciplina (Análise do Edital sempre em destaque)
+      const { data: bizuRows } = await supabase
+        .from("bizuaulas_videos").select("disciplina_id");
+      const bizuCount: Record<string, number> = {};
+      (bizuRows || []).forEach((r: { disciplina_id: string }) => {
+        bizuCount[r.disciplina_id] = (bizuCount[r.disciplina_id] || 0) + 1;
+      });
+      const bizuList: BizuAulaItem[] = bizuAulaDisciplinas
+        .map((d) => ({
+          id: d.id,
+          title: d.title,
+          subtitle: d.subtitle,
+          count: bizuCount[d.id] || 0,
+          restricted: d.restricted,
+          destaque: d.id === ANALISE_EDITAL_DISC.id,
+        }))
+        // mantém a Análise do Edital sempre; demais só se tiverem vídeo
+        .filter((d) => d.destaque || d.count > 0);
+      setBizuAulas(bizuList);
 
       setLoading(false);
     })();
@@ -723,6 +746,48 @@ const Dashboard = () => {
               {/* Calendário Inteligente CHOA */}
               <CalendarioInteligente />
             </div>
+
+            {/* BizuAulas — atalho rápido (Análise do Edital em destaque) */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+              className="glass-card rounded-xl p-4 sm:p-5 min-w-0">
+              <div className="flex items-center justify-between mb-4 gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Youtube className="w-5 h-5 text-primary shrink-0" />
+                  <h2 className="font-semibold text-sm sm:text-base truncate">BizuAulas</h2>
+                </div>
+                <Link to="/bizuaula"
+                  className="text-[11px] bg-secondary/50 hover:bg-secondary border border-border/40 rounded-md px-2 py-1 text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 shrink-0">
+                  Ver todas <ArrowUpRight className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {bizuAulas.map((b) => (
+                  <Link
+                    key={b.id}
+                    to={`/bizuaula?disciplina=${b.id}`}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors min-w-0 ${
+                      b.destaque
+                        ? "bg-gold/10 border-gold/40 hover:border-gold/70"
+                        : "bg-secondary/30 border-border/40 hover:border-primary/40"
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${b.destaque ? "bg-gold/20 text-gold" : "bg-primary/10 text-primary"}`}>
+                      {b.destaque ? <Sparkles className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className={`text-xs font-semibold truncate ${b.destaque ? "text-gold" : ""}`}>{b.title}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {b.restricted
+                          ? "Documento sigiloso"
+                          : b.count > 0
+                            ? `${b.count} vídeo${b.count > 1 ? "s" : ""}`
+                            : b.destaque ? "Comece por aqui" : "Em breve"}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
 
             <MaintenanceNoticeModal />
           </>

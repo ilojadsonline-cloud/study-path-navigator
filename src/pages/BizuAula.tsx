@@ -5,7 +5,7 @@ import { Youtube, ChevronDown, ChevronUp, Loader2, Inbox, Play } from "lucide-re
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { disciplinasLite } from "@/lib/edital-structure";
+import { bizuAulaDisciplinas } from "@/lib/edital-structure";
 import { PopSigilosoNotice, PopSigilosoBadge } from "@/components/PopSigilosoNotice";
 import { toast } from "sonner";
 
@@ -90,7 +90,7 @@ function VideoCard({ row }: { row: VideoRow }) {
 
 export default function BizuAula() {
   const [params] = useSearchParams();
-  const initialDisc = params.get("disciplina") || disciplinasLite[0].id;
+  const initialDisc = params.get("disciplina") || bizuAulaDisciplinas[0].id;
   const [openId, setOpenId] = useState<string>(initialDisc);
   const [rows, setRows] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,7 +141,7 @@ export default function BizuAula() {
           </div>
         ) : (
           <div className="space-y-3">
-            {disciplinasLite.map((d, i) => {
+            {bizuAulaDisciplinas.map((d, i) => {
               const open = openId === d.id;
               const videos = byDisc.get(d.id) || [];
               return (
