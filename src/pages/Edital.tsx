@@ -5,7 +5,7 @@ import { BackButton } from "@/components/BackButton";
 import {
   BookOpen, ChevronDown, ChevronUp, ChevronRight, ExternalLink, PlayCircle, FileText,
   Shield, Gavel, BookMarked, Landmark, BadgeCheck, Layers, ChevronsDownUp, ChevronsUpDown,
-  ClipboardList, FileCheck, Brain, Target, Clock, Lock, Download
+  ClipboardList, FileCheck, Brain, Target, Clock, Lock, Download, Scroll
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
