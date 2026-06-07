@@ -876,20 +876,24 @@ serve(async (req) => {
     const disc = DISCIPLINES[discIndex];
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Fetch legal text
-    const { data: legalTextRow, error: ltError } = await supabase
+    // Fetch source text. Para tipo "lei"/"conceitual" é fonte obrigatória.
+    // Para tipo "texto" (Língua Portuguesa) a IA cria o próprio texto-base → fonte opcional.
+    const { data: legalTextRow } = await supabase
       .from("discipline_legal_texts").select("content").eq("disciplina", disc.disciplina).single();
 
-    if (ltError || !legalTextRow?.content || String(legalTextRow.content).trim().length < 500) {
+    const sourceContent = legalTextRow?.content ? String(legalTextRow.content).trim() : "";
+    const requiresSource = disc.tipo !== "texto";
+
+    if (requiresSource && sourceContent.length < 500) {
       return new Response(JSON.stringify({
         status: "erro",
-        mensagem: `Texto legal oficial insuficiente para "${disc.disciplina}". Geração bloqueada — discipline_legal_texts.content é a ÚNICA fonte permitida.`,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_LEGAL_TEXT", descricao: `Cadastre/expanda o texto legal oficial da disciplina "${disc.disciplina}" (mínimo 500 caracteres). PDFs, anexos e conhecimento geral do modelo são proibidos como fonte.` }] },
+        mensagem: `Texto oficial insuficiente para "${disc.disciplina}". Geração bloqueada — discipline_legal_texts.content é a ÚNICA fonte permitida.`,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_LEGAL_TEXT", descricao: `Cadastre/expanda o texto oficial da disciplina "${disc.disciplina}" (mínimo 500 caracteres). PDFs, anexos e conhecimento geral do modelo são proibidos como fonte.` }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const leiSeca = legalTextRow.content;
+    const leiSeca = sourceContent;
     const blocks = parseArticleBlocks(leiSeca);
     const availableArticles = blocks.map(b => `Art. ${b.artNum}`).join(", ");
 
