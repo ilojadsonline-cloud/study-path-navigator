@@ -621,42 +621,30 @@ function TopicItem({ item }: { item: EditalItem }) {
   );
 }
 
-function MaterialButton({ entry }: { entry: EditalMaterialEntry | null }) {
-  const handleOpen = async () => {
-    if (!entry) return;
-
-    if (entry.mode === "link" && entry.externalUrl) {
-      window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
-      return;
+async function openMaterialEntry(entry: EditalMaterialEntry) {
+  if (entry.storagePath) {
+    try {
+      const url = await createEditalMaterialSignedUrl(entry.storagePath);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      /* falha silenciosa: o material não pôde ser aberto agora */
     }
+    return;
+  }
+  if (entry.externalUrl) {
+    window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
+  }
+}
 
-    if (entry.mode === "lei_seca") {
-      if (entry.storagePath) {
-        try {
-          const url = await createEditalMaterialSignedUrl(entry.storagePath);
-          window.open(url, "_blank", "noopener,noreferrer");
-        } catch {
-          /* falha silenciosa */
-        }
-        return;
-      }
-      if (entry.externalUrl) {
-        window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
-        return;
-      }
-    }
+function materialIcon(entry: EditalMaterialEntry) {
+  if (entry.mode === "pdf") return Download;
+  if (entry.mode === "lei_seca") return entry.storagePath ? Download : Scroll;
+  return ExternalLink;
+}
 
-    if (entry.mode === "pdf" && entry.storagePath) {
-      try {
-        const url = await createEditalMaterialSignedUrl(entry.storagePath);
-        window.open(url, "_blank", "noopener,noreferrer");
-      } catch {
-        /* falha silenciosa: o material não pôde ser aberto agora */
-      }
-    }
-  };
-
-  if (!entry) {
+// Lista numerada de materiais (um abaixo do outro, com título).
+function MaterialList({ entries }: { entries: EditalMaterialEntry[] }) {
+  if (entries.length === 0) {
     return (
       <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-dashed border-amber-500/30 text-amber-500 text-xs font-semibold cursor-default">
         <Clock className="w-4 h-4" />
@@ -665,23 +653,28 @@ function MaterialButton({ entry }: { entry: EditalMaterialEntry | null }) {
     );
   }
 
-  const Icon =
-    entry.mode === "pdf"
-      ? Download
-      : entry.mode === "lei_seca"
-        ? entry.storagePath
-          ? Download
-          : Scroll
-        : ExternalLink;
-
   return (
-    <button
-      onClick={handleOpen}
-      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
-    >
-      <Icon className="w-4 h-4" />
-      {entry.buttonLabel || (entry.mode === "lei_seca" ? "Lei Seca atualizada" : "Material de estudo")}
-    </button>
+    <ol className="space-y-2">
+      {entries.map((entry, idx) => {
+        const Icon = materialIcon(entry);
+        return (
+          <li key={entry.id}>
+            <button
+              onClick={() => openMaterialEntry(entry)}
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors text-left"
+            >
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[11px] font-bold">
+                {idx + 1}
+              </span>
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="flex-1 min-w-0 truncate">
+                {entry.buttonLabel || (entry.mode === "lei_seca" ? "Lei Seca atualizada" : "Material de estudo")}
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -690,16 +683,21 @@ function DisciplinaBlock({
   index,
   open,
   onToggle,
-  material,
+  materials,
 }: {
   d: Disciplina;
   index: number;
   open: boolean;
   onToggle: () => void;
-  material: EditalMaterialEntry | null;
+  materials: EditalMaterialEntry[];
 }) {
   const navigate = useNavigate();
   const { peso, clean } = parseSubtitle(d.subtitle);
+
+  // Lei Seca enviada pelo admin substitui o link fixo (ex.: "Lei nº 2.578").
+  const leiSecaEntry = materials.find((m) => m.mode === "lei_seca") ?? null;
+  // Demais materiais entram na lista numerada (links, vídeos, PDFs).
+  const otherMaterials = materials.filter((m) => m.mode !== "lei_seca");
 
 
   return (
