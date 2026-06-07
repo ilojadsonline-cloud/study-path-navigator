@@ -931,6 +931,7 @@ export default function Edital() {
               index={i}
               open={openIds.has(d.id)}
               onToggle={() => toggle(d.id)}
+              material={materials[d.id] ?? null}
             />
           ))}
         </div>
