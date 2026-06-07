@@ -281,6 +281,32 @@ async function callDeepSeekRewriter(prompt: string, timeoutMs = 120000): Promise
   }
 }
 
+/**
+ * Bloco-mestre de auditoria conforme o Edital nº 001/2026 — CHOA/2026 PMTO.
+ * Define a matriz oficial, o roteamento por disciplina (Regra Zero), os recortes
+ * de escopo e a filosofia "corrigir antes de excluir". Viaja junto da mensagem
+ * do usuário (não no system prompt) para manter o roteamento por questão.
+ */
+const CHOA_EDITAL_AUDIT_RULES = `### MATRIZ OFICIAL DO EDITAL CHOA/2026 PMTO (8 disciplinas) — use para identificar a disciplina REAL e o recorte permitido:
+01 Lei nº 2.578/2012 — Estatuto dos Militares Estaduais (ingresso, direitos, deveres, hierarquia/disciplina, cargo×função, movimentação, licenciamento, reserva, reforma).
+02 Lei nº 2.575/2012 — Lei de Promoções (CPO×CPP, QA/QAA/QAM/QAE, interstício, merecimento×antiguidade, requisitos do CHOA, seleção interna).
+03 Lei Complementar nº 128/2021 — Organização Básica da PMTO (estrutura, Comando-Geral, Estado-Maior, diretorias, quadros, competências de órgãos).
+04 CPPM — Polícia Judiciária Militar, IPM, prisão em flagrante e APF, LIMITADO aos arts. 8º a 28 e 243 a 253. Conteúdo fora desse recorte = fora do edital.
+05 RDMETO — Decreto nº 4.994/2014 e Anexo Único (transgressão disciplinar, sindicância, autoridade, prazos, sanções, comportamento, tabela de punições).
+06 POP — Portaria Normativa nº 001/2024 (Processo 108 e Processos 201 a 214). Processo fora desse recorte = fora do edital.
+07 Língua Portuguesa — interpretação e compreensão de texto. EXIGE texto-base; resposta deve estar sustentada pelo texto. Gramática pura = fora do foco.
+08 Manual de Redação Oficial da PMTO — Item 6, subitens 6.1 a 6.8, SÓ definição, finalidade e hipóteses de uso dos documentos. Formatação/margem/fonte/modelos = fora do edital.
+
+### REGRA ZERO (roteamento): identifique a disciplina REAL pelo conteúdo cobrado, mesmo que o campo "Disciplina" esteja errado. Se a disciplina declarada divergir da real e o conteúdo for juridicamente correto, emita issue type='disciplina_incorreta' (severity='medium', fix simples: sugira a disciplina certa). Se houver mistura indevida de duas disciplinas sem base para correção → revisão manual.
+
+### RECORTE DO EDITAL: se a questão cobrar dispositivo/processo/assunto FORA do recorte da sua disciplina (ex.: CPPM fora de 8-28/243-253; POP fora de 108/201-214; Redação fora de 6.1-6.8 ou cobrando formatação; Português sem texto-base ou exigindo gramática), emita issue type='fora_do_edital' (severity='high').
+
+### PROIBIÇÃO DE COBRANÇA DE NÚMERO DE ARTIGO: questões cujo OBJETO central é decorar número de artigo/inciso/§/alínea/processo ("em qual artigo", "qual artigo trata de", alternativas formadas só por "Art. N") devem ser sinalizadas type='cobranca_numero_artigo' (severity='high'). Citar o artigo na base normativa/comentário é permitido e desejável — proibido é cobrar o NÚMERO como resposta. Correção preferencial: reescrever para cobrar o CONTEÚDO jurídico do dispositivo.
+
+### FILOSOFIA: CORRIGIR ANTES DE EXCLUIR. Preserve o banco sempre que houver base normativa para reescrever. Só classifique como irrecuperável (AUTO_DELETE) quando: totalmente fora do edital, incoerente a ponto de impedir reescrita, ou duplicata literal sem ganho pedagógico. Havendo dúvida jurídica (alucinação, conflito de vigência, sem base na lei carregada) → needs_human_review=true (revisão manual), NUNCA exclusão automática.
+
+`;
+
 function buildAuditPrompt(q: Questao, legalText: string | null): string {
   const alts = ["A", "B", "C", "D", "E"].map(
     (l, i) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`
