@@ -92,7 +92,7 @@ export default function AdminEditalTab() {
         return;
       }
 
-      if (entry.mode === "link" && entry.externalUrl) {
+      if ((entry.mode === "link" || entry.mode === "lei_seca") && entry.externalUrl) {
         window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
         return;
       }
