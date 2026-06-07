@@ -823,7 +823,221 @@ function parseQuestionsFromModelContent(content: string): { questions: any[]; sa
   throw new Error("INVALID_JSON");
 }
 
-serve(async (req) => {
+// ──────────────────────────────────────────────────────────────────────────
+// FLUXO PRÓPRIO — disciplinas NÃO jurídicas (Língua Portuguesa / Redação Oficial)
+// Não dependem de artigos de lei: validação estrutural + dedup + auditoria cética genérica.
+// ──────────────────────────────────────────────────────────────────────────
+async function generateNonLegalBatch(ctx: {
+  supabase: any;
+  disc: any;
+  sourceContent: string;
+  batchSize: number;
+  existingFingerprints: Set<string>;
+  existingSemanticFPs: Set<string>;
+  existingForSimilarity: Array<{ id: number; enunciado: string }>;
+  assuntoCoverage: Map<string, number>;
+  openingsToAvoid: string[];
+  timestamp: string;
+  questoesRevisaoManual: Array<{ id?: string; motivo: string }>;
+  errosEncontrados: Array<{ codigo: string; descricao: string }>;
+  useLovable: boolean;
+}): Promise<Response> {
+  const {
+    supabase, disc, sourceContent, batchSize,
+    existingFingerprints, existingSemanticFPs, existingForSimilarity,
+    assuntoCoverage, openingsToAvoid, timestamp, questoesRevisaoManual, errosEncontrados, useLovable,
+  } = ctx;
+
+  const isTexto = disc.tipo === "texto"; // Língua Portuguesa
+  const leastCoveredAssuntos = disc.assuntos
+    .map((a: string) => ({ assunto: a, count: assuntoCoverage.get(a) || 0 }))
+    .sort((a: any, b: any) => a.count - b.count)
+    .slice(0, 4)
+    .map((a: any) => `"${a.assunto}"`)
+    .join(", ");
+
+  const openingsBlock = openingsToAvoid.length > 0
+    ? `\nABERTURAS JÁ MUITO USADAS (varie, não comece igual):\n${openingsToAvoid.map((o, i) => `${i + 1}) "${o}..."`).join("\n")}`
+    : "";
+
+  const systemPrompt = isTexto
+    ? `Você é uma BANCA EXAMINADORA DE LÍNGUA PORTUGUESA DE ALTÍSSIMO NÍVEL para o concurso interno CHOA/2026 da PMTO, no padrão de bancas como CEBRASPE, FGV e FCC. Sua missão é elaborar questões objetivas de INTERPRETAÇÃO E COMPREENSÃO DE TEXTO, com 5 alternativas e apenas uma correta.
+
+REGRAS OBRIGATÓRIAS:
+1. Para CADA questão, CRIE você mesmo um TEXTO-BASE inédito, curto ou médio (6 a 14 linhas), coeso e bem escrito, sobre temas institucionais (segurança pública, hierarquia e disciplina, gestão pública, ética profissional, tecnologia na atividade policial, ordem pública, comunicação institucional, liderança militar, cidadania e direitos humanos). O texto-base deve fazer parte do campo "enunciado", separado da pergunta por uma linha em branco.
+2. A pergunta deve exigir compreensão/interpretação: ideia central, finalidade, inferência, pressuposto, efeito de sentido, referência/retomada, conectivos, relações lógico-discursivas, sentido de palavra/expressão no contexto.
+3. A resposta correta deve ser INTEGRALMENTE sustentável pelo PRÓPRIO TEXTO-BASE. NUNCA dependa de conhecimento externo ao texto.
+4. NÃO cobre gramática isolada (concordância, regência, crase, pontuação, ortografia) como fim em si — só quando vinculada à interpretação.
+5. As 4 alternativas incorretas devem ser plausíveis (extrapolação indevida, contradição sutil, generalização, troca de causa/consequência), nunca absurdas nem ambíguas.
+6. Exatamente UMA alternativa correta; as cinco com comprimento e estrutura semelhantes (a correta não pode ser a mais longa nem a mais curta).
+7. Distinga compreender (o que o texto diz) de extrapolar (o que o texto NÃO autoriza concluir).
+8. PADRÃO ELITE: questões com real dificuldade interpretativa; nada óbvio ou resolvível sem ler o texto.`
+    : `Você é uma BANCA EXAMINADORA DE REDAÇÃO OFICIAL MILITAR DE ALTÍSSIMO NÍVEL para o concurso interno CHOA/2026 da PMTO. Sua missão é elaborar questões objetivas sobre o MANUAL DE REDAÇÃO OFICIAL DA PMTO — Item 6, subitens 6.1 a 6.8 — com 5 alternativas e apenas uma correta.
+
+ESCOPO ESTRITO (Edital nº 001/2026): cobre APENAS os ASPECTOS CONCEITUAIS de cada documento — DEFINIÇÃO, FINALIDADE e HIPÓTESES DE UTILIZAÇÃO. É EXPRESSAMENTE PROIBIDO cobrar estrutura, formatação, partes constitutivas, cabeçalho, fonte, margens, espaçamento, epígrafe, assinatura, modelos e pronomes de tratamento.
+
+REGRAS OBRIGATÓRIAS:
+1. FONTE ÚNICA: use exclusivamente o TEXTO OFICIAL fornecido na mensagem do usuário (Manual de Redação Oficial da PMTO). Nada de conhecimento externo, outros manuais ou analogias.
+2. O foco é RECONHECER o documento adequado a uma finalidade, ou ASSOCIAR tipo de ato à sua finalidade/categoria (correspondência, normativo, ordinatório, enunciativo, negocial, comprobatório, divulgação, serviço).
+3. NÃO pergunte "quais as partes do ofício" nem "como se estrutura a portaria". Nada de gramática normativa.
+4. As 4 alternativas incorretas devem ser plausíveis (troca de documento adequado, finalidade trocada, categoria errada), nunca absurdas nem ambíguas.
+5. Exatamente UMA alternativa correta; as cinco com comprimento e estrutura semelhantes (a correta não pode ser a mais longa nem a mais curta).
+6. PADRÃO ELITE: questões que diferenciem documentos próximos (Ofício x Memorando x Parte x Requerimento; Parecer x Relatório x Estudo de Caso x Projeto).`;
+
+  const fonteBlock = isTexto
+    ? `Você cria o próprio TEXTO-BASE de cada questão (não há fonte externa). Cada texto-base deve ser inédito e diferente dos demais do lote.`
+    : `TEXTO OFICIAL — FONTE ÚNICA (Manual de Redação Oficial da PMTO, Item 6):\n"""${(sourceContent || "").slice(0, 14000)}"""`;
+
+  const prompt = `DADOS DA GERAÇÃO
+Disciplina: ${disc.disciplina}
+Quantidade exata de questões a gerar: ${batchSize}
+Assuntos a priorizar (menos explorados): ${leastCoveredAssuntos}
+Assuntos possíveis: ${disc.assuntos.join(", ")}
+
+DIRETRIZES ESPECÍFICAS DA DISCIPLINA (Edital nº 001/2026 — CHOA/2026 PMTO) — obrigatórias:
+${disc.diretrizes}
+
+${fonteBlock}
+${openingsBlock}
+
+REGRAS DE QUALIDADE:
+- Cada questão do lote deve abordar um ASPECTO/${isTexto ? "TEXTO" : "DOCUMENTO"} DIFERENTE. Não repita tema, estrutura ou pegadinha.
+- Distribua o gabarito entre A(0), B(1), C(2), D(3), E(4) — não concentre na mesma letra.
+- O comentário deve explicar por que a correta está certa e por que CADA incorreta está errada, em tom didático de professor (máx. 1500 caracteres), terminando com uma dica de prova curta.
+
+REGRAS DE SAÍDA — responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do objeto, no formato {"questions":[...]}.
+Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" ("Fácil|Médio|Difícil"), "enunciado"${isTexto ? " (inclui o TEXTO-BASE + linha em branco + a pergunta)" : ""}, "alt_a".."alt_e" (sem prefixo de letra), "gabarito" (0=A,1=B,2=C,3=D,4=E), "comentario", "cognitive_skill", "trap_type".
+{"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Médio","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"...","cognitive_skill":"interpretação","trap_type":"..."}]}
+
+Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {"questions":[],"erro":"NAO_FOI_POSSIVEL_GERAR"}.`;
+
+  const maxTokens = 3200;
+  const PRIMARY_TIMEOUT_MS = useLovable ? 55000 : 60000;
+
+  let content = '{"questions":[]}';
+  try {
+    const genMessages: ChatMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: prompt },
+    ];
+    const aiResult = await runAiStage("question_generation", genMessages, {
+      jsonResponse: true,
+      maxOutputTokensOverride: maxTokens,
+      temperatureOverride: 0.4,
+      timeoutMs: PRIMARY_TIMEOUT_MS,
+      metadata: { batchSize, disciplina: disc.disciplina, tipo: disc.tipo },
+    });
+    content = aiResult.content || '{"questions":[]}';
+    console.log(`[GERAR-NL] OK via ${aiResult.provider}/${aiResult.model} (${disc.disciplina})`);
+  } catch (genErr: any) {
+    const msg = String(genErr?.message ?? genErr);
+    const isCredit = /HTTP 402|insufficient|no credits|saldo|quota|billing|exhaust/i.test(msg);
+    const isRate = /HTTP 429|rate limit|too many requests/i.test(msg);
+    const isTimeout = /abort|timeout/i.test(msg);
+    return new Response(JSON.stringify({
+      status: "erro",
+      mensagem: isCredit ? "Provedor de IA sem saldo/limite." : isRate ? "Rate limit da IA." : isTimeout ? "A IA demorou demais." : "Erro da IA na geração.",
+      paused: isCredit || isRate,
+      detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isCredit ? "AI_402" : isRate ? "RATE_LIMIT" : isTimeout ? "TIMEOUT" : "API_ERROR", descricao: msg.slice(0, 200) }] },
+      timestamp,
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  let rawQuestions: any[];
+  try {
+    rawQuestions = parseQuestionsFromModelContent(content).questions;
+  } catch {
+    return new Response(JSON.stringify({
+      status: "erro", mensagem: "IA retornou JSON inválido.",
+      detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "INVALID_JSON", descricao: "JSON inválido" }] },
+      timestamp,
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  if (!Array.isArray(rawQuestions)) rawQuestions = [];
+
+  const validQuestions: any[] = [];
+  let discarded = 0;
+  const batchFingerprints = new Set<string>();
+  const batchSemanticFPs = new Set<string>();
+  const batchForSimilarity: Array<{ id: number; enunciado: string }> = [];
+
+  for (let idx = 0; idx < rawQuestions.length; idx++) {
+    const raw = rawQuestions[idx];
+    const q: Record<string, any> = {
+      disciplina: disc.disciplina,
+      assunto: normalizeWhitespace(raw.assunto),
+      dificuldade: normalizeWhitespace(raw.dificuldade) || "Médio",
+      enunciado: normalizeWhitespace(raw.enunciado),
+      comentario: normalizeWhitespace(raw.comentario),
+      gabarito: Math.min(Math.max(Number(raw.gabarito) || 0, 0), 4),
+      cognitive_skill: normalizeWhitespace(raw.cognitive_skill) || null,
+      trap_type: normalizeWhitespace(raw.trap_type) || null,
+      artigo_principal: null,
+    };
+    for (const k of ALT_KEYS) q[k] = stripAlternativePrefix(raw[k]);
+
+    const alts = ALT_KEYS.map(k => q[k] as string);
+    const minEnun = isTexto ? 120 : 25; // texto-base exige enunciado mais longo
+    if (!q.enunciado || q.enunciado.length < minEnun) { discarded++; continue; }
+    if (alts.some(a => !a || a.length < 2)) { discarded++; continue; }
+    if (hasDuplicateAlts(alts)) { discarded++; continue; }
+    if (!q.comentario || q.comentario.length < 30) { discarded++; continue; }
+
+    // Paridade de comprimento (anti "correta = outlier")
+    const gabIdx = Number(q.gabarito);
+    const lens = alts.map(a => (a || "").trim().length);
+    const otherLens = lens.filter((_, i) => i !== gabIdx);
+    const otherAvg = otherLens.reduce((s, n) => s + n, 0) / Math.max(1, otherLens.length);
+    const correctLen = lens[gabIdx];
+    if (correctLen > otherAvg * 1.9 || correctLen < otherAvg * 0.45) { discarded++; continue; }
+
+    // Dedup textual / semântica / similaridade
+    const fp = buildFingerprint(q.enunciado);
+    if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) { discarded++; continue; }
+    batchFingerprints.add(fp);
+
+    const correctAltText = q[ALT_KEYS[q.gabarito]] as string;
+    const semFP = buildSemanticFingerprint(q.comentario, correctAltText);
+    if (existingSemanticFPs.has(semFP) || batchSemanticFPs.has(semFP)) { discarded++; continue; }
+    batchSemanticFPs.add(semFP);
+
+    if (findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55)) { discarded++; continue; }
+    if (findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55) !== null) { discarded++; continue; }
+    batchForSimilarity.push({ id: idx, enunciado: q.enunciado });
+
+    validQuestions.push(q);
+  }
+
+  // Inserção
+  let insertedCount = 0;
+  if (validQuestions.length > 0) {
+    const { error: insertError } = await supabase.from("questoes").insert(validQuestions);
+    if (insertError) {
+      errosEncontrados.push({ codigo: "INSERT_ERROR", descricao: insertError.message });
+    } else {
+      insertedCount = validQuestions.length;
+    }
+  }
+
+  const statusResult = errosEncontrados.length > 0 ? "parcial" : (insertedCount > 0 ? "sucesso" : "parcial");
+  const mensagem = `${insertedCount} questões criadas, ${discarded} descartadas de ${rawQuestions.length} geradas para "${disc.disciplina}".`;
+  console.log(`[GERAR-NL] RESULTADO: ${mensagem}`);
+
+  return new Response(JSON.stringify({
+    status: statusResult, mensagem,
+    detalhes: {
+      total_processado: rawQuestions.length,
+      questoes_criadas: insertedCount,
+      questoes_corrigidas: 0,
+      questoes_revisao_manual: questoesRevisaoManual,
+      erros_encontrados: errosEncontrados,
+    },
+    success: true, count: insertedCount, inserted: insertedCount, generated: insertedCount,
+    discarded, total_generated: rawQuestions.length, timestamp,
+  }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
+
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const timestamp = new Date().toISOString();
