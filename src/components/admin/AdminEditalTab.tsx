@@ -11,7 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { disciplinasLite } from "@/lib/edital-structure";
+import { disciplinasLite, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
+
+// Inclui o tópico especial "Análise do Edital" (em primeiro) junto das disciplinas.
+const editalAdminItems = [ANALISE_EDITAL_DISC, ...disciplinasLite];
 import {
   EDITAL_MATERIALS_BUCKET,
   EDITAL_MATERIALS_UPLOAD_PREFIX,
@@ -50,7 +53,7 @@ export default function AdminEditalTab() {
 
   const items = useMemo(
     () =>
-      disciplinasLite.map((disc) => ({
+      editalAdminItems.map((disc) => ({
         ...disc,
         current: materials[disc.id] ?? null,
         form: forms[disc.id] ?? getInitialForm(materials[disc.id]),
@@ -64,7 +67,7 @@ export default function AdminEditalTab() {
     setMaterials(config.materials);
 
     const nextForms: Record<string, FormState> = {};
-    disciplinasLite.forEach((disc) => {
+    editalAdminItems.forEach((disc) => {
       nextForms[disc.id] = getInitialForm(config.materials[disc.id]);
     });
     setForms(nextForms);
