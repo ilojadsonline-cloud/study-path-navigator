@@ -478,8 +478,60 @@ function detectArticleNumberCobranca(
   return { hit: false, reason: "" };
 }
 
+/**
+ * Detecta questões de REDAÇÃO OFICIAL fora do escopo CONCEITUAL do edital.
+ * O edital (Item 6, 6.1–6.8) cobra APENAS definição, finalidade e hipóteses de
+ * utilização dos documentos. Questões que cobram estrutura, formatação, partes
+ * constitutivas, cabeçalho, margem, fonte, espaçamento, epígrafe, vocativo, fecho,
+ * diagramação, assinatura, modelos ou pronomes de tratamento são IRRECUPERÁVEIS
+ * (não há como reescrever para o viés conceitual sem mudar o tema) → AUTO_DELETE.
+ */
+function isRedacaoOficial(disciplina: string | null | undefined): boolean {
+  const d = String(disciplina ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return d.includes("redacao oficial") || d.includes("redacao") || d.includes("manual de redacao");
+}
 
-function articleExists(legalText: string | null, artNum: string): boolean {
+function detectRedacaoForaDeEscopo(
+  q: Pick<Questao, "disciplina" | "enunciado" | "alt_a" | "alt_b" | "alt_c" | "alt_d" | "alt_e">,
+): { hit: boolean; reason: string } {
+  if (!isRedacaoOficial(q.disciplina)) return { hit: false, reason: "" };
+  const norm = (s: unknown) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const enun = norm(q.enunciado);
+  const alts = [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].map(norm).join(" \u2022 ");
+  const haystack = `${enun} \u2022 ${alts}`;
+
+  // Termos que caracterizam cobrança de estrutura/formatação (fora do escopo conceitual).
+  const formatTerms: Array<[RegExp, string]> = [
+    [/\bpartes?\s+(?:constitutivas?|integrantes?|componentes?|que\s+comp[oõ]em|do\s+(?:oficio|memorando|documento|ato|texto|expediente))/, "partes constitutivas do documento"],
+    [/\bestrutura\s+(?:do|da|de|correta|formal|interna|basica|de\s+um|de\s+uma)/, "estrutura do documento"],
+    [/\bcomo\s+(?:se\s+)?(?:estrutura|estruturar|formata|formatar|diagrama|organiza\s+graficamente)\b/, "como se estrutura/formata"],
+    [/\bordem\s+(?:correta\s+)?(?:das\s+partes|dos\s+elementos|de\s+apresentacao)\b/, "ordem das partes"],
+    [/\bformatac/, "formatação"],
+    [/\bdiagramac/, "diagramação"],
+    [/\bcabecalho\b/, "cabeçalho"],
+    [/\bespacamento\b/, "espaçamento"],
+    [/\bentrelinhas?\b/, "entrelinhas"],
+    [/\bepigrafe\b/, "epígrafe"],
+    [/\bvocativo\b/, "vocativo"],
+    [/\bementa\b/, "ementa"],
+    [/\bfecho\b/, "fecho"],
+    [/\bmargens?\b/, "margens"],
+    [/\brodape\b/, "rodapé"],
+    [/\balinhamento\b/, "alinhamento"],
+    [/\bnumeracao\s+(?:de\s+paragrafos?|das?\s+pagina|dos?\s+itens)\b/, "numeração de parágrafos/páginas"],
+    [/\b(?:tipo|tamanho|corpo)\s+(?:de\s+)?(?:da\s+)?fonte\b/, "tipo/tamanho de fonte"],
+    [/\bfonte\s+(?:arial|times|calibri|tipografica|sem\s+serifa)\b/, "fonte tipográfica"],
+    [/\bpronomes?\s+de\s+tratamento\b/, "pronomes de tratamento"],
+    [/\bdisposicao\s+grafica\b/, "disposição gráfica"],
+    [/\b(?:modelo|leiaute|layout|padrao\s+grafico)\s+(?:do|de|correto)\b/, "modelo/leiaute do documento"],
+  ];
+  for (const [re, label] of formatTerms) {
+    if (re.test(haystack)) return { hit: true, reason: `cobra ${label} (fora do escopo conceitual do edital 6.1–6.8)` };
+  }
+  return { hit: false, reason: "" };
+}
+
+
   if (!legalText) return false;
   return parseArticleBlocks(legalText).some((b) => b.artNum === artNum);
 }
