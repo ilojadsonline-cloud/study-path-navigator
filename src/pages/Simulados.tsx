@@ -437,7 +437,7 @@ const Simulados = () => {
                     <Badge variant="outline" className={`text-[10px] ${getDifficultyColor(q.dificuldade)}`}>{q.dificuldade}</Badge>
                   </div>
                 </div>
-                <p className="text-sm leading-relaxed">{q.enunciado}</p>
+                <FormattedText text={q.enunciado} className="text-sm text-foreground" />
                 <div className="space-y-2">
                   {q.alternativas.map((alt, ai) => {
                     const isSelected = selectedAnswer[q.id] === ai;
