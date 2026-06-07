@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
 import {
-  BookOpen, ChevronDown, ChevronUp, ExternalLink, PlayCircle, FileText,
-  Shield, Gavel, BookMarked, Landmark, BadgeCheck,
+  BookOpen, ChevronDown, ChevronUp, ChevronRight, ExternalLink, PlayCircle, FileText,
+  Shield, Gavel, BookMarked, Landmark, BadgeCheck, Layers, ChevronsDownUp, ChevronsUpDown,
   ClipboardList, FileCheck, Brain, Target, Clock, Lock
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
