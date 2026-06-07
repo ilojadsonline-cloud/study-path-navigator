@@ -747,6 +747,48 @@ const Dashboard = () => {
               <CalendarioInteligente />
             </div>
 
+            {/* BizuAulas — atalho rápido (Análise do Edital em destaque) */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+              className="glass-card rounded-xl p-4 sm:p-5 min-w-0">
+              <div className="flex items-center justify-between mb-4 gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Youtube className="w-5 h-5 text-primary shrink-0" />
+                  <h2 className="font-semibold text-sm sm:text-base truncate">BizuAulas</h2>
+                </div>
+                <Link to="/bizuaula"
+                  className="text-[11px] bg-secondary/50 hover:bg-secondary border border-border/40 rounded-md px-2 py-1 text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 shrink-0">
+                  Ver todas <ArrowUpRight className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {bizuAulas.map((b) => (
+                  <Link
+                    key={b.id}
+                    to={`/bizuaula?disciplina=${b.id}`}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors min-w-0 ${
+                      b.destaque
+                        ? "gradient-gold-subtle border-gold/40 hover:border-gold/70"
+                        : "bg-secondary/30 border-border/40 hover:border-primary/40"
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${b.destaque ? "bg-gold/20 text-gold" : "bg-primary/10 text-primary"}`}>
+                      {b.destaque ? <Sparkles className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className={`text-xs font-semibold truncate ${b.destaque ? "text-gold" : ""}`}>{b.title}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {b.restricted
+                          ? "Documento sigiloso"
+                          : b.count > 0
+                            ? `${b.count} vídeo${b.count > 1 ? "s" : ""}`
+                            : b.destaque ? "Comece por aqui" : "Em breve"}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
+
             <MaintenanceNoticeModal />
           </>
         )}
