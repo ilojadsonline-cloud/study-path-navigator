@@ -25,7 +25,7 @@ const benefits = [
   "+1.000 questões com gabarito comentado",
   "Simulados ilimitados com randomização",
   "Ranking Top 10 Guerreiros 🏆",
-  "Dashboard completo de desempenho",
+  "Meu Desempenho completo",
   "Cronômetro de estudo integrado",
   "Suporte via e-mail",
   "Acesso por 90 dias corridos",
@@ -124,7 +124,7 @@ const whyQuestions = [
   {
     icon: <TrendingUp className="w-6 h-6" />,
     title: "Mede sua evolução real",
-    desc: "Dashboard com taxa de acertos, horas de estudo e progresso por disciplina — saiba exatamente onde melhorar.",
+    desc: "Meu Desempenho com taxa de acertos, horas de estudo e progresso por disciplina — saiba exatamente onde melhorar.",
   },
   {
     icon: <Lightbulb className="w-6 h-6" />,
@@ -135,7 +135,7 @@ const whyQuestions = [
 
 const platformPreviews = [
   {
-    title: "Dashboard & Ranking",
+    title: "Meu Desempenho & Ranking",
     desc: "Visualize seu progresso com gráficos detalhados, acompanhe o Ranking Top 10 Guerreiros e monitore horas de estudo.",
     image: mockupDashboard,
   },
@@ -587,7 +587,7 @@ const Landing = () => {
             {[
               { step: "01", icon: <BookOpen className="w-7 h-7" />, title: "Estude pelo Edital", desc: "Siga a trilha verticalizada com todas as disciplinas organizadas por tópico. Acesse a lei seca e videoaulas em um clique." },
               { step: "02", icon: <HelpCircle className="w-7 h-7" />, title: "Pratique com Questões", desc: "Resolva questões no estilo da prova real. Receba correção imediata com comentários fundamentados na legislação." },
-              { step: "03", icon: <BarChart3 className="w-7 h-7" />, title: "Acompanhe sua Evolução", desc: "Visualize estatísticas detalhadas no dashboard: taxa de acerto, horas de estudo e progresso por disciplina." },
+              { step: "03", icon: <BarChart3 className="w-7 h-7" />, title: "Acompanhe sua Evolução", desc: "Visualize estatísticas detalhadas no Meu Desempenho: taxa de acerto, horas de estudo e progresso por disciplina." },
             ].map((item, i) => (
               <motion.div
                 key={i}
