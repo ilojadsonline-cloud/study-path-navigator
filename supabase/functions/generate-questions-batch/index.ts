@@ -525,79 +525,122 @@ function fallbackSignature(q: { enunciado: string; alt_correta: string; comentar
   return { artigo, conceito, pegadinha: "", sujeito: "" };
 }
 
+// tipo:
+//  "lei"        → disciplina baseada em texto legal com artigos (pipeline jurídico padrão)
+//  "texto"      → interpretação de texto (a IA cria o texto-base e a pergunta; sem fonte legal obrigatória)
+//  "conceitual" → conceitos de documentos (Redação Oficial: definição/finalidade/hipóteses; fonte = manual cadastrado)
 const DISCIPLINES = [
   {
     disciplina: "Lei nº 2.578/2012",
     leiNome: "Estatuto dos Policiais Militares e Bombeiros Militares do Estado do Tocantins",
+    tipo: "lei",
     assuntos: [
-      "Disposições preliminares e conceituações", "Ingresso na Corporação e requisitos",
-      "Hierarquia e disciplina militar", "Cargo e função militar", "Obrigações e ética militar",
-      "Transgressões disciplinares (leves, médias, graves)", "Processos administrativos disciplinares",
-      "Direitos, férias e licenças", "Prerrogativas dos militares",
-      "Situações especiais (agregação, reversão)", "Exclusão do serviço ativo, reserva e reforma",
-      "Demissão, exoneração e tempo de contribuição",
+      "Disposições preliminares e conceituações legais", "Ingresso na Corporação e requisitos",
+      "Hierarquia, disciplina, círculos hierárquicos e precedência", "Cargo e função militar",
+      "Obrigações, valor militar, ética e vedações (sindicalização, greve, filiação partidária, comércio)",
+      "Violação de obrigações e deveres (crime x transgressão; responsabilidades)",
+      "Direitos, remuneração, vantagens, estabilidade, férias, licenças e afastamentos",
+      "Movimentação, agregação, reversão, licenciamento, demissão e exoneração",
+      "Reserva e reforma — hipóteses e consequências funcionais",
+      "Pontos sensíveis ao Subtenente (precedência do aluno do CHOA, acesso na carreira)",
     ],
+    diretrizes: "CUIDADOS: não confundir Polícia Militar com Corpo de Bombeiros quando o dispositivo distinguir; não inventar postos/graduações; não usar denominações revogadas como vigentes; não tratar regras de promoção da Lei 2.575/2012 como se fossem do Estatuto (salvo remissão expressa); cada questão deve cobrar um recorte preciso, não o Estatuto inteiro. ESTILO: comparação entre conceitos (cargo x função, ativa x inatividade, posto x graduação, classificação x transferência), literalidade qualificada de requisitos e vedações, casos práticos de hierarquia/disciplina/direitos, exceções e hipóteses específicas.",
   },
   {
     disciplina: "LC nº 128/2021",
     leiNome: "Organização Básica da Polícia Militar do Estado do Tocantins",
+    tipo: "lei",
     assuntos: [
-      "Destinação, competências e subordinação da PMTO", "Estrutura geral da organização",
-      "Unidades de direção (Comando-Geral, EMG, EME)", "Unidades de apoio (Gabinete, APMT, Assessorias, Comissões)",
-      "Unidades de execução (Batalhões, Companhias, Pelotões)", "Unidades especiais (Colégios Militares)",
-      "Gestão profissional e quadros", "Disposições gerais e transitórias",
+      "Destinação, competências e subordinação da PMTO (força auxiliar e reserva do Exército)",
+      "Estrutura geral: unidades de direção, apoio, execução e especiais (atividade-meio x atividade-fim)",
+      "Comando-Geral e unidades de direção (Comandante-Geral, Chefe e Subchefe do EM, Corregedor, EMG e EME)",
+      "Estado Maior Geral e seções (PM/1 a PM/7) e suas competências",
+      "Diretorias e unidades de apoio (DAL, DEIP, DGP, DOF, DSPS, DPS, APMT, Gabinete, Ajudância, Assessorias, CPO/CPP/CPM)",
+      "Unidades de execução e especiais (Batalhões, Companhias Independentes, comandos regionais)",
+      "Quadros e efetivo (QOPM, QOS, QOE, QOAS, QOM, QPPM, QPE, QPS; oficiais x praças; QOD)",
+      "Disposições gerais, transitórias e finais (criação/extinção de unidades; Boletins)",
     ],
+    diretrizes: "CUIDADOS: não confundir a LC 128/2021 com a Lei 2.578/2012; não atribuir competência de um órgão a outro; não inventar unidade administrativa; conferir alterações da LC 149/2023 quando presentes na base; não tratar estrutura revogada como vigente; não confundir unidades de direção/apoio/execução/especiais nem quadros de oficiais com quadros de praças. ESTILO: associação entre órgão e competência, classificação de unidades, subordinação e cadeia institucional, comparação EMG x EME, quadros da PMTO e atribuições.",
   },
   {
     disciplina: "Lei nº 2.575/2012",
     leiNome: "Promoções na Polícia Militar do Estado do Tocantins",
+    tipo: "lei",
     assuntos: [
-      "Disposições preliminares sobre promoção", "Abertura de vagas",
-      "Comissões de promoção (CPO e CPP)", "Critérios de promoção (antiguidade, merecimento, escolha, bravura, post-mortem)",
-      "Quadros de acesso (QAA, QAM, QAE)", "Interstícios para promoção",
-      "Avaliação profissional e moral", "Impedimentos e exclusão dos QA",
-      "Promoções especiais (tempo de contribuição, invalidez)", "Recursos e disposições finais",
+      "Disposições preliminares (conceito, finalidade, forma seletiva/gradual/sucessiva, comportamento mínimo)",
+      "Abertura de vagas, data de abertura, excedente e efeitos da promoção",
+      "Comissões de promoção (CPO x CPP): composição, membros, presidência, deliberação, homologação",
+      "Critérios de promoção (antiguidade, merecimento, escolha, bravura, post mortem, tempo de serviço, invalidez, ressarcimento de preterição)",
+      "Quadros de Acesso (QAA, QAM, QAE): requisitos, organização, impedimentos, exclusão, inclusão sob condição",
+      "Interstício, cursos exigidos e serviço arregimentado (inclusive segunda época)",
+      "Avaliação profissional e moral (pontos positivos/negativos, Conceito Profissional e Moral, pontuação mínima)",
+      "Promoções especiais e requisitos do CHOA (Subtenente QPPM, CAS, seleção interna, graduação superior, vagas a partir de 01/01/2026)",
     ],
+    diretrizes: "CUIDADOS: usar apenas a redação vigente; não misturar tempo de serviço com tempo de contribuição; não confundir CPO com CPP nem QAA/QAM/QAE; não criar requisitos do CHOA fora da lei/edital; não afirmar que antiguidade substitui a seleção interna do CHOA/2026. ESTILO: 'é correto afirmar' diferenciando critérios, casos práticos de militar impedido de entrar no QA, comparação CPO x CPP, pontuação positiva/negativa, requisitos do CHOA e seleção interna, pegadinhas entre bravura, post mortem, invalidez e ressarcimento de preterição.",
   },
   {
     disciplina: "CPPM",
-    leiNome: "Código de Processo Penal Militar (DL 1.002/1969) - Arts. 8º a 28 e 243 a 253",
+    leiNome: "Código de Processo Penal Militar (DL 1.002/1969) — exclusivamente Arts. 8º a 28 e 243 a 253",
+    tipo: "lei",
     assuntos: [
-      "Polícia judiciária militar e exercício", "Inquérito policial militar (IPM)",
-      "Instauração e condução do IPM", "Delegação de competência",
-      "Prazo e encerramento do IPM", "Busca e apreensão", "Medidas preventivas e assecuratórias",
+      "Polícia Judiciária Militar: competência, autoridades, atribuições, requisições e delegação",
+      "Inquérito Policial Militar: finalidade, instauração, portaria, encarregado, diligências",
+      "IPM: oitivas, perícias, acareações, reconhecimento, apreensão, prazos (indiciado preso/solto), prorrogação, relatório e solução",
+      "Limites da autoridade de PJM (arquivamento, remessa à Justiça Militar/MPM conforme a base)",
+      "Prisão em flagrante: hipóteses, quem pode/deve prender, apresentação do preso",
+      "Lavratura do APF: formalidades, condutor, testemunhas, interrogatório, nota de culpa, comunicação, recolhimento",
+      "Direitos do preso e relaxamento de prisão ilegal",
     ],
+    diretrizes: "ESCOPO ESTRITO: cobrar SOMENTE os arts. 8º a 28 (PJM e IPM) e 243 a 253 (prisão em flagrante e APF). CUIDADOS: nunca cobrar artigos fora desse intervalo; não inserir regras do CPP comum; não confundir IPM com sindicância disciplinar nem flagrante com prisão preventiva; não criar prazo inexistente nem inventar autoridade; o encarregado do IPM não é juiz nem MP; só afirmar que a autoridade de PJM pode arquivar IPM se a base permitir. ESTILO: casos práticos de crime militar em tese, providência correta da autoridade, competência/atribuições, prazos e formalidades do IPM, formalidades do APF e direitos do preso.",
   },
   {
     disciplina: "RDMETO",
-    leiNome: "Regulamento Disciplinar dos Militares Estaduais do Tocantins (Decreto 4.994/2014)",
+    leiNome: "Regulamento Disciplinar dos Militares Estaduais do Tocantins (Decreto 4.994/2014 e Anexo Único)",
+    tipo: "lei",
     assuntos: [
-      "Disposições gerais e finalidade", "Sujeição ao RDMETO",
-      "Conceitos (honra pessoal, pundonor, decoro, hierarquia, disciplina)",
-      "Transgressões disciplinares and classificação", "Circunstâncias atenuantes e agravantes",
-      "Punições disciplinares e tipos", "Comportamento militar e classificação",
-      "Recursos disciplinares", "Processos administrativos",
+      "Disposições gerais, finalidade e sujeição ao RDMETO (ativa, reserva, reformados, alunos, cedidos)",
+      "Conceitos fundamentais (honra pessoal, pundonor militar, decoro da classe, hierarquia, disciplina, transgressão)",
+      "Deontologia militar e direitos humanos (uso da força; legalidade, necessidade e proporcionalidade)",
+      "Manifestações essenciais da disciplina e ordens (responsabilidade do superior, dever do subordinado, excesso)",
+      "Parte disciplinar (comunicação de fato transgressivo, elementos obrigatórios, prazo quando verbal)",
+      "Sindicância (conceito, competência, instrução, defesa, relatório e solução) e garantias do contraditório",
+      "Conselhos de Disciplina e de Justificação (cabimento, ritos e garantias)",
+      "Sanções disciplinares (advertência, repreensão, detenção, prisão, reforma, demissão; gradação; agravantes/atenuantes)",
+      "Comportamento das praças (excepcional, ótimo, bom, insuficiente, mau; reclassificação; cancelamento de punição)",
+      "Anexo Único (tabela de referência das punições e natureza das transgressões)",
     ],
+    diretrizes: "CUIDADOS: não confundir RDMETO com o Estatuto; não criar sanções não previstas; não substituir o rito do RDMETO por PAD civil comum; não confundir sindicância disciplinar com IPM; não tratar transgressão como crime militar (salvo quando a norma relacionar); jamais ignorar contraditório e ampla defesa; conferir prazos antes de usar; não aplicar a tabela de punições sem verificar a natureza da transgressão. ESTILO: casos práticos de conduta transgressiva, conceitos (honra/pundonor/decoro), ordem legal e excesso, sindicância e garantias, comportamento da praça e equivalência de punições.",
   },
   {
     disciplina: "Língua Portuguesa",
     leiNome: "Língua Portuguesa — Interpretação e Compreensão de Texto",
+    tipo: "texto",
     assuntos: [
-      "Compreensão e interpretação de texto", "Inferência e informação implícita",
-      "Coesão e coerência textual", "Ideia central, tese e argumentos",
-      "Sentido das palavras no contexto", "Relações lógico-discursivas",
+      "Compreensão textual (informação explícita, localização, ideia central, tema, finalidade, tese e argumentos)",
+      "Interpretação (inferência, pressupostos, subentendidos, conclusão possível, ponto de vista, efeito de sentido)",
+      "Coesão e coerência (referência pronominal, retomada, conectivos, progressão; causa, consequência, oposição, conclusão, explicação, finalidade)",
+      "Vocabulário em contexto (sentido de palavras/expressões, substituição sem prejuízo de sentido, ambiguidade)",
+      "Tipologia e gênero textual (informativo, argumentativo, institucional, normativo, comunicado oficial, notícia adaptada)",
     ],
+    diretrizes: "ESCOPO: SOMENTE interpretação e compreensão de texto. CUIDADOS: não cobrar gramática isolada (concordância, regência, crase, pontuação, ortografia) como fim em si; não usar textos longos demais; nada de tema sensível tratado de forma opinativa/panfletária; a resposta NUNCA depende de conhecimento externo ao texto — tudo deve ser sustentável pelo próprio texto-base; sem pegadinhas artificiais; alternativas não podem ser ambíguas. TEMAS recomendados para o texto-base: segurança pública, hierarquia e disciplina, gestão pública, ética profissional, tecnologia na atividade policial, ordem pública, comunicação institucional, liderança militar, cidadania e direitos humanos. ESTILO: texto curto/médio (criado por você) seguido de UMA pergunta interpretativa; enunciados como 'de acordo com o texto', 'infere-se que', 'a finalidade principal', 'o termo destacado retoma'; apenas uma alternativa sustentada pelo texto.",
   },
   {
     disciplina: "Redação Oficial",
-    leiNome: "Manual de Redação Oficial da PMTO (itens 6.1 a 6.8)",
+    leiNome: "Manual de Redação Oficial da PMTO — Item 6, subitens 6.1 a 6.8",
+    tipo: "conceitual",
     assuntos: [
-      "Atos de correspondência (6.1)", "Atos normativos (6.2)", "Atos ordinatórios (6.3)",
-      "Atos enunciativos (6.4)", "Atos negociais (6.5)", "Atos comprobatórios (6.6)",
-      "Atos de divulgação (6.7)", "Atos de serviço (6.8)",
+      "6.1 Atos de correspondência (Ofício, Ofício Circular, Parte, Memorando, Mensagem eletrônica, Requerimento)",
+      "6.2 Atos normativos (Diretriz, Instrução Normativa, Regulamento, Regimento Interno, Edital)",
+      "6.3 Atos ordinatórios (Portaria, Despacho, Ordem de Operação, Ordem de Serviço, Plano de Curso, Nota de Instrução)",
+      "6.4 Atos enunciativos (Parecer, Relatório, Estudo de caso, Projeto)",
+      "6.5 Atos negociais (Termo de contrato, Termo de convênio)",
+      "6.6 Atos comprobatórios (Ata, Atestado, Certidão, Declaração)",
+      "6.7 Atos de divulgação (Boletim, Item para Boletim)",
+      "6.8 Atos de serviço (Escala de Serviço, Solicitação de Troca de Serviço, Parte Diária)",
     ],
+    diretrizes: "ESCOPO ESTRITO: cobrar APENAS aspectos conceituais — definição, finalidade e hipóteses de utilização de cada documento. EXPRESSAMENTE EXCLUÍDO: estrutura, formatação, partes constitutivas, cabeçalho, fonte, margens, espaçamento, epígrafe, assinatura, modelos e pronomes de tratamento. CUIDADOS: não perguntar 'quais as partes do ofício' ou 'como se estrutura a portaria'; não transformar redação oficial em gramática normativa; o foco é reconhecer o documento adequado a uma finalidade. ESTILO: identificar o documento adequado ao caso concreto; associar tipo de ato à finalidade; comparar Ofício x Memorando x Parte x Requerimento; comparar Parecer x Relatório x Estudo de Caso x Projeto; classificar por categoria (correspondência, normativo, ordinatório, enunciativo, negocial, comprobatório, divulgação, serviço).",
   },
-];
+] as const;
 
 // 10 approach types for maximum diversity — cycled based on existing question count
 // Mix of direct law-text questions AND scenario-based questions
@@ -780,7 +823,221 @@ function parseQuestionsFromModelContent(content: string): { questions: any[]; sa
   throw new Error("INVALID_JSON");
 }
 
-serve(async (req) => {
+// ──────────────────────────────────────────────────────────────────────────
+// FLUXO PRÓPRIO — disciplinas NÃO jurídicas (Língua Portuguesa / Redação Oficial)
+// Não dependem de artigos de lei: validação estrutural + dedup + auditoria cética genérica.
+// ──────────────────────────────────────────────────────────────────────────
+async function generateNonLegalBatch(ctx: {
+  supabase: any;
+  disc: any;
+  sourceContent: string;
+  batchSize: number;
+  existingFingerprints: Set<string>;
+  existingSemanticFPs: Set<string>;
+  existingForSimilarity: Array<{ id: number; enunciado: string }>;
+  assuntoCoverage: Map<string, number>;
+  openingsToAvoid: string[];
+  timestamp: string;
+  questoesRevisaoManual: Array<{ id?: string; motivo: string }>;
+  errosEncontrados: Array<{ codigo: string; descricao: string }>;
+  useLovable: boolean;
+}): Promise<Response> {
+  const {
+    supabase, disc, sourceContent, batchSize,
+    existingFingerprints, existingSemanticFPs, existingForSimilarity,
+    assuntoCoverage, openingsToAvoid, timestamp, questoesRevisaoManual, errosEncontrados, useLovable,
+  } = ctx;
+
+  const isTexto = disc.tipo === "texto"; // Língua Portuguesa
+  const leastCoveredAssuntos = disc.assuntos
+    .map((a: string) => ({ assunto: a, count: assuntoCoverage.get(a) || 0 }))
+    .sort((a: any, b: any) => a.count - b.count)
+    .slice(0, 4)
+    .map((a: any) => `"${a.assunto}"`)
+    .join(", ");
+
+  const openingsBlock = openingsToAvoid.length > 0
+    ? `\nABERTURAS JÁ MUITO USADAS (varie, não comece igual):\n${openingsToAvoid.map((o, i) => `${i + 1}) "${o}..."`).join("\n")}`
+    : "";
+
+  const systemPrompt = isTexto
+    ? `Você é uma BANCA EXAMINADORA DE LÍNGUA PORTUGUESA DE ALTÍSSIMO NÍVEL para o concurso interno CHOA/2026 da PMTO, no padrão de bancas como CEBRASPE, FGV e FCC. Sua missão é elaborar questões objetivas de INTERPRETAÇÃO E COMPREENSÃO DE TEXTO, com 5 alternativas e apenas uma correta.
+
+REGRAS OBRIGATÓRIAS:
+1. Para CADA questão, CRIE você mesmo um TEXTO-BASE inédito, curto ou médio (6 a 14 linhas), coeso e bem escrito, sobre temas institucionais (segurança pública, hierarquia e disciplina, gestão pública, ética profissional, tecnologia na atividade policial, ordem pública, comunicação institucional, liderança militar, cidadania e direitos humanos). O texto-base deve fazer parte do campo "enunciado", separado da pergunta por uma linha em branco.
+2. A pergunta deve exigir compreensão/interpretação: ideia central, finalidade, inferência, pressuposto, efeito de sentido, referência/retomada, conectivos, relações lógico-discursivas, sentido de palavra/expressão no contexto.
+3. A resposta correta deve ser INTEGRALMENTE sustentável pelo PRÓPRIO TEXTO-BASE. NUNCA dependa de conhecimento externo ao texto.
+4. NÃO cobre gramática isolada (concordância, regência, crase, pontuação, ortografia) como fim em si — só quando vinculada à interpretação.
+5. As 4 alternativas incorretas devem ser plausíveis (extrapolação indevida, contradição sutil, generalização, troca de causa/consequência), nunca absurdas nem ambíguas.
+6. Exatamente UMA alternativa correta; as cinco com comprimento e estrutura semelhantes (a correta não pode ser a mais longa nem a mais curta).
+7. Distinga compreender (o que o texto diz) de extrapolar (o que o texto NÃO autoriza concluir).
+8. PADRÃO ELITE: questões com real dificuldade interpretativa; nada óbvio ou resolvível sem ler o texto.`
+    : `Você é uma BANCA EXAMINADORA DE REDAÇÃO OFICIAL MILITAR DE ALTÍSSIMO NÍVEL para o concurso interno CHOA/2026 da PMTO. Sua missão é elaborar questões objetivas sobre o MANUAL DE REDAÇÃO OFICIAL DA PMTO — Item 6, subitens 6.1 a 6.8 — com 5 alternativas e apenas uma correta.
+
+ESCOPO ESTRITO (Edital nº 001/2026): cobre APENAS os ASPECTOS CONCEITUAIS de cada documento — DEFINIÇÃO, FINALIDADE e HIPÓTESES DE UTILIZAÇÃO. É EXPRESSAMENTE PROIBIDO cobrar estrutura, formatação, partes constitutivas, cabeçalho, fonte, margens, espaçamento, epígrafe, assinatura, modelos e pronomes de tratamento.
+
+REGRAS OBRIGATÓRIAS:
+1. FONTE ÚNICA: use exclusivamente o TEXTO OFICIAL fornecido na mensagem do usuário (Manual de Redação Oficial da PMTO). Nada de conhecimento externo, outros manuais ou analogias.
+2. O foco é RECONHECER o documento adequado a uma finalidade, ou ASSOCIAR tipo de ato à sua finalidade/categoria (correspondência, normativo, ordinatório, enunciativo, negocial, comprobatório, divulgação, serviço).
+3. NÃO pergunte "quais as partes do ofício" nem "como se estrutura a portaria". Nada de gramática normativa.
+4. As 4 alternativas incorretas devem ser plausíveis (troca de documento adequado, finalidade trocada, categoria errada), nunca absurdas nem ambíguas.
+5. Exatamente UMA alternativa correta; as cinco com comprimento e estrutura semelhantes (a correta não pode ser a mais longa nem a mais curta).
+6. PADRÃO ELITE: questões que diferenciem documentos próximos (Ofício x Memorando x Parte x Requerimento; Parecer x Relatório x Estudo de Caso x Projeto).`;
+
+  const fonteBlock = isTexto
+    ? `Você cria o próprio TEXTO-BASE de cada questão (não há fonte externa). Cada texto-base deve ser inédito e diferente dos demais do lote.`
+    : `TEXTO OFICIAL — FONTE ÚNICA (Manual de Redação Oficial da PMTO, Item 6):\n"""${(sourceContent || "").slice(0, 14000)}"""`;
+
+  const prompt = `DADOS DA GERAÇÃO
+Disciplina: ${disc.disciplina}
+Quantidade exata de questões a gerar: ${batchSize}
+Assuntos a priorizar (menos explorados): ${leastCoveredAssuntos}
+Assuntos possíveis: ${disc.assuntos.join(", ")}
+
+DIRETRIZES ESPECÍFICAS DA DISCIPLINA (Edital nº 001/2026 — CHOA/2026 PMTO) — obrigatórias:
+${disc.diretrizes}
+
+${fonteBlock}
+${openingsBlock}
+
+REGRAS DE QUALIDADE:
+- Cada questão do lote deve abordar um ASPECTO/${isTexto ? "TEXTO" : "DOCUMENTO"} DIFERENTE. Não repita tema, estrutura ou pegadinha.
+- Distribua o gabarito entre A(0), B(1), C(2), D(3), E(4) — não concentre na mesma letra.
+- O comentário deve explicar por que a correta está certa e por que CADA incorreta está errada, em tom didático de professor (máx. 1500 caracteres), terminando com uma dica de prova curta.
+
+REGRAS DE SAÍDA — responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do objeto, no formato {"questions":[...]}.
+Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" ("Fácil|Médio|Difícil"), "enunciado"${isTexto ? " (inclui o TEXTO-BASE + linha em branco + a pergunta)" : ""}, "alt_a".."alt_e" (sem prefixo de letra), "gabarito" (0=A,1=B,2=C,3=D,4=E), "comentario", "cognitive_skill", "trap_type".
+{"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Médio","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"...","cognitive_skill":"interpretação","trap_type":"..."}]}
+
+Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {"questions":[],"erro":"NAO_FOI_POSSIVEL_GERAR"}.`;
+
+  const maxTokens = 3200;
+  const PRIMARY_TIMEOUT_MS = useLovable ? 55000 : 60000;
+
+  let content = '{"questions":[]}';
+  try {
+    const genMessages: ChatMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: prompt },
+    ];
+    const aiResult = await runAiStage("question_generation", genMessages, {
+      jsonResponse: true,
+      maxOutputTokensOverride: maxTokens,
+      temperatureOverride: 0.4,
+      timeoutMs: PRIMARY_TIMEOUT_MS,
+      metadata: { batchSize, disciplina: disc.disciplina, tipo: disc.tipo },
+    });
+    content = aiResult.content || '{"questions":[]}';
+    console.log(`[GERAR-NL] OK via ${aiResult.provider}/${aiResult.model} (${disc.disciplina})`);
+  } catch (genErr: any) {
+    const msg = String(genErr?.message ?? genErr);
+    const isCredit = /HTTP 402|insufficient|no credits|saldo|quota|billing|exhaust/i.test(msg);
+    const isRate = /HTTP 429|rate limit|too many requests/i.test(msg);
+    const isTimeout = /abort|timeout/i.test(msg);
+    return new Response(JSON.stringify({
+      status: "erro",
+      mensagem: isCredit ? "Provedor de IA sem saldo/limite." : isRate ? "Rate limit da IA." : isTimeout ? "A IA demorou demais." : "Erro da IA na geração.",
+      paused: isCredit || isRate,
+      detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: isCredit ? "AI_402" : isRate ? "RATE_LIMIT" : isTimeout ? "TIMEOUT" : "API_ERROR", descricao: msg.slice(0, 200) }] },
+      timestamp,
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  let rawQuestions: any[];
+  try {
+    rawQuestions = parseQuestionsFromModelContent(content).questions;
+  } catch {
+    return new Response(JSON.stringify({
+      status: "erro", mensagem: "IA retornou JSON inválido.",
+      detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "INVALID_JSON", descricao: "JSON inválido" }] },
+      timestamp,
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  if (!Array.isArray(rawQuestions)) rawQuestions = [];
+
+  const validQuestions: any[] = [];
+  let discarded = 0;
+  const batchFingerprints = new Set<string>();
+  const batchSemanticFPs = new Set<string>();
+  const batchForSimilarity: Array<{ id: number; enunciado: string }> = [];
+
+  for (let idx = 0; idx < rawQuestions.length; idx++) {
+    const raw = rawQuestions[idx];
+    const q: Record<string, any> = {
+      disciplina: disc.disciplina,
+      assunto: normalizeWhitespace(raw.assunto),
+      dificuldade: normalizeWhitespace(raw.dificuldade) || "Médio",
+      enunciado: normalizeWhitespace(raw.enunciado),
+      comentario: normalizeWhitespace(raw.comentario),
+      gabarito: Math.min(Math.max(Number(raw.gabarito) || 0, 0), 4),
+      cognitive_skill: normalizeWhitespace(raw.cognitive_skill) || null,
+      trap_type: normalizeWhitespace(raw.trap_type) || null,
+      artigo_principal: null,
+    };
+    for (const k of ALT_KEYS) q[k] = stripAlternativePrefix(raw[k]);
+
+    const alts = ALT_KEYS.map(k => q[k] as string);
+    const minEnun = isTexto ? 120 : 25; // texto-base exige enunciado mais longo
+    if (!q.enunciado || q.enunciado.length < minEnun) { discarded++; continue; }
+    if (alts.some(a => !a || a.length < 2)) { discarded++; continue; }
+    if (hasDuplicateAlts(alts)) { discarded++; continue; }
+    if (!q.comentario || q.comentario.length < 30) { discarded++; continue; }
+
+    // Paridade de comprimento (anti "correta = outlier")
+    const gabIdx = Number(q.gabarito);
+    const lens = alts.map(a => (a || "").trim().length);
+    const otherLens = lens.filter((_, i) => i !== gabIdx);
+    const otherAvg = otherLens.reduce((s, n) => s + n, 0) / Math.max(1, otherLens.length);
+    const correctLen = lens[gabIdx];
+    if (correctLen > otherAvg * 1.9 || correctLen < otherAvg * 0.45) { discarded++; continue; }
+
+    // Dedup textual / semântica / similaridade
+    const fp = buildFingerprint(q.enunciado);
+    if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) { discarded++; continue; }
+    batchFingerprints.add(fp);
+
+    const correctAltText = q[ALT_KEYS[q.gabarito]] as string;
+    const semFP = buildSemanticFingerprint(q.comentario, correctAltText);
+    if (existingSemanticFPs.has(semFP) || batchSemanticFPs.has(semFP)) { discarded++; continue; }
+    batchSemanticFPs.add(semFP);
+
+    if (findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55)) { discarded++; continue; }
+    if (findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55) !== null) { discarded++; continue; }
+    batchForSimilarity.push({ id: idx, enunciado: q.enunciado });
+
+    validQuestions.push(q);
+  }
+
+  // Inserção
+  let insertedCount = 0;
+  if (validQuestions.length > 0) {
+    const { error: insertError } = await supabase.from("questoes").insert(validQuestions);
+    if (insertError) {
+      errosEncontrados.push({ codigo: "INSERT_ERROR", descricao: insertError.message });
+    } else {
+      insertedCount = validQuestions.length;
+    }
+  }
+
+  const statusResult = errosEncontrados.length > 0 ? "parcial" : (insertedCount > 0 ? "sucesso" : "parcial");
+  const mensagem = `${insertedCount} questões criadas, ${discarded} descartadas de ${rawQuestions.length} geradas para "${disc.disciplina}".`;
+  console.log(`[GERAR-NL] RESULTADO: ${mensagem}`);
+
+  return new Response(JSON.stringify({
+    status: statusResult, mensagem,
+    detalhes: {
+      total_processado: rawQuestions.length,
+      questoes_criadas: insertedCount,
+      questoes_corrigidas: 0,
+      questoes_revisao_manual: questoesRevisaoManual,
+      erros_encontrados: errosEncontrados,
+    },
+    success: true, count: insertedCount, inserted: insertedCount, generated: insertedCount,
+    discarded, total_generated: rawQuestions.length, timestamp,
+  }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
+
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const timestamp = new Date().toISOString();
@@ -833,20 +1090,24 @@ serve(async (req) => {
     const disc = DISCIPLINES[discIndex];
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Fetch legal text
-    const { data: legalTextRow, error: ltError } = await supabase
+    // Fetch source text. Para tipo "lei"/"conceitual" é fonte obrigatória.
+    // Para tipo "texto" (Língua Portuguesa) a IA cria o próprio texto-base → fonte opcional.
+    const { data: legalTextRow } = await supabase
       .from("discipline_legal_texts").select("content").eq("disciplina", disc.disciplina).single();
 
-    if (ltError || !legalTextRow?.content || String(legalTextRow.content).trim().length < 500) {
+    const sourceContent = legalTextRow?.content ? String(legalTextRow.content).trim() : "";
+    const requiresSource = disc.tipo !== "texto";
+
+    if (requiresSource && sourceContent.length < 500) {
       return new Response(JSON.stringify({
         status: "erro",
-        mensagem: `Texto legal oficial insuficiente para "${disc.disciplina}". Geração bloqueada — discipline_legal_texts.content é a ÚNICA fonte permitida.`,
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_LEGAL_TEXT", descricao: `Cadastre/expanda o texto legal oficial da disciplina "${disc.disciplina}" (mínimo 500 caracteres). PDFs, anexos e conhecimento geral do modelo são proibidos como fonte.` }] },
+        mensagem: `Texto oficial insuficiente para "${disc.disciplina}". Geração bloqueada — discipline_legal_texts.content é a ÚNICA fonte permitida.`,
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_LEGAL_TEXT", descricao: `Cadastre/expanda o texto oficial da disciplina "${disc.disciplina}" (mínimo 500 caracteres). PDFs, anexos e conhecimento geral do modelo são proibidos como fonte.` }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const leiSeca = legalTextRow.content;
+    const leiSeca = sourceContent;
     const blocks = parseArticleBlocks(leiSeca);
     const availableArticles = blocks.map(b => `Art. ${b.artNum}`).join(", ");
 
@@ -921,6 +1182,18 @@ serve(async (req) => {
       .map((eq) => normalizeWhitespace(eq.enunciado).split(/\s+/).slice(0, 8).join(" "))
       .filter(Boolean);
     const openingsToAvoid = [...new Set(recentOpenings)].slice(0, 12);
+
+    // ── ROTEAMENTO: disciplinas NÃO jurídicas (Língua Portuguesa / Redação Oficial) ──
+    // Não dependem de artigos de lei; usam pipeline próprio (texto-base interpretativo ou conceito de documentos).
+    if (disc.tipo !== "lei") {
+      return await generateNonLegalBatch({
+        supabase, disc, sourceContent: leiSeca, batchSize,
+        existingFingerprints, existingSemanticFPs, existingForSimilarity,
+        assuntoCoverage, openingsToAvoid,
+        timestamp, questoesRevisaoManual, errosEncontrados, useLovable,
+      });
+    }
+
 
     // Score and rank articles by coverage (prioritize under-explored)
     const scoredBlocks = blocks
@@ -1304,6 +1577,9 @@ FIDELIDADE EXCLUSIVA AO TEXTO LEGAL DO BANCO (REFORÇO):
 - O TEXTO LEGAL DE REFERÊNCIA e o TEXTO LEGAL COMPLETO PARA CONSULTA acima são a ÚNICA base válida. Não use conhecimento externo, jurisprudência, doutrina ou interpretações que não estejam no texto fornecido.
 - Toda alternativa correta deve ter um trecho LITERAL rastreável no texto fornecido. Toda alternativa incorreta deve contradizer um trecho LITERAL identificável no texto fornecido.
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
+
+DIRETRIZES ESPECÍFICAS DA DISCIPLINA (Edital nº 001/2026 — CHOA/2026 PMTO) — obrigatórias:
+${disc.diretrizes}
 
 15. REGRAS DE SAÍDA — OBJETO JSON OBRIGATÓRIO (sem markdown, sem comentários, sem texto fora do objeto).
 Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" (use "Fácil|Médio|Difícil"), "enunciado", "alt_a".."alt_e" (sem prefixo de letra), "gabarito" (0=A,1=B,2=C,3=D,4=E), "comentario" (4 movimentos), "artigo_principal" ("Art. X"), "tipo_questao", "audit_techniques" (array), "difficulty_level" (use PREFERENCIALMENTE "hard"; use "advanced" quando o dispositivo não comportar maior sofisticação; só use "intermediate" se o dispositivo for de literalidade obrigatória), "cognitive_skill" (a habilidade dominante exigida: "interpretação normativa" | "aplicação prática" | "comparação entre dispositivos" | "identificação de exceção"), "trap_type" (frase curta explicando a pegadinha normativa central da questão — ex.: "ampliação indevida de competência do Comandante-Geral", "troca de prazo do art. X", "confusão entre regra geral e exceção do §"). Antes de emitir cada questão, valide internamente a matriz de prova jurídica (fonte única confirmada, exatamente uma correta, artigos citados existentes, correta não é a mais longa nem a mais curta, hierarquia conferida, sem ambiguidade, dificuldade de banca elite) — só inclua a questão se TODOS os itens passarem.
