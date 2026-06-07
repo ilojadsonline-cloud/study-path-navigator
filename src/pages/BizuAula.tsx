@@ -5,7 +5,7 @@ import { Youtube, ChevronDown, ChevronUp, Loader2, Inbox, Play } from "lucide-re
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { disciplinasLite } from "@/lib/edital-structure";
+import { bizuAulaDisciplinas } from "@/lib/edital-structure";
 import { PopSigilosoNotice, PopSigilosoBadge } from "@/components/PopSigilosoNotice";
 import { toast } from "sonner";
 
