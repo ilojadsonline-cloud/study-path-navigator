@@ -330,12 +330,14 @@ export default function AdminEditalTab() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Link de redirecionamento</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {form.mode === "lei_seca" ? "Link da Lei Seca atualizada" : "Link de redirecionamento"}
+                  </label>
                   <Input
                     value={form.externalUrl}
                     onChange={(e) => setFormValue(disc.id, { externalUrl: e.target.value })}
                     placeholder="https://..."
-                    disabled={isRestricted || form.mode !== "link"}
+                    disabled={isRestricted || (form.mode !== "link" && form.mode !== "lei_seca")}
                   />
                 </div>
               </div>
