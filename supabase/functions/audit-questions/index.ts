@@ -329,7 +329,7 @@ function buildAuditPrompt(q: Questao, legalText: string | null): string {
     ? `${articleIndex}${relevantBlock}TEXTO LEGAL DE REFERÊNCIA (FONTE ÚNICA E EXCLUSIVA de verdade; pode estar truncado por limite técnico, então o ÍNDICE acima prevalece para EXISTÊNCIA de artigo). PROIBIDO usar PDFs, anexos, sites, memória do modelo, conhecimento jurídico geral ou outras leis fora deste texto:\n"""${legalText.slice(0, 9000)}"""\n`
     : "BLOQUEIO OPERACIONAL: Não há texto legal oficial cadastrado em discipline_legal_texts para esta disciplina. NÃO use conhecimento geral, PDFs, anexos ou memória do modelo. Sinalize NO_LEGAL_TEXT e marque para revisão manual.\n";
 
-  return `${legalBlock}
+  return `${CHOA_EDITAL_AUDIT_RULES}${legalBlock}
 QUESTÃO #${q.id}
 Disciplina: ${q.disciplina}
 Assunto: ${q.assunto}
