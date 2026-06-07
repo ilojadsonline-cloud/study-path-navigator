@@ -11,7 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { disciplinasLite } from "@/lib/edital-structure";
+import { disciplinasLite, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
+
+// Inclui o tópico especial "Análise do Edital" (em primeiro) junto das disciplinas.
+const editalAdminItems = [ANALISE_EDITAL_DISC, ...disciplinasLite];
 import {
   EDITAL_MATERIALS_BUCKET,
   EDITAL_MATERIALS_UPLOAD_PREFIX,
