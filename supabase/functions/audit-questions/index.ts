@@ -715,8 +715,20 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
       });
     }
   }
-
-  // ── ETAPA 2: ROTEAMENTO POR COMPLEXIDADE ──
+  // Cobrança de número de artigo (Regra Especial do edital) — detecção determinística.
+  {
+    const art = detectArticleNumberCobranca(q);
+    if (art.hit && !issues.some((i: any) => i?.type === "cobranca_numero_artigo")) {
+      issues.push({
+        type: "cobranca_numero_artigo",
+        severity: "high",
+        field: "questao_inteira",
+        evidence: art.reason,
+        description: "Questão cobra memorização do número do dispositivo como objeto central — proibido pelo edital CHOA/2026.",
+        suggestion: "Reescrever para cobrar o CONTEÚDO jurídico do dispositivo; citar o número apenas na base normativa/comentário.",
+      });
+    }
+  }
   // Issues SIMPLES (mecânicas) → DeepSeek já entregou o patch.
   // Issues COMPLEXAS (prosa jurídica) → Maritaca Sabiá 4 reescreve.
   const SIMPLE_TYPES = new Set(["gabarito_errado", "bug_estrutural", "formatacao"]);
