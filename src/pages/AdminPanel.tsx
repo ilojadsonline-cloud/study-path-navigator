@@ -20,6 +20,7 @@ const AdminTextosLegaisContent = lazy(() => import("@/components/admin/AdminText
 const AdminAssinaturasTab = lazy(() => import("@/components/admin/AdminAssinaturasTab").then(m => ({ default: m.AdminAssinaturasTab })));
 const AdminMapasMentaisTab = lazy(() => import("@/components/admin/AdminMapasMentaisTab").then(m => ({ default: m.AdminMapasMentaisTab })));
 const AdminBizuAulaTab = lazy(() => import("@/components/admin/AdminBizuAulaTab").then(m => ({ default: m.AdminBizuAulaTab })));
+const AdminEditalTab = lazy(() => import("@/components/admin/AdminEditalTab"));
 
 const Fallback = () => (
   <div className="flex items-center justify-center py-16">
