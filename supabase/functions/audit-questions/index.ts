@@ -370,6 +370,10 @@ S. FÁCIL DEMAIS — questão óbvia, de mera memorização, resolvível por eli
 T. ENUNCIADO COPIADO — enunciado e/ou alternativa correta são cópia literal de longo trecho da lei sem transformação em pergunta de banca, entregando a resposta. type='enunciado_copiado' severity='high'.
 U. DISTRATOR ABSURDO — distratores não são tecnicamente próximos/plausíveis; algum é claramente absurdo, fora do tema ou eliminável sem ler a lei. type='distrator_absurdo' severity='high'.
 V. DEPENDÊNCIA DE FONTE EXTERNA — a questão só se sustenta com Constituição Federal, doutrina, jurisprudência, internet, PDF externo, outra lei não incluída no TEXTO LEGAL DE REFERÊNCIA ou conhecimento geral do modelo. type='dependencia_fonte_externa' severity='high'.
+W. COBRANÇA DE NÚMERO DE ARTIGO — o objeto CENTRAL é decorar número de artigo/inciso/§/alínea/processo ("em qual artigo", "qual artigo trata de", alternativas formadas só por "Art. N"). type='cobranca_numero_artigo' severity='high'. Correção: reescrever para cobrar o CONTEÚDO jurídico do dispositivo (citar o número só na base/comentário).
+X. DISCIPLINA INCORRETA — a disciplina declarada NÃO corresponde à disciplina real identificada pelo conteúdo (Regra Zero/matriz do edital). type='disciplina_incorreta' severity='medium'; em suggestion indique a disciplina correta.
+Y. FORA DO EDITAL/RECORTE — conteúdo fora das 8 disciplinas oficiais ou fora do recorte permitido (CPPM 8-28/243-253; POP 108/201-214; Redação 6.1-6.8 só definição/finalidade/uso; Português exige texto-base). type='fora_do_edital' severity='high'.
+
 
 REGRA INTERPRETATIVA: paráfrase, interpretação e combinação de dispositivos SÃO VÁLIDAS — só marque alucinação quando a afirmação CONTRARIAR a lei ou inventar requisito/prazo/autoridade.
 REGRA ANTI-FALSO-POSITIVO: se um artigo aparece no ÍNDICE DETERMINÍSTICO ou no bloco "DISPOSITIVOS CITADOS...", é PROIBIDO dizer que esse artigo não existe. Nesse caso, se houver problema, classifique como desalinhamento, gabarito_errado ou comentario_incompleto — nunca como alucinacao_juridica por inexistência do artigo.
