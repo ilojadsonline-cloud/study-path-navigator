@@ -374,6 +374,26 @@ const Dashboard = () => {
         setIncompleteSimulado({ disciplina: progressData.disciplina, respondidas: Object.keys(respostas).length, total: progressData.total });
       }
 
+      // BizuAulas: contagem de vídeos por disciplina (Análise do Edital sempre em destaque)
+      const { data: bizuRows } = await supabase
+        .from("bizuaulas_videos").select("disciplina_id");
+      const bizuCount: Record<string, number> = {};
+      (bizuRows || []).forEach((r: { disciplina_id: string }) => {
+        bizuCount[r.disciplina_id] = (bizuCount[r.disciplina_id] || 0) + 1;
+      });
+      const bizuList: BizuAulaItem[] = bizuAulaDisciplinas
+        .map((d) => ({
+          id: d.id,
+          title: d.title,
+          subtitle: d.subtitle,
+          count: bizuCount[d.id] || 0,
+          restricted: d.restricted,
+          destaque: d.id === ANALISE_EDITAL_DISC.id,
+        }))
+        // mantém a Análise do Edital sempre; demais só se tiverem vídeo
+        .filter((d) => d.destaque || d.count > 0);
+      setBizuAulas(bizuList);
+
       setLoading(false);
     })();
   }, [user]);
