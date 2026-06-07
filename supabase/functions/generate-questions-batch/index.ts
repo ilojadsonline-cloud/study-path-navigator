@@ -969,6 +969,18 @@ serve(async (req) => {
       .filter(Boolean);
     const openingsToAvoid = [...new Set(recentOpenings)].slice(0, 12);
 
+    // ── ROTEAMENTO: disciplinas NÃO jurídicas (Língua Portuguesa / Redação Oficial) ──
+    // Não dependem de artigos de lei; usam pipeline próprio (texto-base interpretativo ou conceito de documentos).
+    if (disc.tipo !== "lei") {
+      return await generateNonLegalBatch({
+        supabase, disc, sourceContent: leiSeca, batchSize,
+        existingFingerprints, existingSemanticFPs, existingForSimilarity,
+        assuntoCoverage, openingsToAvoid,
+        timestamp, questoesRevisaoManual, errosEncontrados, useLovable,
+      });
+    }
+
+
     // Score and rank articles by coverage (prioritize under-explored)
     const scoredBlocks = blocks
       .map((block) => ({
