@@ -1074,7 +1074,7 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
   }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
-
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const timestamp = new Date().toISOString();
