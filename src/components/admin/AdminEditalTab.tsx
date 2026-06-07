@@ -92,7 +92,7 @@ export default function AdminEditalTab() {
         return;
       }
 
-      if (entry.mode === "link" && entry.externalUrl) {
+      if ((entry.mode === "link" || entry.mode === "lei_seca") && entry.externalUrl) {
         window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
         return;
       }
@@ -120,17 +120,22 @@ export default function AdminEditalTab() {
           await removeEditalMaterialFile(current.storagePath);
         }
         delete nextMaterials[disciplinaId];
-      } else if (form.mode === "link") {
+      } else if (form.mode === "link" || form.mode === "lei_seca") {
         if (!form.externalUrl.trim()) {
-          throw new Error("Informe o link que será usado no botão da disciplina.");
+          throw new Error(
+            form.mode === "lei_seca"
+              ? "Informe o link da Lei Seca atualizada."
+              : "Informe o link que será usado no botão da disciplina.",
+          );
         }
         if (current?.mode === "pdf" && current.storagePath) {
           await removeEditalMaterialFile(current.storagePath);
         }
+        const fallbackLabel = form.mode === "lei_seca" ? "Lei Seca atualizada" : DEFAULT_BUTTON_LABEL;
         nextMaterials[disciplinaId] = {
           disciplinaId,
-          mode: "link",
-          buttonLabel: form.buttonLabel.trim() || DEFAULT_BUTTON_LABEL,
+          mode: form.mode,
+          buttonLabel: form.buttonLabel.trim() || fallbackLabel,
           externalUrl: form.externalUrl.trim(),
           updatedAt: new Date().toISOString(),
         };
@@ -314,6 +319,7 @@ export default function AdminEditalTab() {
                       <SelectItem value="none">Em breve (sem material)</SelectItem>
                       <SelectItem value="link">Link de redirecionamento</SelectItem>
                       <SelectItem value="pdf">PDF para download</SelectItem>
+                      <SelectItem value="lei_seca">Lei Seca atualizada</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -329,12 +335,14 @@ export default function AdminEditalTab() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Link de redirecionamento</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {form.mode === "lei_seca" ? "Link da Lei Seca atualizada" : "Link de redirecionamento"}
+                  </label>
                   <Input
                     value={form.externalUrl}
                     onChange={(e) => setFormValue(disc.id, { externalUrl: e.target.value })}
                     placeholder="https://..."
-                    disabled={isRestricted || form.mode !== "link"}
+                    disabled={isRestricted || (form.mode !== "link" && form.mode !== "lei_seca")}
                   />
                 </div>
               </div>
