@@ -531,7 +531,7 @@ function detectRedacaoForaDeEscopo(
   return { hit: false, reason: "" };
 }
 
-
+function articleExists(legalText: string | null, artNum: string): boolean {
   if (!legalText) return false;
   return parseArticleBlocks(legalText).some((b) => b.artNum === artNum);
 }
