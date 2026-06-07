@@ -869,7 +869,7 @@ function DisciplinaBlock({
 
 export default function Edital() {
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set([disciplinas[0].id]));
-  const [materials, setMaterials] = useState<Record<string, EditalMaterialEntry>>({});
+  const [materials, setMaterials] = useState<Record<string, EditalMaterialEntry[]>>({});
 
   useEffect(() => {
     let alive = true;
@@ -956,8 +956,8 @@ export default function Edital() {
                 </p>
               </div>
             </div>
-            <div className="shrink-0">
-              <MaterialButton entry={materials[ANALISE_EDITAL_DISC.id] ?? null} />
+            <div className="shrink-0 w-full sm:w-auto sm:min-w-[240px]">
+              <MaterialList entries={materials[ANALISE_EDITAL_DISC.id] ?? []} />
             </div>
           </div>
         </motion.div>
@@ -1001,7 +1001,7 @@ export default function Edital() {
               index={i}
               open={openIds.has(d.id)}
               onToggle={() => toggle(d.id)}
-              material={materials[d.id] ?? null}
+              materials={materials[d.id] ?? []}
             />
           ))}
         </div>
