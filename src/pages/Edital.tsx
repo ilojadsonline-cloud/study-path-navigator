@@ -785,49 +785,66 @@ function DisciplinaBlock({
                       O conteúdo programático abaixo já está disponível para você se planejar.
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <MaterialButton entry={material} />
-                  </div>
+                  <MaterialList entries={otherMaterials} />
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-2">
-                  <a
-                    href={d.leiSecaUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
-                  >
-                    <FileText className="w-4 h-4" />
-                    {d.leiSecaLabel}
-                    <ExternalLink className="w-3 h-3 opacity-60" />
-                  </a>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {leiSecaEntry ? (
+                      <button
+                        onClick={() => openMaterialEntry(leiSecaEntry)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                      >
+                        {leiSecaEntry.storagePath ? <Download className="w-4 h-4" /> : <Scroll className="w-4 h-4" />}
+                        {leiSecaEntry.buttonLabel || d.leiSecaLabel || "Lei Seca atualizada"}
+                      </button>
+                    ) : (
+                      <a
+                        href={d.leiSecaUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                      >
+                        <FileText className="w-4 h-4" />
+                        {d.leiSecaLabel}
+                        <ExternalLink className="w-3 h-3 opacity-60" />
+                      </a>
+                    )}
 
-                  <MaterialButton entry={material} />
+                    <button
+                      onClick={() => navigate(`/questoes?disciplina=${encodeURIComponent(d.disciplinaFilter)}`)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-gold text-gold-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      Banco de Questões
+                    </button>
 
+                    <button
+                      onClick={() => navigate(`/mapas-mentais?disciplina=${encodeURIComponent(d.id)}`)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                    >
+                      <Brain className="w-4 h-4" />
+                      Mapas Mentais
+                    </button>
 
-                  <button
-                    onClick={() => navigate(`/questoes?disciplina=${encodeURIComponent(d.disciplinaFilter)}`)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-gold text-gold-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    <BookOpen className="w-4 h-4" />
-                    Banco de Questões
-                  </button>
+                    <button
+                      onClick={() => navigate(`/bizuaula?disciplina=${encodeURIComponent(d.id)}`)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
+                    >
+                      <PlayCircle className="w-4 h-4" />
+                      BizuAula
+                    </button>
+                  </div>
 
-                  <button
-                    onClick={() => navigate(`/mapas-mentais?disciplina=${encodeURIComponent(d.id)}`)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
-                  >
-                    <Brain className="w-4 h-4" />
-                    Mapas Mentais
-                  </button>
-
-                  <button
-                    onClick={() => navigate(`/bizuaula?disciplina=${encodeURIComponent(d.id)}`)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
-                  >
-                    <PlayCircle className="w-4 h-4" />
-                    BizuAula
-                  </button>
+                  {otherMaterials.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <FileText className="w-3.5 h-3.5 text-primary" />
+                        Materiais de estudo
+                      </div>
+                      <MaterialList entries={otherMaterials} />
+                    </div>
+                  )}
                 </div>
               )}
 
