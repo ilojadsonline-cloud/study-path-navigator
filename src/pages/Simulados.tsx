@@ -15,11 +15,12 @@ const DISCIPLINAS_OFICIAIS = [
   "Lei nº 2.575/2012",
   "CPPM",
   "RDMETO",
+  "Língua Portuguesa",
+  "Redação Oficial",
 ];
 
-// Disciplinas do novo edital ainda sem banco de questões (exibidas como "em breve")
 // Obs.: POP não entra (documento sigiloso — Portaria nº 021/2015-Gab. PMTO)
-const DISCIPLINAS_EM_BREVE = ["Língua Portuguesa", "Redação Oficial"];
+const DISCIPLINAS_EM_BREVE: string[] = [];
 
 const disciplinasOpcoes = ["Todas as Disciplinas", ...DISCIPLINAS_OFICIAIS];
 
@@ -566,8 +567,6 @@ const Simulados = () => {
             </div>
             <p className="text-[11px] text-muted-foreground mt-2">
               Selecione 2 ou mais para personalizar. Vazio = todas as disciplinas (distribuição proporcional).
-              As disciplinas marcadas como <span className="text-amber-500 font-semibold">Em breve</span> ainda
-              não possuem banco de questões.
             </p>
 
           </div>

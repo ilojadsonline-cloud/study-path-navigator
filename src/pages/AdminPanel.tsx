@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen, CreditCard, Brain, Youtube, Wrench } from "lucide-react";
+import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen, CreditCard, Brain, Youtube, Wrench, FileText } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 
 // Lazy load das abas — reduz bundle inicial e evita cálculo simultâneo
@@ -20,6 +20,7 @@ const AdminTextosLegaisContent = lazy(() => import("@/components/admin/AdminText
 const AdminAssinaturasTab = lazy(() => import("@/components/admin/AdminAssinaturasTab").then(m => ({ default: m.AdminAssinaturasTab })));
 const AdminMapasMentaisTab = lazy(() => import("@/components/admin/AdminMapasMentaisTab").then(m => ({ default: m.AdminMapasMentaisTab })));
 const AdminBizuAulaTab = lazy(() => import("@/components/admin/AdminBizuAulaTab").then(m => ({ default: m.AdminBizuAulaTab })));
+const AdminEditalTab = lazy(() => import("@/components/admin/AdminEditalTab"));
 
 const Fallback = () => (
   <div className="flex items-center justify-center py-16">
@@ -72,6 +73,7 @@ const AdminPanel = () => {
               <TabsTrigger value="assinaturas" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><CreditCard className="w-3.5 h-3.5" />Assinaturas</TabsTrigger>
               <TabsTrigger value="mapas" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Brain className="w-3.5 h-3.5" />Mapas Mentais</TabsTrigger>
               <TabsTrigger value="bizuaula" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Youtube className="w-3.5 h-3.5" />BizuAula</TabsTrigger>
+              <TabsTrigger value="edital" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><FileText className="w-3.5 h-3.5" />Edital</TabsTrigger>
             </TabsList>
           </div>
 
@@ -89,6 +91,7 @@ const AdminPanel = () => {
           <TabsContent value="assinaturas" className="mt-6" forceMount={visited.has("assinaturas") ? true : undefined} hidden={activeTab !== "assinaturas"}>{renderTab("assinaturas", AdminAssinaturasTab)}</TabsContent>
           <TabsContent value="mapas" className="mt-6" forceMount={visited.has("mapas") ? true : undefined} hidden={activeTab !== "mapas"}>{renderTab("mapas", AdminMapasMentaisTab)}</TabsContent>
           <TabsContent value="bizuaula" className="mt-6" forceMount={visited.has("bizuaula") ? true : undefined} hidden={activeTab !== "bizuaula"}>{renderTab("bizuaula", AdminBizuAulaTab)}</TabsContent>
+          <TabsContent value="edital" className="mt-6" forceMount={visited.has("edital") ? true : undefined} hidden={activeTab !== "edital"}>{renderTab("edital", AdminEditalTab)}</TabsContent>
         </Tabs>
       </div>
     </AppLayout>

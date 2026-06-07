@@ -1,13 +1,18 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
 import {
   BookOpen, ChevronDown, ChevronUp, ChevronRight, ExternalLink, PlayCircle, FileText,
   Shield, Gavel, BookMarked, Landmark, BadgeCheck, Layers, ChevronsDownUp, ChevronsUpDown,
-  ClipboardList, FileCheck, Brain, Target, Clock, Lock
+  ClipboardList, FileCheck, Brain, Target, Clock, Lock, Download
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  type EditalMaterialEntry,
+  createEditalMaterialSignedUrl,
+  loadEditalMaterialsConfig,
+} from "@/lib/edital-materials";
 
 type EditalItem = {
   topic: string;
@@ -615,19 +620,59 @@ function TopicItem({ item }: { item: EditalItem }) {
   );
 }
 
+function MaterialButton({ entry }: { entry: EditalMaterialEntry | null }) {
+  const handleOpen = async () => {
+    if (!entry) return;
+    if (entry.mode === "link" && entry.externalUrl) {
+      window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (entry.mode === "pdf" && entry.storagePath) {
+      try {
+        const url = await createEditalMaterialSignedUrl(entry.storagePath);
+        window.open(url, "_blank", "noopener,noreferrer");
+      } catch {
+        /* falha silenciosa: o material não pôde ser aberto agora */
+      }
+    }
+  };
+
+  if (!entry) {
+    return (
+      <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-dashed border-amber-500/30 text-amber-500 text-xs font-semibold cursor-default">
+        <Clock className="w-4 h-4" />
+        Material em breve
+      </span>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleOpen}
+      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+    >
+      {entry.mode === "pdf" ? <Download className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
+      {entry.buttonLabel || "Material de estudo"}
+    </button>
+  );
+}
+
 function DisciplinaBlock({
   d,
   index,
   open,
   onToggle,
+  material,
 }: {
   d: Disciplina;
   index: number;
   open: boolean;
   onToggle: () => void;
+  material: EditalMaterialEntry | null;
 }) {
   const navigate = useNavigate();
   const { peso, clean } = parseSubtitle(d.subtitle);
+
 
   return (
     <motion.div
@@ -705,13 +750,18 @@ function DisciplinaBlock({
                   </div>
                 </div>
               ) : d.comingSoon ? (
-                <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
-                  <Clock className="w-5 h-5 shrink-0 mt-0.5" />
-                  <p className="text-xs leading-relaxed">
-                    <strong>Conteúdo em preparação.</strong> Esta disciplina já consta no novo edital
-                    do CHOA 2026. Estamos produzindo o texto de referência, as questões e os materiais.
-                    O conteúdo programático abaixo já está disponível para você se planejar.
-                  </p>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
+                    <Clock className="w-5 h-5 shrink-0 mt-0.5" />
+                    <p className="text-xs leading-relaxed">
+                      <strong>Conteúdo em preparação.</strong> Esta disciplina já consta no novo edital
+                      do CHOA 2026. Estamos produzindo o texto de referência, as questões e os materiais.
+                      O conteúdo programático abaixo já está disponível para você se planejar.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <MaterialButton entry={material} />
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -725,6 +775,9 @@ function DisciplinaBlock({
                     {d.leiSecaLabel}
                     <ExternalLink className="w-3 h-3 opacity-60" />
                   </a>
+
+                  <MaterialButton entry={material} />
+
 
                   <button
                     onClick={() => navigate(`/questoes?disciplina=${encodeURIComponent(d.disciplinaFilter)}`)}
@@ -773,6 +826,17 @@ function DisciplinaBlock({
 
 export default function Edital() {
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set([disciplinas[0].id]));
+  const [materials, setMaterials] = useState<Record<string, EditalMaterialEntry>>({});
+
+  useEffect(() => {
+    let alive = true;
+    loadEditalMaterialsConfig().then((config) => {
+      if (alive) setMaterials(config.materials);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const allOpen = openIds.size === disciplinas.length;
 
@@ -867,6 +931,7 @@ export default function Edital() {
               index={i}
               open={openIds.has(d.id)}
               onToggle={() => toggle(d.id)}
+              material={materials[d.id] ?? null}
             />
           ))}
         </div>
