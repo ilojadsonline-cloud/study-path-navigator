@@ -21,6 +21,7 @@ import {
 type DisciplinaProgress = { name: string; total: number; corretas: number };
 type AtividadeRecente = { text: string; time: string; icon: React.ReactNode; sortDate: Date };
 type StudySession = { id: number; duration_seconds: number; started_at: string | null; created_at: string | null };
+type BizuAulaItem = { id: string; title: string; subtitle: string; count: number; restricted?: boolean; destaque?: boolean };
 
 function localDateKey(d: Date | string): string {
   const dt = typeof d === "string" ? new Date(d) : d;
