@@ -90,7 +90,7 @@ function VideoCard({ row }: { row: VideoRow }) {
 
 export default function BizuAula() {
   const [params] = useSearchParams();
-  const initialDisc = params.get("disciplina") || disciplinasLite[0].id;
+  const initialDisc = params.get("disciplina") || bizuAulaDisciplinas[0].id;
   const [openId, setOpenId] = useState<string>(initialDisc);
   const [rows, setRows] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
