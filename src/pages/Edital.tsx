@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
 import {
-  BookOpen, ChevronDown, ChevronUp, ExternalLink, PlayCircle, FileText,
-  Shield, Gavel, BookMarked, Landmark, BadgeCheck,
+  BookOpen, ChevronDown, ChevronUp, ChevronRight, ExternalLink, PlayCircle, FileText,
+  Shield, Gavel, BookMarked, Landmark, BadgeCheck, Layers, ChevronsDownUp, ChevronsUpDown,
   ClipboardList, FileCheck, Brain, Target, Clock, Lock
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -554,20 +554,92 @@ const disciplinas: Disciplina[] = [
   },
 ];
 
-function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
-  const [open, setOpen] = useState(index === 0);
+// Rótulos curtos para a navegação rápida
+const navLabels: Record<string, string> = {
+  estatuto: "Estatuto",
+  promocoes: "Promoções",
+  organizacao: "Organização",
+  cppm: "CPPM",
+  rdmeto: "RDMETO",
+  pop: "POP",
+  portugues: "Português",
+  redacao: "Redação Oficial",
+};
+
+// Extrai o "Peso N" do subtítulo, devolvendo um subtítulo limpo
+function parseSubtitle(subtitle: string): { peso: number | null; clean: string } {
+  const match = subtitle.match(/Peso\s+(\d+)/i);
+  const peso = match ? parseInt(match[1], 10) : null;
+  const clean = subtitle.replace(/\s*•\s*Peso\s+\d+/i, "").trim();
+  return { peso, clean };
+}
+
+function TopicItem({ item }: { item: EditalItem }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-xl bg-secondary/40 border border-border/30 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-secondary/60 transition-colors"
+      >
+        <BookMarked className="w-4 h-4 text-primary shrink-0" />
+        <span className="flex-1 font-semibold text-sm text-foreground leading-snug">{item.topic}</span>
+        <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full bg-background/40 text-[10px] font-medium text-muted-foreground shrink-0">
+          {item.details.length} itens
+        </span>
+        <ChevronRight className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "rotate-90 text-primary" : ""}`} />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
+          >
+            <ul className="px-4 pb-4 pt-1 space-y-2 border-t border-border/30">
+              {item.details.map((detail, j) => (
+                <li key={j} className="text-xs text-muted-foreground flex items-start gap-2.5 leading-relaxed">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/50 mt-1.5 shrink-0" />
+                  {detail}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function DisciplinaBlock({
+  d,
+  index,
+  open,
+  onToggle,
+}: {
+  d: Disciplina;
+  index: number;
+  open: boolean;
+  onToggle: () => void;
+}) {
   const navigate = useNavigate();
+  const { peso, clean } = parseSubtitle(d.subtitle);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      id={`disc-${d.id}`}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className="glass-card rounded-2xl overflow-hidden border border-border/50"
+      transition={{ delay: Math.min(index * 0.04, 0.2) }}
+      className="glass-card rounded-2xl overflow-hidden border border-border/50 scroll-mt-20"
     >
       <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-4 p-5 text-left hover:bg-secondary/30 transition-colors"
+        onClick={onToggle}
+        className="w-full flex items-center gap-4 p-4 sm:p-5 text-left hover:bg-secondary/30 transition-colors"
       >
         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${d.color} flex items-center justify-center shrink-0`}>
           {d.icon}
@@ -588,14 +660,20 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
               </span>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{d.subtitle}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{clean}</p>
         </div>
+        {peso != null && (
+          <span className="hidden sm:inline-flex flex-col items-center justify-center px-3 py-1 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
+            <span className="text-sm font-black text-primary leading-none">{peso}</span>
+            <span className="text-[9px] uppercase tracking-wide text-primary/70 mt-0.5">peso</span>
+          </span>
+        )}
         <div className="shrink-0 text-muted-foreground">
           {open ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </div>
       </button>
 
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {open && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
@@ -604,7 +682,7 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 space-y-4">
+            <div className="px-4 sm:px-5 pb-5 space-y-4">
               {d.restricted ? (
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive">
                   <Lock className="w-5 h-5 shrink-0 mt-0.5" />
@@ -674,22 +752,15 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
                 </div>
               )}
 
-              <div className="space-y-3">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground pt-1">
+                <Layers className="w-3.5 h-3.5 text-primary" />
+                Conteúdo programático
+                <span className="text-muted-foreground/50 normal-case font-normal">• toque para expandir cada tópico</span>
+              </div>
+
+              <div className="space-y-2.5">
                 {d.items.map((item, i) => (
-                  <div key={i} className="rounded-xl bg-secondary/40 border border-border/30 p-4">
-                    <h3 className="font-semibold text-sm text-foreground flex items-center gap-2 mb-2">
-                      <BookMarked className="w-4 h-4 text-primary shrink-0" />
-                      {item.topic}
-                    </h3>
-                    <ul className="space-y-1 ml-6">
-                      {item.details.map((detail, j) => (
-                        <li key={j} className="text-xs text-muted-foreground flex items-start gap-2">
-                          <span className="w-1 h-1 rounded-full bg-muted-foreground/50 mt-1.5 shrink-0" />
-                          {detail}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  <TopicItem key={i} item={item} />
                 ))}
               </div>
             </div>
@@ -701,20 +772,102 @@ function DisciplinaBlock({ d, index }: { d: Disciplina; index: number }) {
 }
 
 export default function Edital() {
+  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set([disciplinas[0].id]));
+
+  const allOpen = openIds.size === disciplinas.length;
+
+  const toggle = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const expandAll = () => setOpenIds(new Set(disciplinas.map((d) => d.id)));
+  const collapseAll = () => setOpenIds(new Set());
+
+  const jumpTo = (id: string) => {
+    setOpenIds((prev) => new Set(prev).add(id));
+    setTimeout(() => {
+      document.getElementById(`disc-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 90);
+  };
+
+  const totalDisponiveis = useMemo(
+    () => disciplinas.filter((d) => !d.comingSoon && !d.restricted).length,
+    [],
+  );
+
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-5">
         <BackButton />
-        <header className="space-y-1">
-          <h1 className="text-2xl font-black text-gradient-primary">📋 Edital Verticalizado</h1>
-          <p className="text-sm text-muted-foreground">
-            Conteúdo programático detalhado por disciplina — CHOA 2026 (novo edital)
+
+        {/* Cabeçalho */}
+        <header className="glass-card rounded-2xl border border-border/50 p-5 sm:p-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary mb-3">
+            <Shield className="w-3.5 h-3.5" />
+            CHOA 2026 • Novo edital
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-gradient-primary tracking-tight">
+            Edital Verticalizado
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1.5 max-w-2xl">
+            Conteúdo programático oficial por disciplina, organizado para leitura clara e acesso rápido
+            aos materiais de estudo.
           </p>
+
+          <div className="flex flex-wrap gap-2 mt-4">
+            <span className="rounded-full border border-border/50 bg-secondary/50 px-3 py-1.5 text-xs font-semibold text-foreground">
+              {disciplinas.length} disciplinas
+            </span>
+            <span className="rounded-full border border-border/50 bg-secondary/50 px-3 py-1.5 text-xs font-semibold text-foreground">
+              {totalDisponiveis} disponíveis agora
+            </span>
+            <span className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+              Lei seca + questões + mapas
+            </span>
+          </div>
         </header>
 
+        {/* Navegação rápida */}
+        <div className="glass-card rounded-2xl border border-border/50 p-4">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Navegação rápida
+            </p>
+            <button
+              onClick={allOpen ? collapseAll : expandAll}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+            >
+              {allOpen ? <ChevronsDownUp className="w-3.5 h-3.5" /> : <ChevronsUpDown className="w-3.5 h-3.5" />}
+              {allOpen ? "Recolher todas" : "Expandir todas"}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {disciplinas.map((d) => (
+              <button
+                key={d.id}
+                onClick={() => jumpTo(d.id)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-secondary/40 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary/70 hover:text-foreground transition-colors"
+              >
+                <span className="text-primary">{d.icon}</span>
+                {navLabels[d.id] ?? d.title}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Disciplinas */}
         <div className="space-y-3">
           {disciplinas.map((d, i) => (
-            <DisciplinaBlock key={d.id} d={d} index={i} />
+            <DisciplinaBlock
+              key={d.id}
+              d={d}
+              index={i}
+              open={openIds.has(d.id)}
+              onToggle={() => toggle(d.id)}
+            />
           ))}
         </div>
       </div>
