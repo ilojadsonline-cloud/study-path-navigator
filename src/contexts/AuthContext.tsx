@@ -141,7 +141,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     resetAuthState();
-    await supabase.auth.signOut();
+    try {
+      // scope: "local" só limpa a sessão DESTE dispositivo/aba e NÃO revoga o
+      // refresh token no servidor. Evita o erro "Refresh Token Not Found" que
+      // desloga o usuário em outras abas/refresh após inatividade.
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      // ignore — estado local já foi limpo por resetAuthState()
+    }
   }, [resetAuthState]);
 
   const handleExpiredSession = useCallback(async () => {
