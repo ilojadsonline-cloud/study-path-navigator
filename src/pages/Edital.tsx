@@ -1,13 +1,18 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
 import {
   BookOpen, ChevronDown, ChevronUp, ChevronRight, ExternalLink, PlayCircle, FileText,
   Shield, Gavel, BookMarked, Landmark, BadgeCheck, Layers, ChevronsDownUp, ChevronsUpDown,
-  ClipboardList, FileCheck, Brain, Target, Clock, Lock
+  ClipboardList, FileCheck, Brain, Target, Clock, Lock, Download
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  type EditalMaterialEntry,
+  createEditalMaterialSignedUrl,
+  loadEditalMaterialsConfig,
+} from "@/lib/edital-materials";
 
 type EditalItem = {
   topic: string;
