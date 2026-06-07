@@ -621,42 +621,30 @@ function TopicItem({ item }: { item: EditalItem }) {
   );
 }
 
-function MaterialButton({ entry }: { entry: EditalMaterialEntry | null }) {
-  const handleOpen = async () => {
-    if (!entry) return;
-
-    if (entry.mode === "link" && entry.externalUrl) {
-      window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
-      return;
+async function openMaterialEntry(entry: EditalMaterialEntry) {
+  if (entry.storagePath) {
+    try {
+      const url = await createEditalMaterialSignedUrl(entry.storagePath);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      /* falha silenciosa: o material não pôde ser aberto agora */
     }
+    return;
+  }
+  if (entry.externalUrl) {
+    window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
+  }
+}
 
-    if (entry.mode === "lei_seca") {
-      if (entry.storagePath) {
-        try {
-          const url = await createEditalMaterialSignedUrl(entry.storagePath);
-          window.open(url, "_blank", "noopener,noreferrer");
-        } catch {
-          /* falha silenciosa */
-        }
-        return;
-      }
-      if (entry.externalUrl) {
-        window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
-        return;
-      }
-    }
+function materialIcon(entry: EditalMaterialEntry) {
+  if (entry.mode === "pdf") return Download;
+  if (entry.mode === "lei_seca") return entry.storagePath ? Download : Scroll;
+  return ExternalLink;
+}
 
-    if (entry.mode === "pdf" && entry.storagePath) {
-      try {
-        const url = await createEditalMaterialSignedUrl(entry.storagePath);
-        window.open(url, "_blank", "noopener,noreferrer");
-      } catch {
-        /* falha silenciosa: o material não pôde ser aberto agora */
-      }
-    }
-  };
-
-  if (!entry) {
+// Lista numerada de materiais (um abaixo do outro, com título).
+function MaterialList({ entries }: { entries: EditalMaterialEntry[] }) {
+  if (entries.length === 0) {
     return (
       <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-dashed border-amber-500/30 text-amber-500 text-xs font-semibold cursor-default">
         <Clock className="w-4 h-4" />
@@ -665,23 +653,28 @@ function MaterialButton({ entry }: { entry: EditalMaterialEntry | null }) {
     );
   }
 
-  const Icon =
-    entry.mode === "pdf"
-      ? Download
-      : entry.mode === "lei_seca"
-        ? entry.storagePath
-          ? Download
-          : Scroll
-        : ExternalLink;
-
   return (
-    <button
-      onClick={handleOpen}
-      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
-    >
-      <Icon className="w-4 h-4" />
-      {entry.buttonLabel || (entry.mode === "lei_seca" ? "Lei Seca atualizada" : "Material de estudo")}
-    </button>
+    <ol className="space-y-2">
+      {entries.map((entry, idx) => {
+        const Icon = materialIcon(entry);
+        return (
+          <li key={entry.id}>
+            <button
+              onClick={() => openMaterialEntry(entry)}
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors text-left"
+            >
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[11px] font-bold">
+                {idx + 1}
+              </span>
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="flex-1 min-w-0 truncate">
+                {entry.buttonLabel || (entry.mode === "lei_seca" ? "Lei Seca atualizada" : "Material de estudo")}
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -690,16 +683,21 @@ function DisciplinaBlock({
   index,
   open,
   onToggle,
-  material,
+  materials,
 }: {
   d: Disciplina;
   index: number;
   open: boolean;
   onToggle: () => void;
-  material: EditalMaterialEntry | null;
+  materials: EditalMaterialEntry[];
 }) {
   const navigate = useNavigate();
   const { peso, clean } = parseSubtitle(d.subtitle);
+
+  // Lei Seca enviada pelo admin substitui o link fixo (ex.: "Lei nº 2.578").
+  const leiSecaEntry = materials.find((m) => m.mode === "lei_seca") ?? null;
+  // Demais materiais entram na lista numerada (links, vídeos, PDFs).
+  const otherMaterials = materials.filter((m) => m.mode !== "lei_seca");
 
 
   return (
@@ -787,49 +785,66 @@ function DisciplinaBlock({
                       O conteúdo programático abaixo já está disponível para você se planejar.
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <MaterialButton entry={material} />
-                  </div>
+                  <MaterialList entries={otherMaterials} />
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-2">
-                  <a
-                    href={d.leiSecaUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
-                  >
-                    <FileText className="w-4 h-4" />
-                    {d.leiSecaLabel}
-                    <ExternalLink className="w-3 h-3 opacity-60" />
-                  </a>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {leiSecaEntry ? (
+                      <button
+                        onClick={() => openMaterialEntry(leiSecaEntry)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                      >
+                        {leiSecaEntry.storagePath ? <Download className="w-4 h-4" /> : <Scroll className="w-4 h-4" />}
+                        {leiSecaEntry.buttonLabel || d.leiSecaLabel || "Lei Seca atualizada"}
+                      </button>
+                    ) : (
+                      <a
+                        href={d.leiSecaUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                      >
+                        <FileText className="w-4 h-4" />
+                        {d.leiSecaLabel}
+                        <ExternalLink className="w-3 h-3 opacity-60" />
+                      </a>
+                    )}
 
-                  <MaterialButton entry={material} />
+                    <button
+                      onClick={() => navigate(`/questoes?disciplina=${encodeURIComponent(d.disciplinaFilter)}`)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-gold text-gold-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      Banco de Questões
+                    </button>
 
+                    <button
+                      onClick={() => navigate(`/mapas-mentais?disciplina=${encodeURIComponent(d.id)}`)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                    >
+                      <Brain className="w-4 h-4" />
+                      Mapas Mentais
+                    </button>
 
-                  <button
-                    onClick={() => navigate(`/questoes?disciplina=${encodeURIComponent(d.disciplinaFilter)}`)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-gold text-gold-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    <BookOpen className="w-4 h-4" />
-                    Banco de Questões
-                  </button>
+                    <button
+                      onClick={() => navigate(`/bizuaula?disciplina=${encodeURIComponent(d.id)}`)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
+                    >
+                      <PlayCircle className="w-4 h-4" />
+                      BizuAula
+                    </button>
+                  </div>
 
-                  <button
-                    onClick={() => navigate(`/mapas-mentais?disciplina=${encodeURIComponent(d.id)}`)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
-                  >
-                    <Brain className="w-4 h-4" />
-                    Mapas Mentais
-                  </button>
-
-                  <button
-                    onClick={() => navigate(`/bizuaula?disciplina=${encodeURIComponent(d.id)}`)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
-                  >
-                    <PlayCircle className="w-4 h-4" />
-                    BizuAula
-                  </button>
+                  {otherMaterials.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <FileText className="w-3.5 h-3.5 text-primary" />
+                        Materiais de estudo
+                      </div>
+                      <MaterialList entries={otherMaterials} />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -854,7 +869,7 @@ function DisciplinaBlock({
 
 export default function Edital() {
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set([disciplinas[0].id]));
-  const [materials, setMaterials] = useState<Record<string, EditalMaterialEntry>>({});
+  const [materials, setMaterials] = useState<Record<string, EditalMaterialEntry[]>>({});
 
   useEffect(() => {
     let alive = true;
@@ -941,8 +956,8 @@ export default function Edital() {
                 </p>
               </div>
             </div>
-            <div className="shrink-0">
-              <MaterialButton entry={materials[ANALISE_EDITAL_DISC.id] ?? null} />
+            <div className="shrink-0 w-full sm:w-auto sm:min-w-[240px]">
+              <MaterialList entries={materials[ANALISE_EDITAL_DISC.id] ?? []} />
             </div>
           </div>
         </motion.div>
@@ -986,7 +1001,7 @@ export default function Edital() {
               index={i}
               open={openIds.has(d.id)}
               onToggle={() => toggle(d.id)}
-              material={materials[d.id] ?? null}
+              materials={materials[d.id] ?? []}
             />
           ))}
         </div>

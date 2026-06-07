@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { BookOpen, Clock, ExternalLink, FileDown, Loader2, Save, Trash2, Upload } from "lucide-react";
+import {
+  BookOpen,
+  Clock,
+  ExternalLink,
+  FileDown,
+  Loader2,
+  Pencil,
+  Plus,
+  Save,
+  Scroll,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,33 +34,67 @@ import {
   type EditalMaterialEntry,
   type EditalMaterialMode,
   createEditalMaterialSignedUrl,
+  generateMaterialId,
   loadEditalMaterialsConfig,
   removeEditalMaterialFile,
   saveEditalMaterialsConfig,
 } from "@/lib/edital-materials";
 import { supabase } from "@/integrations/supabase/client";
 
+type AddMode = Exclude<EditalMaterialMode, "none">;
+
 type FormState = {
-  mode: EditalMaterialMode;
+  mode: AddMode;
   buttonLabel: string;
   externalUrl: string;
 };
 
 const DEFAULT_BUTTON_LABEL = "Material de estudo";
 
-function getInitialForm(entry?: EditalMaterialEntry | null): FormState {
+const MODE_LABEL: Record<AddMode, string> = {
+  link: "Link / vídeo",
+  pdf: "PDF para download",
+  lei_seca: "Lei Seca atualizada",
+};
+
+function emptyForm(): FormState {
+  return { mode: "link", buttonLabel: "", externalUrl: "" };
+}
+
+function formFromEntry(entry: EditalMaterialEntry): FormState {
   return {
-    mode: entry?.mode ?? "none",
-    buttonLabel: entry?.buttonLabel ?? DEFAULT_BUTTON_LABEL,
-    externalUrl: entry?.externalUrl ?? "",
+    mode: entry.mode,
+    buttonLabel: entry.buttonLabel ?? "",
+    externalUrl: entry.externalUrl ?? "",
   };
+}
+
+async function uploadPdf(disciplinaId: string, file: File) {
+  if (file.type !== "application/pdf") {
+    throw new Error("O arquivo enviado precisa estar em PDF.");
+  }
+  const safeName = file.name.replace(/[^\w.-]+/g, "_");
+  const uploadPath = `${EDITAL_MATERIALS_UPLOAD_PREFIX}/${disciplinaId}-${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage
+    .from(EDITAL_MATERIALS_BUCKET)
+    .upload(uploadPath, file, { upsert: true, contentType: "application/pdf" });
+  if (error) throw error;
+  return { storagePath: uploadPath, fileName: file.name };
 }
 
 export default function AdminEditalTab() {
   const [loading, setLoading] = useState(true);
-  const [materials, setMaterials] = useState<Record<string, EditalMaterialEntry>>({});
-  const [forms, setForms] = useState<Record<string, FormState>>({});
-  const [files, setFiles] = useState<Record<string, File | null>>({});
+  const [materials, setMaterials] = useState<Record<string, EditalMaterialEntry[]>>({});
+
+  // Formulário "novo material" por disciplina
+  const [newForms, setNewForms] = useState<Record<string, FormState>>({});
+  const [newFiles, setNewFiles] = useState<Record<string, File | null>>({});
+  const [addingId, setAddingId] = useState<string | null>(null);
+
+  // Edição inline de um material existente
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<FormState>(emptyForm());
+  const [editFile, setEditFile] = useState<File | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
@@ -55,22 +102,16 @@ export default function AdminEditalTab() {
     () =>
       editalAdminItems.map((disc) => ({
         ...disc,
-        current: materials[disc.id] ?? null,
-        form: forms[disc.id] ?? getInitialForm(materials[disc.id]),
+        list: materials[disc.id] ?? [],
+        newForm: newForms[disc.id] ?? emptyForm(),
       })),
-    [forms, materials],
+    [materials, newForms],
   );
 
   const loadConfig = async () => {
     setLoading(true);
     const config = await loadEditalMaterialsConfig();
     setMaterials(config.materials);
-
-    const nextForms: Record<string, FormState> = {};
-    editalAdminItems.forEach((disc) => {
-      nextForms[disc.id] = getInitialForm(config.materials[disc.id]);
-    });
-    setForms(nextForms);
     setLoading(false);
   };
 
@@ -78,180 +119,150 @@ export default function AdminEditalTab() {
     loadConfig();
   }, []);
 
-  const setFormValue = (disciplinaId: string, patch: Partial<FormState>) => {
-    setForms((prev) => ({
+  const setNewFormValue = (disciplinaId: string, patch: Partial<FormState>) => {
+    setNewForms((prev) => ({
       ...prev,
-      [disciplinaId]: {
-        ...(prev[disciplinaId] ?? getInitialForm(materials[disciplinaId])),
-        ...patch,
-      },
+      [disciplinaId]: { ...(prev[disciplinaId] ?? emptyForm()), ...patch },
     }));
   };
 
-  const openCurrentMaterial = async (entry: EditalMaterialEntry | null) => {
+  const openMaterial = async (entry: EditalMaterialEntry) => {
     try {
-      if (!entry) {
-        toast.error("Esta disciplina ainda não tem material configurado.");
+      if (entry.storagePath) {
+        const signedUrl = await createEditalMaterialSignedUrl(entry.storagePath);
+        window.open(signedUrl, "_blank", "noopener,noreferrer");
         return;
       }
-
-      if (entry.mode === "link" && entry.externalUrl) {
+      if (entry.externalUrl) {
         window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
         return;
       }
-
-      if (entry.mode === "lei_seca") {
-        if (entry.storagePath) {
-          const signedUrl = await createEditalMaterialSignedUrl(entry.storagePath);
-          window.open(signedUrl, "_blank", "noopener,noreferrer");
-          return;
-        }
-        if (entry.externalUrl) {
-          window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
-          return;
-        }
-      }
-
-      if (entry.mode === "pdf" && entry.storagePath) {
-        const signedUrl = await createEditalMaterialSignedUrl(entry.storagePath);
-        window.open(signedUrl, "_blank", "noopener,noreferrer");
-      }
+      toast.error("Este material não tem link ou arquivo configurado.");
     } catch (error: any) {
       toast.error(error?.message || "Não foi possível abrir o material.");
     }
   };
 
-  const handleSave = async (disciplinaId: string) => {
-    const current = materials[disciplinaId] ?? null;
-    const form = forms[disciplinaId] ?? getInitialForm(current);
-    const selectedFile = files[disciplinaId];
+  const persist = async (next: Record<string, EditalMaterialEntry[]>) => {
+    await saveEditalMaterialsConfig(next);
+    setMaterials(next);
+  };
 
-    setSavingId(disciplinaId);
+  const handleAdd = async (disciplinaId: string) => {
+    const form = newForms[disciplinaId] ?? emptyForm();
+    const file = newFiles[disciplinaId] ?? null;
+
+    setAddingId(disciplinaId);
     try {
-      const nextMaterials = { ...materials };
+      const entry: EditalMaterialEntry = {
+        id: generateMaterialId(),
+        disciplinaId,
+        mode: form.mode,
+        buttonLabel: form.buttonLabel.trim() || undefined,
+        updatedAt: new Date().toISOString(),
+      };
 
-      if (form.mode === "none") {
-        if (current?.storagePath) {
-          await removeEditalMaterialFile(current.storagePath);
-        }
-        delete nextMaterials[disciplinaId];
-      } else if (form.mode === "link") {
-        if (!form.externalUrl.trim()) {
-          throw new Error("Informe o link que será usado no botão da disciplina.");
-        }
-        if (current?.storagePath) {
-          await removeEditalMaterialFile(current.storagePath);
-        }
-        nextMaterials[disciplinaId] = {
-          disciplinaId,
-          mode: "link",
-          buttonLabel: form.buttonLabel.trim() || DEFAULT_BUTTON_LABEL,
-          externalUrl: form.externalUrl.trim(),
-          updatedAt: new Date().toISOString(),
-        };
+      if (form.mode === "link") {
+        if (!form.externalUrl.trim()) throw new Error("Informe o link (página, vídeo ou PDF externo).");
+        entry.externalUrl = form.externalUrl.trim();
       } else if (form.mode === "lei_seca") {
         const hasLink = form.externalUrl.trim().length > 0;
-        const hasNewFile = !!selectedFile;
-        const hasExistingFile = !!current?.storagePath && current.mode !== "link";
+        if (!hasLink && !file) throw new Error("Informe um link ou envie um PDF para a Lei Seca.");
+        if (file) {
+          const up = await uploadPdf(disciplinaId, file);
+          entry.storagePath = up.storagePath;
+          entry.fileName = up.fileName;
+        }
+        if (hasLink) entry.externalUrl = form.externalUrl.trim();
+      } else {
+        if (!file) throw new Error("Envie um arquivo PDF para este material.");
+        const up = await uploadPdf(disciplinaId, file);
+        entry.storagePath = up.storagePath;
+        entry.fileName = up.fileName;
+      }
 
-        if (!hasLink && !hasNewFile && !hasExistingFile) {
+      const next = { ...materials, [disciplinaId]: [...(materials[disciplinaId] ?? []), entry] };
+      await persist(next);
+
+      setNewForms((prev) => ({ ...prev, [disciplinaId]: emptyForm() }));
+      setNewFiles((prev) => ({ ...prev, [disciplinaId]: null }));
+      const input = document.getElementById(`edital-new-file-${disciplinaId}`) as HTMLInputElement | null;
+      if (input) input.value = "";
+
+      toast.success("Material adicionado.");
+    } catch (error: any) {
+      toast.error(error?.message || "Não foi possível adicionar o material.");
+    } finally {
+      setAddingId(null);
+    }
+  };
+
+  const startEdit = (entry: EditalMaterialEntry) => {
+    setEditingId(entry.id);
+    setEditForm(formFromEntry(entry));
+    setEditFile(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditFile(null);
+  };
+
+  const saveEdit = async (entry: EditalMaterialEntry) => {
+    setSavingId(entry.id);
+    try {
+      const updated: EditalMaterialEntry = {
+        ...entry,
+        mode: editForm.mode,
+        buttonLabel: editForm.buttonLabel.trim() || undefined,
+        externalUrl: undefined,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (editForm.mode === "link") {
+        if (!editForm.externalUrl.trim()) throw new Error("Informe o link.");
+        updated.externalUrl = editForm.externalUrl.trim();
+        if (entry.storagePath) {
+          await removeEditalMaterialFile(entry.storagePath);
+          updated.storagePath = undefined;
+          updated.fileName = undefined;
+        }
+      } else if (editForm.mode === "lei_seca") {
+        const hasLink = editForm.externalUrl.trim().length > 0;
+        if (editFile) {
+          const up = await uploadPdf(entry.disciplinaId, editFile);
+          if (entry.storagePath && entry.storagePath !== up.storagePath) {
+            await removeEditalMaterialFile(entry.storagePath);
+          }
+          updated.storagePath = up.storagePath;
+          updated.fileName = up.fileName;
+        }
+        if (hasLink) updated.externalUrl = editForm.externalUrl.trim();
+        if (!hasLink && !editFile && !entry.storagePath) {
           throw new Error("Informe um link ou envie um PDF para a Lei Seca.");
         }
-
-        let storagePath = (current?.mode === "lei_seca" || current?.mode === "pdf") ? current?.storagePath : undefined;
-        let fileName = (current?.mode === "lei_seca" || current?.mode === "pdf") ? current?.fileName : undefined;
-
-        if (hasNewFile) {
-          if (selectedFile.type !== "application/pdf") {
-            throw new Error("O arquivo enviado precisa estar em PDF.");
-          }
-
-          const safeName = selectedFile.name.replace(/[^\w.-]+/g, "_");
-          const uploadPath = `${EDITAL_MATERIALS_UPLOAD_PREFIX}/${disciplinaId}-${Date.now()}-${safeName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from(EDITAL_MATERIALS_BUCKET)
-            .upload(uploadPath, selectedFile, {
-              upsert: true,
-              contentType: "application/pdf",
-            });
-
-          if (uploadError) {
-            throw uploadError;
-          }
-
-          if (storagePath && storagePath !== uploadPath) {
-            await removeEditalMaterialFile(storagePath);
-          }
-
-          storagePath = uploadPath;
-          fileName = selectedFile.name;
-        }
-
-        nextMaterials[disciplinaId] = {
-          disciplinaId,
-          mode: "lei_seca",
-          buttonLabel: form.buttonLabel.trim() || "Lei Seca atualizada",
-          externalUrl: form.externalUrl.trim() || undefined,
-          storagePath,
-          fileName,
-          updatedAt: new Date().toISOString(),
-        };
       } else {
-        let storagePath = current?.storagePath;
-        let fileName = current?.fileName;
-
-        if (selectedFile) {
-          if (selectedFile.type !== "application/pdf") {
-            throw new Error("O arquivo enviado precisa estar em PDF.");
+        if (editFile) {
+          const up = await uploadPdf(entry.disciplinaId, editFile);
+          if (entry.storagePath && entry.storagePath !== up.storagePath) {
+            await removeEditalMaterialFile(entry.storagePath);
           }
-
-          const safeName = selectedFile.name.replace(/[^\w.-]+/g, "_");
-          const uploadPath = `${EDITAL_MATERIALS_UPLOAD_PREFIX}/${disciplinaId}-${Date.now()}-${safeName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from(EDITAL_MATERIALS_BUCKET)
-            .upload(uploadPath, selectedFile, {
-              upsert: true,
-              contentType: "application/pdf",
-            });
-
-          if (uploadError) {
-            throw uploadError;
-          }
-
-          if (current?.storagePath && current.storagePath !== uploadPath) {
-            await removeEditalMaterialFile(current.storagePath);
-          }
-
-          storagePath = uploadPath;
-          fileName = selectedFile.name;
+          updated.storagePath = up.storagePath;
+          updated.fileName = up.fileName;
         }
-
-        if (!storagePath || !fileName) {
-          throw new Error("Envie um PDF para salvar o material desta disciplina.");
-        }
-
-        nextMaterials[disciplinaId] = {
-          disciplinaId,
-          mode: "pdf",
-          buttonLabel: form.buttonLabel.trim() || DEFAULT_BUTTON_LABEL,
-          fileName,
-          storagePath,
-          updatedAt: new Date().toISOString(),
-        };
+        if (!updated.storagePath) throw new Error("Envie um PDF para este material.");
       }
 
-      await saveEditalMaterialsConfig(nextMaterials);
-      setMaterials(nextMaterials);
-      setFiles((prev) => ({ ...prev, [disciplinaId]: null }));
-
-      const input = document.getElementById(`edital-file-${disciplinaId}`) as HTMLInputElement | null;
-      if (input) {
-        input.value = "";
-      }
-
-      toast.success("Material do edital atualizado.");
+      const next = {
+        ...materials,
+        [entry.disciplinaId]: (materials[entry.disciplinaId] ?? []).map((m) =>
+          m.id === entry.id ? updated : m,
+        ),
+      };
+      await persist(next);
+      setEditingId(null);
+      setEditFile(null);
+      toast.success("Material atualizado.");
     } catch (error: any) {
       toast.error(error?.message || "Não foi possível salvar o material.");
     } finally {
@@ -259,25 +270,19 @@ export default function AdminEditalTab() {
     }
   };
 
-  const handleReset = async (disciplinaId: string) => {
-    const current = materials[disciplinaId];
-    if (!current) {
-      toast.message("Esta disciplina já está marcada como \"Em breve\".");
-      return;
-    }
-
-    setRemovingId(disciplinaId);
+  const handleRemove = async (entry: EditalMaterialEntry) => {
+    if (!confirm(`Remover "${entry.buttonLabel || DEFAULT_BUTTON_LABEL}"?`)) return;
+    setRemovingId(entry.id);
     try {
-      const nextMaterials = { ...materials };
-      if (current.storagePath) {
-        await removeEditalMaterialFile(current.storagePath);
+      if (entry.storagePath) {
+        await removeEditalMaterialFile(entry.storagePath);
       }
-      delete nextMaterials[disciplinaId];
-      await saveEditalMaterialsConfig(nextMaterials);
-      setMaterials(nextMaterials);
-      setFormValue(disciplinaId, getInitialForm(null));
-      setFiles((prev) => ({ ...prev, [disciplinaId]: null }));
-      toast.success("Material removido. A disciplina volta a exibir \"Em breve\".");
+      const remaining = (materials[entry.disciplinaId] ?? []).filter((m) => m.id !== entry.id);
+      const next = { ...materials };
+      if (remaining.length > 0) next[entry.disciplinaId] = remaining;
+      else delete next[entry.disciplinaId];
+      await persist(next);
+      toast.success("Material removido.");
     } catch (error: any) {
       toast.error(error?.message || "Não foi possível remover o material.");
     } finally {
@@ -301,9 +306,11 @@ export default function AdminEditalTab() {
           <div className="space-y-1">
             <h2 className="text-base font-bold text-foreground">Materiais do Edital</h2>
             <p className="text-sm text-muted-foreground">
-              Suba um PDF para download ou informe um link de redirecionamento para cada disciplina.
-              Enquanto nada for configurado, a página do Edital exibe a mensagem{" "}
-              <span className="font-semibold text-amber-500">"Em breve"</span> no material da disciplina.
+              Adicione quantos materiais quiser por disciplina (links, vídeos, PDFs e Lei Seca). Cada
+              novo material entra na lista <span className="font-semibold text-foreground">sem substituir</span> os
+              demais, e você pode editar, remover ou reenviar individualmente. Materiais do tipo{" "}
+              <span className="font-semibold text-amber-500">Lei Seca</span> substituem o link de lei seca exibido na
+              página do Edital.
             </p>
           </div>
         </div>
@@ -311,152 +318,253 @@ export default function AdminEditalTab() {
 
       <div className="space-y-4">
         {items.map((disc) => {
-          const current = disc.current;
-          const form = disc.form;
-          const selectedFile = files[disc.id];
           const isRestricted = Boolean(disc.restricted);
+          const list = disc.list;
+          const form = disc.newForm;
+          const newFile = newFiles[disc.id] ?? null;
 
           return (
             <div key={disc.id} className="glass-card rounded-2xl p-5 space-y-4">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm font-semibold text-foreground">{disc.title}</h3>
-                    {disc.restricted && (
-                      <span className="rounded-full border border-destructive/25 bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">
-                        Sigiloso
-                      </span>
-                    )}
-                    {current?.mode === "pdf" && (
-                      <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                        PDF para download
-                      </span>
-                    )}
-                    {current?.mode === "link" && (
-                      <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
-                        Link externo
-                      </span>
-                    )}
-                    {current?.mode === "lei_seca" && (
-                      <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
-                        Lei Seca
-                      </span>
-                    )}
-                    {!current && !disc.restricted && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-500">
-                        <Clock className="h-3 w-3" />
-                        Em breve
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{disc.subtitle}</p>
-                  {current && (
-                    <button
-                      type="button"
-                      onClick={() => openCurrentMaterial(current)}
-                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                    >
-                      {current.mode === "pdf" ? <FileDown className="h-3.5 w-3.5" /> : <ExternalLink className="h-3.5 w-3.5" />}
-                      Abrir material atual
-                    </button>
-                  )}
-                </div>
-
-                <div className="rounded-xl border border-border/40 bg-secondary/20 px-3 py-2 text-xs text-muted-foreground">
-                  Botão exibido: <span className="font-semibold text-foreground">{form.buttonLabel || DEFAULT_BUTTON_LABEL}</span>
-                </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground">{disc.title}</h3>
+                {disc.restricted && (
+                  <span className="rounded-full border border-destructive/25 bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">
+                    Sigiloso
+                  </span>
+                )}
+                {!isRestricted && (
+                  <span className="rounded-full border border-border/40 bg-secondary/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {list.length} material{list.length === 1 ? "" : "is"}
+                  </span>
+                )}
               </div>
+              <p className="text-xs text-muted-foreground -mt-2">{disc.subtitle}</p>
 
-              <div className="grid gap-3 lg:grid-cols-[200px_minmax(0,1fr)_minmax(0,1fr)]">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Tipo de material</label>
-                  <Select
-                    value={form.mode}
-                    onValueChange={(value) => setFormValue(disc.id, { mode: value as EditalMaterialMode })}
-                    disabled={isRestricted}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Em breve (sem material)</SelectItem>
-                      <SelectItem value="link">Link de redirecionamento</SelectItem>
-                      <SelectItem value="pdf">PDF para download</SelectItem>
-                      <SelectItem value="lei_seca">Lei Seca atualizada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Texto do botão</label>
-                  <Input
-                    value={form.buttonLabel}
-                    onChange={(e) => setFormValue(disc.id, { buttonLabel: e.target.value })}
-                    placeholder={DEFAULT_BUTTON_LABEL}
-                    disabled={isRestricted || form.mode === "none"}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {form.mode === "lei_seca" ? "Link da Lei Seca atualizada" : "Link de redirecionamento"}
-                  </label>
-                  <Input
-                    value={form.externalUrl}
-                    onChange={(e) => setFormValue(disc.id, { externalUrl: e.target.value })}
-                    placeholder="https://..."
-                    disabled={isRestricted || (form.mode !== "link" && form.mode !== "lei_seca")}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {form.mode === "lei_seca" ? "PDF da Lei Seca (opcional)" : "Arquivo PDF"}
-                  </label>
-                  <Input
-                    id={`edital-file-${disc.id}`}
-                    type="file"
-                    accept="application/pdf"
-                    disabled={isRestricted || (form.mode !== "pdf" && form.mode !== "lei_seca")}
-                    onChange={(e) =>
-                      setFiles((prev) => ({
-                        ...prev,
-                        [disc.id]: e.target.files?.[0] || null,
-                      }))
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {selectedFile
-                      ? `Arquivo selecionado: ${selectedFile.name}`
-                      : current?.fileName
-                        ? `Arquivo atual: ${current.fileName}`
-                        : "Nenhum PDF enviado para esta disciplina."}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleReset(disc.id)}
-                    disabled={isRestricted || removingId === disc.id || savingId === disc.id}
-                  >
-                    {removingId === disc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                    Remover (Em breve)
-                  </Button>
-                  <Button onClick={() => handleSave(disc.id)} disabled={isRestricted || savingId === disc.id}>
-                    {savingId === disc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : form.mode === "pdf" ? <Upload className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-                    Salvar
-                  </Button>
-                </div>
-              </div>
-
-              {isRestricted && (
+              {isRestricted ? (
                 <p className="text-xs text-destructive">
                   Esta disciplina permanece bloqueada por sigilo institucional (Portaria nº 021/2015-Gab. PMTO)
                   e não aceita material público na plataforma.
                 </p>
+              ) : (
+                <>
+                  {/* Lista de materiais cadastrados */}
+                  {list.length === 0 ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-dashed border-amber-500/30 bg-amber-500/5 px-3 py-2.5 text-xs text-amber-500">
+                      <Clock className="h-3.5 w-3.5" />
+                      Nenhum material ainda — a página do Edital exibe "Em breve".
+                    </div>
+                  ) : (
+                    <ol className="space-y-2">
+                      {list.map((entry, idx) => {
+                        const isEditing = editingId === entry.id;
+                        return (
+                          <li
+                            key={entry.id}
+                            className="rounded-xl border border-border/40 bg-secondary/20 p-3"
+                          >
+                            {isEditing ? (
+                              <div className="space-y-3">
+                                <div className="grid gap-3 lg:grid-cols-[180px_minmax(0,1fr)]">
+                                  <div className="space-y-1">
+                                    <label className="text-xs font-medium text-muted-foreground">Tipo</label>
+                                    <Select
+                                      value={editForm.mode}
+                                      onValueChange={(value) =>
+                                        setEditForm((p) => ({ ...p, mode: value as AddMode }))
+                                      }
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="link">{MODE_LABEL.link}</SelectItem>
+                                        <SelectItem value="pdf">{MODE_LABEL.pdf}</SelectItem>
+                                        <SelectItem value="lei_seca">{MODE_LABEL.lei_seca}</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-xs font-medium text-muted-foreground">Título do material</label>
+                                    <Input
+                                      value={editForm.buttonLabel}
+                                      onChange={(e) => setEditForm((p) => ({ ...p, buttonLabel: e.target.value }))}
+                                      placeholder={DEFAULT_BUTTON_LABEL}
+                                    />
+                                  </div>
+                                </div>
+                                {(editForm.mode === "link" || editForm.mode === "lei_seca") && (
+                                  <div className="space-y-1">
+                                    <label className="text-xs font-medium text-muted-foreground">Link</label>
+                                    <Input
+                                      value={editForm.externalUrl}
+                                      onChange={(e) => setEditForm((p) => ({ ...p, externalUrl: e.target.value }))}
+                                      placeholder="https://..."
+                                    />
+                                  </div>
+                                )}
+                                {(editForm.mode === "pdf" || editForm.mode === "lei_seca") && (
+                                  <div className="space-y-1">
+                                    <label className="text-xs font-medium text-muted-foreground">
+                                      {editForm.mode === "lei_seca" ? "PDF da Lei Seca (opcional)" : "Arquivo PDF"}
+                                    </label>
+                                    <Input
+                                      type="file"
+                                      accept="application/pdf"
+                                      onChange={(e) => setEditFile(e.target.files?.[0] || null)}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                      {editFile
+                                        ? `Novo arquivo: ${editFile.name}`
+                                        : entry.fileName
+                                          ? `Arquivo atual: ${entry.fileName}`
+                                          : "Nenhum PDF enviado."}
+                                    </p>
+                                  </div>
+                                )}
+                                <div className="flex flex-wrap gap-2">
+                                  <Button size="sm" onClick={() => saveEdit(entry)} disabled={savingId === entry.id}>
+                                    {savingId === entry.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Save className="h-4 w-4" />
+                                    )}
+                                    Salvar
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={cancelEdit}>
+                                    <X className="h-4 w-4" /> Cancelar
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-3">
+                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                                  {idx + 1}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => openMaterial(entry)}
+                                      className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:text-primary hover:underline"
+                                    >
+                                      {entry.mode === "lei_seca" ? (
+                                        <Scroll className="h-3.5 w-3.5" />
+                                      ) : entry.storagePath ? (
+                                        <FileDown className="h-3.5 w-3.5" />
+                                      ) : (
+                                        <ExternalLink className="h-3.5 w-3.5" />
+                                      )}
+                                      {entry.buttonLabel || DEFAULT_BUTTON_LABEL}
+                                    </button>
+                                    <span className="rounded-full border border-border/40 bg-background/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                      {MODE_LABEL[entry.mode]}
+                                    </span>
+                                  </div>
+                                  <p className="truncate text-[11px] text-muted-foreground">
+                                    {entry.fileName || entry.externalUrl || "—"}
+                                  </p>
+                                </div>
+                                <div className="flex shrink-0 items-center gap-1">
+                                  <Button size="sm" variant="outline" onClick={() => startEdit(entry)}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    disabled={removingId === entry.id}
+                                    onClick={() => handleRemove(entry)}
+                                  >
+                                    {removingId === entry.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
+
+                  {/* Formulário de novo material */}
+                  <div className="rounded-xl border border-border/40 bg-background/30 p-3 space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Adicionar material
+                    </p>
+                    <div className="grid gap-3 lg:grid-cols-[180px_minmax(0,1fr)]">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Tipo</label>
+                        <Select
+                          value={form.mode}
+                          onValueChange={(value) => setNewFormValue(disc.id, { mode: value as AddMode })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="link">{MODE_LABEL.link}</SelectItem>
+                            <SelectItem value="pdf">{MODE_LABEL.pdf}</SelectItem>
+                            <SelectItem value="lei_seca">{MODE_LABEL.lei_seca}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Título do material</label>
+                        <Input
+                          value={form.buttonLabel}
+                          onChange={(e) => setNewFormValue(disc.id, { buttonLabel: e.target.value })}
+                          placeholder={DEFAULT_BUTTON_LABEL}
+                        />
+                      </div>
+                    </div>
+
+                    {(form.mode === "link" || form.mode === "lei_seca") && (
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          {form.mode === "lei_seca" ? "Link da Lei Seca (opcional se enviar PDF)" : "Link (página, vídeo ou PDF externo)"}
+                        </label>
+                        <Input
+                          value={form.externalUrl}
+                          onChange={(e) => setNewFormValue(disc.id, { externalUrl: e.target.value })}
+                          placeholder="https://..."
+                        />
+                      </div>
+                    )}
+
+                    {(form.mode === "pdf" || form.mode === "lei_seca") && (
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          {form.mode === "lei_seca" ? "PDF da Lei Seca (opcional)" : "Arquivo PDF"}
+                        </label>
+                        <Input
+                          id={`edital-new-file-${disc.id}`}
+                          type="file"
+                          accept="application/pdf"
+                          onChange={(e) =>
+                            setNewFiles((prev) => ({ ...prev, [disc.id]: e.target.files?.[0] || null }))
+                          }
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {newFile ? `Arquivo selecionado: ${newFile.name}` : "Nenhum PDF selecionado."}
+                        </p>
+                      </div>
+                    )}
+
+                    <Button onClick={() => handleAdd(disc.id)} disabled={addingId === disc.id}>
+                      {addingId === disc.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : form.mode === "link" ? (
+                        <Plus className="h-4 w-4" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                      Adicionar material
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           );
