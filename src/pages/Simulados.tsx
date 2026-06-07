@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { FormattedText } from "@/components/FormattedText";
 
 const DISCIPLINAS_OFICIAIS = [
   "Lei nº 2.578/2012",
@@ -436,7 +437,7 @@ const Simulados = () => {
                     <Badge variant="outline" className={`text-[10px] ${getDifficultyColor(q.dificuldade)}`}>{q.dificuldade}</Badge>
                   </div>
                 </div>
-                <p className="text-sm leading-relaxed">{q.enunciado}</p>
+                <FormattedText text={q.enunciado} className="text-sm text-foreground" />
                 <div className="space-y-2">
                   {q.alternativas.map((alt, ai) => {
                     const isSelected = selectedAnswer[q.id] === ai;
