@@ -141,7 +141,7 @@ export default function BizuAula() {
           </div>
         ) : (
           <div className="space-y-3">
-            {disciplinasLite.map((d, i) => {
+            {bizuAulaDisciplinas.map((d, i) => {
               const open = openId === d.id;
               const videos = byDisc.get(d.id) || [];
               return (
