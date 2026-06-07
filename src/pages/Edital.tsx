@@ -623,10 +623,28 @@ function TopicItem({ item }: { item: EditalItem }) {
 function MaterialButton({ entry }: { entry: EditalMaterialEntry | null }) {
   const handleOpen = async () => {
     if (!entry) return;
-    if ((entry.mode === "link" || entry.mode === "lei_seca") && entry.externalUrl) {
+
+    if (entry.mode === "link" && entry.externalUrl) {
       window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
       return;
     }
+
+    if (entry.mode === "lei_seca") {
+      if (entry.storagePath) {
+        try {
+          const url = await createEditalMaterialSignedUrl(entry.storagePath);
+          window.open(url, "_blank", "noopener,noreferrer");
+        } catch {
+          /* falha silenciosa */
+        }
+        return;
+      }
+      if (entry.externalUrl) {
+        window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
+    }
+
     if (entry.mode === "pdf" && entry.storagePath) {
       try {
         const url = await createEditalMaterialSignedUrl(entry.storagePath);
@@ -646,7 +664,14 @@ function MaterialButton({ entry }: { entry: EditalMaterialEntry | null }) {
     );
   }
 
-  const Icon = entry.mode === "pdf" ? Download : entry.mode === "lei_seca" ? Scroll : ExternalLink;
+  const Icon =
+    entry.mode === "pdf"
+      ? Download
+      : entry.mode === "lei_seca"
+        ? entry.storagePath
+          ? Download
+          : Scroll
+        : ExternalLink;
 
   return (
     <button
