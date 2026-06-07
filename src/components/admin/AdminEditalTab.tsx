@@ -92,9 +92,21 @@ export default function AdminEditalTab() {
         return;
       }
 
-      if ((entry.mode === "link" || entry.mode === "lei_seca") && entry.externalUrl) {
+      if (entry.mode === "link" && entry.externalUrl) {
         window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
         return;
+      }
+
+      if (entry.mode === "lei_seca") {
+        if (entry.storagePath) {
+          const signedUrl = await createEditalMaterialSignedUrl(entry.storagePath);
+          window.open(signedUrl, "_blank", "noopener,noreferrer");
+          return;
+        }
+        if (entry.externalUrl) {
+          window.open(entry.externalUrl, "_blank", "noopener,noreferrer");
+          return;
+        }
       }
 
       if (entry.mode === "pdf" && entry.storagePath) {
@@ -120,23 +132,66 @@ export default function AdminEditalTab() {
           await removeEditalMaterialFile(current.storagePath);
         }
         delete nextMaterials[disciplinaId];
-      } else if (form.mode === "link" || form.mode === "lei_seca") {
+      } else if (form.mode === "link") {
         if (!form.externalUrl.trim()) {
-          throw new Error(
-            form.mode === "lei_seca"
-              ? "Informe o link da Lei Seca atualizada."
-              : "Informe o link que será usado no botão da disciplina.",
-          );
+          throw new Error("Informe o link que será usado no botão da disciplina.");
         }
-        if (current?.mode === "pdf" && current.storagePath) {
+        if (current?.storagePath) {
           await removeEditalMaterialFile(current.storagePath);
         }
-        const fallbackLabel = form.mode === "lei_seca" ? "Lei Seca atualizada" : DEFAULT_BUTTON_LABEL;
         nextMaterials[disciplinaId] = {
           disciplinaId,
-          mode: form.mode,
-          buttonLabel: form.buttonLabel.trim() || fallbackLabel,
+          mode: "link",
+          buttonLabel: form.buttonLabel.trim() || DEFAULT_BUTTON_LABEL,
           externalUrl: form.externalUrl.trim(),
+          updatedAt: new Date().toISOString(),
+        };
+      } else if (form.mode === "lei_seca") {
+        const hasLink = form.externalUrl.trim().length > 0;
+        const hasNewFile = !!selectedFile;
+        const hasExistingFile = !!current?.storagePath && current.mode !== "link";
+
+        if (!hasLink && !hasNewFile && !hasExistingFile) {
+          throw new Error("Informe um link ou envie um PDF para a Lei Seca.");
+        }
+
+        let storagePath = (current?.mode === "lei_seca" || current?.mode === "pdf") ? current?.storagePath : undefined;
+        let fileName = (current?.mode === "lei_seca" || current?.mode === "pdf") ? current?.fileName : undefined;
+
+        if (hasNewFile) {
+          if (selectedFile.type !== "application/pdf") {
+            throw new Error("O arquivo enviado precisa estar em PDF.");
+          }
+
+          const safeName = selectedFile.name.replace(/[^\w.-]+/g, "_");
+          const uploadPath = `${EDITAL_MATERIALS_UPLOAD_PREFIX}/${disciplinaId}-${Date.now()}-${safeName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from(EDITAL_MATERIALS_BUCKET)
+            .upload(uploadPath, selectedFile, {
+              upsert: true,
+              contentType: "application/pdf",
+            });
+
+          if (uploadError) {
+            throw uploadError;
+          }
+
+          if (storagePath && storagePath !== uploadPath) {
+            await removeEditalMaterialFile(storagePath);
+          }
+
+          storagePath = uploadPath;
+          fileName = selectedFile.name;
+        }
+
+        nextMaterials[disciplinaId] = {
+          disciplinaId,
+          mode: "lei_seca",
+          buttonLabel: form.buttonLabel.trim() || "Lei Seca atualizada",
+          externalUrl: form.externalUrl.trim() || undefined,
+          storagePath,
+          fileName,
           updatedAt: new Date().toISOString(),
         };
       } else {
@@ -279,6 +334,11 @@ export default function AdminEditalTab() {
                         Link externo
                       </span>
                     )}
+                    {current?.mode === "lei_seca" && (
+                      <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                        Lei Seca
+                      </span>
+                    )}
                     {!current && !disc.restricted && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-500">
                         <Clock className="h-3 w-3" />
@@ -349,12 +409,14 @@ export default function AdminEditalTab() {
 
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Arquivo PDF</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {form.mode === "lei_seca" ? "PDF da Lei Seca (opcional)" : "Arquivo PDF"}
+                  </label>
                   <Input
                     id={`edital-file-${disc.id}`}
                     type="file"
                     accept="application/pdf"
-                    disabled={isRestricted || form.mode !== "pdf"}
+                    disabled={isRestricted || (form.mode !== "pdf" && form.mode !== "lei_seca")}
                     onChange={(e) =>
                       setFiles((prev) => ({
                         ...prev,
