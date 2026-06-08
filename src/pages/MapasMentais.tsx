@@ -125,41 +125,42 @@ export default function MapasMentais() {
                         <div className="px-5 pb-5 space-y-2">
                           {d.restricted ? (
                             <PopSigilosoNotice />
-                          ) : (
-                            d.topics.map((t) => {
-                            const row = mapByDiscTopic.get(`${d.id}::${t}`);
-                            return (
+                          ) : (() => {
+                            const items = mapsByDisc.get(d.id) || [];
+                            if (items.length === 0) {
+                              return (
+                                <div className="flex items-center justify-center gap-2 rounded-xl bg-muted/30 border border-border/30 p-4 text-muted-foreground text-sm">
+                                  <Inbox className="w-4 h-4" /> Nenhum mapa disponível ainda.
+                                </div>
+                              );
+                            }
+                            return items.map((row, idx) => (
                               <div
-                                key={t}
+                                key={row.id}
                                 className="flex items-center justify-between gap-3 rounded-xl bg-secondary/40 border border-border/30 p-3"
                               >
                                 <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-xs font-bold text-primary shrink-0">{idx + 1}.</span>
                                   <BookMarked className="w-4 h-4 text-primary shrink-0" />
-                                  <span className="text-sm text-foreground truncate">{t}</span>
+                                  <span className="text-sm text-foreground truncate">{row.topico}</span>
                                 </div>
-                                {row ? (
-                                  <button
-                                    onClick={() => openPdf(row)}
-                                    disabled={openingId === row.id}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-gold text-gold-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 shrink-0"
-                                  >
-                                    {openingId === row.id ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    ) : (
-                                      <FileDown className="w-3.5 h-3.5" />
-                                    )}
-                                    Abrir PDF
-                                  </button>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/40 text-muted-foreground text-xs shrink-0">
-                                    <Inbox className="w-3.5 h-3.5" /> Em breve
-                                  </span>
-                                )}
+                                <button
+                                  onClick={() => openPdf(row)}
+                                  disabled={openingId === row.id}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-gold text-gold-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 shrink-0"
+                                >
+                                  {openingId === row.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <FileDown className="w-3.5 h-3.5" />
+                                  )}
+                                  Abrir PDF
+                                </button>
                               </div>
-                            );
-                          })
-                          )}
+                            ));
+                          })()}
                         </div>
+
                       </motion.div>
                     )}
                   </AnimatePresence>
