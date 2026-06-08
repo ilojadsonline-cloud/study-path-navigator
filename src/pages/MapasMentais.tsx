@@ -39,9 +39,13 @@ export default function MapasMentais() {
     return () => { alive = false; };
   }, []);
 
-  const mapByDiscTopic = useMemo(() => {
-    const m = new Map<string, MapaRow>();
-    for (const r of rows) m.set(`${r.disciplina_id}::${r.topico}`, r);
+  const mapsByDisc = useMemo(() => {
+    const m = new Map<string, MapaRow[]>();
+    for (const r of rows) {
+      const list = m.get(r.disciplina_id) || [];
+      list.push(r);
+      m.set(r.disciplina_id, list);
+    }
     return m;
   }, [rows]);
 
