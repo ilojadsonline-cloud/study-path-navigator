@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { disciplinasLite, disciplinasSelecionaveis } from "@/lib/edital-structure";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, Upload, Trash2, FileDown, Brain } from "lucide-react";
+import { Loader2, Upload, Trash2, FileDown, Brain, Pencil, X, Check } from "lucide-react";
 import { toast } from "sonner";
 
 type MapaRow = {
@@ -19,20 +19,17 @@ type MapaRow = {
 export function AdminMapasMentaisTab() {
   const [rows, setRows] = useState<MapaRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [discId, setDiscId] = useState<string>(disciplinasLite[0].id);
-  const [topico, setTopico] = useState<string>(disciplinasLite[0].topics[0]);
+  const [discId, setDiscId] = useState<string>(disciplinasSelecionaveis[0].id);
+  const [titulo, setTitulo] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const topicsForDisc = useMemo(
-    () => disciplinasLite.find((d) => d.id === discId)?.topics || [],
-    [discId]
-  );
-
-  useEffect(() => {
-    if (!topicsForDisc.includes(topico)) setTopico(topicsForDisc[0] || "");
-  }, [discId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // edição inline
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editTitulo, setEditTitulo] = useState<string>("");
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchRows = async () => {
     setLoading(true);
@@ -40,7 +37,7 @@ export function AdminMapasMentaisTab() {
       .from("mapas_mentais")
       .select("*")
       .order("disciplina_id", { ascending: true })
-      .order("topico", { ascending: true });
+      .order("created_at", { ascending: true });
     if (error) toast.error("Erro ao carregar mapas mentais");
     setRows((data as MapaRow[]) || []);
     setLoading(false);
@@ -49,35 +46,26 @@ export function AdminMapasMentaisTab() {
   useEffect(() => { fetchRows(); }, []);
 
   const handleUpload = async () => {
+    if (!titulo.trim()) { toast.error("Informe o título do mapa mental"); return; }
     if (!file) { toast.error("Selecione um arquivo PDF"); return; }
     if (file.type !== "application/pdf") { toast.error("O arquivo deve ser PDF"); return; }
-    if (!discId || !topico) { toast.error("Selecione disciplina e tópico"); return; }
+    if (!discId) { toast.error("Selecione a disciplina"); return; }
     setUploading(true);
     try {
-      const safeTopic = topico.replace(/[^\w\d-]+/g, "_").slice(0, 80);
-      const path = `${discId}/${safeTopic}-${Date.now()}.pdf`;
+      const safeTitle = titulo.trim().replace(/[^\w\d-]+/g, "_").slice(0, 80);
+      const path = `${discId}/${safeTitle}-${Date.now()}.pdf`;
       const { error: upErr } = await supabase.storage
         .from("mapas-mentais")
         .upload(path, file, { contentType: "application/pdf", upsert: true });
       if (upErr) throw upErr;
 
-      // Remove arquivo antigo se existir
-      const existing = rows.find((r) => r.disciplina_id === discId && r.topico === topico);
-      if (existing) {
-        await supabase.storage.from("mapas-mentais").remove([existing.storage_path]);
-        const { error: updErr } = await supabase
-          .from("mapas_mentais")
-          .update({ nome_arquivo: file.name, storage_path: path })
-          .eq("id", existing.id);
-        if (updErr) throw updErr;
-      } else {
-        const { error: insErr } = await supabase
-          .from("mapas_mentais")
-          .insert({ disciplina_id: discId, topico, nome_arquivo: file.name, storage_path: path });
-        if (insErr) throw insErr;
-      }
+      const { error: insErr } = await supabase
+        .from("mapas_mentais")
+        .insert({ disciplina_id: discId, topico: titulo.trim(), nome_arquivo: file.name, storage_path: path });
+      if (insErr) throw insErr;
 
-      toast.success("Mapa mental enviado");
+      toast.success("Mapa mental adicionado");
+      setTitulo("");
       setFile(null);
       const input = document.getElementById("mm-file-input") as HTMLInputElement | null;
       if (input) input.value = "";
@@ -86,6 +74,54 @@ export function AdminMapasMentaisTab() {
       toast.error(e?.message || "Falha no upload");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const startEdit = (row: MapaRow) => {
+    setEditId(row.id);
+    setEditTitulo(row.topico);
+    setEditFile(null);
+  };
+
+  const cancelEdit = () => {
+    setEditId(null);
+    setEditTitulo("");
+    setEditFile(null);
+  };
+
+  const handleSaveEdit = async (row: MapaRow) => {
+    if (!editTitulo.trim()) { toast.error("Informe o título"); return; }
+    if (editFile && editFile.type !== "application/pdf") { toast.error("O arquivo deve ser PDF"); return; }
+    setSavingEdit(true);
+    try {
+      let storage_path = row.storage_path;
+      let nome_arquivo = row.nome_arquivo;
+
+      if (editFile) {
+        const safeTitle = editTitulo.trim().replace(/[^\w\d-]+/g, "_").slice(0, 80);
+        const newPath = `${row.disciplina_id}/${safeTitle}-${Date.now()}.pdf`;
+        const { error: upErr } = await supabase.storage
+          .from("mapas-mentais")
+          .upload(newPath, editFile, { contentType: "application/pdf", upsert: true });
+        if (upErr) throw upErr;
+        await supabase.storage.from("mapas-mentais").remove([row.storage_path]);
+        storage_path = newPath;
+        nome_arquivo = editFile.name;
+      }
+
+      const { error: updErr } = await supabase
+        .from("mapas_mentais")
+        .update({ topico: editTitulo.trim(), storage_path, nome_arquivo })
+        .eq("id", row.id);
+      if (updErr) throw updErr;
+
+      toast.success("Mapa mental atualizado");
+      cancelEdit();
+      fetchRows();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -113,6 +149,8 @@ export function AdminMapasMentaisTab() {
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   };
 
+  const discTitle = (id: string) => disciplinasLite.find((d) => d.id === id)?.title || id;
+
   return (
     <div className="space-y-6">
       <div className="glass-card rounded-2xl p-5 space-y-4">
@@ -132,15 +170,12 @@ export function AdminMapasMentaisTab() {
             </Select>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Tópico</label>
-            <Select value={topico} onValueChange={setTopico}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {topicsForDisc.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <label className="text-xs text-muted-foreground mb-1 block">Título do mapa</label>
+            <Input
+              placeholder="Ex.: Lei nº 2.578 - Mapa completo"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+            />
           </div>
         </div>
         <div className="flex flex-wrap items-end gap-3">
@@ -153,13 +188,13 @@ export function AdminMapasMentaisTab() {
               onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
           </div>
-          <Button onClick={handleUpload} disabled={uploading || !file}>
+          <Button onClick={handleUpload} disabled={uploading || !file || !titulo.trim()}>
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             Enviar
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Se já existir mapa mental para o mesmo tópico, ele será substituído.
+          Cada envio adiciona um novo mapa à disciplina. Você pode cadastrar vários mapas por disciplina; eles ficam listados abaixo.
         </p>
       </div>
 
@@ -170,35 +205,75 @@ export function AdminMapasMentaisTab() {
         ) : rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum mapa cadastrado ainda.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {disciplinasLite.map((d) => {
               const items = rows.filter((r) => r.disciplina_id === d.id);
               if (items.length === 0) return null;
               return (
                 <div key={d.id} className="space-y-2">
-                  <h3 className="text-sm font-semibold text-foreground">{d.title}</h3>
-                  <div className="space-y-1">
-                    {items.map((r) => (
-                      <div key={r.id} className="flex items-center justify-between gap-3 rounded-lg bg-secondary/30 border border-border/30 p-3">
-                        <div className="min-w-0">
-                          <p className="text-sm text-foreground truncate">{r.topico}</p>
-                          <p className="text-xs text-muted-foreground truncate">{r.nome_arquivo}</p>
+                  <h3 className="text-sm font-semibold text-foreground">{discTitle(d.id)}</h3>
+                  <div className="space-y-2">
+                    {items.map((r, idx) => {
+                      const isEditing = editId === r.id;
+                      return (
+                        <div key={r.id} className="rounded-lg bg-secondary/30 border border-border/30 p-3">
+                          {isEditing ? (
+                            <div className="space-y-2">
+                              <Input
+                                value={editTitulo}
+                                onChange={(e) => setEditTitulo(e.target.value)}
+                                placeholder="Título do mapa"
+                              />
+                              <div>
+                                <label className="text-xs text-muted-foreground mb-1 block">
+                                  Substituir arquivo (opcional)
+                                </label>
+                                <Input
+                                  type="file"
+                                  accept="application/pdf"
+                                  onChange={(e) => setEditFile(e.target.files?.[0] || null)}
+                                />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button size="sm" onClick={() => handleSaveEdit(r)} disabled={savingEdit}>
+                                  {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                  Salvar
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={cancelEdit} disabled={savingEdit}>
+                                  <X className="w-4 h-4" /> Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0 flex items-start gap-2">
+                                <span className="text-xs font-bold text-primary mt-0.5">{idx + 1}.</span>
+                                <div className="min-w-0">
+                                  <p className="text-sm text-foreground truncate">{r.topico}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{r.nome_arquivo}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Button size="sm" variant="outline" onClick={() => handleOpen(r)}>
+                                  <FileDown className="w-4 h-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={deletingId === r.id}
+                                  onClick={() => handleDelete(r)}
+                                >
+                                  {deletingId === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Button size="sm" variant="outline" onClick={() => handleOpen(r)}>
-                            <FileDown className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={deletingId === r.id}
-                            onClick={() => handleDelete(r)}
-                          >
-                            {deletingId === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );

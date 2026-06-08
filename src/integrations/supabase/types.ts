@@ -629,6 +629,8 @@ export type Database = {
           dificuldade: string
           disciplina: string
           enunciado: string
+          enunciado_imagem_nome: string | null
+          enunciado_imagem_path: string | null
           gabarito: number
           id: number
           origem: string | null
@@ -656,6 +658,8 @@ export type Database = {
           dificuldade?: string
           disciplina: string
           enunciado: string
+          enunciado_imagem_nome?: string | null
+          enunciado_imagem_path?: string | null
           gabarito: number
           id?: never
           origem?: string | null
@@ -683,6 +687,8 @@ export type Database = {
           dificuldade?: string
           disciplina?: string
           enunciado?: string
+          enunciado_imagem_nome?: string | null
+          enunciado_imagem_path?: string | null
           gabarito?: number
           id?: never
           origem?: string | null
