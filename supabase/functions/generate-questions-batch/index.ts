@@ -944,8 +944,10 @@ Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" ("Fác
 
 Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {"questions":[],"erro":"NAO_FOI_POSSIVEL_GERAR"}.`;
 
-  const maxTokens = 3200;
-  const PRIMARY_TIMEOUT_MS = useLovable ? 55000 : 60000;
+  // Resposta final maior para não truncar o JSON com o gerador DeepSeek Reasoner.
+  const maxTokens = 5000;
+  // Timeout generoso para o reasoner (limite do edge é 150s).
+  const PRIMARY_TIMEOUT_MS = useLovable ? 55000 : 110000;
 
   let content = '{"questions":[]}';
   try {
