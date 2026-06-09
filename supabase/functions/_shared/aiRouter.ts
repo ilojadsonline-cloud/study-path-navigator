@@ -191,7 +191,8 @@ export function resolveAiRoute(stage: AiStage): AiRoute {
     case "source_selection":
       return { provider: "google", model: MODELS.light(), temperature: 0.1, maxOutputTokens: 2000, allowFallback: true, legalRisk: "low" };
     case "question_generation":
-      return { provider: "google", model: MODELS.generation(), temperature: LIMITS.genTemp(), maxOutputTokens: maxOut, allowFallback: true, legalRisk: "high" };
+      // Gerador primário: DeepSeek Reasoner (R1) — mantém o nível de complexidade jurídica.
+      return { provider: "deepseek", model: MODELS.deepseekGeneration(), temperature: LIMITS.genTemp(), maxOutputTokens: maxOut, allowFallback: true, legalRisk: "high" };
     case "commentary_generation":
       return { provider: "google", model: MODELS.commentary(), temperature: LIMITS.commentaryTemp(), maxOutputTokens: maxOut, allowFallback: true, legalRisk: "high" };
     case "legal_audit":
