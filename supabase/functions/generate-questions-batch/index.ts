@@ -1625,17 +1625,19 @@ Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" (use "
 Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO LEGAL OFICIAL, retorne {"questions":[],"erro":"NAO_FOI_POSSIVEL_GERAR_COM_FONTE_UNICA","motivo":"explique objetivamente o requisito que falhou, sem fonte externa."}`;
 
     // API call with retry logic
-    // Lovable AI Gateway with google/gemini-2.5-flash is dramatically faster
-    // than DeepSeek (typically 8-25s vs 50-90s for the same prompt).
+    // Gerador primário agora é DeepSeek Reasoner (R1) — mais lento (~40-110s) porém
+    // mantém o nível de complexidade jurídica. Gemini entra como fallback rápido.
     const MAX_API_RETRIES = 2;
-    const PRIMARY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 35000 : 50000) : (batchSize === 1 ? 50000 : 58000);
+    // Timeout generoso para o reasoner (limite do edge é 150s; o fallback rápido cabe na sobra).
+    const PRIMARY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 35000 : 50000) : (batchSize === 1 ? 95000 : 115000);
     const RETRY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 30000 : 42000) : (batchSize === 1 ? 42000 : 50000);
-    // Output token budget — Gemini Flash handles slightly larger budgets faster
-    const maxTokens = batchSize === 1 ? 1800 : 3000;
+    // Orçamento de tokens da RESPOSTA FINAL. O DeepSeek Reasoner gasta o "thinking"
+    // em campo separado, mas o JSON final precisa caber sem truncar (finish_reason=length → +0).
+    const maxTokens = batchSize === 1 ? 4000 : 6000;
 
     // ===== Geração via camada de roteamento (aiRouter) =====
-    // Etapa de ALTO risco jurídico → Gemini 2.5 Flash (direto/gateway) como principal,
-    // OpenRouter Gemini como fallback. DeepSeek NÃO é usado na geração premium.
+    // Etapa de ALTO risco jurídico → DeepSeek Reasoner (R1) como principal,
+    // DeepSeek Chat e Gemini 2.5 Flash como fallbacks (evita lote +0 por indisponibilidade).
     let content = '{"questions":[]}';
     let finishReason = "stop";
     try {
