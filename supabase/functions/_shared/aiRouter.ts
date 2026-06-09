@@ -461,12 +461,20 @@ export async function runAiStage(
     throw new Error(`NO_PROVIDER_AVAILABLE_FOR_STAGE:${stage} (mode=${getRoutingMode()})`);
   }
 
+  // Orçamento GLOBAL de tempo compartilhado entre todas as tentativas (evita estourar
+  // o limite de 150s do edge: ex.: reasoner lento + fallback não somam dois timeouts cheios).
+  const totalBudgetMs = opts.timeoutMs ?? 120_000;
+  const deadline = Date.now() + totalBudgetMs;
+
   let lastError: unknown = null;
   for (const attempt of attempts) {
     const started = Date.now();
+    const remainingMs = deadline - started;
+    if (remainingMs < 6_000) break; // tempo insuficiente para outra tentativa útil
     try {
       const res = await callProvider(attempt, messages, {
         ...opts,
+        timeoutMs: Math.min(opts.timeoutMs ?? remainingMs, remainingMs),
         jsonResponse: opts.jsonResponse ?? attempt.jsonResponse,
       });
       await logAiAttempt({
