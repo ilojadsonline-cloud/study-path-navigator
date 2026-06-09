@@ -1630,14 +1630,16 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
     // Lovable AI Gateway with google/gemini-2.5-flash is dramatically faster
     // than DeepSeek (typically 8-25s vs 50-90s for the same prompt).
     const MAX_API_RETRIES = 2;
-    const PRIMARY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 35000 : 50000) : (batchSize === 1 ? 50000 : 58000);
-    const RETRY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 30000 : 42000) : (batchSize === 1 ? 42000 : 50000);
-    // Output token budget — Gemini Flash handles slightly larger budgets faster
-    const maxTokens = batchSize === 1 ? 1800 : 3000;
+    const PRIMARY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 35000 : 50000) : (batchSize === 1 ? 90000 : 110000);
+    const RETRY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 30000 : 42000) : (batchSize === 1 ? 60000 : 70000);
+    // Output token budget. DeepSeek Reasoner (R1) consome boa parte do orçamento
+    // em raciocínio interno; com cap baixo o JSON trunca (finish_reason=length) → lote "+0".
+    // Damos margem ampla; Gemini (fallback) ignora o excedente sem custo extra.
+    const maxTokens = batchSize === 1 ? 5200 : 7000;
 
     // ===== Geração via camada de roteamento (aiRouter) =====
-    // Etapa de ALTO risco jurídico → Gemini 2.5 Flash (direto/gateway) como principal,
-    // OpenRouter Gemini como fallback. DeepSeek NÃO é usado na geração premium.
+    // Etapa de ALTO risco jurídico → DeepSeek Reasoner (R1) como principal (mantém
+    // complexidade), com deepseek-chat → Gemini → OpenRouter como fallbacks.
     let content = '{"questions":[]}';
     let finishReason = "stop";
     try {
