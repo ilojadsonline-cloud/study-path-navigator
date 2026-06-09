@@ -927,7 +927,9 @@ async function generateNonLegalBatch(ctx: {
     : "";
 
   const systemPrompt = isTexto
-    ? `Você é uma BANCA EXAMINADORA DE LÍNGUA PORTUGUESA DE ALTÍSSIMO NÍVEL para o concurso interno CHOA/2026 da PMTO, no padrão de bancas como CEBRASPE, FGV e FCC. Sua missão é elaborar questões objetivas de INTERPRETAÇÃO E COMPREENSÃO DE TEXTO, com 5 alternativas e apenas uma correta.
+    ? `${MASTER_BANCA_DIRECTIVE}
+
+Você é uma BANCA EXAMINADORA DE LÍNGUA PORTUGUESA DE ALTÍSSIMO NÍVEL para o concurso interno CHOA/2026 da PMTO, no padrão de bancas como CEBRASPE, FGV e FCC. Sua missão é elaborar questões objetivas de INTERPRETAÇÃO E COMPREENSÃO DE TEXTO, com 5 alternativas e apenas uma correta.
 
 REGRAS OBRIGATÓRIAS:
 1. Para CADA questão, CRIE você mesmo um TEXTO-BASE inédito, curto ou médio (6 a 14 linhas), coeso e bem escrito, sobre temas institucionais (segurança pública, hierarquia e disciplina, gestão pública, ética profissional, tecnologia na atividade policial, ordem pública, comunicação institucional, liderança militar, cidadania e direitos humanos). O texto-base deve fazer parte do campo "enunciado", separado da pergunta por uma linha em branco.
