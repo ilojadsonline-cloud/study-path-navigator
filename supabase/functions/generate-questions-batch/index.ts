@@ -944,10 +944,10 @@ Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" ("Fác
 
 Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {"questions":[],"erro":"NAO_FOI_POSSIVEL_GERAR"}.`;
 
-  // Resposta final maior para não truncar o JSON com o gerador DeepSeek Reasoner.
-  const maxTokens = 5000;
-  // Timeout generoso para o reasoner (limite do edge é 150s).
-  const PRIMARY_TIMEOUT_MS = useLovable ? 55000 : 110000;
+  // DeepSeek Reasoner (R1) gasta grande parte do orçamento em raciocínio interno;
+  // com cap baixo o JSON sai truncado (finish_reason=length) → lote "+0". Margem ampla.
+  const maxTokens = 5200;
+  const PRIMARY_TIMEOUT_MS = useLovable ? 55000 : 90000;
 
   let content = '{"questions":[]}';
   try {
@@ -1627,19 +1627,19 @@ Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" (use "
 Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO LEGAL OFICIAL, retorne {"questions":[],"erro":"NAO_FOI_POSSIVEL_GERAR_COM_FONTE_UNICA","motivo":"explique objetivamente o requisito que falhou, sem fonte externa."}`;
 
     // API call with retry logic
-    // Gerador primário agora é DeepSeek Reasoner (R1) — mais lento (~40-110s) porém
-    // mantém o nível de complexidade jurídica. Gemini entra como fallback rápido.
+    // Lovable AI Gateway with google/gemini-2.5-flash is dramatically faster
+    // than DeepSeek (typically 8-25s vs 50-90s for the same prompt).
     const MAX_API_RETRIES = 2;
-    // Timeout generoso para o reasoner (limite do edge é 150s; o fallback rápido cabe na sobra).
-    const PRIMARY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 35000 : 50000) : (batchSize === 1 ? 95000 : 115000);
-    const RETRY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 30000 : 42000) : (batchSize === 1 ? 42000 : 50000);
-    // Orçamento de tokens da RESPOSTA FINAL. O DeepSeek Reasoner gasta o "thinking"
-    // em campo separado, mas o JSON final precisa caber sem truncar (finish_reason=length → +0).
-    const maxTokens = batchSize === 1 ? 4000 : 6000;
+    const PRIMARY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 35000 : 50000) : (batchSize === 1 ? 90000 : 110000);
+    const RETRY_TIMEOUT_MS = useLovable ? (batchSize === 1 ? 30000 : 42000) : (batchSize === 1 ? 60000 : 70000);
+    // Output token budget. DeepSeek Reasoner (R1) consome boa parte do orçamento
+    // em raciocínio interno; com cap baixo o JSON trunca (finish_reason=length) → lote "+0".
+    // Damos margem ampla; Gemini (fallback) ignora o excedente sem custo extra.
+    const maxTokens = batchSize === 1 ? 5200 : 7000;
 
     // ===== Geração via camada de roteamento (aiRouter) =====
-    // Etapa de ALTO risco jurídico → DeepSeek Reasoner (R1) como principal,
-    // DeepSeek Chat e Gemini 2.5 Flash como fallbacks (evita lote +0 por indisponibilidade).
+    // Etapa de ALTO risco jurídico → DeepSeek Reasoner (R1) como principal (mantém
+    // complexidade), com deepseek-chat → Gemini → OpenRouter como fallbacks.
     let content = '{"questions":[]}';
     let finishReason = "stop";
     try {

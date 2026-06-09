@@ -98,9 +98,6 @@ export function getRoutingMode(): RoutingMode {
 const MODELS = {
   light: () => env("AI_LIGHT_MODEL") ?? "gemini-2.5-flash-lite",
   generation: () => env("AI_GENERATION_MODEL") ?? "gemini-2.5-flash",
-  // Gerador primário DeepSeek: reasoner (R1) mantém o nível de complexidade jurídica.
-  deepseekGeneration: () => env("AI_DEEPSEEK_GENERATION_MODEL") ?? "deepseek-reasoner",
-  deepseekGenerationFallback: () => env("AI_DEEPSEEK_GENERATION_FALLBACK_MODEL") ?? "deepseek-chat",
   commentary: () => env("AI_COMMENTARY_MODEL") ?? "gemini-2.5-flash",
   audit: () => env("AI_AUDIT_MODEL") ?? "gemini-2.5-flash",
   heavyAudit: () => env("AI_HEAVY_AUDIT_MODEL") ?? "gemini-2.5-pro",
@@ -110,6 +107,8 @@ const MODELS = {
   openrouterHeavyAudit: () => env("AI_OPENROUTER_HEAVY_AUDIT_MODEL") ?? "google/gemini-2.5-pro",
   deepseekLight: () => env("AI_DEEPSEEK_LIGHT_MODEL") ?? "deepseek-chat",
   deepseekJsonRepair: () => env("AI_DEEPSEEK_JSON_REPAIR_MODEL") ?? "deepseek-chat",
+  // Geração premium: DeepSeek Reasoner (R1) mantém a complexidade jurídica "padrão banca elite".
+  deepseekGeneration: () => env("AI_DEEPSEEK_GENERATION_MODEL") ?? "deepseek-reasoner",
 };
 
 const LIMITS = {
@@ -191,8 +190,7 @@ export function resolveAiRoute(stage: AiStage): AiRoute {
     case "source_selection":
       return { provider: "google", model: MODELS.light(), temperature: 0.1, maxOutputTokens: 2000, allowFallback: true, legalRisk: "low" };
     case "question_generation":
-      // Gerador primário: DeepSeek Reasoner (R1) — mantém o nível de complexidade jurídica.
-      return { provider: "deepseek", model: MODELS.deepseekGeneration(), temperature: LIMITS.genTemp(), maxOutputTokens: maxOut, allowFallback: true, legalRisk: "high" };
+      return { provider: "google", model: MODELS.generation(), temperature: LIMITS.genTemp(), maxOutputTokens: maxOut, allowFallback: true, legalRisk: "high" };
     case "commentary_generation":
       return { provider: "google", model: MODELS.commentary(), temperature: LIMITS.commentaryTemp(), maxOutputTokens: maxOut, allowFallback: true, legalRisk: "high" };
     case "legal_audit":
@@ -241,11 +239,12 @@ export function buildAttemptsForStage(stage: AiStage): AiAttempt[] {
       break;
     }
     case "question_generation": {
-      // Alto risco jurídico — qualidade/complexidade primeiro:
-      // DeepSeek Reasoner (R1) → DeepSeek Chat (V3, mais rápido) → Gemini Flash → OpenRouter Gemini.
-      // DeepSeek primeiro a pedido (mantendo complexidade); Gemini garante que o lote nunca fique +0 por indisponibilidade.
-      push("deepseek", MODELS.deepseekGeneration(), null);
-      push("deepseek", MODELS.deepseekGenerationFallback(), "deepseek_reasoner_failed");
+      // Geração premium (alto risco jurídico): DeepSeek Reasoner (R1) mantém a
+      // complexidade exigida. Fallbacks: deepseek-chat (rápido) → Gemini → OpenRouter.
+      if (mode !== "openrouter_fallback") {
+        push("deepseek", MODELS.deepseekGeneration(), null);
+        push("deepseek", MODELS.deepseekLight(), "reasoner_failed");
+      }
       push("google", MODELS.generation(), "deepseek_failed");
       push("openrouter", MODELS.openrouterGeneration(), "secondary_failed");
       break;
@@ -461,20 +460,12 @@ export async function runAiStage(
     throw new Error(`NO_PROVIDER_AVAILABLE_FOR_STAGE:${stage} (mode=${getRoutingMode()})`);
   }
 
-  // Orçamento GLOBAL de tempo compartilhado entre todas as tentativas (evita estourar
-  // o limite de 150s do edge: ex.: reasoner lento + fallback não somam dois timeouts cheios).
-  const totalBudgetMs = opts.timeoutMs ?? 120_000;
-  const deadline = Date.now() + totalBudgetMs;
-
   let lastError: unknown = null;
   for (const attempt of attempts) {
     const started = Date.now();
-    const remainingMs = deadline - started;
-    if (remainingMs < 6_000) break; // tempo insuficiente para outra tentativa útil
     try {
       const res = await callProvider(attempt, messages, {
         ...opts,
-        timeoutMs: Math.min(opts.timeoutMs ?? remainingMs, remainingMs),
         jsonResponse: opts.jsonResponse ?? attempt.jsonResponse,
       });
       await logAiAttempt({
