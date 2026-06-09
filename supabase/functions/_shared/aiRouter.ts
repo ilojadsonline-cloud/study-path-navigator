@@ -98,6 +98,9 @@ export function getRoutingMode(): RoutingMode {
 const MODELS = {
   light: () => env("AI_LIGHT_MODEL") ?? "gemini-2.5-flash-lite",
   generation: () => env("AI_GENERATION_MODEL") ?? "gemini-2.5-flash",
+  // Gerador primário DeepSeek: reasoner (R1) mantém o nível de complexidade jurídica.
+  deepseekGeneration: () => env("AI_DEEPSEEK_GENERATION_MODEL") ?? "deepseek-reasoner",
+  deepseekGenerationFallback: () => env("AI_DEEPSEEK_GENERATION_FALLBACK_MODEL") ?? "deepseek-chat",
   commentary: () => env("AI_COMMENTARY_MODEL") ?? "gemini-2.5-flash",
   audit: () => env("AI_AUDIT_MODEL") ?? "gemini-2.5-flash",
   heavyAudit: () => env("AI_HEAVY_AUDIT_MODEL") ?? "gemini-2.5-pro",
