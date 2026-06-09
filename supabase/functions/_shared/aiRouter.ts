@@ -241,11 +241,13 @@ export function buildAttemptsForStage(stage: AiStage): AiAttempt[] {
       break;
     }
     case "question_generation": {
-      // Alto risco jurídico: Gemini Flash → OpenRouter Gemini Flash (sem DeepSeek)
-      push("google", MODELS.generation(), null);
-      push("openrouter", MODELS.openrouterGeneration(), "primary_failed");
-      // 3ª tentativa: Gemini direto novamente (prompt reduzido é tratado pelo chamador)
-      push("google", MODELS.generation(), "retry_reduced_prompt", { temperature: Math.max(0, base.temperature - 0.05) });
+      // Alto risco jurídico — qualidade/complexidade primeiro:
+      // DeepSeek Reasoner (R1) → DeepSeek Chat (V3, mais rápido) → Gemini Flash → OpenRouter Gemini.
+      // DeepSeek primeiro a pedido (mantendo complexidade); Gemini garante que o lote nunca fique +0 por indisponibilidade.
+      push("deepseek", MODELS.deepseekGeneration(), null);
+      push("deepseek", MODELS.deepseekGenerationFallback(), "deepseek_reasoner_failed");
+      push("google", MODELS.generation(), "deepseek_failed");
+      push("openrouter", MODELS.openrouterGeneration(), "secondary_failed");
       break;
     }
     case "commentary_generation": {
