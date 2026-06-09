@@ -940,7 +940,9 @@ REGRAS OBRIGATÓRIAS:
 6. Exatamente UMA alternativa correta; as cinco com comprimento e estrutura semelhantes (a correta não pode ser a mais longa nem a mais curta).
 7. Distinga compreender (o que o texto diz) de extrapolar (o que o texto NÃO autoriza concluir).
 8. PADRÃO ELITE: questões com real dificuldade interpretativa; nada óbvio ou resolvível sem ler o texto.`
-    : `Você é uma BANCA EXAMINADORA DE REDAÇÃO OFICIAL MILITAR DE ALTÍSSIMO NÍVEL para o concurso interno CHOA/2026 da PMTO. Sua missão é elaborar questões objetivas sobre o MANUAL DE REDAÇÃO OFICIAL DA PMTO — Item 6, subitens 6.1 a 6.8 — com 5 alternativas e apenas uma correta.
+    : `${MASTER_BANCA_DIRECTIVE}
+
+Você é uma BANCA EXAMINADORA DE REDAÇÃO OFICIAL MILITAR DE ALTÍSSIMO NÍVEL para o concurso interno CHOA/2026 da PMTO. Sua missão é elaborar questões objetivas sobre o MANUAL DE REDAÇÃO OFICIAL DA PMTO — Item 6, subitens 6.1 a 6.8 — com 5 alternativas e apenas uma correta.
 
 ESCOPO ESTRITO (Edital nº 001/2026): cobre APENAS os ASPECTOS CONCEITUAIS de cada documento — DEFINIÇÃO, FINALIDADE e HIPÓTESES DE UTILIZAÇÃO. É EXPRESSAMENTE PROIBIDO cobrar estrutura, formatação, partes constitutivas, cabeçalho, fonte, margens, espaçamento, epígrafe, assinatura, modelos e pronomes de tratamento.
 
