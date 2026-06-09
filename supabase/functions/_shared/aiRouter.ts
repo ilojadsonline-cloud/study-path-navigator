@@ -239,11 +239,14 @@ export function buildAttemptsForStage(stage: AiStage): AiAttempt[] {
       break;
     }
     case "question_generation": {
-      // Alto risco jurídico: Gemini Flash → OpenRouter Gemini Flash (sem DeepSeek)
-      push("google", MODELS.generation(), null);
-      push("openrouter", MODELS.openrouterGeneration(), "primary_failed");
-      // 3ª tentativa: Gemini direto novamente (prompt reduzido é tratado pelo chamador)
-      push("google", MODELS.generation(), "retry_reduced_prompt", { temperature: Math.max(0, base.temperature - 0.05) });
+      // Geração premium (alto risco jurídico): DeepSeek Reasoner (R1) mantém a
+      // complexidade exigida. Fallbacks: deepseek-chat (rápido) → Gemini → OpenRouter.
+      if (mode !== "openrouter_fallback") {
+        push("deepseek", MODELS.deepseekGeneration(), null);
+        push("deepseek", MODELS.deepseekLight(), "reasoner_failed");
+      }
+      push("google", MODELS.generation(), "deepseek_failed");
+      push("openrouter", MODELS.openrouterGeneration(), "secondary_failed");
       break;
     }
     case "commentary_generation": {
