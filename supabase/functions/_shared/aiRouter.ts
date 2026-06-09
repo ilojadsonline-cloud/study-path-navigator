@@ -107,6 +107,8 @@ const MODELS = {
   openrouterHeavyAudit: () => env("AI_OPENROUTER_HEAVY_AUDIT_MODEL") ?? "google/gemini-2.5-pro",
   deepseekLight: () => env("AI_DEEPSEEK_LIGHT_MODEL") ?? "deepseek-chat",
   deepseekJsonRepair: () => env("AI_DEEPSEEK_JSON_REPAIR_MODEL") ?? "deepseek-chat",
+  // Geração premium: DeepSeek Reasoner (R1) mantém a complexidade jurídica "padrão banca elite".
+  deepseekGeneration: () => env("AI_DEEPSEEK_GENERATION_MODEL") ?? "deepseek-reasoner",
 };
 
 const LIMITS = {
