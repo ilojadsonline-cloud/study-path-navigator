@@ -21,11 +21,15 @@ interface EnrichedUser {
 
 interface EditUserData { user_id: string; nome: string; email: string; cpf: string; }
 
+const PAGE_SIZE = 50;
+
 export function AdminUsersTab() {
   const { toast } = useToast();
   const [users, setUsers] = useState<EnrichedUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
