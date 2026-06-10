@@ -56,10 +56,14 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
   let json: any = null;
   try { json = JSON.parse(text); } catch { /* */ }
   const content = json?.choices?.[0]?.message?.content ?? null;
+  const finish = json?.choices?.[0]?.finish_reason ?? null;
+  console.log(`[DIAG] status=${resp.status} finish=${finish} len=${content ? content.length : 0} usage=${JSON.stringify(json?.usage ?? null)}`);
+  console.log(`[DIAG] PREVIEW=${content ? content.slice(0, 600).replace(/\n/g, " ") : text.slice(0, 600)}`);
+  console.log(`[DIAG] TAIL=${content ? content.slice(-400).replace(/\n/g, " ") : ""}`);
   return new Response(JSON.stringify({
     status: resp.status,
     source_len: sourceContent.length,
-    finish_reason: json?.choices?.[0]?.finish_reason ?? null,
+    finish_reason: finish,
     usage: json?.usage ?? null,
     content_len: content ? content.length : 0,
     content_preview: content ? content.slice(0, 1500) : null,
