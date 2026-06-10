@@ -513,7 +513,7 @@ export async function runAiStage(
   messages: ChatMessage[],
   opts: RunAiOptions = {},
 ): Promise<RunAiResult> {
-  const attempts = buildAttemptsForStage(stage);
+  const attempts = buildAttemptsForStage(stage, { complexity: opts.complexity });
   if (attempts.length === 0) {
     throw new Error(`NO_PROVIDER_AVAILABLE_FOR_STAGE:${stage} (mode=${getRoutingMode()})`);
   }
