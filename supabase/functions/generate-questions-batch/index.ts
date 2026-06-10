@@ -1000,7 +1000,8 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
       metadata: { batchSize, disciplina: disc.disciplina, tipo: disc.tipo },
     });
     content = aiResult.content || '{"questions":[]}';
-    console.log(`[GERAR-NL] OK via ${aiResult.provider}/${aiResult.model} (${disc.disciplina})`);
+    const finishReason = aiResult.raw?.choices?.[0]?.finish_reason ?? aiResult.raw?.choices?.[0]?.stop_reason ?? "?";
+    console.log(`[GERAR-NL] OK via ${aiResult.provider}/${aiResult.model} (${disc.disciplina}) finish=${finishReason} len=${content.length} preview=${content.slice(0, 300).replace(/\n/g, " ")}`);
   } catch (genErr: any) {
     const msg = String(genErr?.message ?? genErr);
     const isCredit = /HTTP 402|insufficient|no credits|saldo|quota|billing|exhaust/i.test(msg);
