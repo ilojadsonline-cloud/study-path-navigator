@@ -1197,7 +1197,7 @@ serve(async (req: Request) => {
     if (!DEEPSEEK_API_KEY_PRIMARY && !MARITACA_API_KEY && !LOVABLE_API_KEY) {
       return new Response(JSON.stringify({
         status: "erro", mensagem: "Nenhuma API key de IA configurada para o gerador.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Configure DEEPSEEK_API_KEY (preferencial — reasoner), MARITACA_API_KEY ou LOVABLE_API_KEY" }] },
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Configure MARITACA_API_KEY (preferencial — Sabiá-4), DEEPSEEK_API_KEY (fallback — reasoner) ou LOVABLE_API_KEY" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
