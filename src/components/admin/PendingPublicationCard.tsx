@@ -38,6 +38,24 @@ type AuditInfo = {
 
 const SELECT_COLS = "id,disciplina,assunto,dificuldade,enunciado,alt_a,alt_b,alt_c,alt_d,alt_e,gabarito,comentario,created_at";
 
+function AuditBadge({ info }: { info?: AuditInfo }) {
+  if (!info) return null;
+  const s = info.status;
+  let label = "Auditada";
+  let cls = "border-primary/40 text-primary";
+  let Icon = ShieldCheck;
+  if (s === "approved") { label = "OK na auditoria"; cls = "border-emerald-500/40 text-emerald-500"; Icon = CheckCircle2; }
+  else if (s === "auto_fixed") { label = "Corrigida"; cls = "border-sky-500/40 text-sky-500"; Icon = ShieldCheck; }
+  else if (s === "manual_review" || s === "error") { label = "Revisar"; cls = "border-amber-500/50 text-amber-500"; Icon = AlertTriangle; }
+  else if (s === "soft_deleted") { label = "Sugerido excluir"; cls = "border-destructive/50 text-destructive"; Icon = Trash2; }
+  return (
+    <Badge variant="outline" className={`text-[10px] gap-1 ${cls}`} title={info.ai_summary ?? undefined}>
+      <Icon className="w-3 h-3" /> {label}
+    </Badge>
+  );
+}
+
+
 export function PendingPublicationCard() {
   const [rows, setRows] = useState<PendingQuestao[]>([]);
   const [total, setTotal] = useState(0);
