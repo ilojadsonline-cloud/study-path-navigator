@@ -164,7 +164,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTrialExpired(expired && !sub);
   }, []);
 
-  const checkSubscription = useCallback(async () => {
+  const checkSubscription = useCallback(async (opts?: { background?: boolean }) => {
+    // Verificação em segundo plano (timer de 30 min) NÃO deve revogar o acesso
+    // por falhas transitórias — isso causava redirecionamento súbito para
+    // /assinatura ou /login, que o usuário percebia como "o site recarregando
+    // sozinho". Em background, só atualizamos o estado de forma positiva.
+    const background = opts?.background === true;
+
     if (checkInFlightRef.current) {
       return checkInFlightRef.current;
     }
@@ -205,6 +211,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
           }
 
+          // Em background nunca derruba o acesso por erro transitório.
+          if (background) return;
           applySubState(false, null);
           return;
         }
@@ -238,6 +246,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        // Em background nunca derruba o acesso por erro transitório.
+        if (background) return;
         applySubState(false, null);
       } finally {
         setSubscriptionLoading(false);
@@ -247,7 +257,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkInFlightRef.current = promise;
     return promise;
-  }, [handleExpiredSession, applySubState]);
+  }, [handleExpiredSession, applySubState, user]);
+
 
   useEffect(() => {
     const {
@@ -393,15 +404,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Re-check subscription every 30 minutes in background.
   // Never toggles subscriptionLoading so ProtectedRoute does not unmount
   // the current page and lose in-progress work (e.g. questions/simulado state).
+  // background: true => nunca revoga o acesso por falha transitória (evita
+  // redirecionamento súbito que parecia "o site recarregando sozinho").
   useEffect(() => {
     if (!user || isAdmin) return;
 
     const interval = setInterval(() => {
-      void checkSubscription();
+      void checkSubscription({ background: true });
     }, 30 * 60_000);
 
     return () => clearInterval(interval);
   }, [user, isAdmin, checkSubscription]);
+
 
   return (
     <AuthContext.Provider
