@@ -133,7 +133,10 @@ export function AdminGerarTab() {
       }
 
       if (data?.status === "erro" || data?.error) {
-        return { data: null, error: new Error(data?.mensagem || data?.error || "Falha na geração."), usedBatchSize };
+        const motivos = data?.detalhes?.motivos_descarte
+          ? Object.entries(data.detalhes.motivos_descarte).map(([k, v]) => `${k}: ${v}`).join("; ")
+          : "";
+        return { data: null, error: new Error(motivos || data?.mensagem || data?.error || "Falha na geração."), usedBatchSize };
       }
 
       return { data, error: null, usedBatchSize };
