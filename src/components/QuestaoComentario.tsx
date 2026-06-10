@@ -1,4 +1,5 @@
 import { CheckCircle2, AlertTriangle, XCircle, Lightbulb, BookOpen, GraduationCap } from "lucide-react";
+import { isHtmlContent, sanitizeRichHtml } from "@/lib/sanitize-html";
 
 type Section =
   | { type: "professor"; text: string }
