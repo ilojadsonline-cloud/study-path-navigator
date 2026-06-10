@@ -47,6 +47,8 @@ export type AiAttempt = AiRoute & {
   attemptIndex: number;
   fallbackReason: string | null;
   jsonResponse: boolean; // pedir response_format json_object quando suportado
+  serviceTier?: string; // Maritaca: "flex" (-50%) etc.
+  timeoutMsOverride?: number; // timeout específico desta tentativa (ex.: Flex curto)
 };
 
 export type RunAiResult = {
