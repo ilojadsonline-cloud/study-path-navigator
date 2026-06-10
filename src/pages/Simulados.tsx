@@ -141,7 +141,7 @@ const Simulados = () => {
         .from("questoes")
         .select("*")
         .in("id", ids)
-        .in("audit_status", ["approved", "auto_corrected", "admin_resolved", "pending"]);
+        .in("audit_status", ["approved", "auto_corrected", "admin_resolved"]);
       if (cancelled || !data) { setResumeLoading(false); return; }
 
       // Preserve saved order
