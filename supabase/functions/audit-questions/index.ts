@@ -1564,7 +1564,7 @@ async function processQuestion(
 
     await supabase.from("questoes").update(result.proposed_patch).eq("id", q.id);
     appliedPatch = result.proposed_patch;
-    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.AUTO_CORRECTED, result.techniques_used);
+    await setQuestionAuditStatus(supabase, q.id, correctedStatus, result.techniques_used);
     return { status: "auto_fixed", auto_fixed: true, flagged: false, deleted: false };
   } else {
     finalStatus = "manual_review";
