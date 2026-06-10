@@ -45,7 +45,25 @@ export function PendingPublicationCard() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [auditing, setAuditing] = useState(false);
   const [auditProgress, setAuditProgress] = useState<{ done: number; total: number } | null>(null);
+  const [audits, setAudits] = useState<Record<number, AuditInfo>>({});
   const auditStopRef = useRef(false);
+
+  const loadAudits = useCallback(async (ids: number[]) => {
+    if (ids.length === 0) { setAudits({}); return; }
+    const { data } = await supabase
+      .from("question_audits")
+      .select("questao_id,status,risk_level,ai_summary,created_at")
+      .in("questao_id", ids)
+      .order("created_at", { ascending: false });
+    const map: Record<number, AuditInfo> = {};
+    for (const a of (data as any[]) || []) {
+      // mantém apenas a auditoria mais recente por questão (lista já vem desc)
+      if (!map[a.questao_id]) {
+        map[a.questao_id] = { status: a.status, risk_level: a.risk_level, ai_summary: a.ai_summary };
+      }
+    }
+    setAudits(map);
+  }, []);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
