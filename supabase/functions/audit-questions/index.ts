@@ -1388,7 +1388,7 @@ async function processQuestion(
       }],
       ai_summary: "Auditoria não executada por ausência de fonte legal oficial estruturada.",
     });
-    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.MANUAL);
+    await setQuestionAuditStatus(supabase, q.id, flagStatus);
     return { status: "manual_review", auto_fixed: false, flagged: true, deleted: false };
   }
 
