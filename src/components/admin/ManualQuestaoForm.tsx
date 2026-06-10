@@ -20,7 +20,6 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const enunciadoRef = useRef<HTMLTextAreaElement>(null);
 
   const [disciplina, setDisciplina] = useState(disciplinas[0] || "");
   const [assunto, setAssunto] = useState("");
@@ -48,46 +47,46 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
   };
 
   const handleSave = async () => {
-    const parsed = manualSchema.safeParse({
-      disciplina,
-      assunto,
-      dificuldade,
-      banca: banca || undefined,
-      prova: prova || undefined,
-      ano: ano ? Number(ano) : undefined,
-      enunciado,
-      alternativas,
-      gabarito,
-      comentario,
-    });
-
-    if (!parsed.success) {
-      toast({
-        title: "Verifique os campos",
-        description: parsed.error.errors[0]?.message || "Dados inválidos.",
-        variant: "destructive",
-      });
+    // Validação baseada no texto puro (ignora marcação HTML do editor).
+    if (!disciplina.trim()) {
+      toast({ title: "Verifique os campos", description: "Selecione a disciplina.", variant: "destructive" });
       return;
     }
+    if (assunto.trim().length < 2) {
+      toast({ title: "Verifique os campos", description: "Informe o assunto.", variant: "destructive" });
+      return;
+    }
+    if (htmlToPlainText(enunciado).length < 20) {
+      toast({ title: "Verifique os campos", description: "Enunciado muito curto.", variant: "destructive" });
+      return;
+    }
+    if (alternativas.some((a) => htmlToPlainText(a).length < 1)) {
+      toast({ title: "Verifique os campos", description: "Preencha todas as alternativas.", variant: "destructive" });
+      return;
+    }
+    if (htmlToPlainText(comentario).length < 10) {
+      toast({ title: "Verifique os campos", description: "Inclua um comentário/justificativa.", variant: "destructive" });
+      return;
+    }
+    const anoNum = ano ? Number(ano) : null;
 
     setSaving(true);
-    const v = parsed.data;
     const { error } = await supabase.from("questoes").insert({
-      disciplina: v.disciplina,
-      assunto: v.assunto,
-      dificuldade: v.dificuldade,
-      banca: v.banca ?? null,
-      prova: v.prova ?? null,
-      ano: v.ano ?? null,
+      disciplina: disciplina.trim(),
+      assunto: assunto.trim(),
+      dificuldade,
+      banca: banca.trim() || null,
+      prova: prova.trim() || null,
+      ano: anoNum,
       origem: "manual",
-      enunciado: v.enunciado,
-      alt_a: v.alternativas[0],
-      alt_b: v.alternativas[1],
-      alt_c: v.alternativas[2],
-      alt_d: v.alternativas[3],
-      alt_e: v.alternativas[4],
-      gabarito: v.gabarito,
-      comentario: v.comentario,
+      enunciado: sanitizeRichHtml(enunciado),
+      alt_a: sanitizeRichHtml(alternativas[0]),
+      alt_b: sanitizeRichHtml(alternativas[1]),
+      alt_c: sanitizeRichHtml(alternativas[2]),
+      alt_d: sanitizeRichHtml(alternativas[3]),
+      alt_e: sanitizeRichHtml(alternativas[4]),
+      gabarito,
+      comentario: sanitizeRichHtml(comentario),
       audit_status: "approved",
     } as any);
     setSaving(false);
@@ -100,6 +99,7 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
     resetForm();
     onCreated?.();
   };
+
 
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5 overflow-hidden">
