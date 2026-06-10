@@ -211,11 +211,20 @@ export function AdminGerarTab() {
         break;
       } else {
         const inserted = data?.inserted || data?.generated || 0;
-        batches[i].status = "success";
-        batches[i].geradas = inserted;
-        total += inserted;
-        setTotalGeradas(total);
-        consecutiveFailsRef.current = 0;
+        if (inserted <= 0) {
+          const motivos = data?.detalhes?.motivos_descarte
+            ? Object.entries(data.detalhes.motivos_descarte).map(([k, v]) => `${k}: ${v}`).join("; ")
+            : data?.mensagem || "Nenhuma questão passou na validação pós-geração.";
+          batches[i].status = "error";
+          batches[i].error = motivos;
+          consecutiveFailsRef.current++;
+        } else {
+          batches[i].status = "success";
+          batches[i].geradas = inserted;
+          total += inserted;
+          setTotalGeradas(total);
+          consecutiveFailsRef.current = 0;
+        }
       }
 
       batchTimesRef.current.push(batchDuration);
