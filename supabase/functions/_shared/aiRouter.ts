@@ -407,6 +407,7 @@ async function callProvider(
   const { url, key } = providerEndpoint(attempt.provider);
   const model = normalizeModelForProvider(attempt.provider, attempt.model);
   const isDeepseekReasoner = model === "deepseek-reasoner";
+  const isMaritaca = attempt.provider === "maritaca";
 
   const body: Record<string, unknown> = {
     model,
@@ -417,7 +418,9 @@ async function callProvider(
   // deepseek-reasoner NÃO aceita temperature/response_format.
   if (!isDeepseekReasoner) {
     body.temperature = opts.temperatureOverride ?? attempt.temperature;
-    if (attempt.jsonResponse) body.response_format = { type: "json_object" };
+    // Maritaca (Sabiá) NÃO suporta response_format json_object — só `tools`.
+    // O JSON é garantido pelo prompt + pipeline de extração/reparo a jusante.
+    if (attempt.jsonResponse && !isMaritaca) body.response_format = { type: "json_object" };
   }
 
   // -------------------------------------------------------------------------
