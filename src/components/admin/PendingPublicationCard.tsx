@@ -11,7 +11,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, CheckCircle2, Trash2, Eye, Clock, CheckCheck, ShieldCheck } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, Trash2, Eye, Clock, CheckCheck, ShieldCheck, AlertTriangle } from "lucide-react";
 import { FormattedText } from "@/components/FormattedText";
 import { htmlToPlainText } from "@/lib/sanitize-html";
 
@@ -30,7 +30,31 @@ type PendingQuestao = {
   created_at: string;
 };
 
+type AuditInfo = {
+  status: string;
+  risk_level: string | null;
+  ai_summary: string | null;
+};
+
 const SELECT_COLS = "id,disciplina,assunto,dificuldade,enunciado,alt_a,alt_b,alt_c,alt_d,alt_e,gabarito,comentario,created_at";
+
+function AuditBadge({ info }: { info?: AuditInfo }) {
+  if (!info) return null;
+  const s = info.status;
+  let label = "Auditada";
+  let cls = "border-primary/40 text-primary";
+  let Icon = ShieldCheck;
+  if (s === "approved") { label = "OK na auditoria"; cls = "border-emerald-500/40 text-emerald-500"; Icon = CheckCircle2; }
+  else if (s === "auto_fixed") { label = "Corrigida"; cls = "border-sky-500/40 text-sky-500"; Icon = ShieldCheck; }
+  else if (s === "manual_review" || s === "error") { label = "Revisar"; cls = "border-amber-500/50 text-amber-500"; Icon = AlertTriangle; }
+  else if (s === "soft_deleted") { label = "Sugerido excluir"; cls = "border-destructive/50 text-destructive"; Icon = Trash2; }
+  return (
+    <Badge variant="outline" className={`text-[10px] gap-1 ${cls}`} title={info.ai_summary ?? undefined}>
+      <Icon className="w-3 h-3" /> {label}
+    </Badge>
+  );
+}
+
 
 export function PendingPublicationCard() {
   const [rows, setRows] = useState<PendingQuestao[]>([]);
@@ -45,7 +69,25 @@ export function PendingPublicationCard() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [auditing, setAuditing] = useState(false);
   const [auditProgress, setAuditProgress] = useState<{ done: number; total: number } | null>(null);
+  const [audits, setAudits] = useState<Record<number, AuditInfo>>({});
   const auditStopRef = useRef(false);
+
+  const loadAudits = useCallback(async (ids: number[]) => {
+    if (ids.length === 0) { setAudits({}); return; }
+    const { data } = await supabase
+      .from("question_audits")
+      .select("questao_id,status,risk_level,ai_summary,created_at")
+      .in("questao_id", ids)
+      .order("created_at", { ascending: false });
+    const map: Record<number, AuditInfo> = {};
+    for (const a of (data as any[]) || []) {
+      // mantém apenas a auditoria mais recente por questão (lista já vem desc)
+      if (!map[a.questao_id]) {
+        map[a.questao_id] = { status: a.status, risk_level: a.risk_level, ai_summary: a.ai_summary };
+      }
+    }
+    setAudits(map);
+  }, []);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -62,14 +104,16 @@ export function PendingPublicationCard() {
       if (disc !== "all") q = q.eq("disciplina", disc);
       const { data, error, count } = await q;
       if (error) throw error;
-      setRows((data as PendingQuestao[]) || []);
+      const list = (data as PendingQuestao[]) || [];
+      setRows(list);
       setTotal(count ?? 0);
       setPage(p);
+      loadAudits(list.map((r) => r.id));
     } catch (e: any) {
       toast.error("Erro ao carregar pendentes", { description: e.message });
     }
     setLoading(false);
-  }, []);
+  }, [loadAudits]);
 
   useEffect(() => {
     load(0, "all");
@@ -187,7 +231,7 @@ export function PendingPublicationCard() {
     setAuditProgress({ done: 0, total: ids.length });
     try {
       const { data, error } = await supabase.functions.invoke("audit-questions", {
-        body: { action: "start", mode: "selected", question_ids: ids, limit: ids.length },
+        body: { action: "start", mode: "selected", question_ids: ids, limit: ids.length, keep_pending: true },
       });
       if (error) throw error;
       const job = data?.job;
@@ -315,6 +359,7 @@ export function PendingPublicationCard() {
                       <span className="text-[11px] font-mono text-muted-foreground">#{r.id}</span>
                       <Badge variant="outline" className="text-[10px]">{r.disciplina}</Badge>
                       <span className="text-[11px] text-muted-foreground truncate">{r.assunto}</span>
+                      <AuditBadge info={audits[r.id]} />
                     </div>
                     <p className="text-sm line-clamp-2">{htmlToPlainText(r.enunciado)}</p>
                   </div>

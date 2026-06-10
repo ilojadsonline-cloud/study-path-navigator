@@ -1353,7 +1353,14 @@ async function processQuestion(
   supabase: ReturnType<typeof createClient>,
   q: Questao,
   legalCache: Map<string, string | null>,
+  opts?: { keepPending?: boolean },
 ): Promise<{ status: string; auto_fixed: boolean; flagged: boolean; deleted: boolean }> {
+  // keepPending: aplica correções no conteúdo, mas mantém audit_status='pending'
+  // (questão continua na lista de pendentes para publicação/exclusão manual pelo admin).
+  const keepPending = opts?.keepPending === true;
+  const okStatus = keepPending ? Q_STATUS.PENDING : Q_STATUS.APPROVED;
+  const flagStatus = keepPending ? Q_STATUS.PENDING : Q_STATUS.MANUAL;
+  const correctedStatus = keepPending ? Q_STATUS.PENDING : Q_STATUS.AUTO_CORRECTED;
   // Busca texto legal por disciplina (cache)
   let legal = legalCache.get(q.disciplina);
   if (legal === undefined) {
@@ -1381,7 +1388,7 @@ async function processQuestion(
       }],
       ai_summary: "Auditoria não executada por ausência de fonte legal oficial estruturada.",
     });
-    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.MANUAL);
+    await setQuestionAuditStatus(supabase, q.id, flagStatus);
     return { status: "manual_review", auto_fixed: false, flagged: true, deleted: false };
   }
 
@@ -1408,7 +1415,7 @@ async function processQuestion(
       issues: [{ type: "outros", severity: "high", description: msg }],
       ai_summary: "Erro durante auditoria",
     });
-    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.MANUAL);
+    await setQuestionAuditStatus(supabase, q.id, flagStatus);
     return { status: "error", auto_fixed: false, flagged: false, deleted: false };
   }
 
@@ -1454,6 +1461,12 @@ async function processQuestion(
       .eq("questao_id", q.id)
       .in("status", OPEN_AUDIT_STATUSES);
     // Soft delete: marca status lógico 'deleted' em vez de remover do banco.
+    // Em keepPending, NÃO exclui: mantém pendente para o admin decidir (a auditoria
+    // já registrou a sugestão de exclusão em question_audits).
+    if (keepPending) {
+      await setQuestionAuditStatus(supabase, q.id, Q_STATUS.PENDING);
+      return { status: "soft_deleted", auto_fixed: false, flagged: true, deleted: false };
+    }
     await setQuestionAuditStatus(supabase, q.id, Q_STATUS.DELETED);
     return { status: "deleted", auto_fixed: false, flagged: false, deleted: true };
   }
@@ -1551,7 +1564,7 @@ async function processQuestion(
 
     await supabase.from("questoes").update(result.proposed_patch).eq("id", q.id);
     appliedPatch = result.proposed_patch;
-    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.AUTO_CORRECTED, result.techniques_used);
+    await setQuestionAuditStatus(supabase, q.id, correctedStatus, result.techniques_used);
     return { status: "auto_fixed", auto_fixed: true, flagged: false, deleted: false };
   } else {
     finalStatus = "manual_review";
@@ -1579,7 +1592,7 @@ async function processQuestion(
   await setQuestionAuditStatus(
     supabase,
     q.id,
-    finalStatus === "approved" ? Q_STATUS.APPROVED : Q_STATUS.MANUAL,
+    finalStatus === "approved" ? okStatus : flagStatus,
     result.techniques_used,
   );
 
@@ -1682,7 +1695,12 @@ serve(async (req) => {
         disciplinas: Array.isArray(body.disciplinas) ? body.disciplinas : null,
         only_unaudited: mode === "unaudited",
         limit: Math.min(Number(body.limit ?? 200), 100000),
+        // keep_pending: audita e CORRIGE o conteúdo, mas mantém audit_status='pending'
+        // (não publica nem oculta). Usado pelo fluxo manual da lista de pendentes:
+        // o admin revisa e publica/exclui manualmente depois da auditoria.
+        keep_pending: body.keep_pending === true,
       };
+
 
       if (mode === "selected") {
         // Audita apenas as questões selecionadas (ids enviados pelo admin).
@@ -1865,11 +1883,13 @@ serve(async (req) => {
     let processed = 0, autoFixed = 0, flagged = 0, errors = 0, deleted = 0;
     let lastBatchError: string | null = null;
 
+    const keepPending = job.scope?.keep_pending === true;
     for (let i = 0; i < pending.length; i += PROCESS_CONCURRENCY) {
       const chunk = pending.slice(i, i + PROCESS_CONCURRENCY);
       const results = await Promise.allSettled(
-        chunk.map((q) => processQuestion(supabase, q as Questao, legalCache)),
+        chunk.map((q) => processQuestion(supabase, q as Questao, legalCache, { keepPending })),
       );
+
       for (const result of results) {
         if (result.status === "fulfilled") {
           const r = result.value;

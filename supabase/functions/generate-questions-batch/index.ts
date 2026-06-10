@@ -2075,15 +2075,16 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
       console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} | sig.artigo=${newSig.artigo} sig.peg=${newSig.pegadinha} maxSim=${highestSim.toFixed(2)}`);
     }
 
-    // ===== AUDITORIA CRUZADA PÓS-GERAÇÃO =====
-    // Para cada questão aprovada na dedup, roda mini-auditoria cética em paralelo.
-    // - issue high → descarta + revisão manual
-    // - confidence ≥ 0.9 + risco low + patch → aplica patch e mantém
-    // - caso contrário → mantém como está
+    // ===== AUDITORIA CRUZADA PÓS-GERAÇÃO (DESATIVADA) =====
+    // Fluxo oficial: gerar questões -> enviar TODAS para a lista de PENDENTES (audit_status='pending').
+    // A auditoria/correção é feita MANUALMENTE pelo admin na lista de pendentes (botão "Auditar selecionadas").
+    // Por isso a auditoria automática durante a geração fica desligada — nada é descartado/corrigido aqui.
+    const ENABLE_CROSS_AUDIT = false;
     let autoCorrigidas = 0;
     try {
-    if (validQuestions.length > 0) {
+    if (ENABLE_CROSS_AUDIT && validQuestions.length > 0) {
       console.log(`[AUDIT-XGEN] Iniciando auditoria cruzada de ${validQuestions.length} questões (sequencial p/ estabilidade)...`);
+
 
       // Snippet FOCADO nos artigos citados pela questão → impede falsos descartes "artigo inexistente".
       const buildFocusedLawSnippet = (q: any): string => {
