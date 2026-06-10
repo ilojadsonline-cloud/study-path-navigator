@@ -54,6 +54,16 @@ interface Props {
 }
 
 export function FormattedText({ text, className }: Props) {
+  // Conteúdo criado pelo editor de texto rico é HTML — renderiza sanitizado.
+  if (isHtmlContent(text)) {
+    return (
+      <div
+        className={cn("rich-html leading-relaxed", className)}
+        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(text) }}
+      />
+    );
+  }
+
   const tokens = parseInline(text || "");
 
   return (
