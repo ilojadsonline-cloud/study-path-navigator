@@ -133,7 +133,10 @@ export function AdminGerarTab() {
       }
 
       if (data?.status === "erro" || data?.error) {
-        return { data: null, error: new Error(data?.mensagem || data?.error || "Falha na geração."), usedBatchSize };
+        const motivos = data?.detalhes?.motivos_descarte
+          ? Object.entries(data.detalhes.motivos_descarte).map(([k, v]) => `${k}: ${v}`).join("; ")
+          : "";
+        return { data: null, error: new Error(motivos || data?.mensagem || data?.error || "Falha na geração."), usedBatchSize };
       }
 
       return { data, error: null, usedBatchSize };
@@ -211,11 +214,20 @@ export function AdminGerarTab() {
         break;
       } else {
         const inserted = data?.inserted || data?.generated || 0;
-        batches[i].status = "success";
-        batches[i].geradas = inserted;
-        total += inserted;
-        setTotalGeradas(total);
-        consecutiveFailsRef.current = 0;
+        if (inserted <= 0) {
+          const motivos = data?.detalhes?.motivos_descarte
+            ? Object.entries(data.detalhes.motivos_descarte).map(([k, v]) => `${k}: ${v}`).join("; ")
+            : data?.mensagem || "Nenhuma questão passou na validação pós-geração.";
+          batches[i].status = "error";
+          batches[i].error = motivos;
+          consecutiveFailsRef.current++;
+        } else {
+          batches[i].status = "success";
+          batches[i].geradas = inserted;
+          total += inserted;
+          setTotalGeradas(total);
+          consecutiveFailsRef.current = 0;
+        }
       }
 
       batchTimesRef.current.push(batchDuration);

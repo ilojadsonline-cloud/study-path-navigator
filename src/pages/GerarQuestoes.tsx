@@ -95,6 +95,12 @@ const GerarQuestoes = () => {
         }
 
         const inserted = data?.inserted || data?.generated || 0;
+        if (inserted <= 0) {
+          const motivos = data?.detalhes?.motivos_descarte
+            ? Object.entries(data.detalhes.motivos_descarte).map(([k, v]) => `${k}: ${v}`).join("; ")
+            : data?.mensagem || "Nenhuma questão passou na validação pós-geração.";
+          throw new Error(motivos);
+        }
         batches[i].status = "success";
         batches[i].geradas = inserted;
         total += inserted;

@@ -1038,6 +1038,12 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
 
   const validQuestions: any[] = [];
   let discarded = 0;
+  const discardReasons = new Map<string, number>();
+  const discard = (reason: string, detail?: string) => {
+    discarded++;
+    discardReasons.set(reason, (discardReasons.get(reason) || 0) + 1);
+    console.log(`[GERAR-NL] Q descartada (${disc.disciplina}): ${reason}${detail ? ` — ${detail}` : ""}`);
+  };
   const batchFingerprints = new Set<string>();
   const batchSemanticFPs = new Set<string>();
   const batchForSimilarity: Array<{ id: number; enunciado: string }> = [];
@@ -1059,13 +1065,13 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
 
     const alts = ALT_KEYS.map(k => q[k] as string);
     const minEnun = isTexto ? 120 : 25; // texto-base exige enunciado mais longo
-    if (!q.enunciado || q.enunciado.length < minEnun) { discarded++; continue; }
-    if (alts.some(a => !a || a.length < 2)) { discarded++; continue; }
-    if (hasDuplicateAlts(alts)) { discarded++; continue; }
-    if (!q.comentario || q.comentario.length < 30) { discarded++; continue; }
+    if (!q.enunciado || q.enunciado.length < minEnun) { discard("enunciado_curto", `${q.enunciado?.length || 0} chars`); continue; }
+    if (alts.some(a => !a || a.length < 2)) { discard("alternativa_vazia"); continue; }
+    if (hasDuplicateAlts(alts)) { discard("alternativas_duplicadas"); continue; }
+    if (!q.comentario || q.comentario.length < 30) { discard("comentario_curto", `${q.comentario?.length || 0} chars`); continue; }
 
     // Redação Oficial: descarta questões fora do escopo conceitual (estrutura/formatação/partes).
-    if (redacaoForaDeEscopo(q.disciplina, q.enunciado, alts)) { discarded++; continue; }
+    if (redacaoForaDeEscopo(q.disciplina, q.enunciado, alts)) { discard("redacao_fora_escopo"); continue; }
 
 
     // Paridade de comprimento (anti "correta = outlier")
@@ -1074,20 +1080,22 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
     const otherLens = lens.filter((_, i) => i !== gabIdx);
     const otherAvg = otherLens.reduce((s, n) => s + n, 0) / Math.max(1, otherLens.length);
     const correctLen = lens[gabIdx];
-    if (correctLen > otherAvg * 1.9 || correctLen < otherAvg * 0.45) { discarded++; continue; }
+    if (correctLen > otherAvg * 2.4 || correctLen < otherAvg * 0.35) { discard("gabarito_outlier_tamanho", `lens=${lens.join(",")}, gab=${gabIdx}`); continue; }
 
     // Dedup textual / semântica / similaridade
     const fp = buildFingerprint(q.enunciado);
-    if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) { discarded++; continue; }
+    if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) { discard("duplicata_textual_exata"); continue; }
     batchFingerprints.add(fp);
 
     const correctAltText = q[ALT_KEYS[q.gabarito]] as string;
     const semFP = buildSemanticFingerprint(q.comentario, correctAltText);
-    if (existingSemanticFPs.has(semFP) || batchSemanticFPs.has(semFP)) { discarded++; continue; }
+    // Em Redação Oficial/Língua Portuguesa, a assinatura semântica baseada em comentário
+    // gera muitos falsos positivos (mesmos documentos/termos). Mantém só dedup dentro do lote;
+    // a auditoria/aba de duplicatas faz a limpeza posterior sem zerar a criação.
+    if (batchSemanticFPs.has(semFP)) { discard("duplicata_semantica_no_lote"); continue; }
     batchSemanticFPs.add(semFP);
 
-    if (findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55)) { discarded++; continue; }
-    if (findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55) !== null) { discarded++; continue; }
+    if (findSimilarQuestion(q.enunciado, batchForSimilarity, 0.72) !== null) { discard("similar_no_lote"); continue; }
     batchForSimilarity.push({ id: idx, enunciado: q.enunciado });
 
     validQuestions.push(q);
@@ -1104,9 +1112,10 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
     }
   }
 
-  const statusResult = errosEncontrados.length > 0 ? "parcial" : (insertedCount > 0 ? "sucesso" : "parcial");
+  const statusResult = insertedCount > 0 ? (errosEncontrados.length > 0 ? "parcial" : "sucesso") : "erro";
+  const discardSummary = Object.fromEntries(discardReasons.entries());
   const mensagem = `${insertedCount} questões criadas, ${discarded} descartadas de ${rawQuestions.length} geradas para "${disc.disciplina}".`;
-  console.log(`[GERAR-NL] RESULTADO: ${mensagem}`);
+  console.log(`[GERAR-NL] RESULTADO: ${mensagem} motivos=${JSON.stringify(discardSummary)}`);
 
   return new Response(JSON.stringify({
     status: statusResult, mensagem,
@@ -1116,8 +1125,9 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
       questoes_corrigidas: 0,
       questoes_revisao_manual: questoesRevisaoManual,
       erros_encontrados: errosEncontrados,
+      motivos_descarte: discardSummary,
     },
-    success: true, count: insertedCount, inserted: insertedCount, generated: insertedCount,
+    success: insertedCount > 0, count: insertedCount, inserted: insertedCount, generated: insertedCount,
     discarded, total_generated: rawQuestions.length, timestamp,
   }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
@@ -2271,7 +2281,7 @@ Responda APENAS JSON:
       }
     }
 
-    const statusResult = errosEncontrados.length > 0 ? "parcial" : (insertedCount > 0 ? "sucesso" : "parcial");
+    const statusResult = insertedCount > 0 ? (errosEncontrados.length > 0 ? "parcial" : "sucesso") : "erro";
     const mensagem = `${insertedCount} questões criadas, ${discarded} descartadas de ${rawQuestions.length} geradas para "${disc.disciplina}".`;
 
     console.log(`[GERAR] RESULTADO: ${mensagem}`);
@@ -2285,7 +2295,7 @@ Responda APENAS JSON:
         questoes_revisao_manual: questoesRevisaoManual,
         erros_encontrados: errosEncontrados,
       },
-      success: true, count: insertedCount, inserted: insertedCount, generated: insertedCount,
+      success: insertedCount > 0, count: insertedCount, inserted: insertedCount, generated: insertedCount,
       discarded, total_generated: rawQuestions.length, timestamp,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
