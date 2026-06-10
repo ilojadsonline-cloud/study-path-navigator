@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, CheckCircle2, Trash2, Eye, Clock, CheckCheck } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, Trash2, Eye, Clock, CheckCheck, ShieldCheck } from "lucide-react";
 import { FormattedText } from "@/components/FormattedText";
 import { htmlToPlainText } from "@/lib/sanitize-html";
 
@@ -43,6 +43,9 @@ export function PendingPublicationCard() {
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<PendingQuestao | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [auditing, setAuditing] = useState(false);
+  const [auditProgress, setAuditProgress] = useState<{ done: number; total: number } | null>(null);
+  const auditStopRef = useRef(false);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -176,6 +179,53 @@ export function PendingPublicationCard() {
     setBusy(false);
   };
 
+  const auditSelected = async () => {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    auditStopRef.current = false;
+    setAuditing(true);
+    setAuditProgress({ done: 0, total: ids.length });
+    try {
+      const { data, error } = await supabase.functions.invoke("audit-questions", {
+        body: { action: "start", mode: "selected", question_ids: ids, limit: ids.length },
+      });
+      if (error) throw error;
+      const job = data?.job;
+      if (!job?.id) throw new Error("Não foi possível iniciar a auditoria");
+      toast.success(`Auditoria iniciada — ${job.total ?? ids.length} questão(ões)`);
+
+      let consecutiveFailures = 0;
+      while (!auditStopRef.current) {
+        try {
+          const res = await supabase.functions.invoke("audit-questions", {
+            body: { action: "run", job_id: job.id },
+          });
+          if (res.error) throw res.error;
+          consecutiveFailures = 0;
+          const cj = res.data?.job;
+          if (cj) setAuditProgress({ done: cj.done ?? 0, total: cj.total ?? ids.length });
+          if (res.data?.done) {
+            toast.success("Auditoria das selecionadas concluída!");
+            break;
+          }
+        } catch (e: any) {
+          consecutiveFailures++;
+          if (consecutiveFailures >= 3) {
+            toast.error(`Auditoria pausada após falhas repetidas: ${e.message}`);
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+      }
+      setSelected(new Set());
+      load(page, filterDisc);
+    } catch (e: any) {
+      toast.error("Erro ao auditar", { description: e.message });
+    }
+    setAuditing(false);
+    setAuditProgress(null);
+  };
+
   return (
     <Card className="glass-card border-warning/30">
       <CardHeader>
@@ -215,9 +265,20 @@ export function PendingPublicationCard() {
           <div className="flex-1" />
           <Button
             size="sm"
+            variant="secondary"
+            onClick={auditSelected}
+            disabled={busy || auditing || selected.size === 0}
+          >
+            {auditing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 mr-1" />}
+            {auditing && auditProgress
+              ? `Auditando ${auditProgress.done}/${auditProgress.total}`
+              : `Auditar selecionadas (${selected.size})`}
+          </Button>
+          <Button
+            size="sm"
             className="gradient-primary text-primary-foreground font-bold"
             onClick={publishSelected}
-            disabled={busy || selected.size === 0}
+            disabled={busy || auditing || selected.size === 0}
           >
             {busy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
             Publicar selecionadas ({selected.size})
