@@ -13,7 +13,9 @@ type: feature
 ## Mudanças técnicas
 
 ### generate-questions-batch
-- **Auditoria cruzada pós-geração DESATIVADA** (`const ENABLE_CROSS_AUDIT = false`). Antes ela descartava/auto-corrigia na geração e causava "+0 lotes". Agora nada é descartado/corrigido na geração — tudo vai para pendentes para auditoria manual.
+- **Auditoria cruzada pós-geração DESATIVADA** (`const ENABLE_CROSS_AUDIT = false`).
+- **SEM descarte por qualidade/duplicidade na geração** (ambos os caminhos: `[GERAR]` jurídico e `[GERAR-NL]` texto/Língua Portuguesa). A geração só descarta por **integridade estrutural** (enunciado vazio/curto, alternativa vazia, alternativas duplicadas, comentário < 30 chars) — questões inutilizáveis. Tudo o que era "descartado" antes (similaridade/Jaccard, dedup semântica, ancoragem legal fraca, ambiguidade, comentário repetitivo, artigo inexistente, snippet mismatch, outlier de comprimento, decoreba, citação seca) NÃO descarta mais: aplicam-se apenas **auto-fixes seguros** (reconciliação de artigo/snippet/confronto) e a questão segue para `pending`. A auditoria manual na lista de pendentes é quem reprova/corrige/exclui. Isso elimina o "0 criadas / N descartadas".
+
 
 ### audit-questions (modo `selected` + `keep_pending`)
 - `start` com `mode='selected'` aceita `keep_pending: true` (gravado em `scope.keep_pending`).
