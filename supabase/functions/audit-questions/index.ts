@@ -1461,6 +1461,12 @@ async function processQuestion(
       .eq("questao_id", q.id)
       .in("status", OPEN_AUDIT_STATUSES);
     // Soft delete: marca status lógico 'deleted' em vez de remover do banco.
+    // Em keepPending, NÃO exclui: mantém pendente para o admin decidir (a auditoria
+    // já registrou a sugestão de exclusão em question_audits).
+    if (keepPending) {
+      await setQuestionAuditStatus(supabase, q.id, Q_STATUS.PENDING);
+      return { status: "soft_deleted", auto_fixed: false, flagged: true, deleted: false };
+    }
     await setQuestionAuditStatus(supabase, q.id, Q_STATUS.DELETED);
     return { status: "deleted", auto_fixed: false, flagged: false, deleted: true };
   }
