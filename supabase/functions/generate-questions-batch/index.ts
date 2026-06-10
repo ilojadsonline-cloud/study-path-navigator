@@ -1113,8 +1113,9 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
   }
 
   const statusResult = errosEncontrados.length > 0 ? "parcial" : (insertedCount > 0 ? "sucesso" : "parcial");
+  const discardSummary = Object.fromEntries(discardReasons.entries());
   const mensagem = `${insertedCount} questões criadas, ${discarded} descartadas de ${rawQuestions.length} geradas para "${disc.disciplina}".`;
-  console.log(`[GERAR-NL] RESULTADO: ${mensagem}`);
+  console.log(`[GERAR-NL] RESULTADO: ${mensagem} motivos=${JSON.stringify(discardSummary)}`);
 
   return new Response(JSON.stringify({
     status: statusResult, mensagem,
@@ -1124,6 +1125,7 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
       questoes_corrigidas: 0,
       questoes_revisao_manual: questoesRevisaoManual,
       erros_encontrados: errosEncontrados,
+      motivos_descarte: discardSummary,
     },
     success: true, count: insertedCount, inserted: insertedCount, generated: insertedCount,
     discarded, total_generated: rawQuestions.length, timestamp,
