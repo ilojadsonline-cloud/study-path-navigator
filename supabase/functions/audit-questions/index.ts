@@ -1870,11 +1870,13 @@ serve(async (req) => {
     let processed = 0, autoFixed = 0, flagged = 0, errors = 0, deleted = 0;
     let lastBatchError: string | null = null;
 
+    const keepPending = job.scope?.keep_pending === true;
     for (let i = 0; i < pending.length; i += PROCESS_CONCURRENCY) {
       const chunk = pending.slice(i, i + PROCESS_CONCURRENCY);
       const results = await Promise.allSettled(
-        chunk.map((q) => processQuestion(supabase, q as Questao, legalCache)),
+        chunk.map((q) => processQuestion(supabase, q as Questao, legalCache, { keepPending })),
       );
+
       for (const result of results) {
         if (result.status === "fulfilled") {
           const r = result.value;
