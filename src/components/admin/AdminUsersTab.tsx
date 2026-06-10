@@ -347,6 +347,26 @@ export function AdminUsersTab() {
         </div>
       )}
 
+      {/* Paginação */}
+      {!loading && total > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+          <span className="text-xs text-muted-foreground">
+            Mostrando {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} de {total} usuários
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => goToPage(page - 1)}>
+              Anterior
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Página {page + 1} de {Math.max(1, Math.ceil(total / PAGE_SIZE))}
+            </span>
+            <Button variant="outline" size="sm" disabled={(page + 1) * PAGE_SIZE >= total} onClick={() => goToPage(page + 1)}>
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Add User Dialog */}
       <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
         <DialogContent className="max-w-md">
