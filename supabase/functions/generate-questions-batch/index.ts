@@ -973,7 +973,7 @@ ${openingsBlock}
 REGRAS DE QUALIDADE:
 - Cada questão do lote deve abordar um ASPECTO/${isTexto ? "TEXTO" : "DOCUMENTO"} DIFERENTE. Não repita tema, estrutura ou pegadinha.
 - Distribua o gabarito entre A(0), B(1), C(2), D(3), E(4) — não concentre na mesma letra.
-- O comentário deve explicar por que a correta está certa e por que CADA incorreta está errada, em tom didático de professor (máx. 1500 caracteres), terminando com uma dica de prova curta.
+- O comentário é a parte MAIS importante e deve funcionar como uma AULA CURTA (tom de professor altamente didático, entre 900 e 2400 caracteres). Consolide no campo "comentario", nesta ordem e com estes rótulos em negrito markdown: **Comentário do professor:** (por que a correta está certa, com referência ao trecho do texto-base/${isTexto ? "texto" : "documento"} e à pegadinha); **Análise das alternativas:** (CADA alternativa A–E comentada individualmente, uma por linha, no padrão "**A)** ...", explicando por que está correta ou incorreta — nunca escreva "as demais estão erradas"); **Dica de prova:** (resumo estratégico/alerta de pegadinha curto); **Base normativa:** (${isTexto ? "elemento do texto-base que fundamenta a resposta" : "subitem do Manual — ex.: 6.1, 6.5 — que fundamenta a resposta"}). Proibido comentário raso ou que apenas repita o gabarito.
 
 REGRAS DE SAÍDA — responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do objeto, no formato {"questions":[...]}.
 Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" ("Fácil|Médio|Difícil"), "enunciado"${isTexto ? " (inclui o TEXTO-BASE + linha em branco + a pergunta)" : ""}, "alt_a".."alt_e" (sem prefixo de letra), "gabarito" (0=A,1=B,2=C,3=D,4=E), "comentario", "cognitive_skill", "trap_type".
@@ -1518,15 +1518,19 @@ Uma questão é considerada repetida quando possui mesmo artigo principal, mesmo
 Se o artigo já foi muito explorado, procure outro ângulo: parágrafo, inciso, exceção, consequência, competência, sujeito passivo, requisito cumulativo, hipótese negativa ou interação com artigo próximo. Se não houver ângulo novo suficiente, não force repetição.
 
 ============================================================
-12. COMENTÁRIO DIDÁTICO OBRIGATÓRIO
+12. COMENTÁRIO DIDÁTICO OBRIGATÓRIO (PADRÃO BANCA DE ELITE)
 ============================================================
-O comentário deve soar como um professor explicando a questão ao aluno. Ele deve ser claro, didático, direto e juridicamente preciso. Máximo de 1500 caracteres. Proibida formatação robótica ("a) IDENTIFICAÇÃO:") e cópia de blocos enormes da lei.
+O comentário é a parte MAIS importante da questão: cada questão deve funcionar como uma AULA CURTA. Ele deve soar como um professor de Direito Militar altamente didático explicando a questão ao aluno — claro, completo, juridicamente preciso e seguro. Entre 900 e 2400 caracteres. Proibido comentário raso, genérico ou que apenas repita o gabarito. Proibida formatação robótica ("a) IDENTIFICAÇÃO:") e cópia de blocos enormes da lei.
 
-O comentário deve seguir obrigatoriamente quatro movimentos:
-1. Comece com: "A alternativa correta é a [letra], pois..." e explique o fundamento, citando trecho curto e literal do texto legal.
-2. Em seguida, escreva: "A pegadinha desta questão está em..." e identifique a técnica usada, como troca de autoridade, inversão de regra, omissão de requisito, alteração de prazo ou generalização indevida.
-3. Analise cada alternativa incorreta individualmente. Use o padrão: "A alternativa [letra] está incorreta porque...". Não escreva "as demais estão erradas".
-4. Termine com: "Lembre-se: segundo o [artigo/parágrafo/inciso da lei informada], ..." e apresente uma frase curta de fixação.
+O campo "comentario" deve CONSOLIDAR, nesta ordem e com estas seções nomeadas em texto corrido (use os rótulos exatamente como abaixo, em negrito markdown):
+
+**Comentário do professor:** Explique por que o gabarito está correto, citando o trecho curto e literal do texto legal que o sustenta. Contextualize o instituto e, quando houver, diferencie conceitos próximos e explique a pegadinha/técnica usada pela banca (troca de autoridade, inversão de regra/exceção, omissão de requisito, alteração de prazo, generalização indevida etc.).
+
+**Análise das alternativas:** Analise CADA alternativa individualmente, uma por linha, no padrão "**A)** ...", "**B)** ...", "**C)** ...", "**D)** ...", "**E)** ...", explicando por que cada uma está correta ou incorreta com fundamento objetivo no texto legal. NUNCA escreva "as demais estão erradas" — todas as cinco devem ser comentadas.
+
+**Dica de prova:** Encerre com um resumo estratégico para memorização: alerta de pegadinha, comparação importante ou frase de fixação curta ("Lembre-se: segundo o art. X, ...").
+
+**Base normativa:** Indique a norma, artigo, inciso, parágrafo ou item utilizado, sempre presente no TEXTO LEGAL OFICIAL.
 
 O comentário não deve citar fontes externas. Não mencione Constituição Federal, jurisprudência, doutrina ou outros diplomas se eles não estiverem no TEXTO LEGAL OFICIAL. Não copie blocos enormes da lei; use citação curta e suficiente.
 
@@ -1660,7 +1664,7 @@ DIRETRIZES ESPECÍFICAS DA DISCIPLINA (Edital nº 001/2026 — CHOA/2026 PMTO) �
 ${disc.diretrizes}
 
 15. REGRAS DE SAÍDA — OBJETO JSON OBRIGATÓRIO (sem markdown, sem comentários, sem texto fora do objeto).
-Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" (use "Fácil|Médio|Difícil"), "enunciado", "alt_a".."alt_e" (sem prefixo de letra), "gabarito" (0=A,1=B,2=C,3=D,4=E), "comentario" (4 movimentos), "artigo_principal" ("Art. X"), "tipo_questao", "audit_techniques" (array), "difficulty_level" (use PREFERENCIALMENTE "hard"; use "advanced" quando o dispositivo não comportar maior sofisticação; só use "intermediate" se o dispositivo for de literalidade obrigatória), "cognitive_skill" (a habilidade dominante exigida: "interpretação normativa" | "aplicação prática" | "comparação entre dispositivos" | "identificação de exceção"), "trap_type" (frase curta explicando a pegadinha normativa central da questão — ex.: "ampliação indevida de competência do Comandante-Geral", "troca de prazo do art. X", "confusão entre regra geral e exceção do §"). Antes de emitir cada questão, valide internamente a matriz de prova jurídica (fonte única confirmada, exatamente uma correta, artigos citados existentes, correta não é a mais longa nem a mais curta, hierarquia conferida, sem ambiguidade, dificuldade de banca elite) — só inclua a questão se TODOS os itens passarem.
+Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" (use "Fácil|Médio|Difícil"), "enunciado", "alt_a".."alt_e" (sem prefixo de letra), "gabarito" (0=A,1=B,2=C,3=D,4=E), "comentario" (4 seções rotuladas: **Comentário do professor:** / **Análise das alternativas:** com A–E individuais / **Dica de prova:** / **Base normativa:** — vide seção 12), "artigo_principal" ("Art. X"), "tipo_questao", "audit_techniques" (array), "difficulty_level" (use PREFERENCIALMENTE "hard"; use "advanced" quando o dispositivo não comportar maior sofisticação; só use "intermediate" se o dispositivo for de literalidade obrigatória), "cognitive_skill" (a habilidade dominante exigida: "interpretação normativa" | "aplicação prática" | "comparação entre dispositivos" | "identificação de exceção"), "trap_type" (frase curta explicando a pegadinha normativa central da questão — ex.: "ampliação indevida de competência do Comandante-Geral", "troca de prazo do art. X", "confusão entre regra geral e exceção do §"). Antes de emitir cada questão, valide internamente a matriz de prova jurídica (fonte única confirmada, exatamente uma correta, artigos citados existentes, correta não é a mais longa nem a mais curta, hierarquia conferida, sem ambiguidade, dificuldade de banca elite) — só inclua a questão se TODOS os itens passarem.
 {"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Fácil|Médio|Difícil","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"...","artigo_principal":"Art. X","tipo_questao":"literalidade|caso_pratico|competencia_hierarquia|excecao_regra|consequencia_juridica|combinacao_dispositivos|conceito_legal|completar_lacuna|identificar_incorreta","audit_techniques":["troca_autoridade","omissao_requisito","inversao_regra_excecao"],"difficulty_level":"advanced","cognitive_skill":"interpretação normativa","trap_type":"..."}]}
 
 Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO LEGAL OFICIAL, retorne {"questions":[],"erro":"NAO_FOI_POSSIVEL_GERAR_COM_FONTE_UNICA","motivo":"explique objetivamente o requisito que falhou, sem fonte externa."}`;
@@ -2103,6 +2107,7 @@ Verifique:
 4. Comentário cita base legal coerente com o gabarito?
 5. Há afirmação claramente inventada (não apenas ausente do recorte)? Dependência de fonte externa (CF, doutrina, jurisprudência, outra lei não presente) ⇒ 'high'.
 6. NÍVEL DE DIFICULDADE: a questão é fácil demais, óbvia, de mera memorização ou resolvível por eliminação grosseira? O enunciado é apenas uma CÓPIA literal do texto legal sem exigir interpretação? Se sim ⇒ severidade 'high' (type='facil_demais' ou 'enunciado_copiado'). Só tolere literalidade quando o dispositivo EXIGIR literalidade (definição fechada, prazo numérico, enumeração taxativa).
+7. QUALIDADE DO COMENTÁRIO (cada questão deve ser uma AULA CURTA): o comentário explica POR QUE o gabarito está correto com fundamento no texto legal, analisa INDIVIDUALMENTE todas as 5 alternativas (A–E), traz uma dica de prova e indica a base normativa? Comentário raso, genérico, que apenas repete o gabarito, ou que NÃO analisa todas as alternativas ⇒ severidade 'medium' (type='comentario_raso'); se possível, proponha em proposed_patch.comentario uma versão completa no padrão "Comentário do professor / Análise das alternativas (A–E) / Dica de prova / Base normativa".
 
 
 Responda APENAS JSON:
