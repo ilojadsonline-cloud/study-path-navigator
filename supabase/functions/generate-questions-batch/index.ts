@@ -997,6 +997,9 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
       maxOutputTokensOverride: maxTokens,
       temperatureOverride: 0.4,
       timeoutMs: PRIMARY_TIMEOUT_MS,
+      // Complexidade → modelo Maritaca: texto (Língua Portuguesa) = medium (sabiazinho-4);
+      // conceitual (Redação Oficial, normativo) = high (sabia-4).
+      complexity: isTexto ? "medium" : "high",
       metadata: { batchSize, disciplina: disc.disciplina, tipo: disc.tipo },
       // Se o provedor primário devolver lote vazio, cai p/ DeepSeek em vez de retornar +0
       contentValidator: (c: string) => {
