@@ -30,7 +30,7 @@ export type AiStage =
   | "heavy_reported_question_audit"
   | "json_repair";
 
-export type AiProvider = "google" | "openrouter" | "deepseek";
+export type AiProvider = "google" | "openrouter" | "deepseek" | "maritaca";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
