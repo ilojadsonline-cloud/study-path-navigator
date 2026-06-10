@@ -189,6 +189,9 @@ function normalizeModelForProvider(p: AiProvider, logicalModel: string): string 
     case "deepseek":
       // DeepSeek ignora nomes Gemini — usa o modelo deepseek configurado.
       return logicalModel.startsWith("deepseek") ? logicalModel : MODELS.deepseekLight();
+    case "maritaca":
+      // Maritaca usa a família "sabia-*"; ignora nomes de outros provedores.
+      return logicalModel.startsWith("sabia") ? logicalModel : MODELS.maritacaGeneration();
   }
 }
 
