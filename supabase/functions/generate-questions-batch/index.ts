@@ -1702,6 +1702,10 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
         temperatureOverride: 0.25,
         timeoutMs: PRIMARY_TIMEOUT_MS,
         metadata: { batchSize, disciplina: disc.disciplina },
+        contentValidator: (c: string) => {
+          try { return parseQuestionsFromModelContent(c).questions.length > 0; }
+          catch { return false; }
+        },
       });
       content = aiResult.content || '{"questions":[]}';
       finishReason = aiResult.raw?.choices?.[0]?.finish_reason || "stop";
