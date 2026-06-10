@@ -468,7 +468,7 @@ const Simulados = () => {
                         <HelpCircle className="w-4 h-4 text-primary" />
                         <span className="text-xs font-semibold text-primary">Comentário</span>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{q.comentario}</p>
+                      <FormattedText text={q.comentario} className="text-xs text-muted-foreground" />
                     </motion.div>
                   )}
                 </AnimatePresence>
