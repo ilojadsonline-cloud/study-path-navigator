@@ -475,7 +475,9 @@ async function callProvider(
   }
 
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), opts.timeoutMs ?? 120_000);
+  // Tentativa Flex usa timeout curto (timeoutMsOverride) para reexecutar rápido no tier padrão.
+  const effectiveTimeout = attempt.timeoutMsOverride ?? opts.timeoutMs ?? 120_000;
+  const tid = setTimeout(() => controller.abort(), effectiveTimeout);
   try {
     const resp = await fetch(url, {
       method: "POST",
