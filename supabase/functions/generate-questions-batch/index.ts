@@ -998,6 +998,11 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
       temperatureOverride: 0.4,
       timeoutMs: PRIMARY_TIMEOUT_MS,
       metadata: { batchSize, disciplina: disc.disciplina, tipo: disc.tipo },
+      // Se o provedor primário devolver lote vazio, cai p/ DeepSeek em vez de retornar +0
+      contentValidator: (c: string) => {
+        try { return parseQuestionsFromModelContent(c).questions.length > 0; }
+        catch { return false; }
+      },
     });
     content = aiResult.content || '{"questions":[]}';
     const finishReason = aiResult.raw?.choices?.[0]?.finish_reason ?? aiResult.raw?.choices?.[0]?.stop_reason ?? "?";
