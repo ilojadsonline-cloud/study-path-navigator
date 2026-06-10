@@ -47,6 +47,8 @@ export type AiAttempt = AiRoute & {
   attemptIndex: number;
   fallbackReason: string | null;
   jsonResponse: boolean; // pedir response_format json_object quando suportado
+  serviceTier?: string; // Maritaca: "flex" (-50%) etc.
+  timeoutMsOverride?: number; // timeout específico desta tentativa (ex.: Flex curto)
 };
 
 export type RunAiResult = {
@@ -68,6 +70,8 @@ export type RunAiOptions = {
   timeoutMs?: number;
   // valida o conteúdo retornado; se retornar false, força fallback p/ próximo provedor
   contentValidator?: (content: string) => boolean;
+  // complexidade da tarefa → escolhe o modelo Maritaca (high=sabia-4; medium/low=sabiazinho-4)
+  complexity?: "high" | "medium" | "low";
 };
 
 // ----------------------------- Helpers de env --------------------------------
@@ -112,8 +116,16 @@ const MODELS = {
   // Geração premium: DeepSeek Reasoner (R1) mantém a complexidade jurídica "padrão banca elite".
   deepseekGeneration: () => env("AI_DEEPSEEK_GENERATION_MODEL") ?? "deepseek-reasoner",
   // Maritaca AI (Sabiá-4): gerador primário de questões. Fallback → DeepSeek Reasoner.
+  // sabia-4 = alta complexidade (jurídico/normativo); sabiazinho-4 = média/baixa (interpretação de texto).
   maritacaGeneration: () => env("AI_MARITACA_GENERATION_MODEL") ?? "sabia-4",
+  maritacaGenerationLight: () => env("AI_MARITACA_GENERATION_LIGHT_MODEL") ?? "sabiazinho-4",
 };
+
+// Tier de serviço da Maritaca: "flex" = -50% (síncrono, sujeito a fila/429). Padrão = sem desconto.
+const MARITACA_SERVICE_TIER = () => env("AI_MARITACA_SERVICE_TIER") ?? "flex";
+// Timeout curto na tentativa Flex: se a fila da Maritaca não liberar capacidade,
+// abortamos e reexecutamos no tier padrão (ainda Maritaca) antes de cair p/ DeepSeek.
+const MARITACA_FLEX_TIMEOUT_MS = () => envNum("AI_MARITACA_FLEX_TIMEOUT_MS", 55000);
 
 const LIMITS = {
   maxOutputTokens: () => envNum("AI_MAX_OUTPUT_TOKENS", 8000),
@@ -127,6 +139,7 @@ const FLAGS = {
   openrouterEnabled: () => envBool("AI_OPENROUTER_ENABLED", !!env("OPENROUTER_API_KEY")),
   deepseekEnabled: () => envBool("AI_DEEPSEEK_ENABLED", !!env("DEEPSEEK_API_KEY")),
   maritacaEnabled: () => envBool("AI_MARITACA_ENABLED", !!env("MARITACA_API_KEY")),
+  maritacaFlexEnabled: () => envBool("AI_MARITACA_FLEX_ENABLED", true),
   deepseekForFinalAudit: () => envBool("AI_ENABLE_DEEPSEEK_FOR_FINAL_AUDIT", false),
 };
 
@@ -218,7 +231,10 @@ export function resolveAiRoute(stage: AiStage): AiRoute {
 }
 
 // Constrói a cadeia ordenada de tentativas por etapa, respeitando o modo e o risco.
-export function buildAttemptsForStage(stage: AiStage): AiAttempt[] {
+export function buildAttemptsForStage(
+  stage: AiStage,
+  params: { complexity?: "high" | "medium" | "low" } = {},
+): AiAttempt[] {
   const mode = getRoutingMode();
   const base = resolveAiRoute(stage);
   const attempts: AiAttempt[] = [];
@@ -240,6 +256,8 @@ export function buildAttemptsForStage(stage: AiStage): AiAttempt[] {
       attemptIndex: attempts.length,
       fallbackReason,
       jsonResponse: over.jsonResponse ?? true,
+      serviceTier: over.serviceTier,
+      timeoutMsOverride: over.timeoutMsOverride,
     });
   };
 
@@ -254,13 +272,27 @@ export function buildAttemptsForStage(stage: AiStage): AiAttempt[] {
       break;
     }
     case "question_generation": {
-      // Geração premium (alto risco jurídico). PRIMÁRIO: Maritaca AI (Sabiá-4) —
-      // melhor fidelidade ao português jurídico brasileiro. Quando os créditos da
-      // Maritaca acabarem (HTTP 402/429) ou falhar, cai para DeepSeek Reasoner (R1),
-      // depois deepseek-chat → Gemini → OpenRouter. O motivo do fallback é logado.
+      // Geração premium. PRIMÁRIO: Maritaca AI, escolhendo o modelo pela COMPLEXIDADE:
+      //   high  → sabia-4 (jurídico/normativo, máxima fidelidade)
+      //   medium/low → sabiazinho-4 (interpretação de texto; mais barato)
+      // TIER: Flex (-50%, síncrono). Se a fila Flex não liberar (429/timeout curto),
+      // reexecuta no tier padrão (ainda Maritaca) antes de cair p/ DeepSeek Reasoner (R1) →
+      // deepseek-chat → Gemini → OpenRouter. O motivo do fallback é logado.
       // Obs.: Maritaca NÃO suporta response_format json_object → jsonResponse:false.
+      const maritacaModel = (params.complexity === "medium" || params.complexity === "low")
+        ? MODELS.maritacaGenerationLight()
+        : MODELS.maritacaGeneration();
       if (mode !== "openrouter_fallback") {
-        push("maritaca", MODELS.maritacaGeneration(), null, { jsonResponse: false });
+        if (FLAGS.maritacaFlexEnabled()) {
+          push("maritaca", maritacaModel, null, {
+            jsonResponse: false,
+            serviceTier: MARITACA_SERVICE_TIER(),
+            timeoutMsOverride: MARITACA_FLEX_TIMEOUT_MS(),
+          });
+          push("maritaca", maritacaModel, "maritaca_flex_unavailable", { jsonResponse: false });
+        } else {
+          push("maritaca", maritacaModel, null, { jsonResponse: false });
+        }
         push("deepseek", MODELS.deepseekGeneration(), "maritaca_failed");
         push("deepseek", MODELS.deepseekLight(), "reasoner_failed");
       }
@@ -424,6 +456,8 @@ async function callProvider(
     // O JSON é garantido pelo prompt + pipeline de extração/reparo a jusante.
     if (attempt.jsonResponse && !isMaritaca) body.response_format = { type: "json_object" };
   }
+  // Maritaca: tier de serviço (ex.: "flex" → -50%, síncrono sujeito a fila/429).
+  if (isMaritaca && attempt.serviceTier) body.service_tier = attempt.serviceTier;
 
   // -------------------------------------------------------------------------
   // Controle de "thinking" do Gemini (CRÍTICO p/ Google DIRETO).
@@ -441,7 +475,9 @@ async function callProvider(
   }
 
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), opts.timeoutMs ?? 120_000);
+  // Tentativa Flex usa timeout curto (timeoutMsOverride) para reexecutar rápido no tier padrão.
+  const effectiveTimeout = attempt.timeoutMsOverride ?? opts.timeoutMs ?? 120_000;
+  const tid = setTimeout(() => controller.abort(), effectiveTimeout);
   try {
     const resp = await fetch(url, {
       method: "POST",
@@ -477,7 +513,7 @@ export async function runAiStage(
   messages: ChatMessage[],
   opts: RunAiOptions = {},
 ): Promise<RunAiResult> {
-  const attempts = buildAttemptsForStage(stage);
+  const attempts = buildAttemptsForStage(stage, { complexity: opts.complexity });
   if (attempts.length === 0) {
     throw new Error(`NO_PROVIDER_AVAILABLE_FOR_STAGE:${stage} (mode=${getRoutingMode()})`);
   }
