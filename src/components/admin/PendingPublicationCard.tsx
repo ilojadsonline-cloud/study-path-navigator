@@ -341,6 +341,7 @@ export function PendingPublicationCard() {
                       <span className="text-[11px] font-mono text-muted-foreground">#{r.id}</span>
                       <Badge variant="outline" className="text-[10px]">{r.disciplina}</Badge>
                       <span className="text-[11px] text-muted-foreground truncate">{r.assunto}</span>
+                      <AuditBadge info={audits[r.id]} />
                     </div>
                     <p className="text-sm line-clamp-2">{htmlToPlainText(r.enunciado)}</p>
                   </div>
