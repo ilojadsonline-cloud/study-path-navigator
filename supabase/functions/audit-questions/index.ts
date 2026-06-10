@@ -1674,9 +1674,9 @@ serve(async (req) => {
     }
 
     if (action === "start") {
-      // mode: 'all' | 'discipline' | 'unaudited' | 'reported'
-      const mode: "all" | "discipline" | "unaudited" | "reported" =
-        ["all", "discipline", "unaudited", "reported"].includes(body.mode) ? body.mode : "all";
+      // mode: 'all' | 'discipline' | 'unaudited' | 'reported' | 'selected'
+      const mode: "all" | "discipline" | "unaudited" | "reported" | "selected" =
+        ["all", "discipline", "unaudited", "reported", "selected"].includes(body.mode) ? body.mode : "all";
       const scope: any = {
         mode,
         disciplinas: Array.isArray(body.disciplinas) ? body.disciplinas : null,
@@ -1684,7 +1684,24 @@ serve(async (req) => {
         limit: Math.min(Number(body.limit ?? 200), 100000),
       };
 
-      if (mode === "reported") {
+      if (mode === "selected") {
+        // Audita apenas as questões selecionadas (ids enviados pelo admin).
+        const ids = Array.isArray(body.question_ids)
+          ? body.question_ids.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n))
+          : [];
+        scope.question_ids = ids;
+        scope.limit = Math.min(scope.limit, Math.max(ids.length, 1));
+        // Reset em lotes para entrar na fila (vence teto de itens por chamada do .in()).
+        const CHUNK = 500;
+        for (let i = 0; i < ids.length; i += CHUNK) {
+          const slice = ids.slice(i, i + CHUNK);
+          await supabase
+            .from("questoes")
+            .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
+            .in("id", slice)
+            .neq("audit_status", Q_STATUS.DELETED);
+        }
+      } else if (mode === "reported") {
         // Modo "reported": questões com reportes pendentes são forçadas à fila.
         const { data: reps } = await supabase
           .from("question_reports")
