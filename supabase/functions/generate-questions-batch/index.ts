@@ -1479,15 +1479,19 @@ Uma questão é considerada repetida quando possui mesmo artigo principal, mesmo
 Se o artigo já foi muito explorado, procure outro ângulo: parágrafo, inciso, exceção, consequência, competência, sujeito passivo, requisito cumulativo, hipótese negativa ou interação com artigo próximo. Se não houver ângulo novo suficiente, não force repetição.
 
 ============================================================
-12. COMENTÁRIO DIDÁTICO OBRIGATÓRIO
+12. COMENTÁRIO DIDÁTICO OBRIGATÓRIO (PADRÃO BANCA DE ELITE)
 ============================================================
-O comentário deve soar como um professor explicando a questão ao aluno. Ele deve ser claro, didático, direto e juridicamente preciso. Máximo de 1500 caracteres. Proibida formatação robótica ("a) IDENTIFICAÇÃO:") e cópia de blocos enormes da lei.
+O comentário é a parte MAIS importante da questão: cada questão deve funcionar como uma AULA CURTA. Ele deve soar como um professor de Direito Militar altamente didático explicando a questão ao aluno — claro, completo, juridicamente preciso e seguro. Entre 900 e 2400 caracteres. Proibido comentário raso, genérico ou que apenas repita o gabarito. Proibida formatação robótica ("a) IDENTIFICAÇÃO:") e cópia de blocos enormes da lei.
 
-O comentário deve seguir obrigatoriamente quatro movimentos:
-1. Comece com: "A alternativa correta é a [letra], pois..." e explique o fundamento, citando trecho curto e literal do texto legal.
-2. Em seguida, escreva: "A pegadinha desta questão está em..." e identifique a técnica usada, como troca de autoridade, inversão de regra, omissão de requisito, alteração de prazo ou generalização indevida.
-3. Analise cada alternativa incorreta individualmente. Use o padrão: "A alternativa [letra] está incorreta porque...". Não escreva "as demais estão erradas".
-4. Termine com: "Lembre-se: segundo o [artigo/parágrafo/inciso da lei informada], ..." e apresente uma frase curta de fixação.
+O campo "comentario" deve CONSOLIDAR, nesta ordem e com estas seções nomeadas em texto corrido (use os rótulos exatamente como abaixo, em negrito markdown):
+
+**Comentário do professor:** Explique por que o gabarito está correto, citando o trecho curto e literal do texto legal que o sustenta. Contextualize o instituto e, quando houver, diferencie conceitos próximos e explique a pegadinha/técnica usada pela banca (troca de autoridade, inversão de regra/exceção, omissão de requisito, alteração de prazo, generalização indevida etc.).
+
+**Análise das alternativas:** Analise CADA alternativa individualmente, uma por linha, no padrão "**A)** ...", "**B)** ...", "**C)** ...", "**D)** ...", "**E)** ...", explicando por que cada uma está correta ou incorreta com fundamento objetivo no texto legal. NUNCA escreva "as demais estão erradas" — todas as cinco devem ser comentadas.
+
+**Dica de prova:** Encerre com um resumo estratégico para memorização: alerta de pegadinha, comparação importante ou frase de fixação curta ("Lembre-se: segundo o art. X, ...").
+
+**Base normativa:** Indique a norma, artigo, inciso, parágrafo ou item utilizado, sempre presente no TEXTO LEGAL OFICIAL.
 
 O comentário não deve citar fontes externas. Não mencione Constituição Federal, jurisprudência, doutrina ou outros diplomas se eles não estiverem no TEXTO LEGAL OFICIAL. Não copie blocos enormes da lei; use citação curta e suficiente.
 
