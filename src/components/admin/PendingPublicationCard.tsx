@@ -43,6 +43,9 @@ export function PendingPublicationCard() {
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<PendingQuestao | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [auditing, setAuditing] = useState(false);
+  const [auditProgress, setAuditProgress] = useState<{ done: number; total: number } | null>(null);
+  const auditStopRef = useRef(false);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
