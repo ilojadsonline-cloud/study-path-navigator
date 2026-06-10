@@ -173,21 +173,13 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
 
           <div className="space-y-1.5">
             <Label className="text-xs">Enunciado</Label>
-            <FormattingToolbar textareaRef={enunciadoRef} value={enunciado} onChange={setEnunciado} />
-            <Textarea
-              ref={enunciadoRef}
+            <RichTextEditor
               value={enunciado}
-              onChange={(e) => setEnunciado(e.target.value)}
-              rows={5}
-              className="font-mono text-sm whitespace-pre-wrap"
-              placeholder="Texto da questão... Use **negrito**, *itálico* e quebras de linha para facilitar a leitura."
+              onChange={setEnunciado}
+              allowImage
+              minHeight={120}
+              placeholder="Texto da questão. Use a barra para formatar e inserir imagem se necessário."
             />
-            {enunciado.trim() && (
-              <div className="rounded-lg border border-border/60 bg-secondary/30 p-3">
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Pré-visualização</span>
-                <FormattedText text={enunciado} className="text-sm text-foreground mt-1" />
-              </div>
-            )}
           </div>
 
 
@@ -208,26 +200,28 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
                 >
                   {ALT_LETTERS[i]}
                 </button>
-                <Textarea
-                  value={alt}
-                  onChange={(e) => setAlt(i, e.target.value)}
-                  rows={1}
-                  className="min-h-[40px]"
-                  placeholder={`Alternativa ${ALT_LETTERS[i]}`}
-                />
+                <div className="flex-1">
+                  <RichTextEditor
+                    value={alt}
+                    onChange={(v) => setAlt(i, v)}
+                    minHeight={44}
+                    placeholder={`Alternativa ${ALT_LETTERS[i]}`}
+                  />
+                </div>
               </div>
             ))}
           </div>
 
           <div className="space-y-1">
             <Label className="text-xs">Comentário / Justificativa</Label>
-            <Textarea
+            <RichTextEditor
               value={comentario}
-              onChange={(e) => setComentario(e.target.value)}
-              rows={4}
+              onChange={setComentario}
+              minHeight={120}
               placeholder="Explique o gabarito e por que cada distrator está incorreto..."
             />
           </div>
+
 
           <div className="flex gap-2">
             <Button onClick={handleSave} disabled={saving} className="gradient-primary text-primary-foreground font-bold">
