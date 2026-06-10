@@ -998,9 +998,15 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
       temperatureOverride: 0.4,
       timeoutMs: PRIMARY_TIMEOUT_MS,
       metadata: { batchSize, disciplina: disc.disciplina, tipo: disc.tipo },
+      // Se o provedor primário devolver lote vazio, cai p/ DeepSeek em vez de retornar +0
+      contentValidator: (c: string) => {
+        try { return parseQuestionsFromModelContent(c).questions.length > 0; }
+        catch { return false; }
+      },
     });
     content = aiResult.content || '{"questions":[]}';
-    console.log(`[GERAR-NL] OK via ${aiResult.provider}/${aiResult.model} (${disc.disciplina})`);
+    const finishReason = aiResult.raw?.choices?.[0]?.finish_reason ?? aiResult.raw?.choices?.[0]?.stop_reason ?? "?";
+    console.log(`[GERAR-NL] OK via ${aiResult.provider}/${aiResult.model} (${disc.disciplina}) finish=${finishReason} len=${content.length} preview=${content.slice(0, 300).replace(/\n/g, " ")}`);
   } catch (genErr: any) {
     const msg = String(genErr?.message ?? genErr);
     const isCredit = /HTTP 402|insufficient|no credits|saldo|quota|billing|exhaust/i.test(msg);
@@ -1696,6 +1702,10 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
         temperatureOverride: 0.25,
         timeoutMs: PRIMARY_TIMEOUT_MS,
         metadata: { batchSize, disciplina: disc.disciplina },
+        contentValidator: (c: string) => {
+          try { return parseQuestionsFromModelContent(c).questions.length > 0; }
+          catch { return false; }
+        },
       });
       content = aiResult.content || '{"questions":[]}';
       finishReason = aiResult.raw?.choices?.[0]?.finish_reason || "stop";
