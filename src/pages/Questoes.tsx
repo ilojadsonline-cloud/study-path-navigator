@@ -572,7 +572,7 @@ const Questoes = () => {
                           <span className="w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5" translate="no">
                             {String.fromCharCode(65 + ai)}
                           </span>
-                          <span className={`flex-1 ${isCrossed ? "line-through" : ""}`}>{alt}</span>
+                          <FormattedText text={alt} className={`flex-1 ${isCrossed ? "line-through" : ""}`} />
                           {isRevealed && isCorrect && <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-success" />}
                           {isRevealed && isSelected && !isCorrect && <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />}
                         </button>
