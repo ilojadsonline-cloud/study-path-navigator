@@ -86,9 +86,11 @@ export function PendingPublicationCard() {
       if (disc !== "all") q = q.eq("disciplina", disc);
       const { data, error, count } = await q;
       if (error) throw error;
-      setRows((data as PendingQuestao[]) || []);
+      const list = (data as PendingQuestao[]) || [];
+      setRows(list);
       setTotal(count ?? 0);
       setPage(p);
+      loadAudits(list.map((r) => r.id));
     } catch (e: any) {
       toast.error("Erro ao carregar pendentes", { description: e.message });
     }
