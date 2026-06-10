@@ -222,11 +222,18 @@ serve(async (req) => {
     // ── LIST USERS (FAST — DB only, no external API calls) ──
     if (action === "list_users") {
       const { search } = params;
-      logStep("Loading users (fast mode)", { search });
+      const page = Math.max(0, Number(params.page) || 0);
+      const pageSize = Math.min(100, Math.max(10, Number(params.page_size) || 50));
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      logStep("Loading users (paginated)", { search, page, pageSize });
 
-      let query = supabaseAdmin.from("profiles").select("user_id, nome, cpf, email, telefone, created_at").order("created_at", { ascending: false });
+      let query = supabaseAdmin
+        .from("profiles")
+        .select("user_id, nome, cpf, email, telefone, created_at", { count: "exact" })
+        .order("created_at", { ascending: false });
       if (search) query = query.or(`nome.ilike.%${search}%,cpf.ilike.%${search}%,email.ilike.%${search}%`);
-      const { data: profiles, error: profilesErr } = await query.limit(100);
+      const { data: profiles, error: profilesErr, count } = await query.range(from, to);
       if (profilesErr) throw new Error(profilesErr.message);
 
       const { data: allAdminRoles } = await supabaseAdmin
@@ -256,8 +263,9 @@ serve(async (req) => {
         enrichedUsers.push(...results);
       }
 
-      logStep("Fast list done", { count: enrichedUsers.length });
-      return new Response(JSON.stringify({ success: true, users: enrichedUsers }), {
+      const total = count ?? enrichedUsers.length;
+      logStep("Paginated list done", { count: enrichedUsers.length, total, page });
+      return new Response(JSON.stringify({ success: true, users: enrichedUsers, total, page, page_size: pageSize }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
