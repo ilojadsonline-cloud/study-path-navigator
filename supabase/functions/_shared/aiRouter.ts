@@ -272,13 +272,27 @@ export function buildAttemptsForStage(
       break;
     }
     case "question_generation": {
-      // Geração premium (alto risco jurídico). PRIMÁRIO: Maritaca AI (Sabiá-4) —
-      // melhor fidelidade ao português jurídico brasileiro. Quando os créditos da
-      // Maritaca acabarem (HTTP 402/429) ou falhar, cai para DeepSeek Reasoner (R1),
-      // depois deepseek-chat → Gemini → OpenRouter. O motivo do fallback é logado.
+      // Geração premium. PRIMÁRIO: Maritaca AI, escolhendo o modelo pela COMPLEXIDADE:
+      //   high  → sabia-4 (jurídico/normativo, máxima fidelidade)
+      //   medium/low → sabiazinho-4 (interpretação de texto; mais barato)
+      // TIER: Flex (-50%, síncrono). Se a fila Flex não liberar (429/timeout curto),
+      // reexecuta no tier padrão (ainda Maritaca) antes de cair p/ DeepSeek Reasoner (R1) →
+      // deepseek-chat → Gemini → OpenRouter. O motivo do fallback é logado.
       // Obs.: Maritaca NÃO suporta response_format json_object → jsonResponse:false.
+      const maritacaModel = (params.complexity === "medium" || params.complexity === "low")
+        ? MODELS.maritacaGenerationLight()
+        : MODELS.maritacaGeneration();
       if (mode !== "openrouter_fallback") {
-        push("maritaca", MODELS.maritacaGeneration(), null, { jsonResponse: false });
+        if (FLAGS.maritacaFlexEnabled()) {
+          push("maritaca", maritacaModel, null, {
+            jsonResponse: false,
+            serviceTier: MARITACA_SERVICE_TIER(),
+            timeoutMsOverride: MARITACA_FLEX_TIMEOUT_MS(),
+          });
+          push("maritaca", maritacaModel, "maritaca_flex_unavailable", { jsonResponse: false });
+        } else {
+          push("maritaca", maritacaModel, null, { jsonResponse: false });
+        }
         push("deepseek", MODELS.deepseekGeneration(), "maritaca_failed");
         push("deepseek", MODELS.deepseekLight(), "reasoner_failed");
       }
