@@ -2281,7 +2281,7 @@ Responda APENAS JSON:
       }
     }
 
-    const statusResult = errosEncontrados.length > 0 ? "parcial" : (insertedCount > 0 ? "sucesso" : "parcial");
+    const statusResult = insertedCount > 0 ? (errosEncontrados.length > 0 ? "parcial" : "sucesso") : "erro";
     const mensagem = `${insertedCount} questões criadas, ${discarded} descartadas de ${rawQuestions.length} geradas para "${disc.disciplina}".`;
 
     console.log(`[GERAR] RESULTADO: ${mensagem}`);
@@ -2295,7 +2295,7 @@ Responda APENAS JSON:
         questoes_revisao_manual: questoesRevisaoManual,
         erros_encontrados: errosEncontrados,
       },
-      success: true, count: insertedCount, inserted: insertedCount, generated: insertedCount,
+      success: insertedCount > 0, count: insertedCount, inserted: insertedCount, generated: insertedCount,
       discarded, total_generated: rawQuestions.length, timestamp,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
