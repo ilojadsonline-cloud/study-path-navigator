@@ -30,6 +30,12 @@ type PendingQuestao = {
   created_at: string;
 };
 
+type AuditInfo = {
+  status: string;
+  risk_level: string | null;
+  ai_summary: string | null;
+};
+
 const SELECT_COLS = "id,disciplina,assunto,dificuldade,enunciado,alt_a,alt_b,alt_c,alt_d,alt_e,gabarito,comentario,created_at";
 
 export function PendingPublicationCard() {
