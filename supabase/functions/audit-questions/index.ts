@@ -1353,7 +1353,14 @@ async function processQuestion(
   supabase: ReturnType<typeof createClient>,
   q: Questao,
   legalCache: Map<string, string | null>,
+  opts?: { keepPending?: boolean },
 ): Promise<{ status: string; auto_fixed: boolean; flagged: boolean; deleted: boolean }> {
+  // keepPending: aplica correções no conteúdo, mas mantém audit_status='pending'
+  // (questão continua na lista de pendentes para publicação/exclusão manual pelo admin).
+  const keepPending = opts?.keepPending === true;
+  const okStatus = keepPending ? Q_STATUS.PENDING : Q_STATUS.APPROVED;
+  const flagStatus = keepPending ? Q_STATUS.PENDING : Q_STATUS.MANUAL;
+  const correctedStatus = keepPending ? Q_STATUS.PENDING : Q_STATUS.AUTO_CORRECTED;
   // Busca texto legal por disciplina (cache)
   let legal = legalCache.get(q.disciplina);
   if (legal === undefined) {
