@@ -109,6 +109,8 @@ const MODELS = {
   deepseekJsonRepair: () => env("AI_DEEPSEEK_JSON_REPAIR_MODEL") ?? "deepseek-chat",
   // Geração premium: DeepSeek Reasoner (R1) mantém a complexidade jurídica "padrão banca elite".
   deepseekGeneration: () => env("AI_DEEPSEEK_GENERATION_MODEL") ?? "deepseek-reasoner",
+  // Maritaca AI (Sabiá-4): gerador primário de questões. Fallback → DeepSeek Reasoner.
+  maritacaGeneration: () => env("AI_MARITACA_GENERATION_MODEL") ?? "sabia-4",
 };
 
 const LIMITS = {
