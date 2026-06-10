@@ -1065,40 +1065,15 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
 
     const alts = ALT_KEYS.map(k => q[k] as string);
     const minEnun = isTexto ? 120 : 25; // texto-base exige enunciado mais longo
+    // FLUXO OFICIAL: só descartamos por integridade estrutural (questão inutilizável).
+    // Qualidade/duplicidade fica para a auditoria manual na lista de pendentes.
     if (!q.enunciado || q.enunciado.length < minEnun) { discard("enunciado_curto", `${q.enunciado?.length || 0} chars`); continue; }
     if (alts.some(a => !a || a.length < 2)) { discard("alternativa_vazia"); continue; }
     if (hasDuplicateAlts(alts)) { discard("alternativas_duplicadas"); continue; }
     if (!q.comentario || q.comentario.length < 30) { discard("comentario_curto", `${q.comentario?.length || 0} chars`); continue; }
 
-    // Redação Oficial: descarta questões fora do escopo conceitual (estrutura/formatação/partes).
-    if (redacaoForaDeEscopo(q.disciplina, q.enunciado, alts)) { discard("redacao_fora_escopo"); continue; }
-
-
-    // Paridade de comprimento (anti "correta = outlier")
-    const gabIdx = Number(q.gabarito);
-    const lens = alts.map(a => (a || "").trim().length);
-    const otherLens = lens.filter((_, i) => i !== gabIdx);
-    const otherAvg = otherLens.reduce((s, n) => s + n, 0) / Math.max(1, otherLens.length);
-    const correctLen = lens[gabIdx];
-    if (correctLen > otherAvg * 2.4 || correctLen < otherAvg * 0.35) { discard("gabarito_outlier_tamanho", `lens=${lens.join(",")}, gab=${gabIdx}`); continue; }
-
-    // Dedup textual / semântica / similaridade
-    const fp = buildFingerprint(q.enunciado);
-    if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) { discard("duplicata_textual_exata"); continue; }
-    batchFingerprints.add(fp);
-
-    const correctAltText = q[ALT_KEYS[q.gabarito]] as string;
-    const semFP = buildSemanticFingerprint(q.comentario, correctAltText);
-    // Em Redação Oficial/Língua Portuguesa, a assinatura semântica baseada em comentário
-    // gera muitos falsos positivos (mesmos documentos/termos). Mantém só dedup dentro do lote;
-    // a auditoria/aba de duplicatas faz a limpeza posterior sem zerar a criação.
-    if (batchSemanticFPs.has(semFP)) { discard("duplicata_semantica_no_lote"); continue; }
-    batchSemanticFPs.add(semFP);
-
-    if (findSimilarQuestion(q.enunciado, batchForSimilarity, 0.72) !== null) { discard("similar_no_lote"); continue; }
-    batchForSimilarity.push({ id: idx, enunciado: q.enunciado });
-
     validQuestions.push(q);
+
   }
 
   // Inserção
