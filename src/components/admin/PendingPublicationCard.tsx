@@ -179,7 +179,53 @@ export function PendingPublicationCard() {
     setBusy(false);
   };
 
-  return (
+  const auditSelected = async () => {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    auditStopRef.current = false;
+    setAuditing(true);
+    setAuditProgress({ done: 0, total: ids.length });
+    try {
+      const { data, error } = await supabase.functions.invoke("audit-questions", {
+        body: { action: "start", mode: "selected", question_ids: ids, limit: ids.length },
+      });
+      if (error) throw error;
+      const job = data?.job;
+      if (!job?.id) throw new Error("Não foi possível iniciar a auditoria");
+      toast.success(`Auditoria iniciada — ${job.total ?? ids.length} questão(ões)`);
+
+      let consecutiveFailures = 0;
+      while (!auditStopRef.current) {
+        try {
+          const res = await supabase.functions.invoke("audit-questions", {
+            body: { action: "run", job_id: job.id },
+          });
+          if (res.error) throw res.error;
+          consecutiveFailures = 0;
+          const cj = res.data?.job;
+          if (cj) setAuditProgress({ done: cj.done ?? 0, total: cj.total ?? ids.length });
+          if (res.data?.done) {
+            toast.success("Auditoria das selecionadas concluída!");
+            break;
+          }
+        } catch (e: any) {
+          consecutiveFailures++;
+          if (consecutiveFailures >= 3) {
+            toast.error(`Auditoria pausada após falhas repetidas: ${e.message}`);
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+      }
+      setSelected(new Set());
+      load(page, filterDisc);
+    } catch (e: any) {
+      toast.error("Erro ao auditar", { description: e.message });
+    }
+    setAuditing(false);
+    setAuditProgress(null);
+  };
+
     <Card className="glass-card border-warning/30">
       <CardHeader>
         <CardTitle className="flex items-center justify-between gap-2 flex-wrap">
