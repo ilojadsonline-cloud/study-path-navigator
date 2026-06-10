@@ -936,7 +936,7 @@ ${openingsBlock}
 REGRAS DE QUALIDADE:
 - Cada questão do lote deve abordar um ASPECTO/${isTexto ? "TEXTO" : "DOCUMENTO"} DIFERENTE. Não repita tema, estrutura ou pegadinha.
 - Distribua o gabarito entre A(0), B(1), C(2), D(3), E(4) — não concentre na mesma letra.
-- O comentário deve explicar por que a correta está certa e por que CADA incorreta está errada, em tom didático de professor (máx. 1500 caracteres), terminando com uma dica de prova curta.
+- O comentário é a parte MAIS importante e deve funcionar como uma AULA CURTA (tom de professor altamente didático, entre 900 e 2400 caracteres). Consolide no campo "comentario", nesta ordem e com estes rótulos em negrito markdown: **Comentário do professor:** (por que a correta está certa, com referência ao trecho do texto-base/${isTexto ? "texto" : "documento"} e à pegadinha); **Análise das alternativas:** (CADA alternativa A–E comentada individualmente, uma por linha, no padrão "**A)** ...", explicando por que está correta ou incorreta — nunca escreva "as demais estão erradas"); **Dica de prova:** (resumo estratégico/alerta de pegadinha curto); **Base normativa:** (${isTexto ? "elemento do texto-base que fundamenta a resposta" : "subitem do Manual — ex.: 6.1, 6.5 — que fundamenta a resposta"}). Proibido comentário raso ou que apenas repita o gabarito.
 
 REGRAS DE SAÍDA — responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do objeto, no formato {"questions":[...]}.
 Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" ("Fácil|Médio|Difícil"), "enunciado"${isTexto ? " (inclui o TEXTO-BASE + linha em branco + a pergunta)" : ""}, "alt_a".."alt_e" (sem prefixo de letra), "gabarito" (0=A,1=B,2=C,3=D,4=E), "comentario", "cognitive_skill", "trap_type".
