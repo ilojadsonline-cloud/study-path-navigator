@@ -490,6 +490,10 @@ export async function runAiStage(
         ...opts,
         jsonResponse: opts.jsonResponse ?? attempt.jsonResponse,
       });
+      // Conteúdo vazio/inválido (ex.: lote "+0") → trata como falha e cai p/ próximo provedor
+      if (opts.contentValidator && !opts.contentValidator(res.content)) {
+        throw new Error("CONTENT_VALIDATION_FAILED: lote vazio/sem questões válidas");
+      }
       await logAiAttempt({
         stage,
         provider: attempt.provider,
