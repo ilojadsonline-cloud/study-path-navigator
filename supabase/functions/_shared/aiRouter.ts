@@ -252,10 +252,14 @@ export function buildAttemptsForStage(stage: AiStage): AiAttempt[] {
       break;
     }
     case "question_generation": {
-      // Geração premium (alto risco jurídico): DeepSeek Reasoner (R1) mantém a
-      // complexidade exigida. Fallbacks: deepseek-chat (rápido) → Gemini → OpenRouter.
+      // Geração premium (alto risco jurídico). PRIMÁRIO: Maritaca AI (Sabiá-4) —
+      // melhor fidelidade ao português jurídico brasileiro. Quando os créditos da
+      // Maritaca acabarem (HTTP 402/429) ou falhar, cai para DeepSeek Reasoner (R1),
+      // depois deepseek-chat → Gemini → OpenRouter. O motivo do fallback é logado.
+      // Obs.: Maritaca NÃO suporta response_format json_object → jsonResponse:false.
       if (mode !== "openrouter_fallback") {
-        push("deepseek", MODELS.deepseekGeneration(), null);
+        push("maritaca", MODELS.maritacaGeneration(), null, { jsonResponse: false });
+        push("deepseek", MODELS.deepseekGeneration(), "maritaca_failed");
         push("deepseek", MODELS.deepseekLight(), "reasoner_failed");
       }
       push("google", MODELS.generation(), "deepseek_failed");
