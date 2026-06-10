@@ -1,32 +1,15 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Loader2, ChevronDown, Save } from "lucide-react";
-import { z } from "zod";
-import { FormattingToolbar } from "./FormattingToolbar";
-import { FormattedText } from "@/components/FormattedText";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { sanitizeRichHtml, htmlToPlainText } from "@/lib/sanitize-html";
 
 const ALT_LETTERS = ["A", "B", "C", "D", "E"] as const;
 const DIFICULDADES = ["Fácil", "Médio", "Difícil"];
-
-const manualSchema = z.object({
-  disciplina: z.string().trim().min(1, "Selecione a disciplina"),
-  assunto: z.string().trim().min(2, "Informe o assunto").max(200),
-  dificuldade: z.string().trim().min(1),
-  banca: z.string().trim().max(200).optional(),
-  prova: z.string().trim().max(200).optional(),
-  ano: z.number().int().min(1900).max(2100).optional(),
-  enunciado: z.string().trim().min(20, "Enunciado muito curto").max(5000),
-  alternativas: z
-    .array(z.string().trim().min(1, "Preencha todas as alternativas").max(2000))
-    .length(5),
-  gabarito: z.number().int().min(0).max(4),
-  comentario: z.string().trim().min(10, "Inclua um comentário/justificativa").max(5000),
-});
 
 interface Props {
   disciplinas: string[];
