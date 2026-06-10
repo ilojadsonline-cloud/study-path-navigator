@@ -1592,7 +1592,7 @@ async function processQuestion(
   await setQuestionAuditStatus(
     supabase,
     q.id,
-    finalStatus === "approved" ? Q_STATUS.APPROVED : Q_STATUS.MANUAL,
+    finalStatus === "approved" ? okStatus : flagStatus,
     result.techniques_used,
   );
 
