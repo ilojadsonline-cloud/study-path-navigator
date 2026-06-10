@@ -1806,218 +1806,59 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
         discarded++; console.log(`[GERAR] Q${idx+1} descartada: alternativas duplicadas`); continue;
       }
 
-      // ── Paridade de comprimento das alternativas (anti-padrão "correta = mais longa") ──
-      // Só descarta quando a CORRETA é o outlier evidente (a mais longa e desproporcional,
-      // ou a mais curta e desproporcional). NÃO descartamos por mera variação de comprimento
-      // entre alternativas — isso eliminava questões válidas e zerava o lote.
+      // ===================================================================
+      // FLUXO OFICIAL: gerar -> PENDENTES -> auditoria manual -> publicar/excluir
+      // A partir daqui NÃO descartamos por qualidade/duplicidade. Apenas aplicamos
+      // AUTO-FIXES seguros (reconciliação de artigo/snippet) e seguimos. Tudo é
+      // inserido como audit_status='pending' para o admin auditar manualmente.
+      // ===================================================================
+
       const gabIdx = Number(q.gabarito);
-      if (Number.isInteger(gabIdx) && gabIdx >= 0 && gabIdx <= 4) {
-        const lens = alts.map(a => (a || "").trim().length);
-        const minLen = Math.min(...lens);
-        const maxLen = Math.max(...lens);
-        const correctLen = lens[gabIdx];
-        const otherLens = lens.filter((_, i) => i !== gabIdx);
-        const otherAvg = otherLens.reduce((s, n) => s + n, 0) / Math.max(1, otherLens.length);
-        const correctIsLongest = correctLen === maxLen && correctLen > minLen;
-        const correctIsShortest = correctLen === minLen && correctLen < maxLen;
-        // Limiar mais tolerante: só é "tell" se a correta destoar fortemente da média das demais.
-        const correctTooLong = correctLen > otherAvg * 1.8;
-        const correctTooShort = correctLen < otherAvg * 0.45;
-        if ((correctIsLongest && correctTooLong) || (correctIsShortest && correctTooShort)) {
-          discarded++;
-          console.log(`[GERAR] Q${idx+1} descartada: correta é outlier de comprimento (lens=${lens.join(",")}, gab=${gabIdx})`);
-          continue;
-        }
-      }
-
-
-      // ── Anti-decoreba ──
-      const decoreba = /\b(o\s+que\s+(diz|dispõe|estabelece|prevê)\s+o\s+art|qual\s+(o\s+)?artigo|segundo\s+o\s+art[\.\s]*\d|de\s+acordo\s+com\s+o\s+art[\.\s]*\d|conforme\s+o\s+art[\.\s]*\d|nos\s+termos\s+do\s+art[\.\s]*\d)/i;
-      if (decoreba.test(q.enunciado.toLowerCase())) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: decoreba`); continue;
-      }
-
-      // ── Anti-citação-seca nas alternativas ──
-      // Rejeita questões onde alternativas são apenas "Art. X", "Art. X da Lei Y", números de lei secos
-      const dryAltPattern = /^\s*(art\.?\s*\d+[a-z]?(\s*(,|e)\s*art\.?\s*\d+[a-z]?)*\s*(d[aoe]\s+lei.*|d[aoe]\s+decreto.*|d[aoe]\s+lc.*)?\.?\s*|lei\s*(n[°º]?\s*)?\d[\d\.\/]*\s*\.?\s*|decreto\s*(n[°º]?\s*)?\d[\d\.\/]*\s*\.?\s*|lc\s*(n[°º]?\s*)?\d[\d\.\/]*\s*\.?\s*)$/i;
-      const dryAltCount = alts.filter(a => dryAltPattern.test(a)).length;
-      if (dryAltCount >= 2) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: ${dryAltCount} alternativas são apenas citação seca de artigo/lei`); continue;
-      }
-      // Also reject if ANY alt is just a bare article number with no substance
-      const bareArtPattern = /^\s*art\.?\s*\d+[a-z]?\s*\.?\s*$/i;
-      if (alts.some(a => bareArtPattern.test(a))) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: alternativa é apenas número de artigo`); continue;
-      }
-
-      // ── Fingerprint dedup (80 normalized chars, no spaces) ──
-      const fp = buildFingerprint(q.enunciado);
-      if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata textual`); continue;
-      }
-      batchFingerprints.add(fp);
-
-      // ── Semantic dedup ──
       const correctAltKey = ALT_KEYS[q.gabarito];
       const correctAltText = q[correctAltKey] as string;
-      const semFP = buildSemanticFingerprint(q.comentario, correctAltText);
-      if (existingSemanticFPs.has(semFP) || batchSemanticFPs.has(semFP)) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: duplicata semântica`); continue;
-      }
-      batchSemanticFPs.add(semFP);
 
-      // ── Similarity dedup (Jaccard de enunciado): limiar 0.65 evita falsos positivos em leis curtas ──
-      const similarId = findSimilarQuestion(q.enunciado, existingForSimilarity, 0.55);
-      if (similarId) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: similar à #${similarId}`); continue;
-      }
-      const batchSimilarId = findSimilarQuestion(q.enunciado, batchForSimilarity, 0.55);
-      if (batchSimilarId !== null) {
-        discarded++; console.log(`[GERAR] Q${idx+1} descartada: similar a outra no lote`); continue;
-      }
-      batchForSimilarity.push({ id: idx, enunciado: q.enunciado });
-
-      // ── Citation validation ──
+      // ── Citation auto-fix (sem descarte) ──
       const literalArticle = findArticleForText(correctAltText, blocks);
       const evidenceArticle = detectCommentEvidenceArticle(q.comentario, blocks);
       const resolvedArticle = evidenceArticle || literalArticle;
       const citationCheck = validateAllCitations(q.comentario, blocks);
-
-      if (!citationCheck.valid) {
-        if (resolvedArticle) {
-          q.comentario = reconcileCommentArticle(q.comentario, resolvedArticle);
-          const recheck = validateAllCitations(q.comentario, blocks);
-          if (!recheck.valid) {
-            discarded++;
-            questoesRevisaoManual.push({ motivo: `Artigos inexistentes: ${recheck.missing.join(", ")}` });
-            console.log(`[GERAR] Q${idx+1} descartada: artigos inexistentes após correção`);
-            continue;
-          }
+      if (!citationCheck.valid && resolvedArticle) {
+        const reconciled = reconcileCommentArticle(q.comentario, resolvedArticle);
+        if (validateAllCitations(reconciled, blocks).valid) {
+          q.comentario = reconciled;
           console.log(`[GERAR] Q${idx+1} AUTO-FIX: artigo corrigido para ${resolvedArticle}`);
-        } else {
-          discarded++;
-          questoesRevisaoManual.push({ motivo: `Artigos inexistentes: ${citationCheck.missing.join(", ")}` });
-          console.log(`[GERAR] Q${idx+1} descartada: ${citationCheck.missing.join(", ")}`);
-          continue;
         }
       }
 
-      // ── Ensure at least one citation ──
-      const citedArts = extractAllCitedArticles(q.comentario);
-      if (citedArts.length === 0 && resolvedArticle) {
+      // ── Garante citação mínima quando possível (sem descarte) ──
+      if (extractAllCitedArticles(q.comentario).length === 0 && resolvedArticle) {
         q.comentario = reconcileCommentArticle(q.comentario, resolvedArticle);
       }
 
-      const finalCitedArts = extractAllCitedArticles(q.comentario);
-      if (finalCitedArts.length === 0) {
-        discarded++;
-        questoesRevisaoManual.push({ motivo: "Comentário sem citação de artigo" });
-        console.log(`[GERAR] Q${idx+1} descartada: sem artigo no comentário`);
-        continue;
-      }
-
-      // ── Snippet-article verification — discard instead of keeping ──
+      // ── Snippet auto-fix (sem descarte) ──
       const snippetCheck = verifySnippetBelongsToArticle(q.comentario, blocks);
       if (!snippetCheck.valid) {
         const { corrected: snippetFixed, appliedCorrections: snippetCorrs } = applyAllSnippetCorrections(q.comentario, blocks);
-        if (snippetCorrs.length > 0) {
-          const reCheck = validateAllCitations(snippetFixed, blocks);
-          if (reCheck.valid) {
-            q.comentario = snippetFixed;
-            console.log(`[GERAR] Q${idx+1} AUTO-FIX snippet: ${snippetCorrs.map(c => `${c.from}→${c.to}`).join(", ")}`);
-          } else {
-            discarded++;
-            questoesRevisaoManual.push({ motivo: `Snippet-artigo mismatch não resolvido` });
-            console.log(`[GERAR] Q${idx+1} descartada: snippet-artigo mismatch irrecuperável`);
-            continue;
-          }
-        } else {
-          discarded++;
-          questoesRevisaoManual.push({ motivo: `Snippet-artigo mismatch: ${snippetCheck.mismatches[0]}` });
-          console.log(`[GERAR] Q${idx+1} descartada: ${snippetCheck.mismatches[0]}`);
-          continue;
+        if (snippetCorrs.length > 0 && validateAllCitations(snippetFixed, blocks).valid) {
+          q.comentario = snippetFixed;
+          console.log(`[GERAR] Q${idx+1} AUTO-FIX snippet: ${snippetCorrs.map(c => `${c.from}→${c.to}`).join(", ")}`);
         }
       }
 
-      // ── Validação ANTI-ALUCINAÇÃO em TODOS os campos (enunciado + alternativas + comentário) ──
-      // Citações com marcador externo ("da Lei X", "do CPP" etc.) são permitidas;
-      // apenas citações INTERNAS ("Art. N" sem qualificador) precisam existir em `blocks`.
-      const allFieldsCheck = validateCitationsInAllFields(q, blocks);
-      if (!allFieldsCheck.valid) {
-        discarded++;
-        const detalhe = allFieldsCheck.missing.map(m => `${m.field}: ${m.arts.join(", ")}`).join(" | ");
-        questoesRevisaoManual.push({ motivo: `Citação de artigo inexistente na lei alvo (${detalhe})` });
-        console.log(`[GERAR] Q${idx+1} descartada: artigos inexistentes em campos — ${detalhe}`);
-        continue;
-      }
-
-      // ── Cross-validation ──
-      const crossCheck = crossValidateReferences(q.enunciado, q.comentario);
-      if (!crossCheck.valid) {
-        discarded++;
-        questoesRevisaoManual.push({ motivo: crossCheck.reason });
-        console.log(`[GERAR] Q${idx+1} descartada: ${crossCheck.reason}`);
-        continue;
-      }
-
-      // ── Ancoragem legal (aceita questões interpretativas) ──
-      // Questões que parafraseiam ou interpretam a norma são VÁLIDAS desde que haja
-      // alguma ancoragem (literal OU específica do artigo citado). Só descartamos
-      // quando AMBAS as ancoragens são fracas — evita alucinação sem podar interpretação.
-      const lawNorm = normalize(leiSeca);
-      const literalProofScore = computeAltLiteralSupport(correctAltText, lawNorm);
-      const articleSpecificScore = computeArticleSpecificProof(correctAltText, q.comentario, blocks);
-      if (literalProofScore < 0.25 && articleSpecificScore < 0.15) {
-        discarded++;
-        questoesRevisaoManual.push({ motivo: `Ancoragem legal insuficiente (literal=${literalProofScore.toFixed(2)}, artigo=${articleSpecificScore.toFixed(2)})` });
-        console.log(`[GERAR] Q${idx+1} descartada: sem ancoragem (literal ${literalProofScore.toFixed(2)} / artigo ${articleSpecificScore.toFixed(2)})`);
-        continue;
-      }
-
-      // ── Article confrontation: verify comment cites the article where the correct alt text is actually found ──
+      // ── Confronto de artigos: auto-fix (sem descarte) ──
       const commentCitedArticles = extractAllCitedArticles(q.comentario);
       if (literalArticle && commentCitedArticles.length > 0) {
         const literalArtNum = literalArticle.match(/\d+/)?.[0];
         if (literalArtNum && !commentCitedArticles.includes(literalArtNum)) {
-          q.comentario = reconcileCommentArticle(q.comentario, literalArticle);
-          const fixedCited = extractAllCitedArticles(q.comentario);
-          if (!fixedCited.includes(literalArtNum)) {
-            discarded++;
-            questoesRevisaoManual.push({ motivo: `CONFRONTO DE ARTIGOS: comentário cita Art. ${commentCitedArticles[0]} mas alternativa correta encontrada no ${literalArticle}` });
-            console.log(`[GERAR] Q${idx+1} descartada: confronto de artigos (comentário Art. ${commentCitedArticles[0]} vs literal ${literalArticle})`);
-            continue;
+          const reconciled = reconcileCommentArticle(q.comentario, literalArticle);
+          if (extractAllCitedArticles(reconciled).includes(literalArtNum)) {
+            q.comentario = reconciled;
+            console.log(`[GERAR] Q${idx+1} AUTO-FIX confronto: artigo corrigido para ${literalArticle}`);
           }
-          console.log(`[GERAR] Q${idx+1} AUTO-FIX confronto: artigo corrigido para ${literalArticle}`);
         }
       }
 
-      // ── Ambiguity detection: reject if incorrect alts have high literal support ──
-      const ambiguityCheck = detectAmbiguity(q, blocks, lawNorm);
-      if (ambiguityCheck.ambiguous) {
-        discarded++;
-        questoesRevisaoManual.push({ motivo: ambiguityCheck.details });
-        console.log(`[GERAR] Q${idx+1} descartada: ambiguidade — ${ambiguityCheck.details}`);
-        continue;
-      }
-
-      // ── Repetitive/looping comment detection ──
-      const artMentionsGen = (q.comentario || "").match(/Art\.?\s*\d+[A-Z]?/gi) || [];
-      if (artMentionsGen.length >= 6) {
-        const freqGen = new Map<string, number>();
-        for (const m of artMentionsGen) {
-          const key = normalize(m);
-          freqGen.set(key, (freqGen.get(key) || 0) + 1);
-        }
-        const maxFreqGen = Math.max(...freqGen.values());
-        if (maxFreqGen >= 5) {
-          discarded++;
-          questoesRevisaoManual.push({ motivo: `Comentário com texto repetitivo/loop (Art. citado ${maxFreqGen}x)` });
-          console.log(`[GERAR] Q${idx+1} descartada: comentário repetitivo`);
-          continue;
-        }
-      }
-
-      // ── Final reconciliation ──
+      // ── Reconciliação final (sem descarte) ──
       if (resolvedArticle) {
         const resolvedNum = resolvedArticle.match(/\d+/)?.[0];
         const commentCitedArts = extractAllCitedArticles(q.comentario);
@@ -2026,54 +1867,24 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
         }
       }
 
-      // ── Bloco 1: Dedup semântica forte (DeepSeek signature + Jaccard ponderada) ──
-      // Constrói assinatura via IA (com fallback determinístico) e compara com questões
-      // do mesmo artigo. Limiares: ≥0.80 descarta; 0.60–0.80 descarta com flag de reescrita; <0.60 aceita.
+      // ── Assinatura semântica (apenas para metadados/dedup posterior; NÃO descarta) ──
       const newSig = await buildSemanticSignature(
         { enunciado: q.enunciado, alt_correta: correctAltText, comentario: q.comentario },
       );
       const artigoPrincipal = newSig.artigo || extractMainArticle(q.comentario);
       const artKey = normSigToken(artigoPrincipal) || "__sem_artigo__";
-      const candidates = [
-        ...(existingByArticle.get(artKey) || []),
-        ...(existingByArticle.get("__sem_artigo__") || []), // também compara contra os sem artigo
-      ];
 
-      let highestSim = 0;
-      let highestId: number | null = null;
-      for (const cand of candidates) {
-        // pré-filtro barato: se assunto difere muito, comparar mesmo assim só se artigo bate exatamente
-        const sim = compareSignatures(newSig, cand.signature);
-        if (sim > highestSim) { highestSim = sim; highestId = cand.id; }
-        if (sim >= 0.80) break; // já basta para descartar
-      }
-
-      if (highestSim >= 0.80) {
-        discarded++;
-        questoesRevisaoManual.push({ motivo: `Duplicidade semântica forte (sim=${highestSim.toFixed(2)}) com Q#${highestId}` });
-        console.log(`[GERAR] Q${idx+1} descartada: dup semântica ${highestSim.toFixed(2)} vs #${highestId}`);
-        continue;
-      }
-      if (highestSim >= 0.72) {
-        // zona cinza alta: descarta deste lote mas marca para reescrita futura com novo enfoque
-        discarded++;
-        questoesRevisaoManual.push({ motivo: `Similaridade média (${highestSim.toFixed(2)}) com Q#${highestId} — reescrever com novo ângulo` });
-        console.log(`[GERAR] Q${idx+1} descartada: sim média ${highestSim.toFixed(2)} vs #${highestId} (reescrever)`);
-        continue;
-      }
-
-      // Persiste assinatura + artigo principal junto com a questão
       q.assinatura_semantica = newSig;
       q.artigo_principal = artigoPrincipal || null;
 
-      // Adiciona ao índice em memória para que próximas questões DESTE lote já comparem contra esta
       if (!existingByArticle.has(artKey)) existingByArticle.set(artKey, []);
       existingByArticle.get(artKey)!.push({ id: -1 - idx, assunto: q.assunto, signature: newSig, enunciado: q.enunciado });
 
       const approvedArts = extractAllCitedArticles(q.comentario);
       validQuestions.push(q);
-      console.log(`[GERAR] Q${idx+1} APROVADA: ${approvedArts.map(a => `Art. ${a}`).join(", ")} | sig.artigo=${newSig.artigo} sig.peg=${newSig.pegadinha} maxSim=${highestSim.toFixed(2)}`);
+      console.log(`[GERAR] Q${idx+1} ENVIADA PARA PENDENTES: ${approvedArts.map(a => `Art. ${a}`).join(", ")} | sig.artigo=${newSig.artigo}`);
     }
+
 
     // ===== AUDITORIA CRUZADA PÓS-GERAÇÃO (DESATIVADA) =====
     // Fluxo oficial: gerar questões -> enviar TODAS para a lista de PENDENTES (audit_status='pending').
