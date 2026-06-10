@@ -70,6 +70,8 @@ export type RunAiOptions = {
   timeoutMs?: number;
   // valida o conteúdo retornado; se retornar false, força fallback p/ próximo provedor
   contentValidator?: (content: string) => boolean;
+  // complexidade da tarefa → escolhe o modelo Maritaca (high=sabia-4; medium/low=sabiazinho-4)
+  complexity?: "high" | "medium" | "low";
 };
 
 // ----------------------------- Helpers de env --------------------------------
