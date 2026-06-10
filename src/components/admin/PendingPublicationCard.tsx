@@ -187,7 +187,7 @@ export function PendingPublicationCard() {
     setAuditProgress({ done: 0, total: ids.length });
     try {
       const { data, error } = await supabase.functions.invoke("audit-questions", {
-        body: { action: "start", mode: "selected", question_ids: ids, limit: ids.length },
+        body: { action: "start", mode: "selected", question_ids: ids, limit: ids.length, keep_pending: true },
       });
       if (error) throw error;
       const job = data?.job;
