@@ -226,6 +226,7 @@ export function PendingPublicationCard() {
     setAuditProgress(null);
   };
 
+  return (
     <Card className="glass-card border-warning/30">
       <CardHeader>
         <CardTitle className="flex items-center justify-between gap-2 flex-wrap">
