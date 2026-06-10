@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { htmlToPlainText } from "@/lib/sanitize-html";
 import {
   Trash2, Eye, Search, ChevronLeft, ChevronRight, Loader2, CheckCircle, Pencil, Save, ChevronsLeft, ChevronsRight, Hash, RotateCcw, MoreHorizontal, X,
 } from "lucide-react";
@@ -341,7 +342,7 @@ export function AdminQuestoesTab() {
                       />
                     </TableCell>
                     <TableCell className="font-mono text-xs">{q.id}</TableCell>
-                    <TableCell className="text-sm max-w-xs truncate">{q.enunciado}</TableCell>
+                    <TableCell className="text-sm max-w-xs truncate">{htmlToPlainText(q.enunciado)}</TableCell>
                     <TableCell><Badge variant="secondary" className="text-[10px]">{q.disciplina}</Badge></TableCell>
                     <TableCell className="text-xs">{q.dificuldade}</TableCell>
                     <TableCell className="font-bold text-primary">{gabaritoLabel(q.gabarito)}</TableCell>
