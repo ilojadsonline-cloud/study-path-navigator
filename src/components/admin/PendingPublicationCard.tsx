@@ -265,9 +265,20 @@ export function PendingPublicationCard() {
           <div className="flex-1" />
           <Button
             size="sm"
+            variant="secondary"
+            onClick={auditSelected}
+            disabled={busy || auditing || selected.size === 0}
+          >
+            {auditing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 mr-1" />}
+            {auditing && auditProgress
+              ? `Auditando ${auditProgress.done}/${auditProgress.total}`
+              : `Auditar selecionadas (${selected.size})`}
+          </Button>
+          <Button
+            size="sm"
             className="gradient-primary text-primary-foreground font-bold"
             onClick={publishSelected}
-            disabled={busy || selected.size === 0}
+            disabled={busy || auditing || selected.size === 0}
           >
             {busy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
             Publicar selecionadas ({selected.size})
