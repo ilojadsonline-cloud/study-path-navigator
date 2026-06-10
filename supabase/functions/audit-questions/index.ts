@@ -1700,16 +1700,33 @@ serve(async (req) => {
             .in("id", ids);
         }
       } else if (mode === "all" || mode === "discipline") {
-        // Reauditoria preserva questões já validadas (approved / auto_corrected / admin_resolved):
-        // elas continuam visíveis aos alunos e NÃO são reprocessadas automaticamente.
-        // Apenas estados "em aberto" (pending / manual_review / error) entram na fila.
-        // Para forçar reauditoria de aprovadas pelo admin, use a ação "clear_resolved" explicitamente.
-        let resetQ = supabase
-          .from("questoes")
-          .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
-          .in("audit_status", [Q_STATUS.MANUAL, "error"]);
-        if (scope.disciplinas?.length) resetQ = resetQ.in("disciplina", scope.disciplinas);
-        await resetQ;
+        // LITERALIDADE DO ESCOPO (pedido do admin):
+        // - "Todo o banco" reaudita TODAS as questões (inclusive approved / auto_corrected /
+        //   admin_resolved), exceto as logicamente excluídas (deleted).
+        // - "Disciplina(s)" reaudita TODAS as questões da(s) disciplina(s) selecionada(s).
+        // Reset paginado (UPDATE ... > cursor) para vencer o teto de 1000 linhas por chamada
+        // e garantir que o banco inteiro entre na fila, sem amostragem.
+        let resetCursor = 0;
+        const RESET_PAGE = 1000;
+        while (true) {
+          let pageSel = supabase
+            .from("questoes")
+            .select("id")
+            .neq("audit_status", Q_STATUS.DELETED)
+            .gt("id", resetCursor)
+            .order("id", { ascending: true })
+            .limit(RESET_PAGE);
+          if (scope.disciplinas?.length) pageSel = pageSel.in("disciplina", scope.disciplinas);
+          const { data: pageRows, error: pageErr } = await pageSel;
+          if (pageErr || !pageRows || pageRows.length === 0) break;
+          const pageIds = (pageRows as any[]).map((r) => r.id);
+          await supabase
+            .from("questoes")
+            .update({ audit_status: Q_STATUS.PENDING, audit_status_updated_at: new Date().toISOString() })
+            .in("id", pageIds);
+          resetCursor = pageIds[pageIds.length - 1];
+          if (pageRows.length < RESET_PAGE) break;
+        }
       }
       // mode === "unaudited": não altera status; loop filtra por only_unaudited.
 
