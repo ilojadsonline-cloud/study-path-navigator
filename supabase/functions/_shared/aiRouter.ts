@@ -456,6 +456,8 @@ async function callProvider(
     // O JSON é garantido pelo prompt + pipeline de extração/reparo a jusante.
     if (attempt.jsonResponse && !isMaritaca) body.response_format = { type: "json_object" };
   }
+  // Maritaca: tier de serviço (ex.: "flex" → -50%, síncrono sujeito a fila/429).
+  if (isMaritaca && attempt.serviceTier) body.service_tier = attempt.serviceTier;
 
   // -------------------------------------------------------------------------
   // Controle de "thinking" do Gemini (CRÍTICO p/ Google DIRETO).
