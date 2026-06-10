@@ -2068,6 +2068,7 @@ Verifique:
 4. Comentário cita base legal coerente com o gabarito?
 5. Há afirmação claramente inventada (não apenas ausente do recorte)? Dependência de fonte externa (CF, doutrina, jurisprudência, outra lei não presente) ⇒ 'high'.
 6. NÍVEL DE DIFICULDADE: a questão é fácil demais, óbvia, de mera memorização ou resolvível por eliminação grosseira? O enunciado é apenas uma CÓPIA literal do texto legal sem exigir interpretação? Se sim ⇒ severidade 'high' (type='facil_demais' ou 'enunciado_copiado'). Só tolere literalidade quando o dispositivo EXIGIR literalidade (definição fechada, prazo numérico, enumeração taxativa).
+7. QUALIDADE DO COMENTÁRIO (cada questão deve ser uma AULA CURTA): o comentário explica POR QUE o gabarito está correto com fundamento no texto legal, analisa INDIVIDUALMENTE todas as 5 alternativas (A–E), traz uma dica de prova e indica a base normativa? Comentário raso, genérico, que apenas repete o gabarito, ou que NÃO analisa todas as alternativas ⇒ severidade 'medium' (type='comentario_raso'); se possível, proponha em proposed_patch.comentario uma versão completa no padrão "Comentário do professor / Análise das alternativas (A–E) / Dica de prova / Base normativa".
 
 
 Responda APENAS JSON:
