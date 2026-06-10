@@ -1682,7 +1682,12 @@ serve(async (req) => {
         disciplinas: Array.isArray(body.disciplinas) ? body.disciplinas : null,
         only_unaudited: mode === "unaudited",
         limit: Math.min(Number(body.limit ?? 200), 100000),
+        // keep_pending: audita e CORRIGE o conteúdo, mas mantém audit_status='pending'
+        // (não publica nem oculta). Usado pelo fluxo manual da lista de pendentes:
+        // o admin revisa e publica/exclui manualmente depois da auditoria.
+        keep_pending: body.keep_pending === true,
       };
+
 
       if (mode === "selected") {
         // Audita apenas as questões selecionadas (ids enviados pelo admin).
