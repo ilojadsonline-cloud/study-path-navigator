@@ -83,17 +83,20 @@ export function AdminUsersTab() {
     setEnrichingCount(0);
   }, []);
 
-  const loadUsers = async () => {
+  const loadUsers = async (pageArg?: number) => {
+    const targetPage = typeof pageArg === "number" ? pageArg : page;
     setLoading(true);
     enrichAbort.current?.abort();
     try {
       const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: { action: "list_users", search: search || undefined },
+        body: { action: "list_users", search: search || undefined, page: targetPage, page_size: PAGE_SIZE },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       const list: EnrichedUser[] = (data?.users || []).map((u: any) => ({ ...u, _sub_loading: !u.is_admin }));
       setUsers(list);
+      setTotal(typeof data?.total === "number" ? data.total : list.length);
+      setPage(targetPage);
       setLoading(false);
       // Enrich subscriptions in background
       enrichSubscriptions(list);
@@ -101,6 +104,12 @@ export function AdminUsersTab() {
       toast({ title: "Erro ao carregar usuários", description: err.message, variant: "destructive" });
       setLoading(false);
     }
+  };
+
+  const goToPage = (p: number) => {
+    const maxPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
+    const clamped = Math.min(Math.max(0, p), maxPage);
+    loadUsers(clamped);
   };
 
   const handleAddUser = async () => {
