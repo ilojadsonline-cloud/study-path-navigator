@@ -454,7 +454,7 @@ const Simulados = () => {
                         <span className="w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5" translate="no">
                           {String.fromCharCode(65 + ai)}
                         </span>
-                        <span className="flex-1">{alt}</span>
+                        <FormattedText text={alt} className="flex-1" />
                         {isRevealed && isCorrect && <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-success" />}
                         {isRevealed && isSelected && !isCorrect && <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />}
                       </button>
@@ -468,7 +468,7 @@ const Simulados = () => {
                         <HelpCircle className="w-4 h-4 text-primary" />
                         <span className="text-xs font-semibold text-primary">Comentário</span>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{q.comentario}</p>
+                      <FormattedText text={q.comentario} className="text-xs text-muted-foreground" />
                     </motion.div>
                   )}
                 </AnimatePresence>

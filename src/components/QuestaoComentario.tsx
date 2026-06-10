@@ -1,4 +1,5 @@
 import { CheckCircle2, AlertTriangle, XCircle, Lightbulb, BookOpen, GraduationCap } from "lucide-react";
+import { isHtmlContent, sanitizeRichHtml } from "@/lib/sanitize-html";
 
 type Section =
   | { type: "professor"; text: string }
@@ -106,6 +107,16 @@ function parseComentario(raw: string): Section[] {
 }
 
 export function QuestaoComentario({ comentario }: { comentario: string }) {
+  // Comentários criados pelo editor de texto rico são HTML — renderiza sanitizado.
+  if (isHtmlContent(comentario)) {
+    return (
+      <div
+        className="rich-html text-sm text-foreground/85 leading-relaxed"
+        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(comentario) }}
+      />
+    );
+  }
+
   const sections = parseComentario(comentario);
 
   if (sections.length === 0) return null;

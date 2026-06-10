@@ -1,32 +1,15 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Loader2, ChevronDown, Save } from "lucide-react";
-import { z } from "zod";
-import { FormattingToolbar } from "./FormattingToolbar";
-import { FormattedText } from "@/components/FormattedText";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { sanitizeRichHtml, htmlToPlainText } from "@/lib/sanitize-html";
 
 const ALT_LETTERS = ["A", "B", "C", "D", "E"] as const;
 const DIFICULDADES = ["Fácil", "Médio", "Difícil"];
-
-const manualSchema = z.object({
-  disciplina: z.string().trim().min(1, "Selecione a disciplina"),
-  assunto: z.string().trim().min(2, "Informe o assunto").max(200),
-  dificuldade: z.string().trim().min(1),
-  banca: z.string().trim().max(200).optional(),
-  prova: z.string().trim().max(200).optional(),
-  ano: z.number().int().min(1900).max(2100).optional(),
-  enunciado: z.string().trim().min(20, "Enunciado muito curto").max(5000),
-  alternativas: z
-    .array(z.string().trim().min(1, "Preencha todas as alternativas").max(2000))
-    .length(5),
-  gabarito: z.number().int().min(0).max(4),
-  comentario: z.string().trim().min(10, "Inclua um comentário/justificativa").max(5000),
-});
 
 interface Props {
   disciplinas: string[];
@@ -37,7 +20,6 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const enunciadoRef = useRef<HTMLTextAreaElement>(null);
 
   const [disciplina, setDisciplina] = useState(disciplinas[0] || "");
   const [assunto, setAssunto] = useState("");
@@ -65,46 +47,46 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
   };
 
   const handleSave = async () => {
-    const parsed = manualSchema.safeParse({
-      disciplina,
-      assunto,
-      dificuldade,
-      banca: banca || undefined,
-      prova: prova || undefined,
-      ano: ano ? Number(ano) : undefined,
-      enunciado,
-      alternativas,
-      gabarito,
-      comentario,
-    });
-
-    if (!parsed.success) {
-      toast({
-        title: "Verifique os campos",
-        description: parsed.error.errors[0]?.message || "Dados inválidos.",
-        variant: "destructive",
-      });
+    // Validação baseada no texto puro (ignora marcação HTML do editor).
+    if (!disciplina.trim()) {
+      toast({ title: "Verifique os campos", description: "Selecione a disciplina.", variant: "destructive" });
       return;
     }
+    if (assunto.trim().length < 2) {
+      toast({ title: "Verifique os campos", description: "Informe o assunto.", variant: "destructive" });
+      return;
+    }
+    if (htmlToPlainText(enunciado).length < 20) {
+      toast({ title: "Verifique os campos", description: "Enunciado muito curto.", variant: "destructive" });
+      return;
+    }
+    if (alternativas.some((a) => htmlToPlainText(a).length < 1)) {
+      toast({ title: "Verifique os campos", description: "Preencha todas as alternativas.", variant: "destructive" });
+      return;
+    }
+    if (htmlToPlainText(comentario).length < 10) {
+      toast({ title: "Verifique os campos", description: "Inclua um comentário/justificativa.", variant: "destructive" });
+      return;
+    }
+    const anoNum = ano ? Number(ano) : null;
 
     setSaving(true);
-    const v = parsed.data;
     const { error } = await supabase.from("questoes").insert({
-      disciplina: v.disciplina,
-      assunto: v.assunto,
-      dificuldade: v.dificuldade,
-      banca: v.banca ?? null,
-      prova: v.prova ?? null,
-      ano: v.ano ?? null,
+      disciplina: disciplina.trim(),
+      assunto: assunto.trim(),
+      dificuldade,
+      banca: banca.trim() || null,
+      prova: prova.trim() || null,
+      ano: anoNum,
       origem: "manual",
-      enunciado: v.enunciado,
-      alt_a: v.alternativas[0],
-      alt_b: v.alternativas[1],
-      alt_c: v.alternativas[2],
-      alt_d: v.alternativas[3],
-      alt_e: v.alternativas[4],
-      gabarito: v.gabarito,
-      comentario: v.comentario,
+      enunciado: sanitizeRichHtml(enunciado),
+      alt_a: sanitizeRichHtml(alternativas[0]),
+      alt_b: sanitizeRichHtml(alternativas[1]),
+      alt_c: sanitizeRichHtml(alternativas[2]),
+      alt_d: sanitizeRichHtml(alternativas[3]),
+      alt_e: sanitizeRichHtml(alternativas[4]),
+      gabarito,
+      comentario: sanitizeRichHtml(comentario),
       audit_status: "approved",
     } as any);
     setSaving(false);
@@ -117,6 +99,7 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
     resetForm();
     onCreated?.();
   };
+
 
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5 overflow-hidden">
@@ -190,21 +173,13 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
 
           <div className="space-y-1.5">
             <Label className="text-xs">Enunciado</Label>
-            <FormattingToolbar textareaRef={enunciadoRef} value={enunciado} onChange={setEnunciado} />
-            <Textarea
-              ref={enunciadoRef}
+            <RichTextEditor
               value={enunciado}
-              onChange={(e) => setEnunciado(e.target.value)}
-              rows={5}
-              className="font-mono text-sm whitespace-pre-wrap"
-              placeholder="Texto da questão... Use **negrito**, *itálico* e quebras de linha para facilitar a leitura."
+              onChange={setEnunciado}
+              allowImage
+              minHeight={120}
+              placeholder="Texto da questão. Use a barra para formatar e inserir imagem se necessário."
             />
-            {enunciado.trim() && (
-              <div className="rounded-lg border border-border/60 bg-secondary/30 p-3">
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Pré-visualização</span>
-                <FormattedText text={enunciado} className="text-sm text-foreground mt-1" />
-              </div>
-            )}
           </div>
 
 
@@ -225,26 +200,28 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
                 >
                   {ALT_LETTERS[i]}
                 </button>
-                <Textarea
-                  value={alt}
-                  onChange={(e) => setAlt(i, e.target.value)}
-                  rows={1}
-                  className="min-h-[40px]"
-                  placeholder={`Alternativa ${ALT_LETTERS[i]}`}
-                />
+                <div className="flex-1">
+                  <RichTextEditor
+                    value={alt}
+                    onChange={(v) => setAlt(i, v)}
+                    minHeight={44}
+                    placeholder={`Alternativa ${ALT_LETTERS[i]}`}
+                  />
+                </div>
               </div>
             ))}
           </div>
 
           <div className="space-y-1">
             <Label className="text-xs">Comentário / Justificativa</Label>
-            <Textarea
+            <RichTextEditor
               value={comentario}
-              onChange={(e) => setComentario(e.target.value)}
-              rows={4}
+              onChange={setComentario}
+              minHeight={120}
               placeholder="Explique o gabarito e por que cada distrator está incorreto..."
             />
           </div>
+
 
           <div className="flex gap-2">
             <Button onClick={handleSave} disabled={saving} className="gradient-primary text-primary-foreground font-bold">

@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { isHtmlContent, sanitizeRichHtml } from "@/lib/sanitize-html";
 
 // Renderiza texto com formatação leve (markdown-lite), preservando espaços e
 // quebras de linha. Ideal para enunciados de Língua Portuguesa que dependem da
@@ -53,6 +54,16 @@ interface Props {
 }
 
 export function FormattedText({ text, className }: Props) {
+  // Conteúdo criado pelo editor de texto rico é HTML — renderiza sanitizado.
+  if (isHtmlContent(text)) {
+    return (
+      <div
+        className={cn("rich-html leading-relaxed", className)}
+        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(text) }}
+      />
+    );
+  }
+
   const tokens = parseInline(text || "");
 
   return (
