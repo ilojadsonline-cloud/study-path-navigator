@@ -168,6 +168,11 @@ function providerEndpoint(p: AiProvider): { url: string; key: string } {
       const base = env("AI_DEEPSEEK_BASE_URL") ?? "https://api.deepseek.com";
       return { url: `${base.replace(/\/$/, "")}/v1/chat/completions`, key: env("DEEPSEEK_API_KEY")! };
     }
+    case "maritaca": {
+      // Maritaca AI é OpenAI-compatível. Base oficial: https://chat.maritaca.ai/api
+      const base = env("AI_MARITACA_BASE_URL") ?? "https://chat.maritaca.ai/api";
+      return { url: `${base.replace(/\/$/, "")}/chat/completions`, key: env("MARITACA_API_KEY")! };
+    }
   }
 }
 
