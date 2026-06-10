@@ -658,6 +658,7 @@ export function AdminAuditoriaTab() {
 
   return (
     <div className="space-y-6">
+      <PendingPublicationCard />
       <DedupQuestoesCard />
       <Card className="glass-card">
 
