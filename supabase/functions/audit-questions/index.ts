@@ -1415,7 +1415,7 @@ async function processQuestion(
       issues: [{ type: "outros", severity: "high", description: msg }],
       ai_summary: "Erro durante auditoria",
     });
-    await setQuestionAuditStatus(supabase, q.id, Q_STATUS.MANUAL);
+    await setQuestionAuditStatus(supabase, q.id, flagStatus);
     return { status: "error", auto_fixed: false, flagged: false, deleted: false };
   }
 
