@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { isHtmlContent, sanitizeRichHtml } from "@/lib/sanitize-html";
 
 // Renderiza texto com formatação leve (markdown-lite), preservando espaços e
 // quebras de linha. Ideal para enunciados de Língua Portuguesa que dependem da
