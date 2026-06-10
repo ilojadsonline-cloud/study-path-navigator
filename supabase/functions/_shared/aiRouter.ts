@@ -66,6 +66,8 @@ export type RunAiOptions = {
   temperatureOverride?: number;
   maxOutputTokensOverride?: number;
   timeoutMs?: number;
+  // valida o conteúdo retornado; se retornar false, força fallback p/ próximo provedor
+  contentValidator?: (content: string) => boolean;
 };
 
 // ----------------------------- Helpers de env --------------------------------
