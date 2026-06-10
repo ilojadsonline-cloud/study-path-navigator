@@ -30,7 +30,7 @@ export type AiStage =
   | "heavy_reported_question_audit"
   | "json_repair";
 
-export type AiProvider = "google" | "openrouter" | "deepseek";
+export type AiProvider = "google" | "openrouter" | "deepseek" | "maritaca";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -109,6 +109,8 @@ const MODELS = {
   deepseekJsonRepair: () => env("AI_DEEPSEEK_JSON_REPAIR_MODEL") ?? "deepseek-chat",
   // Geração premium: DeepSeek Reasoner (R1) mantém a complexidade jurídica "padrão banca elite".
   deepseekGeneration: () => env("AI_DEEPSEEK_GENERATION_MODEL") ?? "deepseek-reasoner",
+  // Maritaca AI (Sabiá-4): gerador primário de questões. Fallback → DeepSeek Reasoner.
+  maritacaGeneration: () => env("AI_MARITACA_GENERATION_MODEL") ?? "sabia-4",
 };
 
 const LIMITS = {
@@ -122,6 +124,7 @@ const LIMITS = {
 const FLAGS = {
   openrouterEnabled: () => envBool("AI_OPENROUTER_ENABLED", !!env("OPENROUTER_API_KEY")),
   deepseekEnabled: () => envBool("AI_DEEPSEEK_ENABLED", !!env("DEEPSEEK_API_KEY")),
+  maritacaEnabled: () => envBool("AI_MARITACA_ENABLED", !!env("MARITACA_API_KEY")),
   deepseekForFinalAudit: () => envBool("AI_ENABLE_DEEPSEEK_FOR_FINAL_AUDIT", false),
 };
 
@@ -140,6 +143,8 @@ function providerAvailable(p: AiProvider): boolean {
       return FLAGS.openrouterEnabled() && !!env("OPENROUTER_API_KEY");
     case "deepseek":
       return FLAGS.deepseekEnabled() && !!env("DEEPSEEK_API_KEY");
+    case "maritaca":
+      return FLAGS.maritacaEnabled() && !!env("MARITACA_API_KEY");
   }
 }
 
@@ -163,6 +168,11 @@ function providerEndpoint(p: AiProvider): { url: string; key: string } {
       const base = env("AI_DEEPSEEK_BASE_URL") ?? "https://api.deepseek.com";
       return { url: `${base.replace(/\/$/, "")}/v1/chat/completions`, key: env("DEEPSEEK_API_KEY")! };
     }
+    case "maritaca": {
+      // Maritaca AI é OpenAI-compatível. Base oficial: https://chat.maritaca.ai/api
+      const base = env("AI_MARITACA_BASE_URL") ?? "https://chat.maritaca.ai/api";
+      return { url: `${base.replace(/\/$/, "")}/chat/completions`, key: env("MARITACA_API_KEY")! };
+    }
   }
 }
 
@@ -179,6 +189,9 @@ function normalizeModelForProvider(p: AiProvider, logicalModel: string): string 
     case "deepseek":
       // DeepSeek ignora nomes Gemini — usa o modelo deepseek configurado.
       return logicalModel.startsWith("deepseek") ? logicalModel : MODELS.deepseekLight();
+    case "maritaca":
+      // Maritaca usa a família "sabia-*"; ignora nomes de outros provedores.
+      return logicalModel.startsWith("sabia") ? logicalModel : MODELS.maritacaGeneration();
   }
 }
 
@@ -239,10 +252,14 @@ export function buildAttemptsForStage(stage: AiStage): AiAttempt[] {
       break;
     }
     case "question_generation": {
-      // Geração premium (alto risco jurídico): DeepSeek Reasoner (R1) mantém a
-      // complexidade exigida. Fallbacks: deepseek-chat (rápido) → Gemini → OpenRouter.
+      // Geração premium (alto risco jurídico). PRIMÁRIO: Maritaca AI (Sabiá-4) —
+      // melhor fidelidade ao português jurídico brasileiro. Quando os créditos da
+      // Maritaca acabarem (HTTP 402/429) ou falhar, cai para DeepSeek Reasoner (R1),
+      // depois deepseek-chat → Gemini → OpenRouter. O motivo do fallback é logado.
+      // Obs.: Maritaca NÃO suporta response_format json_object → jsonResponse:false.
       if (mode !== "openrouter_fallback") {
-        push("deepseek", MODELS.deepseekGeneration(), null);
+        push("maritaca", MODELS.maritacaGeneration(), null, { jsonResponse: false });
+        push("deepseek", MODELS.deepseekGeneration(), "maritaca_failed");
         push("deepseek", MODELS.deepseekLight(), "reasoner_failed");
       }
       push("google", MODELS.generation(), "deepseek_failed");
@@ -390,6 +407,7 @@ async function callProvider(
   const { url, key } = providerEndpoint(attempt.provider);
   const model = normalizeModelForProvider(attempt.provider, attempt.model);
   const isDeepseekReasoner = model === "deepseek-reasoner";
+  const isMaritaca = attempt.provider === "maritaca";
 
   const body: Record<string, unknown> = {
     model,
@@ -400,7 +418,9 @@ async function callProvider(
   // deepseek-reasoner NÃO aceita temperature/response_format.
   if (!isDeepseekReasoner) {
     body.temperature = opts.temperatureOverride ?? attempt.temperature;
-    if (attempt.jsonResponse) body.response_format = { type: "json_object" };
+    // Maritaca (Sabiá) NÃO suporta response_format json_object — só `tools`.
+    // O JSON é garantido pelo prompt + pipeline de extração/reparo a jusante.
+    if (attempt.jsonResponse && !isMaritaca) body.response_format = { type: "json_object" };
   }
 
   // -------------------------------------------------------------------------

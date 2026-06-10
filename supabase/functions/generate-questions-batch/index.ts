@@ -1187,17 +1187,17 @@ serve(async (req: Request) => {
     const blocks = parseArticleBlocks(leiSeca);
     const availableArticles = blocks.map(b => `Art. ${b.artNum}`).join(", ");
 
-    // ── AI Provider: DeepSeek Reasoner (gerador primário). Maritaca/Lovable como fallback. ──
+    // ── AI Provider: Maritaca AI (Sabiá-4) é o gerador PRIMÁRIO. DeepSeek Reasoner é o fallback. ──
     const DEEPSEEK_API_KEY_PRIMARY = Deno.env.get("DEEPSEEK_API_KEY");
     const MARITACA_API_KEY = Deno.env.get("MARITACA_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const useDeepSeekPrimary = !!DEEPSEEK_API_KEY_PRIMARY;
-    const useMaritaca = !useDeepSeekPrimary && !!MARITACA_API_KEY;
-    const useLovable = !useDeepSeekPrimary && !useMaritaca && !!LOVABLE_API_KEY;
+    const useMaritaca = !!MARITACA_API_KEY;
+    const useDeepSeekFallback = !!DEEPSEEK_API_KEY_PRIMARY;
+    const useLovable = !useMaritaca && !useDeepSeekFallback && !!LOVABLE_API_KEY;
     if (!DEEPSEEK_API_KEY_PRIMARY && !MARITACA_API_KEY && !LOVABLE_API_KEY) {
       return new Response(JSON.stringify({
         status: "erro", mensagem: "Nenhuma API key de IA configurada para o gerador.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Configure DEEPSEEK_API_KEY (preferencial — reasoner), MARITACA_API_KEY ou LOVABLE_API_KEY" }] },
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "NO_API_KEY", descricao: "Configure MARITACA_API_KEY (preferencial — Sabiá-4), DEEPSEEK_API_KEY (fallback — reasoner) ou LOVABLE_API_KEY" }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
