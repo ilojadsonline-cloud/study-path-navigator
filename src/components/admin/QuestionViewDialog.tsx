@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Pencil, Trash2 } from "lucide-react";
 import type { Questao } from "./AdminQuestoesTab";
+import { FormattedText } from "@/components/FormattedText";
 
 interface Props {
   question: Questao | null;
@@ -20,20 +21,20 @@ export function QuestionViewDialog({ question, onClose, onEdit, onDelete }: Prop
         <div className="space-y-4">
           <div>
             <p className="text-xs text-muted-foreground mb-1">{question.disciplina} · {question.assunto} · {question.dificuldade}</p>
-            <p className="text-sm">{question.enunciado}</p>
+            <FormattedText text={question.enunciado} className="text-sm" />
           </div>
           <div className="space-y-2">
             {[question.alt_a, question.alt_b, question.alt_c, question.alt_d, question.alt_e].map((alt, i) => (
               <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-sm ${i === question.gabarito ? "bg-primary/10 border border-primary/30" : "bg-muted/30"}`}>
                 <span className="font-bold text-xs mt-0.5" translate="no">{["A", "B", "C", "D", "E"][i]})</span>
-                <span>{alt}</span>
+                <FormattedText text={alt} className="text-sm" />
                 {i === question.gabarito && <CheckCircle className="w-4 h-4 text-primary shrink-0 ml-auto" />}
               </div>
             ))}
           </div>
           <div className="bg-muted/30 rounded-lg p-3">
             <p className="text-xs font-semibold text-muted-foreground mb-1">Comentário:</p>
-            <p className="text-sm">{question.comentario}</p>
+            <FormattedText text={question.comentario} className="text-sm" />
           </div>
         </div>
         <DialogFooter className="flex gap-2">
