@@ -404,15 +404,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Re-check subscription every 30 minutes in background.
   // Never toggles subscriptionLoading so ProtectedRoute does not unmount
   // the current page and lose in-progress work (e.g. questions/simulado state).
+  // background: true => nunca revoga o acesso por falha transitória (evita
+  // redirecionamento súbito que parecia "o site recarregando sozinho").
   useEffect(() => {
     if (!user || isAdmin) return;
 
     const interval = setInterval(() => {
-      void checkSubscription();
+      void checkSubscription({ background: true });
     }, 30 * 60_000);
 
     return () => clearInterval(interval);
   }, [user, isAdmin, checkSubscription]);
+
 
   return (
     <AuthContext.Provider
