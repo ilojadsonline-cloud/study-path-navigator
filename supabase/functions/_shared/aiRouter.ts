@@ -112,8 +112,16 @@ const MODELS = {
   // Geração premium: DeepSeek Reasoner (R1) mantém a complexidade jurídica "padrão banca elite".
   deepseekGeneration: () => env("AI_DEEPSEEK_GENERATION_MODEL") ?? "deepseek-reasoner",
   // Maritaca AI (Sabiá-4): gerador primário de questões. Fallback → DeepSeek Reasoner.
+  // sabia-4 = alta complexidade (jurídico/normativo); sabiazinho-4 = média/baixa (interpretação de texto).
   maritacaGeneration: () => env("AI_MARITACA_GENERATION_MODEL") ?? "sabia-4",
+  maritacaGenerationLight: () => env("AI_MARITACA_GENERATION_LIGHT_MODEL") ?? "sabiazinho-4",
 };
+
+// Tier de serviço da Maritaca: "flex" = -50% (síncrono, sujeito a fila/429). Padrão = sem desconto.
+const MARITACA_SERVICE_TIER = () => env("AI_MARITACA_SERVICE_TIER") ?? "flex";
+// Timeout curto na tentativa Flex: se a fila da Maritaca não liberar capacidade,
+// abortamos e reexecutamos no tier padrão (ainda Maritaca) antes de cair p/ DeepSeek.
+const MARITACA_FLEX_TIMEOUT_MS = () => envNum("AI_MARITACA_FLEX_TIMEOUT_MS", 55000);
 
 const LIMITS = {
   maxOutputTokens: () => envNum("AI_MAX_OUTPUT_TOKENS", 8000),
