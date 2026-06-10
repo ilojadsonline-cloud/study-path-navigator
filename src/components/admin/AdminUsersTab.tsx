@@ -260,9 +260,9 @@ export function AdminUsersTab() {
       <div className="flex gap-3 flex-wrap items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome, CPF ou email..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && loadUsers()} className="pl-9" />
+          <Input placeholder="Buscar por nome, CPF ou email..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && loadUsers(0)} className="pl-9" />
         </div>
-        <Button onClick={loadUsers} variant="secondary" size="sm"><RefreshCw className="w-3.5 h-3.5 mr-1" />Buscar</Button>
+        <Button onClick={() => loadUsers(0)} variant="secondary" size="sm"><RefreshCw className="w-3.5 h-3.5 mr-1" />Buscar</Button>
         <Button onClick={() => setShowAddUser(true)} size="sm" className="gradient-primary text-primary-foreground font-bold">
           <UserPlus className="w-4 h-4 mr-1" /> Cadastrar
         </Button>
