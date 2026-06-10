@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, CheckCircle2, Trash2, Eye, Clock, CheckCheck } from "lucide-react";
+import { FormattedText } from "@/components/FormattedText";
+import { htmlToPlainText } from "@/lib/sanitize-html";
 
 const PAGE_SIZE = 50;
 const LETRAS = ["A", "B", "C", "D", "E"];
@@ -253,7 +255,7 @@ export function PendingPublicationCard() {
                       <Badge variant="outline" className="text-[10px]">{r.disciplina}</Badge>
                       <span className="text-[11px] text-muted-foreground truncate">{r.assunto}</span>
                     </div>
-                    <p className="text-sm line-clamp-2">{r.enunciado}</p>
+                    <p className="text-sm line-clamp-2">{htmlToPlainText(r.enunciado)}</p>
                   </div>
                   <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" title="Visualizar" onClick={() => setView(r)}>
                     <Eye className="w-3.5 h-3.5" />
@@ -288,20 +290,20 @@ export function PendingPublicationCard() {
             <div className="space-y-4">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">{view.disciplina} · {view.assunto} · {view.dificuldade}</p>
-                <p className="text-sm whitespace-pre-wrap">{view.enunciado}</p>
+                <FormattedText text={view.enunciado} className="text-sm" />
               </div>
               <div className="space-y-2">
                 {[view.alt_a, view.alt_b, view.alt_c, view.alt_d, view.alt_e].map((alt, i) => (
                   <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-sm ${i === view.gabarito ? "bg-primary/10 border border-primary/30" : "bg-muted/30"}`}>
                     <span className="font-bold text-xs mt-0.5" translate="no">{LETRAS[i]})</span>
-                    <span>{alt}</span>
+                    <FormattedText text={alt} className="text-sm" />
                     {i === view.gabarito && <CheckCircle2 className="w-4 h-4 text-primary shrink-0 ml-auto" />}
                   </div>
                 ))}
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
                 <p className="text-xs font-semibold text-muted-foreground mb-1">Comentário:</p>
-                <p className="text-sm whitespace-pre-wrap">{view.comentario}</p>
+                <FormattedText text={view.comentario} className="text-sm" />
               </div>
               <div className="flex gap-2 justify-end">
                 <Button
