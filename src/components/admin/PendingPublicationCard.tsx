@@ -95,7 +95,7 @@ export function PendingPublicationCard() {
       toast.error("Erro ao carregar pendentes", { description: e.message });
     }
     setLoading(false);
-  }, []);
+  }, [loadAudits]);
 
   useEffect(() => {
     load(0, "all");
