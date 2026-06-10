@@ -143,6 +143,8 @@ function providerAvailable(p: AiProvider): boolean {
       return FLAGS.openrouterEnabled() && !!env("OPENROUTER_API_KEY");
     case "deepseek":
       return FLAGS.deepseekEnabled() && !!env("DEEPSEEK_API_KEY");
+    case "maritaca":
+      return FLAGS.maritacaEnabled() && !!env("MARITACA_API_KEY");
   }
 }
 
