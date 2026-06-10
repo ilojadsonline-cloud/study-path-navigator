@@ -362,7 +362,7 @@ K. INSUFFICIENT_DISTRACTORS — menos de 2 técnicas de distração diferentes. 
 L. BUG ESTRUTURAL — campo vazio, alternativa duplicada, formatação corrompida, enunciado truncado. type='bug_estrutural'.
 M. SEM_COMENTARIO — comentário vazio/placeholder. type='sem_comentario'.
 N. COMENTARIO_LOOP — texto circular, parafraseia o enunciado sem explicar. type='comentario_loop'.
-O. COMENTARIO_INCOMPLETO — não analisa cada alternativa errada individualmente, falta um dos 4 movimentos (confirmação+citação / pegadinha / análise alt-a-alt / lembrete). type='comentario_incompleto'.
+O. COMENTARIO_INCOMPLETO — comentário raso, genérico, que apenas repete o gabarito, OU que não traz as 4 seções do PADRÃO BANCA DE ELITE: '**Comentário do professor:**' (fundamento do gabarito + pegadinha), '**Análise das alternativas:**' (CADA alternativa A–E comentada individualmente — não vale 'as demais estão erradas'), '**Dica de prova:**' e '**Base normativa:**'. type='comentario_incompleto'.
 P. DESALINHAMENTO — comentário cita correta diferente do gabarito, ou enunciado pergunta X e alternativas respondem Y. type='desalinhamento'.
 Q. TEXTO_LEGAL_DESATUALIZADO — questão baseada em dispositivo revogado/alterado/substituído. type='texto_legal_desatualizado'.
 R. INCOERENTE — premissa contraditória, situação juridicamente inviável. type='incoerente' (irrecuperável).
