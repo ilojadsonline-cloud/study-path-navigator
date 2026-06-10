@@ -231,7 +231,10 @@ export function resolveAiRoute(stage: AiStage): AiRoute {
 }
 
 // Constrói a cadeia ordenada de tentativas por etapa, respeitando o modo e o risco.
-export function buildAttemptsForStage(stage: AiStage): AiAttempt[] {
+export function buildAttemptsForStage(
+  stage: AiStage,
+  params: { complexity?: "high" | "medium" | "low" } = {},
+): AiAttempt[] {
   const mode = getRoutingMode();
   const base = resolveAiRoute(stage);
   const attempts: AiAttempt[] = [];
@@ -253,6 +256,8 @@ export function buildAttemptsForStage(stage: AiStage): AiAttempt[] {
       attemptIndex: attempts.length,
       fallbackReason,
       jsonResponse: over.jsonResponse ?? true,
+      serviceTier: over.serviceTier,
+      timeoutMsOverride: over.timeoutMsOverride,
     });
   };
 
