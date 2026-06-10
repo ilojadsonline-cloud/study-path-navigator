@@ -135,6 +135,7 @@ const FLAGS = {
   openrouterEnabled: () => envBool("AI_OPENROUTER_ENABLED", !!env("OPENROUTER_API_KEY")),
   deepseekEnabled: () => envBool("AI_DEEPSEEK_ENABLED", !!env("DEEPSEEK_API_KEY")),
   maritacaEnabled: () => envBool("AI_MARITACA_ENABLED", !!env("MARITACA_API_KEY")),
+  maritacaFlexEnabled: () => envBool("AI_MARITACA_FLEX_ENABLED", true),
   deepseekForFinalAudit: () => envBool("AI_ENABLE_DEEPSEEK_FOR_FINAL_AUDIT", false),
 };
 
