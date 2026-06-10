@@ -21,11 +21,15 @@ interface EnrichedUser {
 
 interface EditUserData { user_id: string; nome: string; email: string; cpf: string; }
 
+const PAGE_SIZE = 50;
+
 export function AdminUsersTab() {
   const { toast } = useToast();
   const [users, setUsers] = useState<EnrichedUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -44,7 +48,7 @@ export function AdminUsersTab() {
 
   const enrichAbort = useRef<AbortController | null>(null);
 
-  useEffect(() => { loadUsers(); return () => { enrichAbort.current?.abort(); }; }, []);
+  useEffect(() => { loadUsers(0); return () => { enrichAbort.current?.abort(); }; }, []);
 
   const enrichSubscriptions = useCallback(async (usersList: EnrichedUser[]) => {
     enrichAbort.current?.abort();
@@ -79,17 +83,20 @@ export function AdminUsersTab() {
     setEnrichingCount(0);
   }, []);
 
-  const loadUsers = async () => {
+  const loadUsers = async (pageArg?: number) => {
+    const targetPage = typeof pageArg === "number" ? pageArg : page;
     setLoading(true);
     enrichAbort.current?.abort();
     try {
       const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: { action: "list_users", search: search || undefined },
+        body: { action: "list_users", search: search || undefined, page: targetPage, page_size: PAGE_SIZE },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       const list: EnrichedUser[] = (data?.users || []).map((u: any) => ({ ...u, _sub_loading: !u.is_admin }));
       setUsers(list);
+      setTotal(typeof data?.total === "number" ? data.total : list.length);
+      setPage(targetPage);
       setLoading(false);
       // Enrich subscriptions in background
       enrichSubscriptions(list);
@@ -97,6 +104,12 @@ export function AdminUsersTab() {
       toast({ title: "Erro ao carregar usuários", description: err.message, variant: "destructive" });
       setLoading(false);
     }
+  };
+
+  const goToPage = (p: number) => {
+    const maxPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
+    const clamped = Math.min(Math.max(0, p), maxPage);
+    loadUsers(clamped);
   };
 
   const handleAddUser = async () => {
@@ -247,9 +260,9 @@ export function AdminUsersTab() {
       <div className="flex gap-3 flex-wrap items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome, CPF ou email..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && loadUsers()} className="pl-9" />
+          <Input placeholder="Buscar por nome, CPF ou email..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && loadUsers(0)} className="pl-9" />
         </div>
-        <Button onClick={loadUsers} variant="secondary" size="sm"><RefreshCw className="w-3.5 h-3.5 mr-1" />Buscar</Button>
+        <Button onClick={() => loadUsers(0)} variant="secondary" size="sm"><RefreshCw className="w-3.5 h-3.5 mr-1" />Buscar</Button>
         <Button onClick={() => setShowAddUser(true)} size="sm" className="gradient-primary text-primary-foreground font-bold">
           <UserPlus className="w-4 h-4 mr-1" /> Cadastrar
         </Button>
@@ -331,6 +344,26 @@ export function AdminUsersTab() {
               ))}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {/* Paginação */}
+      {!loading && total > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+          <span className="text-xs text-muted-foreground">
+            Mostrando {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} de {total} usuários
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => goToPage(page - 1)}>
+              Anterior
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Página {page + 1} de {Math.max(1, Math.ceil(total / PAGE_SIZE))}
+            </span>
+            <Button variant="outline" size="sm" disabled={(page + 1) * PAGE_SIZE >= total} onClick={() => goToPage(page + 1)}>
+              Próxima
+            </Button>
+          </div>
         </div>
       )}
 

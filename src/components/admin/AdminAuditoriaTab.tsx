@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Undo2, Save, Pencil, Trash2, X, ShieldCheck, Wand2 } from "lucide-react";
 import { DedupQuestoesCard } from "./DedupQuestoesCard";
+import { PendingPublicationCard } from "./PendingPublicationCard";
 
 // Filtros amigáveis em português
 const STATUS_FILTERS: { key: string; label: string }[] = [
@@ -658,6 +659,7 @@ export function AdminAuditoriaTab() {
 
   return (
     <div className="space-y-6">
+      <PendingPublicationCard />
       <DedupQuestoesCard />
       <Card className="glass-card">
 

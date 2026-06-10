@@ -225,7 +225,7 @@ const Questoes = () => {
       let query = supabase
         .from("questoes")
         .select("*")
-        .in("audit_status", ["approved", "auto_corrected", "admin_resolved", "pending"]);
+        .in("audit_status", ["approved", "auto_corrected", "admin_resolved"]);
       if (filterDisciplina !== "Todos") query = query.eq("disciplina", filterDisciplina);
       if (filterDificuldade !== "Todos") query = query.eq("dificuldade", filterDificuldade);
       const { data, error } = await query.order("id").range(from, from + batchSize - 1);

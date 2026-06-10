@@ -141,7 +141,7 @@ const Simulados = () => {
         .from("questoes")
         .select("*")
         .in("id", ids)
-        .in("audit_status", ["approved", "auto_corrected", "admin_resolved", "pending"]);
+        .in("audit_status", ["approved", "auto_corrected", "admin_resolved"]);
       if (cancelled || !data) { setResumeLoading(false); return; }
 
       // Preserve saved order
@@ -250,7 +250,7 @@ const Simulados = () => {
       .from("questoes")
       .select("id,disciplina,assunto,dificuldade,enunciado,alt_a,alt_b,alt_c,alt_d,alt_e,gabarito,comentario")
       .in("disciplina", disciplinasAlvo)
-      .in("audit_status", ["approved", "auto_corrected", "admin_resolved", "pending"]);
+      .in("audit_status", ["approved", "auto_corrected", "admin_resolved"]);
 
     if (error || !data) {
       toast.error("Erro ao carregar questões");
