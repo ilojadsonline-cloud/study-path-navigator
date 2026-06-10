@@ -1704,6 +1704,8 @@ Se NÃO for possível gerar nenhuma questão válida com base EXCLUSIVA no TEXTO
         maxOutputTokensOverride: maxTokens,
         temperatureOverride: 0.25,
         timeoutMs: PRIMARY_TIMEOUT_MS,
+        // Disciplinas jurídicas (tipo "lei"): alta complexidade → sabia-4.
+        complexity: "high",
         metadata: { batchSize, disciplina: disc.disciplina },
         contentValidator: (c: string) => {
           try { return parseQuestionsFromModelContent(c).questions.length > 0; }
