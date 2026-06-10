@@ -48,7 +48,7 @@ export function AdminUsersTab() {
 
   const enrichAbort = useRef<AbortController | null>(null);
 
-  useEffect(() => { loadUsers(); return () => { enrichAbort.current?.abort(); }; }, []);
+  useEffect(() => { loadUsers(0); return () => { enrichAbort.current?.abort(); }; }, []);
 
   const enrichSubscriptions = useCallback(async (usersList: EnrichedUser[]) => {
     enrichAbort.current?.abort();
