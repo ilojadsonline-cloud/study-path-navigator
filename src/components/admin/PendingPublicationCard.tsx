@@ -427,9 +427,20 @@ export function PendingPublicationCard() {
                     </div>
                     <p className="text-sm line-clamp-2">{htmlToPlainText(r.enunciado)}</p>
                   </div>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" title="Visualizar" onClick={() => setView(r)}>
-                    <Eye className="w-3.5 h-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <Button size="icon" variant="ghost" className="h-7 w-7" title="Visualizar" onClick={() => setView(r)}>
+                      <Eye className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar" onClick={() => setEditQuestion(r as unknown as Questao)}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-500 hover:text-emerald-500" title="Publicar" disabled={rowBusy === r.id} onClick={() => publishOne(r.id)}>
+                      {rowBusy === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" title="Excluir" disabled={rowBusy === r.id} onClick={() => deleteOne(r.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
