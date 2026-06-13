@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { UserMenu } from "@/components/UserMenu";
@@ -11,6 +11,7 @@ interface Notification {
   title: string;
   message: string;
   created_at: string;
+  user_id?: string | null;
 }
 
 interface AppLayoutProps {
@@ -24,11 +25,18 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [readIds, setReadIds] = useState<Set<number>>(new Set());
+  const [floatingAlert, setFloatingAlert] = useState<Notification | null>(null);
+  const floatingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
     const [{ data: notifs }, { data: reads }] = await Promise.all([
-      supabase.from("notifications" as any).select("*").order("created_at", { ascending: false }).limit(20),
+      supabase
+        .from("notifications" as any)
+        .select("*")
+        .or(`user_id.is.null,user_id.eq.${user.id}`)
+        .order("created_at", { ascending: false })
+        .limit(20),
       supabase.from("notification_reads" as any).select("notification_id").eq("user_id", user.id),
     ]);
     setNotifications((notifs as any[]) || []);
@@ -38,6 +46,31 @@ export function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
+
+  // Realtime: novo alerta para este usuário (direcionado ou global)
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("notifications-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications" },
+        (payload) => {
+          const n = payload.new as Notification;
+          if (n.user_id && n.user_id !== user.id) return; // não é para mim
+          setNotifications((prev) => (prev.some((p) => p.id === n.id) ? prev : [n, ...prev]));
+          setFloatingAlert(n);
+          if (floatingTimer.current) clearTimeout(floatingTimer.current);
+          floatingTimer.current = setTimeout(() => setFloatingAlert(null), 9000);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (floatingTimer.current) clearTimeout(floatingTimer.current);
+    };
+  }, [user]);
 
   const unreadCount = notifications.filter(n => !readIds.has(n.id)).length;
 
@@ -58,6 +91,12 @@ export function AppLayout({ children }: AppLayoutProps) {
       unread.forEach(n => next.add(n.id));
       return next;
     });
+  };
+
+  const openFromFloating = () => {
+    setFloatingAlert(null);
+    setShowNotifications(true);
+    fetchNotifications();
   };
 
   return (
@@ -140,6 +179,34 @@ export function AppLayout({ children }: AppLayoutProps) {
             {children}
           </main>
         </div>
+
+        {/* Alerta flutuante à esquerda — novo aviso recebido */}
+        {floatingAlert && (
+          <div className="fixed left-4 bottom-4 z-[60] w-[calc(100vw-2rem)] max-w-xs animate-in slide-in-from-left-4 fade-in duration-300">
+            <div
+              role="button"
+              onClick={openFromFloating}
+              className="glass-card cursor-pointer rounded-xl border border-primary/40 shadow-xl p-3 pr-8 relative"
+            >
+              <button
+                onClick={(e) => { e.stopPropagation(); setFloatingAlert(null); }}
+                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                aria-label="Fechar"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex items-start gap-2">
+                <span className="mt-0.5 shrink-0 w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
+                  <Bell className="w-3.5 h-3.5 text-primary" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{floatingAlert.title}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{floatingAlert.message}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </SidebarProvider>
   );

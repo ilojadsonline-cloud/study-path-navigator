@@ -125,8 +125,18 @@ export function AdminReportsTab() {
   const sendResponse = async (reportId: number) => {
     const text = responseTexts[reportId]?.trim();
     if (!text) return;
+    const report = reports.find((r) => r.id === reportId);
     setSendingResponse(reportId);
     await supabase.from("question_reports" as any).update({ admin_notes: text, status: "resolvido", resolved_at: new Date().toISOString() } as any).eq("id", reportId);
+    // Notifica o usuário que reportou (alerta no sino + alerta flutuante via realtime)
+    if (report?.user_id) {
+      await supabase.from("notifications" as any).insert({
+        title: `Resposta ao seu reporte (Questão #${report.questao_id})`,
+        message: text,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+        user_id: report.user_id,
+      } as any);
+    }
     setSendingResponse(null);
     loadReports();
     toast({ title: "Resposta enviada ao usuário" });

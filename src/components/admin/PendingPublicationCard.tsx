@@ -11,9 +11,11 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, CheckCircle2, Trash2, Eye, Clock, CheckCheck, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, Trash2, Eye, Clock, CheckCheck, ShieldCheck, AlertTriangle, Pencil } from "lucide-react";
 import { FormattedText } from "@/components/FormattedText";
 import { htmlToPlainText } from "@/lib/sanitize-html";
+import { QuestionEditDialog } from "./QuestionEditDialog";
+import type { Questao } from "./AdminQuestoesTab";
 
 const PAGE_SIZE = 50;
 const LETRAS = ["A", "B", "C", "D", "E"];
@@ -66,6 +68,9 @@ export function PendingPublicationCard() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<PendingQuestao | null>(null);
+  const [editQuestion, setEditQuestion] = useState<Questao | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [rowBusy, setRowBusy] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [auditing, setAuditing] = useState(false);
   const [auditProgress, setAuditProgress] = useState<{ done: number; total: number } | null>(null);
@@ -270,6 +275,65 @@ export function PendingPublicationCard() {
     setAuditProgress(null);
   };
 
+  const publishOne = async (id: number) => {
+    setRowBusy(id);
+    try {
+      const { error } = await supabase
+        .from("questoes")
+        .update({ audit_status: "approved", audit_status_updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success(`Questão #${id} publicada`);
+      setView(null);
+      load(page, filterDisc);
+    } catch (e: any) {
+      toast.error("Erro ao publicar", { description: e.message });
+    }
+    setRowBusy(null);
+  };
+
+  const deleteOne = async (id: number) => {
+    setRowBusy(id);
+    try {
+      const { error } = await supabase.rpc("excluir_questoes_por_ids", { p_ids: [id] });
+      if (error) throw error;
+      toast.success(`Questão #${id} excluída`);
+      setView(null);
+      load(page, filterDisc);
+    } catch (e: any) {
+      toast.error("Erro ao excluir", { description: e.message });
+    }
+    setRowBusy(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editQuestion) return;
+    setSavingEdit(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: {
+          action: "update_question",
+          question_id: editQuestion.id,
+          updates: {
+            enunciado: editQuestion.enunciado,
+            alt_a: editQuestion.alt_a, alt_b: editQuestion.alt_b, alt_c: editQuestion.alt_c,
+            alt_d: editQuestion.alt_d, alt_e: editQuestion.alt_e,
+            gabarito: editQuestion.gabarito, comentario: editQuestion.comentario,
+            disciplina: editQuestion.disciplina, assunto: editQuestion.assunto, dificuldade: editQuestion.dificuldade,
+          },
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success(`Questão #${editQuestion.id} atualizada`);
+      setEditQuestion(null);
+      load(page, filterDisc);
+    } catch (e: any) {
+      toast.error("Erro ao salvar", { description: e.message });
+    }
+    setSavingEdit(false);
+  };
+
   return (
     <Card className="glass-card border-warning/30">
       <CardHeader>
@@ -363,9 +427,20 @@ export function PendingPublicationCard() {
                     </div>
                     <p className="text-sm line-clamp-2">{htmlToPlainText(r.enunciado)}</p>
                   </div>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" title="Visualizar" onClick={() => setView(r)}>
-                    <Eye className="w-3.5 h-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <Button size="icon" variant="ghost" className="h-7 w-7" title="Visualizar" onClick={() => setView(r)}>
+                      <Eye className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar" onClick={() => setEditQuestion(r as unknown as Questao)}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-500 hover:text-emerald-500" title="Publicar" disabled={rowBusy === r.id} onClick={() => publishOne(r.id)}>
+                      {rowBusy === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" title="Excluir" disabled={rowBusy === r.id} onClick={() => deleteOne(r.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -414,20 +489,25 @@ export function PendingPublicationCard() {
               <div className="flex gap-2 justify-end">
                 <Button
                   size="sm"
+                  variant="outline"
+                  onClick={() => { setEditQuestion(view as unknown as Questao); setView(null); }}
+                >
+                  <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive hover:text-destructive border-destructive/40"
+                  disabled={rowBusy === view.id}
+                  onClick={() => deleteOne(view.id)}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Excluir
+                </Button>
+                <Button
+                  size="sm"
                   className="gradient-primary text-primary-foreground font-bold"
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    const { error } = await supabase
-                      .from("questoes")
-                      .update({ audit_status: "approved", audit_status_updated_at: new Date().toISOString() })
-                      .eq("id", view.id);
-                    setBusy(false);
-                    if (error) { toast.error("Erro ao publicar", { description: error.message }); return; }
-                    toast.success("Questão publicada");
-                    setView(null);
-                    load(page, filterDisc);
-                  }}
+                  disabled={rowBusy === view.id}
+                  onClick={() => publishOne(view.id)}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Publicar
                 </Button>
@@ -454,6 +534,15 @@ export function PendingPublicationCard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Editar questão */}
+      <QuestionEditDialog
+        question={editQuestion}
+        onClose={() => setEditQuestion(null)}
+        onSave={saveEdit}
+        saving={savingEdit}
+        onChange={setEditQuestion}
+      />
     </Card>
   );
 }
