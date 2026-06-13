@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { UserMenu } from "@/components/UserMenu";
@@ -11,6 +11,7 @@ interface Notification {
   title: string;
   message: string;
   created_at: string;
+  user_id?: string | null;
 }
 
 interface AppLayoutProps {
@@ -24,11 +25,18 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [readIds, setReadIds] = useState<Set<number>>(new Set());
+  const [floatingAlert, setFloatingAlert] = useState<Notification | null>(null);
+  const floatingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
     const [{ data: notifs }, { data: reads }] = await Promise.all([
-      supabase.from("notifications" as any).select("*").order("created_at", { ascending: false }).limit(20),
+      supabase
+        .from("notifications" as any)
+        .select("*")
+        .or(`user_id.is.null,user_id.eq.${user.id}`)
+        .order("created_at", { ascending: false })
+        .limit(20),
       supabase.from("notification_reads" as any).select("notification_id").eq("user_id", user.id),
     ]);
     setNotifications((notifs as any[]) || []);
@@ -38,6 +46,31 @@ export function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
+
+  // Realtime: novo alerta para este usuário (direcionado ou global)
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("notifications-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications" },
+        (payload) => {
+          const n = payload.new as Notification;
+          if (n.user_id && n.user_id !== user.id) return; // não é para mim
+          setNotifications((prev) => (prev.some((p) => p.id === n.id) ? prev : [n, ...prev]));
+          setFloatingAlert(n);
+          if (floatingTimer.current) clearTimeout(floatingTimer.current);
+          floatingTimer.current = setTimeout(() => setFloatingAlert(null), 9000);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (floatingTimer.current) clearTimeout(floatingTimer.current);
+    };
+  }, [user]);
 
   const unreadCount = notifications.filter(n => !readIds.has(n.id)).length;
 
@@ -58,6 +91,12 @@ export function AppLayout({ children }: AppLayoutProps) {
       unread.forEach(n => next.add(n.id));
       return next;
     });
+  };
+
+  const openFromFloating = () => {
+    setFloatingAlert(null);
+    setShowNotifications(true);
+    fetchNotifications();
   };
 
   return (
