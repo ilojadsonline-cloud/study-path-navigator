@@ -489,20 +489,25 @@ export function PendingPublicationCard() {
               <div className="flex gap-2 justify-end">
                 <Button
                   size="sm"
+                  variant="outline"
+                  onClick={() => { setEditQuestion(view as unknown as Questao); setView(null); }}
+                >
+                  <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive hover:text-destructive border-destructive/40"
+                  disabled={rowBusy === view.id}
+                  onClick={() => deleteOne(view.id)}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Excluir
+                </Button>
+                <Button
+                  size="sm"
                   className="gradient-primary text-primary-foreground font-bold"
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    const { error } = await supabase
-                      .from("questoes")
-                      .update({ audit_status: "approved", audit_status_updated_at: new Date().toISOString() })
-                      .eq("id", view.id);
-                    setBusy(false);
-                    if (error) { toast.error("Erro ao publicar", { description: error.message }); return; }
-                    toast.success("Questão publicada");
-                    setView(null);
-                    load(page, filterDisc);
-                  }}
+                  disabled={rowBusy === view.id}
+                  onClick={() => publishOne(view.id)}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Publicar
                 </Button>
