@@ -275,6 +275,65 @@ export function PendingPublicationCard() {
     setAuditProgress(null);
   };
 
+  const publishOne = async (id: number) => {
+    setRowBusy(id);
+    try {
+      const { error } = await supabase
+        .from("questoes")
+        .update({ audit_status: "approved", audit_status_updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success(`Questão #${id} publicada`);
+      setView(null);
+      load(page, filterDisc);
+    } catch (e: any) {
+      toast.error("Erro ao publicar", { description: e.message });
+    }
+    setRowBusy(null);
+  };
+
+  const deleteOne = async (id: number) => {
+    setRowBusy(id);
+    try {
+      const { error } = await supabase.rpc("excluir_questoes_por_ids", { p_ids: [id] });
+      if (error) throw error;
+      toast.success(`Questão #${id} excluída`);
+      setView(null);
+      load(page, filterDisc);
+    } catch (e: any) {
+      toast.error("Erro ao excluir", { description: e.message });
+    }
+    setRowBusy(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editQuestion) return;
+    setSavingEdit(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: {
+          action: "update_question",
+          question_id: editQuestion.id,
+          updates: {
+            enunciado: editQuestion.enunciado,
+            alt_a: editQuestion.alt_a, alt_b: editQuestion.alt_b, alt_c: editQuestion.alt_c,
+            alt_d: editQuestion.alt_d, alt_e: editQuestion.alt_e,
+            gabarito: editQuestion.gabarito, comentario: editQuestion.comentario,
+            disciplina: editQuestion.disciplina, assunto: editQuestion.assunto, dificuldade: editQuestion.dificuldade,
+          },
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success(`Questão #${editQuestion.id} atualizada`);
+      setEditQuestion(null);
+      load(page, filterDisc);
+    } catch (e: any) {
+      toast.error("Erro ao salvar", { description: e.message });
+    }
+    setSavingEdit(false);
+  };
+
   return (
     <Card className="glass-card border-warning/30">
       <CardHeader>
