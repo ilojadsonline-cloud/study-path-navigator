@@ -68,6 +68,9 @@ export function PendingPublicationCard() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<PendingQuestao | null>(null);
+  const [editQuestion, setEditQuestion] = useState<Questao | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [rowBusy, setRowBusy] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [auditing, setAuditing] = useState(false);
   const [auditProgress, setAuditProgress] = useState<{ done: number; total: number } | null>(null);
