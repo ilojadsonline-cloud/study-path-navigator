@@ -524,6 +524,27 @@ const Simulados = () => {
               </button>
             </motion.div>
           )}
+
+          <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Reportar Erro na Questão</DialogTitle>
+              </DialogHeader>
+              <Textarea
+                placeholder="Descreva o erro encontrado (alternativa incorreta, lei errada, gabarito errado, etc.)"
+                value={reportMotivo}
+                onChange={(e) => setReportMotivo(e.target.value)}
+                rows={4}
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setReportOpen(false)}>Cancelar</Button>
+                <Button onClick={submitReport} disabled={reportSending || !reportMotivo.trim()} className="gradient-primary text-primary-foreground font-bold">
+                  {reportSending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Flag className="w-4 h-4 mr-1" />}
+                  Enviar Relatório
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </AppLayout>
     );
