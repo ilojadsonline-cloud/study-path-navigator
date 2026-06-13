@@ -534,6 +534,15 @@ export function PendingPublicationCard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Editar questão */}
+      <QuestionEditDialog
+        question={editQuestion}
+        onClose={() => setEditQuestion(null)}
+        onSave={saveEdit}
+        saving={savingEdit}
+        onChange={setEditQuestion}
+      />
     </Card>
   );
 }
