@@ -462,12 +462,20 @@ const Simulados = () => {
           <div className="space-y-6">
             {stableSimulado.map((q, qi) => (
               <motion.div key={q.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(qi * 0.03, 0.3) }} className="glass-card rounded-xl p-3 sm:p-5 space-y-3 sm:space-y-4">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-primary">Q{qi + 1}</span>
                     <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">{q.disciplina}</Badge>
                     <Badge variant="outline" className={`text-[10px] ${getDifficultyColor(q.dificuldade)}`}>{q.dificuldade}</Badge>
                   </div>
+                  <button
+                    onClick={() => handleReport(q.id)}
+                    title="Reportar erro nesta questão"
+                    className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-destructive/10 border border-destructive/25 text-destructive text-xs font-medium hover:bg-destructive/20 hover:border-destructive/40 transition-all"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Reportar</span>
+                  </button>
                 </div>
                 <FormattedText text={q.enunciado} className="text-sm text-foreground" />
                 <div className="space-y-2">
