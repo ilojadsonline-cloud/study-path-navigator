@@ -2,9 +2,12 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
-import { Shuffle, Settings, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowLeft, Loader2, RotateCcw } from "lucide-react";
+import { Shuffle, Settings, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowLeft, Loader2, RotateCcw, Flag } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -120,6 +123,35 @@ const Simulados = () => {
   const [selectedAnswer, setSelectedAnswer] = useState<Record<number, number>>({});
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [finished, setFinished] = useState(false);
+
+  // ─── Report question error ───
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportQuestaoId, setReportQuestaoId] = useState<number | null>(null);
+  const [reportMotivo, setReportMotivo] = useState("");
+  const [reportSending, setReportSending] = useState(false);
+
+  const handleReport = (questaoId: number) => {
+    setReportQuestaoId(questaoId);
+    setReportMotivo("");
+    setReportOpen(true);
+  };
+
+  const submitReport = async () => {
+    if (!user || !reportQuestaoId) return;
+    setReportSending(true);
+    const { error } = await supabase.from("question_reports" as any).insert({
+      questao_id: reportQuestaoId,
+      user_id: user.id,
+      motivo: reportMotivo,
+    } as any);
+    setReportSending(false);
+    if (error) {
+      toast.error("Erro ao enviar relatório");
+    } else {
+      toast.success("Erro reportado com sucesso! Obrigado.");
+      setReportOpen(false);
+    }
+  };
 
   // ─── Memoize question list to prevent re-renders from changing order ───
   const stableSimulado = useMemo(() => simulado, [simulado]);
@@ -430,12 +462,20 @@ const Simulados = () => {
           <div className="space-y-6">
             {stableSimulado.map((q, qi) => (
               <motion.div key={q.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(qi * 0.03, 0.3) }} className="glass-card rounded-xl p-3 sm:p-5 space-y-3 sm:space-y-4">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-primary">Q{qi + 1}</span>
                     <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">{q.disciplina}</Badge>
                     <Badge variant="outline" className={`text-[10px] ${getDifficultyColor(q.dificuldade)}`}>{q.dificuldade}</Badge>
                   </div>
+                  <button
+                    onClick={() => handleReport(q.id)}
+                    title="Reportar erro nesta questão"
+                    className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-destructive/10 border border-destructive/25 text-destructive text-xs font-medium hover:bg-destructive/20 hover:border-destructive/40 transition-all"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Reportar</span>
+                  </button>
                 </div>
                 <FormattedText text={q.enunciado} className="text-sm text-foreground" />
                 <div className="space-y-2">
@@ -484,6 +524,27 @@ const Simulados = () => {
               </button>
             </motion.div>
           )}
+
+          <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Reportar Erro na Questão</DialogTitle>
+              </DialogHeader>
+              <Textarea
+                placeholder="Descreva o erro encontrado (alternativa incorreta, lei errada, gabarito errado, etc.)"
+                value={reportMotivo}
+                onChange={(e) => setReportMotivo(e.target.value)}
+                rows={4}
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setReportOpen(false)}>Cancelar</Button>
+                <Button onClick={submitReport} disabled={reportSending || !reportMotivo.trim()} className="gradient-primary text-primary-foreground font-bold">
+                  {reportSending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Flag className="w-4 h-4 mr-1" />}
+                  Enviar Relatório
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </AppLayout>
     );
