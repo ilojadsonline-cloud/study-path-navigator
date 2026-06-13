@@ -124,6 +124,35 @@ const Simulados = () => {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [finished, setFinished] = useState(false);
 
+  // ─── Report question error ───
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportQuestaoId, setReportQuestaoId] = useState<number | null>(null);
+  const [reportMotivo, setReportMotivo] = useState("");
+  const [reportSending, setReportSending] = useState(false);
+
+  const handleReport = (questaoId: number) => {
+    setReportQuestaoId(questaoId);
+    setReportMotivo("");
+    setReportOpen(true);
+  };
+
+  const submitReport = async () => {
+    if (!user || !reportQuestaoId) return;
+    setReportSending(true);
+    const { error } = await supabase.from("question_reports" as any).insert({
+      questao_id: reportQuestaoId,
+      user_id: user.id,
+      motivo: reportMotivo,
+    } as any);
+    setReportSending(false);
+    if (error) {
+      toast.error("Erro ao enviar relatório");
+    } else {
+      toast.success("Erro reportado com sucesso! Obrigado.");
+      setReportOpen(false);
+    }
+  };
+
   // ─── Memoize question list to prevent re-renders from changing order ───
   const stableSimulado = useMemo(() => simulado, [simulado]);
 
