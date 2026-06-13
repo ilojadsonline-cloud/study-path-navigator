@@ -179,6 +179,34 @@ export function AppLayout({ children }: AppLayoutProps) {
             {children}
           </main>
         </div>
+
+        {/* Alerta flutuante à esquerda — novo aviso recebido */}
+        {floatingAlert && (
+          <div className="fixed left-4 bottom-4 z-[60] w-[calc(100vw-2rem)] max-w-xs animate-in slide-in-from-left-4 fade-in duration-300">
+            <div
+              role="button"
+              onClick={openFromFloating}
+              className="glass-card cursor-pointer rounded-xl border border-primary/40 shadow-xl p-3 pr-8 relative"
+            >
+              <button
+                onClick={(e) => { e.stopPropagation(); setFloatingAlert(null); }}
+                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                aria-label="Fechar"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex items-start gap-2">
+                <span className="mt-0.5 shrink-0 w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
+                  <Bell className="w-3.5 h-3.5 text-primary" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{floatingAlert.title}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{floatingAlert.message}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </SidebarProvider>
   );
