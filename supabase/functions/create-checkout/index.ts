@@ -94,7 +94,7 @@ serve(async (req) => {
       if (rpcErr) console.error("[create-checkout] has_used_trial error:", rpcErr);
       if (hasUsed === true) {
         return new Response(JSON.stringify({
-          error: "Este CPF ou email já utilizou o teste grátis. Para continuar, assine o plano trimestral pagando R$ 89,90.",
+          error: "Este CPF ou email já utilizou o teste grátis. Para continuar, assine o plano trimestral pagando R$ 99,99.",
           trial_used: true,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -121,7 +121,7 @@ serve(async (req) => {
         }, { onConflict: "email" });
 
         return new Response(JSON.stringify({
-          error: "Este email/CPF já possui cadastro. Para voltar a acessar, assine o plano trimestral pagando R$ 89,90.",
+          error: "Este email/CPF já possui cadastro. Para voltar a acessar, assine o plano trimestral pagando R$ 99,99.",
           trial_used: true,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -145,7 +145,7 @@ serve(async (req) => {
           }, { onConflict: "email" });
 
           return new Response(JSON.stringify({
-            error: "Este email já utilizou o teste grátis no Stripe. Para continuar, assine o plano trimestral pagando R$ 89,90.",
+            error: "Este email já utilizou o teste grátis no Stripe. Para continuar, assine o plano trimestral pagando R$ 99,99.",
             trial_used: true,
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
