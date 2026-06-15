@@ -75,6 +75,7 @@ const AdminPanel = () => {
               <TabsTrigger value="mapas" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Brain className="w-3.5 h-3.5" />Mapas Mentais</TabsTrigger>
               <TabsTrigger value="bizuaula" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Youtube className="w-3.5 h-3.5" />BizuAula</TabsTrigger>
               <TabsTrigger value="edital" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><FileText className="w-3.5 h-3.5" />Edital</TabsTrigger>
+              <TabsTrigger value="pop" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Lock className="w-3.5 h-3.5" />POP (Sigiloso)</TabsTrigger>
             </TabsList>
           </div>
 
@@ -93,6 +94,7 @@ const AdminPanel = () => {
           <TabsContent value="mapas" className="mt-6" forceMount={visited.has("mapas") ? true : undefined} hidden={activeTab !== "mapas"}>{renderTab("mapas", AdminMapasMentaisTab)}</TabsContent>
           <TabsContent value="bizuaula" className="mt-6" forceMount={visited.has("bizuaula") ? true : undefined} hidden={activeTab !== "bizuaula"}>{renderTab("bizuaula", AdminBizuAulaTab)}</TabsContent>
           <TabsContent value="edital" className="mt-6" forceMount={visited.has("edital") ? true : undefined} hidden={activeTab !== "edital"}>{renderTab("edital", AdminEditalTab)}</TabsContent>
+          <TabsContent value="pop" className="mt-6" forceMount={visited.has("pop") ? true : undefined} hidden={activeTab !== "pop"}>{renderTab("pop", AdminPopAccessTab)}</TabsContent>
         </Tabs>
       </div>
     </AppLayout>
