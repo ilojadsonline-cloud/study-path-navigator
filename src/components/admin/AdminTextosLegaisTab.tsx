@@ -20,6 +20,7 @@ const DISCIPLINES = [
   
   { disciplina: "Língua Portuguesa", lei_nome: "Língua Portuguesa — Interpretação e Compreensão de Texto" },
   { disciplina: "Redação Oficial", lei_nome: "Manual de Redação Oficial da PMTO (itens 6.1 a 6.8)" },
+  { disciplina: "POP", lei_nome: "Procedimento Operacional Padrão (POP) — Conteúdo Sigiloso (Restrito)" },
 ];
 
 export default function AdminTextosLegaisContent() {

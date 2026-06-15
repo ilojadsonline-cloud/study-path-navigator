@@ -397,6 +397,57 @@ export type Database = {
         }
         Relationships: []
       }
+      pop_access: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pop_allowlist: {
+        Row: {
+          cpf: string | null
+          created_at: string
+          id: string
+          matricula: string | null
+          nome_completo: string | null
+          rg: string | null
+          updated_at: string
+        }
+        Insert: {
+          cpf?: string | null
+          created_at?: string
+          id?: string
+          matricula?: string | null
+          nome_completo?: string | null
+          rg?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cpf?: string | null
+          created_at?: string
+          id?: string
+          matricula?: string | null
+          nome_completo?: string | null
+          rg?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           cpf: string
@@ -958,6 +1009,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      has_pop_access: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
