@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Shield, Lock, Eye, EyeOff, User, CreditCard, ArrowRight, Loader2, AlertTriangle, Mail, Search } from "lucide-react";
+import { Shield, Lock, Eye, EyeOff, User, CreditCard, ArrowRight, Loader2, AlertTriangle, Mail, Search, Phone } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
@@ -12,6 +12,7 @@ const Cadastro = () => {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termos, setTermos] = useState(false);
@@ -132,6 +133,18 @@ const Cadastro = () => {
     setCpf(formatCPF(value));
   };
 
+  const formatTelefone = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 2) return digits.length ? `(${digits}` : "";
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  };
+
+  const handleTelefoneChange = (value: string) => {
+    setTelefone(formatTelefone(value));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -140,7 +153,7 @@ const Cadastro = () => {
       return;
     }
 
-    if (!nome || !email || !cpf || !password || !confirmPassword) {
+    if (!nome || !email || !cpf || !telefone || !password || !confirmPassword) {
       toast({ title: "Preencha todos os campos", variant: "destructive" });
       return;
     }
@@ -151,6 +164,11 @@ const Cadastro = () => {
     }
     if (!validateCPF(cpf)) {
       toast({ title: "CPF inválido", description: "Verifique o CPF informado.", variant: "destructive" });
+      return;
+    }
+    const telefoneDigits = telefone.replace(/\D/g, "");
+    if (telefoneDigits.length < 10) {
+      toast({ title: "Telefone inválido", description: "Informe um WhatsApp válido com DDD.", variant: "destructive" });
       return;
     }
     if (password.length < 6) {
@@ -199,6 +217,7 @@ const Cadastro = () => {
         nome,
         cpf: cleanedCpf,
         email: profileEmail,
+        telefone: telefone.replace(/\D/g, ""),
       });
 
       if (!profileError) {
@@ -343,6 +362,12 @@ const Cadastro = () => {
               <input type="text" value={cpf} onChange={e => handleCpfChange(e.target.value)} placeholder="CPF" maxLength={14}
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all" />
             </div>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input type="tel" inputMode="numeric" value={telefone} onChange={e => handleTelefoneChange(e.target.value)} placeholder="WhatsApp (com DDD)" maxLength={16}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all" />
+            </div>
+
 
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
