@@ -77,6 +77,8 @@ const App = () => (
             <Route path="/contato" element={<ProtectedRoute><Contato /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/meus-reportes" element={<ProtectedRoute><MeusReportes /></ProtectedRoute>} />
+            {/* Página sigilosa do POP — NÃO listada na navegação; acesso apenas por link direto e usuários autorizados */}
+            <Route path="/pop-questoes" element={<ProtectedRoute><PopQuestoes /></ProtectedRoute>} />
             <Route path="/mapas-mentais" element={<ProtectedRoute><MapasMentais /></ProtectedRoute>} />
             <Route path="/bizuaula" element={<ProtectedRoute><BizuAula /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
