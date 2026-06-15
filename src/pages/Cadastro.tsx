@@ -153,7 +153,7 @@ const Cadastro = () => {
       return;
     }
 
-    if (!nome || !email || !cpf || !password || !confirmPassword) {
+    if (!nome || !email || !cpf || !telefone || !password || !confirmPassword) {
       toast({ title: "Preencha todos os campos", variant: "destructive" });
       return;
     }
@@ -164,6 +164,11 @@ const Cadastro = () => {
     }
     if (!validateCPF(cpf)) {
       toast({ title: "CPF inválido", description: "Verifique o CPF informado.", variant: "destructive" });
+      return;
+    }
+    const telefoneDigits = telefone.replace(/\D/g, "");
+    if (telefoneDigits.length < 10) {
+      toast({ title: "Telefone inválido", description: "Informe um WhatsApp válido com DDD.", variant: "destructive" });
       return;
     }
     if (password.length < 6) {
