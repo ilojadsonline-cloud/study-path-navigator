@@ -8,7 +8,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const PLAN_AMOUNT = 89.9;
+const PLAN_AMOUNT = 99.99;
 const log = (s: string, d?: any) => console.log(`[MP-PIX-BOLETO] ${s}${d ? " - " + JSON.stringify(d) : ""}`);
 
 serve(async (req) => {

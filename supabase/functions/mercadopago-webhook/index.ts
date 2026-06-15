@@ -16,7 +16,7 @@ const corsHeaders = {
 };
 
 const ACCESS_WINDOW_DAYS = 90;
-const PLAN_AMOUNT = 89.9;
+const PLAN_AMOUNT = 99.99;
 
 const log = (step: string, details?: any) => {
   const d = details ? ` - ${JSON.stringify(details)}` : "";
