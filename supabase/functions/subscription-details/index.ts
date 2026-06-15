@@ -45,7 +45,7 @@ serve(async (req) => {
       provider: null,
       paymentMethod: null,
       planName: "Método CHOA — Acesso Trimestral",
-      planPrice: "R$ 89,90 a cada 3 meses",
+      planPrice: "R$ 99,99 a cada 3 meses",
       startDate: null,
       endDate: null,
       nextBillingDate: null,

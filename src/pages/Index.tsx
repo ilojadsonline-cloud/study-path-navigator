@@ -143,8 +143,8 @@ const Index = () => {
               🔥 OFERTA POR TEMPO LIMITADO
             </div>
             <h2 className="text-2xl font-black mb-2">
-              <span className="text-base font-normal text-muted-foreground line-through mr-2">R$ 99,90</span>
-              <span className="text-gradient-gold">R$ 89,90</span>
+              <span className="text-base font-normal text-muted-foreground line-through mr-2">R$ 129,90</span>
+              <span className="text-gradient-gold">R$ 99,99</span>
               <span className="text-base font-normal text-muted-foreground ml-2">/ 90 dias</span>
             </h2>
             <p className="text-sm text-muted-foreground mb-6">Acesso completo a toda a plataforma</p>

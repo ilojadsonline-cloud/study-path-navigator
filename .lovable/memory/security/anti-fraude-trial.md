@@ -33,4 +33,4 @@ Quando `body.trial === true`, valida em ordem antes de criar checkout:
 3. **Stripe** — busca customers; qualquer subscription (`status: "all"`) bloqueia. Marca `trial_usage`.
 4. **Mercado Pago** — busca pagamentos por `payer.email`; approved/in_process/pending bloqueia. Marca `trial_usage`.
 
-Mensagem padrão: "Para continuar, assine o plano trimestral pagando R$ 89,90."
+Mensagem padrão: "Para continuar, assine o plano trimestral pagando R$ 99,99."

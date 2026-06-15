@@ -108,7 +108,7 @@ const Assinatura = () => {
             <Shield className="w-7 h-7 text-gold-foreground" />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold">
-            <span className="text-gradient-gold">Plano Método CHOA Trimestral — R$ 89,90</span>
+            <span className="text-gradient-gold">Plano Método CHOA Trimestral — R$ 99,99</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Acesso completo à plataforma por 90 dias</p>
           {isExpired && (
@@ -167,7 +167,7 @@ const Assinatura = () => {
             <h2 className="text-lg font-bold mb-1">Cartão de Crédito</h2>
             <p className="text-xs text-muted-foreground mb-3">Renovação automática</p>
             <p className="text-sm text-foreground mb-4">
-              Pague <strong>R$ 89,90 a cada 3 meses</strong>. Cancele quando quiser.
+              Pague <strong>R$ 99,99 a cada 3 meses</strong>. Cancele quando quiser.
             </p>
             <ul className="space-y-2 text-xs text-foreground/80 mb-5">
               <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-success" /> Renovação sem dor de cabeça</li>
@@ -199,7 +199,7 @@ const Assinatura = () => {
               Pagamento único <Barcode className="w-3.5 h-3.5" />
             </p>
             <p className="text-sm text-foreground mb-4">
-              Pague <strong>R$ 89,90 uma única vez</strong> e tenha acesso por
+              Pague <strong>R$ 99,99 uma única vez</strong> e tenha acesso por
               <strong> 90 dias</strong>. Sem renovação automática.
             </p>
             <ul className="space-y-2 text-xs text-foreground/80 mb-5">

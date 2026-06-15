@@ -10,7 +10,7 @@ const logStep = (step: string, details?: any) => {
   console.log(`[MP-CHECKOUT] ${step}${detailsStr}`);
 };
 
-const PLAN_AMOUNT = 89.90;
+const PLAN_AMOUNT = 99.99;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -49,7 +49,7 @@ serve(async (req) => {
 
     // ===== Assinatura recorrente via MP (preapproval) =====
     // - SEM período de teste gratuito (cobrança imediata na adesão)
-    // - Cobrança automática de R$ 89,90 a cada 3 meses
+    // - Cobrança automática de R$ 99,99 a cada 3 meses
     const preapprovalBody: any = {
       reason: "Método CHOA — Assinatura Trimestral",
       external_reference: externalReference,
