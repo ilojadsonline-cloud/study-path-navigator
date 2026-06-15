@@ -673,6 +673,23 @@ const DISCIPLINES = [
     ],
     diretrizes: "ESCOPO ESTRITO: cobrar APENAS aspectos conceituais — definição, finalidade e hipóteses de utilização de cada documento. EXPRESSAMENTE EXCLUÍDO: estrutura, formatação, partes constitutivas, cabeçalho, fonte, margens, espaçamento, epígrafe, assinatura, modelos e pronomes de tratamento. CUIDADOS: não perguntar 'quais as partes do ofício' ou 'como se estrutura a portaria'; não transformar redação oficial em gramática normativa; o foco é reconhecer o documento adequado a uma finalidade. ESTILO: identificar o documento adequado ao caso concreto; associar tipo de ato à finalidade; comparar Ofício x Memorando x Parte x Requerimento; comparar Parecer x Relatório x Estudo de Caso x Projeto; classificar por categoria (correspondência, normativo, ordinatório, enunciativo, negocial, comprobatório, divulgação, serviço).",
   },
+  // ATENÇÃO: POP deve permanecer SEMPRE no FINAL do array (índice 7) para não deslocar
+  // os índices das demais disciplinas (disciplina_index é posicional). Conteúdo sigiloso.
+  {
+    disciplina: "POP",
+    leiNome: "Procedimento Operacional Padrão (POP) da PMTO — Uso Seletivo da Força e Abordagens Policiais",
+    tipo: "lei",
+    assuntos: [
+      "Processo 108 — uso seletivo da força: conceito operacional e finalidade",
+      "Princípios do uso da força (legalidade, necessidade, proporcionalidade, moderação, conveniência, responsabilização)",
+      "Níveis de resistência do abordado e correspondência com os níveis de resposta policial",
+      "Presença policial, verbalização, controle de contato e técnicas de menor potencial ofensivo",
+      "Força potencialmente letal: hipóteses, limites e responsabilização",
+      "Avaliação de risco, progressão e regressão no uso da força",
+      "Abordagens policiais: procedimentos, segurança, técnicas e hipóteses de utilização no cotidiano da Corporação",
+    ],
+    diretrizes: "ESCOPO ESTRITO: cobrar SOMENTE o que consta no texto oficial do POP fornecido na base interna. CUIDADOS: não inventar níveis, técnicas ou procedimentos não previstos no texto; não confundir uso da força do POP com sanções disciplinares do RDMETO nem com tipos penais do CPM/CPPM; não criar hipóteses, prazos ou autoridades inexistentes; manter rigor literal e técnico. ESTILO: casos práticos de escolha do nível de resposta adequado ao nível de resistência, aplicação dos princípios do uso da força, providência correta na abordagem, progressão/regressão da força e identificação de conduta conforme/desconforme ao procedimento.",
+  },
 ] as const;
 
 /**
