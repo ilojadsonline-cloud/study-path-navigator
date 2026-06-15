@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen, CreditCard, Brain, Youtube, Wrench, FileText } from "lucide-react";
+import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen, CreditCard, Brain, Youtube, Wrench, FileText, Lock } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 
 // Lazy load das abas — reduz bundle inicial e evita cálculo simultâneo
@@ -21,6 +21,7 @@ const AdminAssinaturasTab = lazy(() => import("@/components/admin/AdminAssinatur
 const AdminMapasMentaisTab = lazy(() => import("@/components/admin/AdminMapasMentaisTab").then(m => ({ default: m.AdminMapasMentaisTab })));
 const AdminBizuAulaTab = lazy(() => import("@/components/admin/AdminBizuAulaTab").then(m => ({ default: m.AdminBizuAulaTab })));
 const AdminEditalTab = lazy(() => import("@/components/admin/AdminEditalTab"));
+const AdminPopAccessTab = lazy(() => import("@/components/admin/AdminPopAccessTab").then(m => ({ default: m.AdminPopAccessTab })));
 
 const Fallback = () => (
   <div className="flex items-center justify-center py-16">
