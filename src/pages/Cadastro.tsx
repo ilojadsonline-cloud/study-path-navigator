@@ -362,6 +362,12 @@ const Cadastro = () => {
               <input type="text" value={cpf} onChange={e => handleCpfChange(e.target.value)} placeholder="CPF" maxLength={14}
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all" />
             </div>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input type="tel" inputMode="numeric" value={telefone} onChange={e => handleTelefoneChange(e.target.value)} placeholder="WhatsApp (com DDD)" maxLength={16}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground transition-all" />
+            </div>
+
 
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
