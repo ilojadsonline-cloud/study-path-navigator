@@ -217,6 +217,7 @@ const Cadastro = () => {
         nome,
         cpf: cleanedCpf,
         email: profileEmail,
+        telefone: telefone.replace(/\D/g, ""),
       });
 
       if (!profileError) {
