@@ -25,6 +25,7 @@ import Landing from "./pages/Landing";
 import ContatoPublico from "./pages/ContatoPublico";
 import Configuracoes from "./pages/Configuracoes";
 import MeusReportes from "./pages/MeusReportes";
+import PopQuestoes from "./pages/PopQuestoes";
 import MapasMentais from "./pages/MapasMentais";
 import BizuAula from "./pages/BizuAula";
 import Cronograma from "./pages/Cronograma";
