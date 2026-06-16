@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
-import { CheckCircle, XCircle, HelpCircle, Loader2, Flag, Scissors, RotateCcw, Lock, ShieldAlert } from "lucide-react";
+import { CheckCircle, XCircle, HelpCircle, Loader2, Flag, Scissors, RotateCcw, Lock, ShieldAlert, Filter, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/BackButton";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +29,8 @@ interface Questao {
 }
 
 const PAGE_SIZE = 20;
-const STORAGE_KEY = "choa_pop_questoes_state_v1";
+const STORAGE_KEY = "choa_pop_questoes_state_v2";
+const STATUS_OPTIONS = ["Não resolvidas", "Todas", "Resolvidas"];
 
 type QuestaoMapped = Questao & { alternativas: string[]; gabaritoShuffled: number };
 
@@ -68,12 +69,17 @@ const PopQuestoes = () => {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [crossedOut, setCrossedOut] = useState<Record<number, number[]>>({});
   const [answeredIds, setAnsweredIds] = useState<Set<number>>(new Set());
+  const [answeredLoaded, setAnsweredLoaded] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("Não resolvidas");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [allAnswered, setAllAnswered] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportQuestaoId, setReportQuestaoId] = useState<number | null>(null);
   const [reportMotivo, setReportMotivo] = useState("");
   const [reportSending, setReportSending] = useState(false);
 
   const topRef = useRef<HTMLDivElement | null>(null);
+  const lastFilterKeyRef = useRef<string>("");
 
   const totalPages = Math.max(1, Math.ceil(allQuestoes.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
@@ -101,38 +107,51 @@ const PopQuestoes = () => {
     try {
       sessionStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ orderIds: allQuestoes.map((q) => q.id), currentPage: safePage, selectedAnswer, revealed }),
+        JSON.stringify({ filterStatus, orderIds: allQuestoes.map((q) => q.id), currentPage: safePage, selectedAnswer, revealed }),
       );
     } catch {}
-  }, [allQuestoes, safePage, selectedAnswer, revealed, loading]);
+  }, [allQuestoes, safePage, selectedAnswer, revealed, loading, filterStatus]);
 
+  // Load answered ids once access is granted
   useEffect(() => {
     if (!accessChecked || !hasAccess) return;
+    const fetchAnswered = async () => {
+      const answered = new Set<number>();
+      if (user) {
+        let from = 0;
+        const batchSize = 1000;
+        while (true) {
+          const { data } = await supabase
+            .from("respostas_usuario")
+            .select("questao_id")
+            .eq("user_id", user.id)
+            .range(from, from + batchSize - 1);
+          if (!data || data.length === 0) break;
+          data.forEach((d: any) => answered.add(d.questao_id));
+          if (data.length < batchSize) break;
+          from += batchSize;
+        }
+      }
+      setAnsweredIds(answered);
+      setAnsweredLoaded(true);
+    };
+    fetchAnswered();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessChecked, hasAccess, user]);
+
+  // Fetch questions whenever answered ids are ready or the status filter changes
+  useEffect(() => {
+    if (!answeredLoaded || !hasAccess) return;
     fetchQuestoes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessChecked, hasAccess]);
+  }, [answeredLoaded, hasAccess, filterStatus]);
 
   const fetchQuestoes = async () => {
-    setLoading(true);
+    const key = filterStatus;
+    if (key === lastFilterKeyRef.current && allQuestoes.length > 0) return;
+    lastFilterKeyRef.current = key;
 
-    // answered ids
-    const answered = new Set<number>();
-    if (user) {
-      let from = 0;
-      const batchSize = 1000;
-      while (true) {
-        const { data } = await supabase
-          .from("respostas_usuario")
-          .select("questao_id")
-          .eq("user_id", user.id)
-          .range(from, from + batchSize - 1);
-        if (!data || data.length === 0) break;
-        data.forEach((d: any) => answered.add(d.questao_id));
-        if (data.length < batchSize) break;
-        from += batchSize;
-      }
-    }
-    setAnsweredIds(answered);
+    setLoading(true);
 
     let allData: Questao[] = [];
     let from = 0;
@@ -151,8 +170,18 @@ const PopQuestoes = () => {
       from += batchSize;
     }
 
-    // Restore prior order if present
-    let ordered = allData;
+    // Status filter
+    let filtered = allData;
+    const totalBeforeStatusFilter = filtered.length;
+    if (filterStatus === "Resolvidas") {
+      filtered = filtered.filter((q) => answeredIds.has(q.id));
+    } else if (filterStatus === "Não resolvidas") {
+      filtered = filtered.filter((q) => !answeredIds.has(q.id));
+    }
+    setAllAnswered(filterStatus === "Não resolvidas" && filtered.length === 0 && totalBeforeStatusFilter > 0);
+
+    // Restore prior order/page/answers only for the same filter
+    let ordered = filtered;
     let restoredPage = 1;
     let restoredSelected: Record<number, number> = {};
     let restoredRevealed: Record<number, boolean> = {};
@@ -160,8 +189,8 @@ const PopQuestoes = () => {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (raw) {
         const p = JSON.parse(raw);
-        if (Array.isArray(p.orderIds) && p.orderIds.length) {
-          const byId = new Map(allData.map((q) => [q.id, q] as const));
+        if (p.filterStatus === filterStatus && Array.isArray(p.orderIds) && p.orderIds.length) {
+          const byId = new Map(filtered.map((q) => [q.id, q] as const));
           const out: Questao[] = [];
           for (const id of p.orderIds) {
             const q = byId.get(id);
@@ -171,8 +200,15 @@ const PopQuestoes = () => {
           restoredPage = p.currentPage || 1;
           restoredSelected = p.selectedAnswer || {};
           restoredRevealed = p.revealed || {};
+        } else {
+          ordered = [...filtered];
+          for (let i = ordered.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
+          }
         }
       } else {
+        ordered = [...filtered];
         for (let i = ordered.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
@@ -191,6 +227,11 @@ const PopQuestoes = () => {
     setSelectedAnswer(restoredSelected);
     setRevealed(restoredRevealed);
     setLoading(false);
+  };
+
+  const changeFilter = (value: string) => {
+    lastFilterKeyRef.current = "";
+    setFilterStatus(value);
   };
 
   const handleReport = (questaoId: number) => {
@@ -314,18 +355,56 @@ const PopQuestoes = () => {
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         <BackButton />
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Lock className="w-5 h-5 text-destructive" />
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
-              <span className="text-gradient-primary">Questões POP</span>
-            </h1>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3"
+        >
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <Lock className="w-5 h-5 text-destructive" />
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
+                <span className="text-gradient-primary">Questões POP</span>
+              </h1>
+            </div>
+            <p ref={topRef} className="text-xs sm:text-sm text-muted-foreground">
+              {allQuestoes.length} questões · {filterStatus}
+              {totalPages > 1 && ` · Página ${safePage} de ${totalPages}`}
+            </p>
           </div>
-          <p ref={topRef} className="text-xs sm:text-sm text-muted-foreground">
-            {allQuestoes.length} questões disponíveis
-            {totalPages > 1 && ` · Página ${safePage} de ${totalPages}`}
-          </p>
+          <button
+            onClick={() => setFilterOpen(!filterOpen)}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-secondary hover:bg-primary/15 hover:text-primary text-sm font-medium transition-all w-full sm:w-auto"
+          >
+            <Filter className="w-4 h-4" />
+            Filtros
+            <ChevronDown className={`w-4 h-4 transition-transform ${filterOpen ? "rotate-180" : ""}`} />
+          </button>
         </motion.div>
+
+        <AnimatePresence>
+          {filterOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="glass-card rounded-xl p-4 overflow-hidden"
+            >
+              <div className="max-w-xs">
+                <label className="text-xs text-muted-foreground mb-1 block">Status</label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => changeFilter(e.target.value)}
+                  className="w-full rounded-lg bg-secondary border-none text-sm p-2 text-foreground focus:ring-1 focus:ring-primary outline-none"
+                >
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <PopSigilosoBanner />
 
@@ -333,10 +412,24 @@ const PopQuestoes = () => {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
+        ) : allAnswered ? (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-16 glass-card rounded-xl space-y-4">
+            <CheckCircle className="w-12 h-12 text-success mx-auto" />
+            <p className="text-lg font-bold text-foreground">Parabéns! 🎉</p>
+            <p className="text-sm text-muted-foreground">Você concluiu todas as questões do POP disponíveis!</p>
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" onClick={() => changeFilter("Resolvidas")}>
+                Revisar Respondidas
+              </Button>
+              <Button variant="outline" onClick={() => changeFilter("Todas")}>
+                Ver Todas
+              </Button>
+            </div>
+          </motion.div>
         ) : allQuestoes.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
-            <p className="text-lg font-medium">Nenhuma questão disponível ainda</p>
-            <p className="text-sm">As questões do POP serão exibidas aqui após a geração.</p>
+            <p className="text-lg font-medium">Nenhuma questão encontrada</p>
+            <p className="text-sm">Tente alterar o filtro de status.</p>
           </div>
         ) : (
           <div className="space-y-6">
