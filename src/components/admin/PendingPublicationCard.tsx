@@ -123,7 +123,12 @@ export function PendingPublicationCard() {
   useEffect(() => {
     load(0, "all");
     supabase.rpc("list_disciplinas").then(({ data }) => {
-      if (data) setDisciplinas((data as { disciplina: string }[]).map((d) => d.disciplina));
+      if (data) {
+        const list = (data as { disciplina: string }[]).map((d) => d.disciplina);
+        // list_disciplinas() oculta POP dos alunos; admin precisa filtrar POP aqui.
+        if (!list.includes("POP")) list.push("POP");
+        setDisciplinas(list);
+      }
     });
   }, [load]);
 
