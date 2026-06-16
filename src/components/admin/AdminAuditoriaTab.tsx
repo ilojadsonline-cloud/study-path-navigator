@@ -146,7 +146,11 @@ export function AdminAuditoriaTab() {
       toast.error("Erro ao carregar disciplinas: " + error.message);
       return;
     }
-    setDisciplinas((data ?? []).map((r: any) => r.disciplina).filter(Boolean));
+    const list = (data ?? []).map((r: any) => r.disciplina).filter(Boolean);
+    // list_disciplinas() oculta POP (sigiloso) dos alunos, mas o admin precisa
+    // poder auditar/corrigir POP especificamente na aba de Validação.
+    if (!list.includes("POP")) list.push("POP");
+    setDisciplinas(list);
   }
 
   async function loadLatestRunningJob() {
