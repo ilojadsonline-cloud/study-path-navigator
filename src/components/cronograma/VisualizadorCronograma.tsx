@@ -6,7 +6,8 @@ import { CronogramaCalendar } from "./CronogramaCalendar";
 import { CronogramaResumoTable } from "./CronogramaResumoTable";
 import { EditarBlocoDialog } from "./EditarBlocoDialog";
 import { CronogramaData, AtividadeBloco, DIAS_SEMANA_ORDER, getDiaLabel, DISCIPLINAS, DisciplinaNome, getCorDisciplina } from "@/lib/cronograma-generator";
-import { Save, ArrowLeft, Pencil, Plus } from "lucide-react";
+import { Save, ArrowLeft, Pencil, Plus, FileDown } from "lucide-react";
+import { exportCronogramaPDF } from "@/lib/cronograma-pdf";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -100,6 +101,9 @@ export function VisualizadorCronograma({ cronograma: initial, onBack, onSaved, e
           </Button>
           <Button variant="outline" size="sm" onClick={() => setEditing(!editing)} className="flex-1 sm:flex-none">
             <Pencil className="w-4 h-4 mr-1" /> {editing ? "Concluir" : "Editar"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportCronogramaPDF({ ...initial, atividades })} className="flex-1 sm:flex-none">
+            <FileDown className="w-4 h-4 mr-1" /> Exportar PDF
           </Button>
           <Button size="sm" onClick={handleSave} disabled={saving} className="flex-1 sm:flex-none">
             <Save className="w-4 h-4 mr-1" /> {saving ? "Salvando..." : "Salvar"}
