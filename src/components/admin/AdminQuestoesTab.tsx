@@ -67,7 +67,10 @@ export function AdminQuestoesTab() {
 
   const loadDisciplinas = async () => {
     const { data } = await supabase.rpc("list_disciplinas");
-    if (data) setDisciplinas((data as { disciplina: string }[]).map(d => d.disciplina));
+    if (data) {
+      const list = (data as { disciplina: string }[]).map(d => d.disciplina);
+      setDisciplinas(list.includes("POP") ? list : [...list, "POP"]);
+    }
   };
 
   const loadQuestoes = async (p = 0, statusOverride?: string) => {
@@ -260,7 +263,7 @@ export function AdminQuestoesTab() {
           <SelectTrigger className="w-52"><SelectValue placeholder="Disciplina" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todas">Todas as disciplinas</SelectItem>
-            {disciplinas.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+            {disciplinas.map(d => <SelectItem key={d} value={d}>{d === "POP" ? "POP (Sigiloso)" : d}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); loadQuestoes(0, v); }}>
@@ -343,7 +346,11 @@ export function AdminQuestoesTab() {
                     </TableCell>
                     <TableCell className="font-mono text-xs">{q.id}</TableCell>
                     <TableCell className="text-sm max-w-xs truncate">{htmlToPlainText(q.enunciado)}</TableCell>
-                    <TableCell><Badge variant="secondary" className="text-[10px]">{q.disciplina}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant={q.disciplina === "POP" ? "default" : "secondary"} className="text-[10px]">
+                        {q.disciplina === "POP" ? "POP (Sigiloso)" : q.disciplina}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-xs">{q.dificuldade}</TableCell>
                     <TableCell className="font-bold text-primary">{gabaritoLabel(q.gabarito)}</TableCell>
                     <TableCell>
