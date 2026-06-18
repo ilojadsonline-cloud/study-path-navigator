@@ -25,22 +25,28 @@ export function exportCronogramaPDF(cronograma: CronogramaData) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 12;
 
-  // Header
-  doc.setFontSize(18);
+  // ========== HEADER ==========
+  // Dark header bar background
+  doc.setFillColor(22, 22, 28);
+  doc.rect(0, 0, pageWidth, 22, "F");
+
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("Método CHOA 2026", marginX, 16);
+  doc.setTextColor(255, 255, 255);
+  doc.text("Método CHOA 2026", marginX, 14);
 
-  doc.setFontSize(13);
-  doc.setTextColor(60, 60, 60);
-  doc.text(cronograma.nome, marginX, 24);
+  doc.setFontSize(14);
+  doc.setTextColor(230, 230, 230);
+  doc.text(cronograma.nome, marginX, 20);
 
-  doc.setFontSize(9);
+  // Subtitle below header bar
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(110, 110, 110);
-  const subtitle = `${cronograma.horas_semanais}h semanais • ${cronograma.dias_semana.length} dias • Horário: ${cronograma.horario_inicio} às ${cronograma.horario_fim}`;
-  doc.text(subtitle, marginX, 30);
+  doc.setTextColor(80, 80, 80);
+  const subtitle = `${cronograma.horas_semanais}h semanais  •  ${cronograma.dias_semana.length} dias  •  Horário: ${cronograma.horario_inicio} às ${cronograma.horario_fim}`;
+  doc.text(subtitle, marginX, 28);
 
-  // Build weekly grid table
+  // ========== WEEKLY GRID TABLE ==========
   const orderedDias = DIAS_SEMANA_ORDER.filter((d) => cronograma.dias_semana.includes(d));
 
   const atividadesPorDia: Record<string, AtividadeBloco[]> = {};
@@ -69,21 +75,22 @@ export function exportCronogramaPDF(cronograma: CronogramaData) {
   autoTable(doc, {
     head,
     body,
-    startY: 36,
+    startY: 33,
     margin: { left: marginX, right: marginX },
     styles: {
-      fontSize: 8,
-      cellPadding: 2,
+      fontSize: 10,
+      cellPadding: 3.5,
       valign: "top",
-      lineColor: [220, 220, 220],
-      lineWidth: 0.2,
+      lineColor: [160, 160, 160],
+      lineWidth: 0.3,
+      fontStyle: "normal",
     },
     headStyles: {
-      fillColor: [30, 30, 35],
+      fillColor: [18, 18, 24],
       textColor: [255, 255, 255],
       halign: "center",
       fontStyle: "bold",
-      fontSize: 9,
+      fontSize: 11,
     },
     columnStyles: orderedDias.reduce((acc, _, idx) => {
       acc[idx] = { cellWidth: (pageWidth - marginX * 2) / orderedDias.length };
@@ -95,27 +102,31 @@ export function exportCronogramaPDF(cronograma: CronogramaData) {
         const b = atividadesPorDia[dia]?.[data.row.index];
         if (b) {
           const [r, g, bl] = hexToRgb(getCorDisciplina(b.disciplina));
+          // Less wash-out: only lighten 50% instead of 85%
           data.cell.styles.fillColor = [
-            Math.round(r + (255 - r) * 0.85),
-            Math.round(g + (255 - g) * 0.85),
-            Math.round(bl + (255 - bl) * 0.85),
+            Math.round(r + (255 - r) * 0.5),
+            Math.round(g + (255 - g) * 0.5),
+            Math.round(bl + (255 - bl) * 0.5),
           ];
+          // Darker, bolder text for readability
+          data.cell.styles.textColor = [18, 18, 18];
+          data.cell.styles.fontStyle = "bold";
         }
       }
     },
   });
 
-  // Summary table
+  // ========== SUMMARY TABLE ==========
   const { porDisciplina, totais } = calcularResumo(cronograma.atividades);
   const finalY = (doc as any).lastAutoTable?.finalY || 36;
 
-  doc.setFontSize(12);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(30, 30, 30);
-  doc.text("Resumo de Horas por Disciplina", marginX, finalY + 10);
+  doc.setTextColor(18, 18, 18);
+  doc.text("Resumo de Horas por Disciplina", marginX, finalY + 14);
 
   autoTable(doc, {
-    startY: finalY + 13,
+    startY: finalY + 17,
     margin: { left: marginX, right: marginX },
     head: [["Disciplina", "Videoaulas", "Lei Seca", "Questões", "Total"]],
     body: DISCIPLINAS.map((d) => [
@@ -132,9 +143,9 @@ export function exportCronogramaPDF(cronograma: CronogramaData) {
       formatMinutes(totais.questoes),
       formatMinutes(totais.total),
     ]],
-    styles: { fontSize: 9, cellPadding: 2.5 },
-    headStyles: { fillColor: [30, 30, 35], textColor: [255, 255, 255], fontStyle: "bold" },
-    footStyles: { fillColor: [245, 245, 245], textColor: [20, 20, 20], fontStyle: "bold" },
+    styles: { fontSize: 10, cellPadding: 3.5, lineColor: [160, 160, 160], lineWidth: 0.3 },
+    headStyles: { fillColor: [18, 18, 24], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 11 },
+    footStyles: { fillColor: [220, 220, 225], textColor: [10, 10, 10], fontStyle: "bold", fontSize: 10 },
     columnStyles: {
       0: { halign: "left" },
       1: { halign: "center" },
@@ -144,14 +155,14 @@ export function exportCronogramaPDF(cronograma: CronogramaData) {
     },
   });
 
-  // Footer
+  // ========== FOOTER ==========
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120);
     doc.text(
-      `Gerado em ${new Date().toLocaleDateString("pt-BR")} • metodochoa.com.br`,
+      `Gerado em ${new Date().toLocaleDateString("pt-BR")}  •  metodochoa.com.br`,
       marginX,
       doc.internal.pageSize.getHeight() - 6
     );
