@@ -40,8 +40,11 @@ export function DedupQuestoesCard() {
         toast.error("Erro ao carregar disciplinas", { description: error.message });
         return;
       }
-      const list = ((data as { disciplina: string }[]) || []).map((d) => d.disciplina).filter(Boolean);
-      setDisciplinas(list);
+      const list = ((data as { disciplina: string }[]) || [])
+        .map((d) => d.disciplina)
+        .filter(Boolean);
+      const listWithPop = list.includes("POP") ? list : [...list, "POP"];
+      setDisciplinas(listWithPop);
     })();
   }, []);
 
