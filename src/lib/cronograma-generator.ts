@@ -6,6 +6,9 @@ export const DISCIPLINAS = [
   { nome: "LC 128", cor: "#3B82F6" },
   { nome: "Lei 2.575", cor: "#EAB308" },
   { nome: "CPPM", cor: "#EF4444" },
+  { nome: "POP", cor: "#A855F7" },
+  { nome: "Português", cor: "#EC4899" },
+  { nome: "Redação Oficial", cor: "#14B8A6" },
 ] as const;
 
 export type TipoAtividade = "videoaula" | "lei" | "questoes";
