@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy, Star, Zap, UserPlus, MessageCircle } from "lucide-react";
+import { Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy, Star, Zap, UserPlus, MessageCircle, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
