@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp, TrendingDown,
   Trophy, Calendar, Flame, Shield, Loader2, FileText, PlayCircle,
-  Sparkles, Youtube, Brain, X, ClipboardCheck, ArrowUpRight, BarChart3
+  Sparkles, Youtube, Brain, X, ClipboardCheck, ArrowUpRight, BarChart3,
+  MessageCircle, ExternalLink
 } from "lucide-react";
 import { CalendarioInteligente } from "@/components/dashboard/CalendarioInteligente";
 import { bizuAulaDisciplinas, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
@@ -122,6 +123,14 @@ const Dashboard = () => {
   const dismissNewToolsBanner = () => {
     localStorage.setItem("new_tools_banner_dismissed_v1", "1");
     setShowNewToolsBanner(false);
+  };
+
+  const [showWhatsAppBanner, setShowWhatsAppBanner] = useState(
+    () => typeof window !== "undefined" && !localStorage.getItem("whatsapp_banner_dismissed_v1")
+  );
+  const dismissWhatsAppBanner = () => {
+    localStorage.setItem("whatsapp_banner_dismissed_v1", "1");
+    setShowWhatsAppBanner(false);
   };
 
   const [dailyGoalHours, setDailyGoalHours] = useState<number>(3);
@@ -482,6 +491,38 @@ const Dashboard = () => {
             </div>
           </div>
         </motion.div>
+
+        {showWhatsAppBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent p-4 sm:p-5"
+          >
+            <button onClick={dismissWhatsAppBanner} aria-label="Fechar"
+              className="absolute top-2.5 right-2.5 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-500/15 shrink-0">
+                <MessageCircle className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div className="min-w-0 pr-6">
+                <p className="font-bold text-sm sm:text-base">Entre no nosso Grupo de Avisos no WhatsApp!</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  Fique por dentro de todas as novidades, atualizações do edital, novas questões, simulados e conteúdos exclusivos em primeira mão. <span className="text-emerald-400 font-semibold">Não perca nada da sua preparação!</span>
+                </p>
+                <a
+                  href="https://chat.whatsapp.com/Djve82S6zXM2TvmcmDalK9"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-colors shadow-lg shadow-emerald-500/20"
+                >
+                  Entrar no Grupo
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {showNewToolsBanner && (
           <motion.div
