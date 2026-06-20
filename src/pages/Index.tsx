@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy, Star, Zap, UserPlus, MessageCircle } from "lucide-react";
+import { Shield, ArrowRight, BookOpen, HelpCircle, Shuffle, Trophy, Star, Zap, UserPlus, MessageCircle, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -60,6 +60,36 @@ const Index = () => {
                 Já tenho conta
               </Link>
             </div>
+          </motion.div>
+        </section>
+
+        {/* Aviso Grupo WhatsApp */}
+        <section className="max-w-3xl mx-auto px-4 pb-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="glass-card rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 border-2 border-emerald-500/40 hover:border-emerald-500/70 transition-all relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -translate-y-10 translate-x-10" />
+            <div className="p-3 rounded-xl bg-emerald-500/15 text-emerald-400 shrink-0">
+              <MessageCircle className="w-8 h-8" />
+            </div>
+            <div className="flex-1 relative">
+              <h3 className="font-bold text-base mb-1 text-foreground">Entre no nosso Grupo de Avisos no WhatsApp!</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Fique por dentro de todas as novidades, atualizações do edital, novas questões, simulados e conteúdos exclusivos em primeira mão. <span className="text-emerald-400 font-semibold">Não perca nada da sua preparação!</span>
+              </p>
+            </div>
+            <a
+              href="https://chat.whatsapp.com/Djve82S6zXM2TvmcmDalK9"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition-colors shadow-lg shadow-emerald-500/20"
+            >
+              Entrar no Grupo
+              <ExternalLink className="w-4 h-4" />
+            </a>
           </motion.div>
         </section>
 
