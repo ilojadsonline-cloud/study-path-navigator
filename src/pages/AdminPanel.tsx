@@ -12,6 +12,7 @@ const AdminQuestoesTab = lazy(() => import("@/components/admin/AdminQuestoesTab"
 const AdminReportsTab = lazy(() => import("@/components/admin/AdminReportsTab").then(m => ({ default: m.AdminReportsTab })));
 const AdminNotificacoesTab = lazy(() => import("@/components/admin/AdminNotificacoesTab").then(m => ({ default: m.AdminNotificacoesTab })));
 const AdminGerarTab = lazy(() => import("@/components/admin/AdminGerarTab").then(m => ({ default: m.AdminGerarTab })));
+const AdminSimuladoSemanalTab = lazy(() => import("@/components/admin/AdminSimuladoSemanalTab").then(m => ({ default: m.AdminSimuladoSemanalTab })));
 
 const AdminAuditoriaTab = lazy(() => import("@/components/admin/AdminAuditoriaTab").then(m => ({ default: m.AdminAuditoriaTab })));
 const AdminPendingPatchesTab = lazy(() => import("@/components/admin/AdminPendingPatchesTab").then(m => ({ default: m.AdminPendingPatchesTab })));
