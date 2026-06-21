@@ -87,6 +87,7 @@ const AdminPanel = () => {
           <TabsContent value="reports" className="mt-6" forceMount={visited.has("reports") ? true : undefined} hidden={activeTab !== "reports"}>{renderTab("reports", AdminReportsTab)}</TabsContent>
           <TabsContent value="notificacoes" className="mt-6" forceMount={visited.has("notificacoes") ? true : undefined} hidden={activeTab !== "notificacoes"}>{renderTab("notificacoes", AdminNotificacoesTab)}</TabsContent>
           <TabsContent value="gerar" className="mt-6" forceMount={visited.has("gerar") ? true : undefined} hidden={activeTab !== "gerar"}>{renderTab("gerar", AdminGerarTab)}</TabsContent>
+          <TabsContent value="simulado-semanal" className="mt-6" forceMount={visited.has("simulado-semanal") ? true : undefined} hidden={activeTab !== "simulado-semanal"}>{renderTab("simulado-semanal", AdminSimuladoSemanalTab)}</TabsContent>
           
           <TabsContent value="auditoria" className="mt-6" forceMount={visited.has("auditoria") ? true : undefined} hidden={activeTab !== "auditoria"}>{renderTab("auditoria", AdminAuditoriaTab)}</TabsContent>
           <TabsContent value="patches" className="mt-6" forceMount={visited.has("patches") ? true : undefined} hidden={activeTab !== "patches"}>{renderTab("patches", AdminPendingPatchesTab)}</TabsContent>
