@@ -45,3 +45,6 @@ verify_jwt = false
 [functions.apply-audit-patch]
 verify_jwt = false
 
+[functions.simulado-semanal]
+verify_jwt = false
+
