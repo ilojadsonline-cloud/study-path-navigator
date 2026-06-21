@@ -68,6 +68,7 @@ const AdminPanel = () => {
               <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Flag className="w-3.5 h-3.5" />Relatórios</TabsTrigger>
               <TabsTrigger value="notificacoes" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Bell className="w-3.5 h-3.5" />Notificações</TabsTrigger>
               <TabsTrigger value="gerar" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Zap className="w-3.5 h-3.5" />Gerar</TabsTrigger>
+              <TabsTrigger value="simulado-semanal" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><CalendarClock className="w-3.5 h-3.5" />Simulado Semanal</TabsTrigger>
               <TabsTrigger value="auditoria" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><ShieldCheck className="w-3.5 h-3.5" />Validação IA</TabsTrigger>
               <TabsTrigger value="patches" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Wrench className="w-3.5 h-3.5" />Patches pendentes</TabsTrigger>
               <TabsTrigger value="online" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Wifi className="w-3.5 h-3.5" />Online</TabsTrigger>
