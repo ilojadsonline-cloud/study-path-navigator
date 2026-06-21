@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, BookOpen, HelpCircle, Shuffle, CalendarDays,
   CreditCard, LogOut, Shield, MessageSquare, Flag,
-  Brain, Youtube, Trophy,
+  Brain, Youtube, Trophy, CalendarClock,
 } from "lucide-react";
 import {
   Tooltip,
@@ -22,6 +22,7 @@ const menuItems = [
   { title: "Edital Verticalizado", url: "/edital", icon: BookOpen },
   { title: "Banco de Questões", url: "/questoes", icon: HelpCircle },
   { title: "Simulados", url: "/simulados", icon: Shuffle },
+  { title: "Simulado Semanal", url: "/simulado-semanal", icon: CalendarClock },
   { title: "Cronograma", url: "/cronograma", icon: CalendarDays },
   { title: "Ranking", url: "/ranking", icon: Trophy },
   { title: "Mapas Mentais", url: "/mapas-mentais", icon: Brain },

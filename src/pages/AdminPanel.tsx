@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen, CreditCard, Brain, Youtube, Wrench, FileText, Lock } from "lucide-react";
+import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen, CreditCard, Brain, Youtube, Wrench, FileText, Lock, CalendarClock } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 
 // Lazy load das abas — reduz bundle inicial e evita cálculo simultâneo
@@ -12,6 +12,7 @@ const AdminQuestoesTab = lazy(() => import("@/components/admin/AdminQuestoesTab"
 const AdminReportsTab = lazy(() => import("@/components/admin/AdminReportsTab").then(m => ({ default: m.AdminReportsTab })));
 const AdminNotificacoesTab = lazy(() => import("@/components/admin/AdminNotificacoesTab").then(m => ({ default: m.AdminNotificacoesTab })));
 const AdminGerarTab = lazy(() => import("@/components/admin/AdminGerarTab").then(m => ({ default: m.AdminGerarTab })));
+const AdminSimuladoSemanalTab = lazy(() => import("@/components/admin/AdminSimuladoSemanalTab").then(m => ({ default: m.AdminSimuladoSemanalTab })));
 
 const AdminAuditoriaTab = lazy(() => import("@/components/admin/AdminAuditoriaTab").then(m => ({ default: m.AdminAuditoriaTab })));
 const AdminPendingPatchesTab = lazy(() => import("@/components/admin/AdminPendingPatchesTab").then(m => ({ default: m.AdminPendingPatchesTab })));
@@ -67,6 +68,7 @@ const AdminPanel = () => {
               <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Flag className="w-3.5 h-3.5" />Relatórios</TabsTrigger>
               <TabsTrigger value="notificacoes" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Bell className="w-3.5 h-3.5" />Notificações</TabsTrigger>
               <TabsTrigger value="gerar" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Zap className="w-3.5 h-3.5" />Gerar</TabsTrigger>
+              <TabsTrigger value="simulado-semanal" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><CalendarClock className="w-3.5 h-3.5" />Simulado Semanal</TabsTrigger>
               <TabsTrigger value="auditoria" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><ShieldCheck className="w-3.5 h-3.5" />Validação IA</TabsTrigger>
               <TabsTrigger value="patches" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Wrench className="w-3.5 h-3.5" />Patches pendentes</TabsTrigger>
               <TabsTrigger value="online" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Wifi className="w-3.5 h-3.5" />Online</TabsTrigger>
@@ -85,6 +87,7 @@ const AdminPanel = () => {
           <TabsContent value="reports" className="mt-6" forceMount={visited.has("reports") ? true : undefined} hidden={activeTab !== "reports"}>{renderTab("reports", AdminReportsTab)}</TabsContent>
           <TabsContent value="notificacoes" className="mt-6" forceMount={visited.has("notificacoes") ? true : undefined} hidden={activeTab !== "notificacoes"}>{renderTab("notificacoes", AdminNotificacoesTab)}</TabsContent>
           <TabsContent value="gerar" className="mt-6" forceMount={visited.has("gerar") ? true : undefined} hidden={activeTab !== "gerar"}>{renderTab("gerar", AdminGerarTab)}</TabsContent>
+          <TabsContent value="simulado-semanal" className="mt-6" forceMount={visited.has("simulado-semanal") ? true : undefined} hidden={activeTab !== "simulado-semanal"}>{renderTab("simulado-semanal", AdminSimuladoSemanalTab)}</TabsContent>
           
           <TabsContent value="auditoria" className="mt-6" forceMount={visited.has("auditoria") ? true : undefined} hidden={activeTab !== "auditoria"}>{renderTab("auditoria", AdminAuditoriaTab)}</TabsContent>
           <TabsContent value="patches" className="mt-6" forceMount={visited.has("patches") ? true : undefined} hidden={activeTab !== "patches"}>{renderTab("patches", AdminPendingPatchesTab)}</TabsContent>

@@ -10,6 +10,7 @@ import {
   MessageCircle, ExternalLink
 } from "lucide-react";
 import { CalendarioInteligente } from "@/components/dashboard/CalendarioInteligente";
+import { SimuladoSemanalDestaque } from "@/components/dashboard/SimuladoSemanalDestaque";
 import { bizuAulaDisciplinas, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
 
 import { getLocalStudyTimerSnapshot, type TimerState } from "@/hooks/useStudyTimer";
@@ -565,6 +566,8 @@ const Dashboard = () => {
           </div>
         ) : (
           <>
+            <SimuladoSemanalDestaque />
+
             {incompleteSimulado && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className="glass-card rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-warning/30 bg-warning/5">
