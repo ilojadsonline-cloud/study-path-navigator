@@ -819,6 +819,115 @@ export type Database = {
         }
         Relationships: []
       }
+      simulado_semanal_questoes: {
+        Row: {
+          alt_a: string
+          alt_b: string
+          alt_c: string
+          alt_d: string
+          alt_e: string
+          assunto: string | null
+          comentario: string | null
+          created_at: string
+          dificuldade: string
+          disciplina: string
+          enunciado: string
+          gabarito: number
+          id: string
+          ordem: number
+          simulado_id: string
+        }
+        Insert: {
+          alt_a: string
+          alt_b: string
+          alt_c: string
+          alt_d: string
+          alt_e: string
+          assunto?: string | null
+          comentario?: string | null
+          created_at?: string
+          dificuldade?: string
+          disciplina: string
+          enunciado: string
+          gabarito: number
+          id?: string
+          ordem: number
+          simulado_id: string
+        }
+        Update: {
+          alt_a?: string
+          alt_b?: string
+          alt_c?: string
+          alt_d?: string
+          alt_e?: string
+          assunto?: string | null
+          comentario?: string | null
+          created_at?: string
+          dificuldade?: string
+          disciplina?: string
+          enunciado?: string
+          gabarito?: number
+          id?: string
+          ordem?: number
+          simulado_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulado_semanal_questoes_simulado_id_fkey"
+            columns: ["simulado_id"]
+            isOneToOne: false
+            referencedRelation: "simulados_semanais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      simulado_semanal_tentativas: {
+        Row: {
+          acertos: number
+          created_at: string
+          finished_at: string | null
+          id: string
+          pontuacao: number
+          respostas: Json
+          simulado_id: string
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          acertos?: number
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          pontuacao?: number
+          respostas?: Json
+          simulado_id: string
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          acertos?: number
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          pontuacao?: number
+          respostas?: Json
+          simulado_id?: string
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulado_semanal_tentativas_simulado_id_fkey"
+            columns: ["simulado_id"]
+            isOneToOne: false
+            referencedRelation: "simulados_semanais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       simulados: {
         Row: {
           acertos: number
@@ -849,6 +958,48 @@ export type Database = {
           questao_ids?: number[]
           total?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      simulados_semanais: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          duracao_minutos: number
+          ends_at: string
+          id: string
+          starts_at: string
+          titulo: string
+          total_questoes: number
+          valor_questao: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          duracao_minutos?: number
+          ends_at: string
+          id?: string
+          starts_at?: string
+          titulo: string
+          total_questoes?: number
+          valor_questao?: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          duracao_minutos?: number
+          ends_at?: string
+          id?: string
+          starts_at?: string
+          titulo?: string
+          total_questoes?: number
+          valor_questao?: number
         }
         Relationships: []
       }
@@ -996,6 +1147,20 @@ export type Database = {
           taxa_acertos: number
           total_corretas: number
           total_respondidas: number
+          user_id: string
+        }[]
+      }
+      get_simulado_semanal_ranking: {
+        Args: { p_simulado_id: string }
+        Returns: {
+          acertos: number
+          duracao_segundos: number
+          finished_at: string
+          nome: string
+          pontuacao: number
+          posicao: number
+          situacao: string
+          total: number
           user_id: string
         }[]
       }
