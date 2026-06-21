@@ -10,6 +10,7 @@ import {
   MessageCircle, ExternalLink
 } from "lucide-react";
 import { CalendarioInteligente } from "@/components/dashboard/CalendarioInteligente";
+import { SimuladoSemanalDestaque } from "@/components/dashboard/SimuladoSemanalDestaque";
 import { bizuAulaDisciplinas, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
 
 import { getLocalStudyTimerSnapshot, type TimerState } from "@/hooks/useStudyTimer";
