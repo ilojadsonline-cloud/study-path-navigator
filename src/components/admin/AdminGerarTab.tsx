@@ -353,6 +353,8 @@ export function AdminGerarTab() {
 
       <ManualQuestaoForm disciplinas={DISCIPLINES} />
 
+      <MarkdownImportCard />
+
       {/* Resume pending job banner */}
       {pendingJob && !running && (
         <div className="p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-3">
