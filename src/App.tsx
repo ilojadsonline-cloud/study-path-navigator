@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Edital from "./pages/Edital";
 import Questoes from "./pages/Questoes";
 import Simulados from "./pages/Simulados";
+import SimuladoSemanal from "./pages/SimuladoSemanal";
 import Assinatura from "./pages/Assinatura";
 import GerarQuestoes from "./pages/GerarQuestoes";
 
