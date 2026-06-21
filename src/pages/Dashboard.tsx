@@ -565,6 +565,8 @@ const Dashboard = () => {
           </div>
         ) : (
           <>
+            <SimuladoSemanalDestaque />
+
             {incompleteSimulado && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className="glass-card rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-warning/30 bg-warning/5">
