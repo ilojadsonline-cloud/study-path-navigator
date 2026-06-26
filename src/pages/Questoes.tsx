@@ -230,7 +230,8 @@ const Questoes = () => {
       from += batchSize;
     }
 
-    let filtered = allData;
+    // Guarda extra: remove qualquer questão POP (variações de espaços/maiúsculas)
+    let filtered = allData.filter(q => (q.disciplina || "").trim().toUpperCase() !== "POP");
     const totalBeforeStatusFilter = filtered.length;
     if (filterStatus === "Resolvidas") {
       filtered = filtered.filter(q => answeredIds.has(q.id));
