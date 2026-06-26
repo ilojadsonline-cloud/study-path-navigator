@@ -218,7 +218,9 @@ const Questoes = () => {
       let query = supabase
         .from("questoes")
         .select("*")
-        .in("audit_status", ["approved", "auto_corrected", "admin_resolved"]);
+        .in("audit_status", ["approved", "auto_corrected", "admin_resolved"])
+        // POP é sigiloso: nunca listar no Banco de Questões (acesso só via /pop-questoes)
+        .neq("disciplina", "POP");
       if (filterDisciplina !== "Todos") query = query.eq("disciplina", filterDisciplina);
       if (filterDificuldade !== "Todos") query = query.eq("dificuldade", filterDificuldade);
       const { data, error } = await query.order("id").range(from, from + batchSize - 1);
@@ -228,7 +230,8 @@ const Questoes = () => {
       from += batchSize;
     }
 
-    let filtered = allData;
+    // Guarda extra: remove qualquer questão POP (variações de espaços/maiúsculas)
+    let filtered = allData.filter(q => (q.disciplina || "").trim().toUpperCase() !== "POP");
     const totalBeforeStatusFilter = filtered.length;
     if (filterStatus === "Resolvidas") {
       filtered = filtered.filter(q => answeredIds.has(q.id));
