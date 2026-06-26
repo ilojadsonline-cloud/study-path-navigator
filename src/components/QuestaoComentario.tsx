@@ -20,9 +20,50 @@ function stripMd(s: string): string {
     .trim();
 }
 
+// Separa um trecho em (introdução + análises por alternativa), aceitando os dois
+// formatos da banca: "A) ..." e "Alternativa A — ...". Evita falsos positivos do
+// tipo "A alternativa D está correta porque..." (frase do comentário, não marcador).
+function splitAlternativas(content: string): { intro: string; alts: { letter: string; text: string }[] } {
+  const c = content || "";
+  const markers: { index: number; end: number; letter: string }[] = [];
+  let m: RegExpExecArray | null;
+
+  // Formato "Alternativa A — ...", "Alternativa A: ...", "Alternativa A) ..."
+  const re1 = /Alternativa\s+(\*{0,2})([A-E])\b\s*([—–\-:)\.]?)\s*/g;
+  while ((m = re1.exec(c))) {
+    const after = c.slice(m.index + m[0].length);
+    const sep = m[3];
+    const isMarker = (!!sep && /[—–\-:)]/.test(sep)) || /^(Correta|Incorreta)/i.test(after);
+    if (isMarker) markers.push({ index: m.index, end: m.index + m[0].length, letter: m[2] });
+  }
+
+  // Formato "A) ...", "**A) ...**"
+  const re2 = /(?<![A-Za-z])(\*{0,2})([A-E])\)\s*(\*{0,2})\s*/g;
+  while ((m = re2.exec(c))) markers.push({ index: m.index, end: m.index + m[0].length, letter: m[2] });
+
+  markers.sort((a, b) => a.index - b.index);
+  const clean: typeof markers = [];
+  for (const mk of markers) {
+    if (!clean.length || mk.index >= clean[clean.length - 1].end) clean.push(mk);
+  }
+
+  if (!clean.length) return { intro: c.trim(), alts: [] };
+
+  const intro = c.slice(0, clean[0].index).trim();
+  const alts: { letter: string; text: string }[] = [];
+  for (let i = 0; i < clean.length; i++) {
+    const start = clean[i].end;
+    const end = i + 1 < clean.length ? clean[i + 1].index : c.length;
+    alts.push({ letter: clean[i].letter.toUpperCase(), text: c.slice(start, end).trim() });
+  }
+  return { intro, alts };
+}
+
 // ----- Formato NOVO (padrão banca de elite) -----
 // "**Comentário do professor:** ... **Análise das alternativas:** **A)** ... **B)** ...
 //  **Dica de prova:** ... **Base normativa:** ..."
+// Também aceita variações sem o rótulo "Comentário do professor" (começando direto
+// por "Gabarito X.") e com as alternativas embutidas no corpo do comentário.
 function parseNovoFormato(raw: string): Section[] | null {
   const text = (raw || "").trim();
   const labelRe =
@@ -32,6 +73,11 @@ function parseNovoFormato(raw: string): Section[] | null {
   if (matches.length === 0) return null;
 
   const blocks: { label: string; content: string }[] = [];
+
+  // Tudo que vem ANTES do primeiro rótulo é o comentário do professor (não pode ser perdido).
+  const preamble = text.slice(0, matches[0].index ?? 0).trim();
+  if (preamble) blocks.push({ label: "comentário do professor", content: preamble });
+
   for (let i = 0; i < matches.length; i++) {
     const m = matches[i];
     const label = m[1].toLowerCase();
@@ -43,21 +89,19 @@ function parseNovoFormato(raw: string): Section[] | null {
   const sections: Section[] = [];
   for (const b of blocks) {
     if (/coment[áa]rio do professor/.test(b.label)) {
-      if (b.content) sections.push({ type: "professor", text: stripMd(b.content) });
+      // O bloco do professor pode trazer a análise das alternativas embutida.
+      const { intro, alts } = splitAlternativas(b.content);
+      if (intro) sections.push({ type: "professor", text: stripMd(intro) });
+      for (const a of alts) {
+        const t = stripMd(a.text);
+        if (t) sections.push({ type: "alt", letter: a.letter, text: t });
+      }
     } else if (/an[áa]lise das alternativas/.test(b.label)) {
-      const altRe = /(?=\*{0,2}\s*[-•]?\s*\*{0,2}[A-E]\)\s)/g;
-      const parts = b.content.split(altRe).map((p) => p.trim()).filter(Boolean);
-      for (const part of parts) {
-        const lm = part.match(/^\*{0,2}\s*[-•]?\s*\*{0,2}([A-E])\)\s*\*{0,2}\s*/);
-        if (lm) {
-          sections.push({
-            type: "alt",
-            letter: lm[1].toUpperCase(),
-            text: stripMd(part.replace(/^\*{0,2}\s*[-•]?\s*\*{0,2}[A-E]\)\s*\*{0,2}\s*/, "")),
-          });
-        } else if (stripMd(part)) {
-          sections.push({ type: "plain", text: stripMd(part) });
-        }
+      const { intro, alts } = splitAlternativas(b.content);
+      if (intro && stripMd(intro)) sections.push({ type: "plain", text: stripMd(intro) });
+      for (const a of alts) {
+        const t = stripMd(a.text);
+        if (t) sections.push({ type: "alt", letter: a.letter, text: t });
       }
     } else if (/dica de prova/.test(b.label)) {
       if (b.content) sections.push({ type: "tip", text: stripMd(b.content) });
