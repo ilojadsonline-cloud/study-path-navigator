@@ -227,7 +227,7 @@ const SimuladoSemanal = () => {
                 <div key={q.id} className="glass-card rounded-xl p-4 sm:p-5 space-y-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold px-2 py-0.5 rounded bg-primary/15 text-primary">Questão {i + 1}</span>
-                    <span className="text-[11px] text-muted-foreground">{q.disciplina}{q.assunto ? ` • ${q.assunto}` : ""}</span>
+                    <span className="text-[11px] text-muted-foreground">{q.disciplina}</span>
                   </div>
                   <div className="text-sm leading-relaxed"><FormattedText text={q.enunciado} /></div>
                   <div className="space-y-2">

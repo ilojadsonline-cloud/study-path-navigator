@@ -449,7 +449,7 @@ const PopQuestoes = () => {
                     <Badge variant="outline" className={`text-[10px] ${getDifficultyColor(q.dificuldade)}`}>
                       {q.dificuldade}
                     </Badge>
-                    <span className="text-[10px] text-muted-foreground">{q.assunto}</span>
+                    
                   </div>
                   <button
                     onClick={() => handleReport(q.id)}
