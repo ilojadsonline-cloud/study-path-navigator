@@ -805,6 +805,26 @@ const Dashboard = () => {
               <CalendarioInteligente />
             </div>
 
+            {/* Diagnóstico de estudo — onde focar (contexto geral) */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
+              className="glass-card rounded-xl p-4 sm:p-5 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Brain className="w-5 h-5 text-primary shrink-0" />
+                <h2 className="font-semibold text-sm sm:text-base">Diagnóstico de Estudo — Onde Focar</h2>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                Visão geral do seu percentual de erro por disciplina, somando o banco de questões e os simulados resolvidos. Use para priorizar o que revisar.
+              </p>
+              <AnaliseDificuldade
+                items={diagnostico}
+                minAmostra={5}
+                unidade="disciplina"
+                emptyHint="Resolva pelo menos 5 questões por disciplina para gerar seu diagnóstico."
+              />
+            </motion.div>
+
+
+
             {/* BizuAulas — atalho rápido (Análise do Edital em destaque) */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
               className="glass-card rounded-xl p-4 sm:p-5 min-w-0">
