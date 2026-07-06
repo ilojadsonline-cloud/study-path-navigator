@@ -334,6 +334,17 @@ const Dashboard = () => {
         .sort((a, b) => b.total - a.total);
       setDisciplinas(discArr);
 
+      // Diagnóstico geral por disciplina (banco + simulados + simulado semanal)
+      const { data: diagData } = await supabase.rpc("get_desempenho_disciplinas");
+      const diagMap: Record<string, { total: number; corretas: number }> = {};
+      (diagData || []).forEach((row: { disciplina: string; total: number; corretas: number }) => {
+        const nome = normalizarDisciplina(row.disciplina) || row.disciplina;
+        if (!diagMap[nome]) diagMap[nome] = { total: 0, corretas: 0 };
+        diagMap[nome].total += Number(row.total) || 0;
+        diagMap[nome].corretas += Number(row.corretas) || 0;
+      });
+      setDiagnostico(Object.entries(diagMap).map(([name, v]) => ({ name, ...v })));
+
       // Atividades recentes
       const acts: AtividadeRecente[] = [];
       sims.slice(0, 4).forEach(s => acts.push({
