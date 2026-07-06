@@ -28,7 +28,7 @@ interface QuestaoTaking {
   enunciado: string;
   alt_a: string; alt_b: string; alt_c: string; alt_d: string; alt_e: string;
 }
-interface QuestaoFull extends QuestaoTaking { gabarito: number; comentario: string; }
+interface QuestaoFull extends QuestaoTaking { gabarito: number; comentario: string; anulada?: boolean; }
 
 type Phase = "loading" | "none" | "intro" | "taking" | "results";
 
