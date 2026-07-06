@@ -390,13 +390,15 @@ function ResultsView({ simulado, tentativa, questoes, ranking, userId }: {
         <h2 className="font-semibold flex items-center gap-2"><ListChecks className="w-5 h-5 text-primary" /> Gabarito e revisão</h2>
         {questoes.map((q, i) => {
           const minhaResp = respostas[q.id];
-          const acertou = minhaResp === q.gabarito;
+          const acertou = q.anulada || minhaResp === q.gabarito;
           return (
             <div key={q.id} className="glass-card rounded-xl p-4 sm:p-5 space-y-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold px-2 py-0.5 rounded bg-primary/15 text-primary">Questão {i + 1}</span>
                 <span className="text-[11px] text-muted-foreground">{q.disciplina}</span>
-                {minhaResp === undefined ? (
+                {q.anulada ? (
+                  <span className="text-[11px] px-1.5 py-0.5 rounded bg-primary/15 text-primary flex items-center gap-1"><ShieldCheck className="w-3 h-3" />Anulada — ponto concedido</span>
+                ) : minhaResp === undefined ? (
                   <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Em branco</span>
                 ) : acertou ? (
                   <span className="text-[11px] px-1.5 py-0.5 rounded bg-success/15 text-success flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Acertou</span>
