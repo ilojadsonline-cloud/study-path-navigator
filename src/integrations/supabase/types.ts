@@ -826,6 +826,7 @@ export type Database = {
           alt_c: string
           alt_d: string
           alt_e: string
+          anulada: boolean
           assunto: string | null
           comentario: string | null
           created_at: string
@@ -843,6 +844,7 @@ export type Database = {
           alt_c: string
           alt_d: string
           alt_e: string
+          anulada?: boolean
           assunto?: string | null
           comentario?: string | null
           created_at?: string
@@ -860,6 +862,7 @@ export type Database = {
           alt_c?: string
           alt_d?: string
           alt_e?: string
+          anulada?: boolean
           assunto?: string | null
           comentario?: string | null
           created_at?: string
