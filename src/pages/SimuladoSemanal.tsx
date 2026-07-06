@@ -10,8 +10,9 @@ import { QuestaoComentario } from "@/components/QuestaoComentario";
 import { Button } from "@/components/ui/button";
 import {
   CalendarClock, Loader2, Clock, Trophy, AlertTriangle, CheckCircle2, XCircle,
-  Flag, ShieldCheck, Award, Lock, ListChecks,
+  Flag, ShieldCheck, Award, Lock, ListChecks, Target,
 } from "lucide-react";
+import { AnaliseDificuldade, type DesempenhoItem } from "@/components/AnaliseDificuldade";
 import {
   EDITAL_DISTRIBUICAO, NOTA_MINIMA_APROVACAO, VAGAS_CLASSIFICACAO,
   PONTUACAO_TOTAL, situacaoLabel,
