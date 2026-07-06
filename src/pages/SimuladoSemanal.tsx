@@ -400,6 +400,35 @@ function ResultsView({ simulado, tentativa, questoes, ranking, userId }: {
         )}
       </div>
 
+      {/* Análise de desempenho por assunto/disciplina */}
+      <div className="glass-card rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h2 className="font-semibold flex items-center gap-2"><Target className="w-5 h-5 text-primary" /> Análise de desempenho</h2>
+          <div className="flex rounded-lg border border-border/60 p-0.5 bg-secondary/40 text-xs">
+            <button
+              onClick={() => setModoAnalise("disciplina")}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${modoAnalise === "disciplina" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Por disciplina
+            </button>
+            <button
+              onClick={() => setModoAnalise("assunto")}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${modoAnalise === "assunto" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Por assunto
+            </button>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Veja onde você teve mais dificuldade neste simulado e o que priorizar na revisão.
+        </p>
+        <AnaliseDificuldade
+          items={analiseItems}
+          unidade={modoAnalise === "assunto" ? "assunto" : "disciplina"}
+          emptyHint="Sem dados para esta visão."
+        />
+      </div>
+
       {/* Revisão / gabarito */}
       <div className="space-y-4">
         <h2 className="font-semibold flex items-center gap-2"><ListChecks className="w-5 h-5 text-primary" /> Gabarito e revisão</h2>
