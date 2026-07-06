@@ -5,7 +5,7 @@ type: feature
 ---
 ## Importação de questões via Markdown
 - `src/lib/markdown-questoes-parser.ts`: parser "blocos com rótulos" (separador `---`). Campos: Disciplina, Assunto, Dificuldade, Banca, Ano, Prova, Enunciado (multilinha), alternativas `A) ... E)`, Gabarito (A–E), Comentário (multilinha). Retorna `{ validas, ignoradas }`. Questões fora do padrão são IGNORADAS (disciplina não reconhecida, enunciado curto, alternativa faltando, gabarito inválido, comentário ausente).
-- `src/lib/edital-distribuicao.ts`: `EDITAL_DISTRIBUICAO` (Anexo II): Lei 2.578=9, Lei 2.575=8, LC 128=5, CPPM=6, RDMETO=5, POP=7, Língua Portuguesa=5, Redação Oficial=5 → 50 questões × 2,0 = 100 pts. `normalizarDisciplina()` mapeia aliases p/ o padrão do banco. NOTA_MINIMA=60, VAGAS=50.
+- `src/lib/edital-distribuicao.ts`: `EDITAL_DISTRIBUICAO` (Anexo II): Lei 2.578=9, Lei 2.575=8, LC 128=5, CPPM=6, RDMETO=5, POP=7, Língua Portuguesa=5, Redação Oficial=5 → 50 questões × 2,0 = 100 pts. `normalizarDisciplina()` mapeia aliases p/ o padrão do banco. NOTA_MINIMA=60. **VAGAS_CLASSIFICACAO=100** (Edital nº 003/2026 ampliou de 50→100 vagas; classificado = aprovado dentro da 100ª posição).
 - UI admin: `MarkdownImportCard.tsx` embutido no `AdminGerarTab` (aba Gerar). Insere em `questoes` com `origem='manual'`, `audit_status='approved'`.
 
 ## Simulado Semanal (online, ranking)
