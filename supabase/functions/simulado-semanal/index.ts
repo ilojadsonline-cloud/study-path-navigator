@@ -113,7 +113,54 @@ serve(async (req) => {
       return updated as Tentativa;
     };
 
+    // ───────────────── ANNUL / UNANNUL (admin) ─────────────────
+    // Marca/desmarca uma questão como anulada e RECALCULA todas as tentativas
+    // finalizadas: em questão anulada, todos os alunos pontuam.
+    if (action === "annul" || action === "unannul") {
+      const { data: isAdmin } = await admin.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      if (!isAdmin) return json({ error: "forbidden" }, 403);
+
+      const questaoId = body.questao_id as string;
+      const simuladoId = body.simulado_id as string;
+      if (!questaoId || !simuladoId) return json({ error: "Parâmetros inválidos." }, 400);
+
+      const anular = action === "annul";
+      const { error: upErr } = await admin
+        .from("simulado_semanal_questoes")
+        .update({ anulada: anular })
+        .eq("id", questaoId)
+        .eq("simulado_id", simuladoId);
+      if (upErr) return json({ error: upErr.message }, 500);
+
+      const sim = await loadSimulado(simuladoId);
+      if (!sim) return json({ error: "Simulado indisponível." }, 404);
+
+      // Recalcula todas as tentativas finalizadas
+      const { data: qs } = await admin
+        .from("simulado_semanal_questoes")
+        .select("id, gabarito, anulada")
+        .eq("simulado_id", simuladoId);
+      const { data: tentativas } = await admin
+        .from("simulado_semanal_tentativas")
+        .select("*")
+        .eq("simulado_id", simuladoId)
+        .eq("status", "finished");
+
+      let recalculadas = 0;
+      for (const t of (tentativas as Tentativa[]) || []) {
+        const { acertos, pontuacao } = computeScore(t.respostas ?? {}, (qs as any[]) || [], Number(sim.valor_questao));
+        await admin
+          .from("simulado_semanal_tentativas")
+          .update({ acertos, pontuacao })
+          .eq("id", t.id);
+        recalculadas++;
+      }
+
+      return json({ ok: true, anulada: anular, recalculadas });
+    }
+
     // ───────────────── STATUS ─────────────────
+
     if (action === "status") {
       const sim = await loadSimulado();
       if (!sim) return json({ simulado: null, tentativa: null });
