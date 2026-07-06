@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CalendarClock, Loader2, Upload, Trophy, Trash2, CheckCircle2, AlertTriangle,
-  Power, PowerOff, Plus, Users,
+  Power, PowerOff, Plus, Users, Pencil,
 } from "lucide-react";
 import { parseMarkdownQuestoes } from "@/lib/markdown-questoes-parser";
+import { SimuladoSemanalEditor } from "@/components/admin/SimuladoSemanalEditor";
 import {
   EDITAL_DISTRIBUICAO, DURACAO_PADRAO_MINUTOS, VALOR_QUESTAO,
   TOTAL_QUESTOES_SIMULADO, situacaoLabel,
@@ -50,6 +51,8 @@ export function AdminSimuladoSemanalTab() {
   const [rankingOpen, setRankingOpen] = useState<string | null>(null);
   const [ranking, setRanking] = useState<any[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
+  const [editOpen, setEditOpen] = useState<string | null>(null);
+
 
   const fetchLista = useCallback(async () => {
     setLoadingList(true);
@@ -284,6 +287,9 @@ export function AdminSimuladoSemanalTab() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <Button size="sm" variant="outline" onClick={() => setEditOpen(editOpen === s.id ? null : s.id)}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => toggleAtivo(s)}>
                     {s.ativo ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
                   </Button>
@@ -295,6 +301,14 @@ export function AdminSimuladoSemanalTab() {
                   </Button>
                 </div>
               </div>
+
+              {editOpen === s.id && (
+                <SimuladoSemanalEditor
+                  simulado={s}
+                  onClose={() => setEditOpen(null)}
+                  onSaved={fetchLista}
+                />
+              )}
 
               {rankingOpen === s.id && (
                 <div className="rounded-lg bg-secondary/40 p-3">

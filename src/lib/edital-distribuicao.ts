@@ -21,7 +21,7 @@ export const TOTAL_QUESTOES_SIMULADO = EDITAL_DISTRIBUICAO.reduce((s, d) => s + 
 export const VALOR_QUESTAO = 2.0;
 export const PONTUACAO_TOTAL = TOTAL_QUESTOES_SIMULADO * VALOR_QUESTAO; // 100
 export const NOTA_MINIMA_APROVACAO = 60; // 60,0 pontos
-export const VAGAS_CLASSIFICACAO = 50;
+export const VAGAS_CLASSIFICACAO = 100; // Edital nº 003/2026 — ampliação de 50 → 100 vagas
 export const DURACAO_PADRAO_MINUTOS = 240; // 4 horas
 
 // Disciplinas aceitas no banco de questões (inclui POP).
