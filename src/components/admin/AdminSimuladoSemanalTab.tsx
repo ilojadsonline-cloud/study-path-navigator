@@ -287,6 +287,9 @@ export function AdminSimuladoSemanalTab() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <Button size="sm" variant="outline" onClick={() => setEditOpen(editOpen === s.id ? null : s.id)}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => toggleAtivo(s)}>
                     {s.ativo ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
                   </Button>
@@ -298,6 +301,14 @@ export function AdminSimuladoSemanalTab() {
                   </Button>
                 </div>
               </div>
+
+              {editOpen === s.id && (
+                <SimuladoSemanalEditor
+                  simulado={s}
+                  onClose={() => setEditOpen(null)}
+                  onSaved={fetchLista}
+                />
+              )}
 
               {rankingOpen === s.id && (
                 <div className="rounded-lg bg-secondary/40 p-3">
