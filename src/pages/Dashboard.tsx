@@ -12,6 +12,8 @@ import {
 import { CalendarioInteligente } from "@/components/dashboard/CalendarioInteligente";
 import { SimuladoSemanalDestaque } from "@/components/dashboard/SimuladoSemanalDestaque";
 import { bizuAulaDisciplinas, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
+import { AnaliseDificuldade, type DesempenhoItem } from "@/components/AnaliseDificuldade";
+import { normalizarDisciplina } from "@/lib/edital-distribuicao";
 
 import { getLocalStudyTimerSnapshot, type TimerState } from "@/hooks/useStudyTimer";
 import { useNavigate, Link } from "react-router-dom";
