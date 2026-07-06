@@ -345,6 +345,20 @@ function ResultsView({ simulado, tentativa, questoes, ranking, userId }: {
   const aprovado = pontuacao >= NOTA_MINIMA_APROVACAO;
   const situacao = minha?.situacao || (aprovado ? "aprovado_nao_classificado" : "reprovado");
   const respostas: Record<string, number> = tentativa?.respostas || {};
+  const [modoAnalise, setModoAnalise] = useState<"disciplina" | "assunto">("disciplina");
+
+  const analiseItems = useMemo<DesempenhoItem[]>(() => {
+    const map: Record<string, { total: number; corretas: number }> = {};
+    for (const q of questoes) {
+      const raw = modoAnalise === "assunto" ? q.assunto : q.disciplina;
+      const name = (raw || "").trim() || "Geral";
+      if (!map[name]) map[name] = { total: 0, corretas: 0 };
+      map[name].total++;
+      const acertou = q.anulada || respostas[q.id] === q.gabarito;
+      if (acertou) map[name].corretas++;
+    }
+    return Object.entries(map).map(([name, v]) => ({ name, ...v }));
+  }, [questoes, respostas, modoAnalise]);
 
   return (
     <div className="space-y-6">
