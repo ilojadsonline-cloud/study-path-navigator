@@ -370,7 +370,7 @@ function ResultsView({ simulado, tentativa, questoes, ranking, userId }: {
           <p className="text-sm text-muted-foreground">Seja o primeiro a finalizar!</p>
         ) : (
           <div className="space-y-1">
-            {ranking.slice(0, 50).map((r) => {
+            {ranking.slice(0, VAGAS_CLASSIFICACAO).map((r) => {
               const eu = r.user_id === userId;
               return (
                 <div key={r.user_id} className={`flex items-center gap-3 p-2.5 rounded-lg ${eu ? "bg-primary/10 border border-primary/20" : "bg-secondary/40"}`}>
