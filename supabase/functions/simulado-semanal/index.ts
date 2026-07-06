@@ -31,11 +31,13 @@ interface Tentativa {
 
 function computeScore(
   respostas: Record<string, number>,
-  questoes: { id: string; gabarito: number }[],
+  questoes: { id: string; gabarito: number; anulada?: boolean }[],
   valorQuestao: number,
 ) {
   let acertos = 0;
   for (const q of questoes) {
+    // Questão anulada: todos pontuam nela, independentemente da resposta.
+    if (q.anulada) { acertos++; continue; }
     const r = respostas?.[q.id];
     if (typeof r === "number" && r === q.gabarito) acertos++;
   }
