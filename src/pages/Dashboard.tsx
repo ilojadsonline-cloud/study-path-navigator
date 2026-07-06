@@ -12,6 +12,8 @@ import {
 import { CalendarioInteligente } from "@/components/dashboard/CalendarioInteligente";
 import { SimuladoSemanalDestaque } from "@/components/dashboard/SimuladoSemanalDestaque";
 import { bizuAulaDisciplinas, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
+import { AnaliseDificuldade, type DesempenhoItem } from "@/components/AnaliseDificuldade";
+import { normalizarDisciplina } from "@/lib/edital-distribuicao";
 
 import { getLocalStudyTimerSnapshot, type TimerState } from "@/hooks/useStudyTimer";
 import { useNavigate, Link } from "react-router-dom";
@@ -164,6 +166,7 @@ const Dashboard = () => {
   const [studySessions, setStudySessions] = useState<StudySession[]>([]);
   const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
   const [bizuAulas, setBizuAulas] = useState<BizuAulaItem[]>([]);
+  const [diagnostico, setDiagnostico] = useState<DesempenhoItem[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -330,6 +333,17 @@ const Dashboard = () => {
       const discArr = Object.entries(discMap).map(([name, v]) => ({ name, ...v }))
         .sort((a, b) => b.total - a.total);
       setDisciplinas(discArr);
+
+      // Diagnóstico geral por disciplina (banco + simulados + simulado semanal)
+      const { data: diagData } = await supabase.rpc("get_desempenho_disciplinas");
+      const diagMap: Record<string, { total: number; corretas: number }> = {};
+      (diagData || []).forEach((row: { disciplina: string; total: number; corretas: number }) => {
+        const nome = normalizarDisciplina(row.disciplina) || row.disciplina;
+        if (!diagMap[nome]) diagMap[nome] = { total: 0, corretas: 0 };
+        diagMap[nome].total += Number(row.total) || 0;
+        diagMap[nome].corretas += Number(row.corretas) || 0;
+      });
+      setDiagnostico(Object.entries(diagMap).map(([name, v]) => ({ name, ...v })));
 
       // Atividades recentes
       const acts: AtividadeRecente[] = [];
@@ -790,6 +804,26 @@ const Dashboard = () => {
               {/* Calendário Inteligente CHOA */}
               <CalendarioInteligente />
             </div>
+
+            {/* Diagnóstico de estudo — onde focar (contexto geral) */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
+              className="glass-card rounded-xl p-4 sm:p-5 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Brain className="w-5 h-5 text-primary shrink-0" />
+                <h2 className="font-semibold text-sm sm:text-base">Diagnóstico de Estudo — Onde Focar</h2>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                Visão geral do seu percentual de erro por disciplina, somando o banco de questões e os simulados resolvidos. Use para priorizar o que revisar.
+              </p>
+              <AnaliseDificuldade
+                items={diagnostico}
+                minAmostra={5}
+                unidade="disciplina"
+                emptyHint="Resolva pelo menos 5 questões por disciplina para gerar seu diagnóstico."
+              />
+            </motion.div>
+
+
 
             {/* BizuAulas — atalho rápido (Análise do Edital em destaque) */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}

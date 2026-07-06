@@ -10,8 +10,9 @@ import { QuestaoComentario } from "@/components/QuestaoComentario";
 import { Button } from "@/components/ui/button";
 import {
   CalendarClock, Loader2, Clock, Trophy, AlertTriangle, CheckCircle2, XCircle,
-  Flag, ShieldCheck, Award, Lock, ListChecks,
+  Flag, ShieldCheck, Award, Lock, ListChecks, Target,
 } from "lucide-react";
+import { AnaliseDificuldade, type DesempenhoItem } from "@/components/AnaliseDificuldade";
 import {
   EDITAL_DISTRIBUICAO, NOTA_MINIMA_APROVACAO, VAGAS_CLASSIFICACAO,
   PONTUACAO_TOTAL, situacaoLabel,
@@ -344,6 +345,20 @@ function ResultsView({ simulado, tentativa, questoes, ranking, userId }: {
   const aprovado = pontuacao >= NOTA_MINIMA_APROVACAO;
   const situacao = minha?.situacao || (aprovado ? "aprovado_nao_classificado" : "reprovado");
   const respostas: Record<string, number> = tentativa?.respostas || {};
+  const [modoAnalise, setModoAnalise] = useState<"disciplina" | "assunto">("disciplina");
+
+  const analiseItems = useMemo<DesempenhoItem[]>(() => {
+    const map: Record<string, { total: number; corretas: number }> = {};
+    for (const q of questoes) {
+      const raw = modoAnalise === "assunto" ? q.assunto : q.disciplina;
+      const name = (raw || "").trim() || "Geral";
+      if (!map[name]) map[name] = { total: 0, corretas: 0 };
+      map[name].total++;
+      const acertou = q.anulada || respostas[q.id] === q.gabarito;
+      if (acertou) map[name].corretas++;
+    }
+    return Object.entries(map).map(([name, v]) => ({ name, ...v }));
+  }, [questoes, respostas, modoAnalise]);
 
   return (
     <div className="space-y-6">
@@ -383,6 +398,35 @@ function ResultsView({ simulado, tentativa, questoes, ranking, userId }: {
             })}
           </div>
         )}
+      </div>
+
+      {/* Análise de desempenho por assunto/disciplina */}
+      <div className="glass-card rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h2 className="font-semibold flex items-center gap-2"><Target className="w-5 h-5 text-primary" /> Análise de desempenho</h2>
+          <div className="flex rounded-lg border border-border/60 p-0.5 bg-secondary/40 text-xs">
+            <button
+              onClick={() => setModoAnalise("disciplina")}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${modoAnalise === "disciplina" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Por disciplina
+            </button>
+            <button
+              onClick={() => setModoAnalise("assunto")}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${modoAnalise === "assunto" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Por assunto
+            </button>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Veja onde você teve mais dificuldade neste simulado e o que priorizar na revisão.
+        </p>
+        <AnaliseDificuldade
+          items={analiseItems}
+          unidade={modoAnalise === "assunto" ? "assunto" : "disciplina"}
+          emptyHint="Sem dados para esta visão."
+        />
       </div>
 
       {/* Revisão / gabarito */}

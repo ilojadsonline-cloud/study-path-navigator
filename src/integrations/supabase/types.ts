@@ -1125,6 +1125,14 @@ export type Database = {
         }[]
       }
       excluir_questoes_por_ids: { Args: { p_ids: number[] }; Returns: number }
+      get_desempenho_disciplinas: {
+        Args: { p_user_id?: string }
+        Returns: {
+          corretas: number
+          disciplina: string
+          total: number
+        }[]
+      }
       get_email_by_cpf: { Args: { p_cpf: string }; Returns: string }
       get_my_ranking_position: {
         Args: { p_period?: string }
