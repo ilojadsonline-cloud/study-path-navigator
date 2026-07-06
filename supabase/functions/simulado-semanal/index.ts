@@ -94,7 +94,7 @@ serve(async (req) => {
     const finalizar = async (t: Tentativa, sim: any, respostasOverride?: Record<string, number>) => {
       const { data: qs } = await admin
         .from("simulado_semanal_questoes")
-        .select("id, gabarito")
+        .select("id, gabarito, anulada")
         .eq("simulado_id", sim.id);
       const respostas = respostasOverride ?? t.respostas ?? {};
       const { acertos, pontuacao } = computeScore(respostas, (qs as any[]) || [], Number(sim.valor_questao));
