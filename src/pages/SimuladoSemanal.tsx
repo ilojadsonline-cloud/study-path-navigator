@@ -57,6 +57,11 @@ const SimuladoSemanal = () => {
   const [ranking, setRanking] = useState<any[]>([]);
   const [tentativaResult, setTentativaResult] = useState<any>(null);
 
+  // histórico / revisão de simulados anteriores
+  const [historico, setHistorico] = useState<HistoricoItem[]>([]);
+  const [revisao, setRevisao] = useState<{ simulado: any; tentativa: any; questoes: QuestaoFull[]; ranking: any[] } | null>(null);
+  const [loadingRevisao, setLoadingRevisao] = useState<string | null>(null);
+
   const respostasRef = useRef(respostas);
   respostasRef.current = respostas;
   const savedSig = useRef("");
