@@ -97,9 +97,32 @@ const SimuladoSemanal = () => {
     }
   }, [call]);
 
+  const carregarHistorico = useCallback(async () => {
+    const { data } = await call("history");
+    if (data && !data.error) setHistorico((data.historico as HistoricoItem[]) || []);
+  }, [call]);
+
+  const abrirRevisao = useCallback(async (simId: string) => {
+    setLoadingRevisao(simId);
+    const { data } = await call("results", { simulado_id: simId });
+    setLoadingRevisao(null);
+    if (data && !data.error) {
+      setRevisao({
+        simulado: data.simulado,
+        tentativa: data.tentativa,
+        questoes: data.questoes || [],
+        ranking: data.ranking || [],
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      toast.error(data?.message || "Não foi possível abrir a revisão.");
+    }
+  }, [call]);
+
   // ── init ──
   useEffect(() => {
     (async () => {
+      carregarHistorico();
       const { data } = await call("status");
       if (!data || !data.simulado) { setPhase("none"); return; }
       setSimulado(data.simulado);
