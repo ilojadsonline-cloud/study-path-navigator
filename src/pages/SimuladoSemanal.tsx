@@ -215,6 +215,30 @@ const SimuladoSemanal = () => {
     );
   }
 
+  // ── Revisão de um simulado anterior (sobrepõe o conteúdo normal) ──
+  if (revisao) {
+    return (
+      <AppLayout>
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Button variant="outline" onClick={() => setRevisao(null)} className="gap-1.5">
+            <ArrowLeft className="w-4 h-4" /> Voltar aos simulados
+          </Button>
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground flex items-center gap-2">
+            <History className="w-4 h-4 text-primary shrink-0" />
+            Você está revisando um simulado anterior. Confira suas respostas e leia os comentários.
+          </div>
+          <ResultsView
+            simulado={revisao.simulado}
+            tentativa={revisao.tentativa}
+            questoes={revisao.questoes}
+            ranking={revisao.ranking}
+            userId={user?.id}
+          />
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-6">
@@ -298,10 +322,61 @@ const SimuladoSemanal = () => {
             userId={user?.id}
           />
         )}
+
+        {/* ── Desempenho em simulados anteriores ── */}
+        {phase !== "taking" && (
+          <HistoricoSimulados
+            historico={historico}
+            loadingId={loadingRevisao}
+            onAbrir={abrirRevisao}
+          />
+        )}
       </div>
     </AppLayout>
   );
 };
+
+// ── Histórico de simulados anteriores (liberados p/ revisão) ──
+function HistoricoSimulados({ historico, loadingId, onAbrir }: {
+  historico: HistoricoItem[]; loadingId: string | null; onAbrir: (id: string) => void;
+}) {
+  if (historico.length === 0) return null;
+  return (
+    <div className="glass-card rounded-xl p-5 space-y-3">
+      <div>
+        <h2 className="font-semibold flex items-center gap-2"><History className="w-5 h-5 text-primary" /> Seu desempenho em simulados anteriores</h2>
+        <p className="text-xs text-muted-foreground mt-1">
+          Reveja suas respostas certas e erradas, releia as questões e os comentários dos simulados já liberados.
+        </p>
+      </div>
+      <div className="space-y-2">
+        {historico.map((h) => {
+          const total = h.total_questoes || 0;
+          const pct = total > 0 ? Math.round((h.acertos / total) * 100) : 0;
+          return (
+            <button
+              key={h.id}
+              onClick={() => onAbrir(h.id)}
+              disabled={loadingId === h.id}
+              className="w-full text-left flex items-center gap-3 p-3 rounded-lg border border-border/60 bg-secondary/30 hover:border-primary/40 hover:bg-secondary/50 transition-all"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate">{h.titulo}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {new Date(h.finished_at).toLocaleDateString("pt-BR")} • {h.acertos}/{total} acertos ({pct}%)
+                </p>
+              </div>
+              <span className="text-sm font-bold text-gradient-primary shrink-0">{Number(h.pontuacao).toFixed(1)} pts</span>
+              {loadingId === h.id
+                ? <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+                : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ── Intro ──
 function IntroCard({ simulado, onStart }: { simulado: any; onStart: () => void }) {
