@@ -167,6 +167,21 @@ export function AdminSimuladoSemanalTab() {
     fetchLista();
   };
 
+  const toggleRevisao = async (s: SimuladoRow) => {
+    const { error } = await supabase
+      .from("simulados_semanais")
+      .update({ revisao_liberada: !s.revisao_liberada })
+      .eq("id", s.id);
+    if (error) {
+      toast({ title: "Erro ao alterar revisão", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: !s.revisao_liberada ? "Revisão liberada para os alunos." : "Revisão ocultada dos alunos.",
+    });
+    fetchLista();
+  };
+
   const excluir = async (id: string) => {
     if (!confirm("Excluir este simulado e todas as tentativas? Esta ação não pode ser desfeita.")) return;
     await supabase.from("simulados_semanais").delete().eq("id", id);
