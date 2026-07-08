@@ -264,6 +264,38 @@ serve(async (req) => {
       return json({ ok: true, acertos: tentativa.acertos, pontuacao: tentativa.pontuacao });
     }
 
+    // ───────────────── HISTORY (simulados anteriores liberados p/ revisão) ─────────────────
+    if (action === "history") {
+      const { data: sims } = await admin
+        .from("simulados_semanais")
+        .select("id, titulo, descricao, starts_at, ends_at, total_questoes, revisao_liberada")
+        .eq("revisao_liberada", true)
+        .order("starts_at", { ascending: false });
+      const ids = ((sims as any[]) || []).map((s) => s.id);
+      if (ids.length === 0) return json({ historico: [] });
+      const { data: tents } = await admin
+        .from("simulado_semanal_tentativas")
+        .select("simulado_id, acertos, pontuacao, finished_at")
+        .eq("user_id", user.id)
+        .eq("status", "finished")
+        .in("simulado_id", ids);
+      const tMap = new Map(((tents as any[]) || []).map((t) => [t.simulado_id, t]));
+      const historico = ((sims as any[]) || [])
+        .filter((s) => tMap.has(s.id))
+        .map((s) => ({
+          id: s.id,
+          titulo: s.titulo,
+          descricao: s.descricao,
+          starts_at: s.starts_at,
+          ends_at: s.ends_at,
+          total_questoes: s.total_questoes,
+          acertos: tMap.get(s.id).acertos,
+          pontuacao: tMap.get(s.id).pontuacao,
+          finished_at: tMap.get(s.id).finished_at,
+        }));
+      return json({ historico });
+    }
+
     // ───────────────── RESULTS (review + ranking) ─────────────────
     if (action === "results") {
       const sim = await loadSimulado(body.simulado_id);
@@ -271,6 +303,11 @@ serve(async (req) => {
       const tentativa = await loadTentativa(sim.id);
       if (!tentativa || tentativa.status !== "finished") {
         return json({ error: "Tentativa não finalizada." }, 403);
+      }
+      // Simulado encerrado só pode ser revisado se o admin liberou a revisão.
+      const janelaAberta = Date.now() <= new Date(sim.ends_at).getTime();
+      if (!janelaAberta && !sim.revisao_liberada) {
+        return json({ error: "review_locked", message: "A revisão deste simulado ainda não foi liberada." }, 403);
       }
       const { data: qs } = await admin
         .from("simulado_semanal_questoes")

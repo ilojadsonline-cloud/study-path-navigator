@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CalendarClock, Loader2, Upload, Trophy, Trash2, CheckCircle2, AlertTriangle,
-  Power, PowerOff, Plus, Users, Pencil,
+  Power, PowerOff, Plus, Users, Pencil, Eye, EyeOff,
 } from "lucide-react";
 import { parseMarkdownQuestoes } from "@/lib/markdown-questoes-parser";
 import { SimuladoSemanalEditor } from "@/components/admin/SimuladoSemanalEditor";
@@ -26,6 +26,7 @@ interface SimuladoRow {
   duracao_minutos: number;
   total_questoes: number;
   ativo: boolean;
+  revisao_liberada: boolean;
   created_at: string;
 }
 
@@ -166,6 +167,21 @@ export function AdminSimuladoSemanalTab() {
     fetchLista();
   };
 
+  const toggleRevisao = async (s: SimuladoRow) => {
+    const { error } = await supabase
+      .from("simulados_semanais")
+      .update({ revisao_liberada: !s.revisao_liberada })
+      .eq("id", s.id);
+    if (error) {
+      toast({ title: "Erro ao alterar revisão", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: !s.revisao_liberada ? "Revisão liberada para os alunos." : "Revisão ocultada dos alunos.",
+    });
+    fetchLista();
+  };
+
   const excluir = async (id: string) => {
     if (!confirm("Excluir este simulado e todas as tentativas? Esta ação não pode ser desfeita.")) return;
     await supabase.from("simulados_semanais").delete().eq("id", id);
@@ -276,10 +292,14 @@ export function AdminSimuladoSemanalTab() {
             <div key={s.id} className="glass-card rounded-xl p-4 space-y-3">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-sm">{s.titulo}</p>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full ${s.ativo ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
                       {s.ativo ? "Ativo" : "Inativo"}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 ${s.revisao_liberada ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                      {s.revisao_liberada ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                      {s.revisao_liberada ? "Revisão liberada" : "Revisão oculta"}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -287,16 +307,25 @@ export function AdminSimuladoSemanalTab() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Button size="sm" variant="outline" onClick={() => setEditOpen(editOpen === s.id ? null : s.id)}>
+                  <Button size="sm" variant="outline" onClick={() => setEditOpen(editOpen === s.id ? null : s.id)} title="Editar">
                     <Pencil className="w-3.5 h-3.5" />
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => toggleAtivo(s)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toggleRevisao(s)}
+                    title={s.revisao_liberada ? "Ocultar revisão dos alunos" : "Liberar revisão para os alunos"}
+                    className={s.revisao_liberada ? "text-primary" : ""}
+                  >
+                    {s.revisao_liberada ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => toggleAtivo(s)} title={s.ativo ? "Desativar" : "Ativar"}>
                     {s.ativo ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => verRanking(s.id)}>
+                  <Button size="sm" variant="outline" onClick={() => verRanking(s.id)} title="Ranking">
                     <Trophy className="w-3.5 h-3.5" />
                   </Button>
-                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => excluir(s.id)}>
+                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => excluir(s.id)} title="Excluir">
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>

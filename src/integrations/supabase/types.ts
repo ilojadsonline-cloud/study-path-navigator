@@ -973,6 +973,7 @@ export type Database = {
           duracao_minutos: number
           ends_at: string
           id: string
+          revisao_liberada: boolean
           starts_at: string
           titulo: string
           total_questoes: number
@@ -986,6 +987,7 @@ export type Database = {
           duracao_minutos?: number
           ends_at: string
           id?: string
+          revisao_liberada?: boolean
           starts_at?: string
           titulo: string
           total_questoes?: number
@@ -999,6 +1001,7 @@ export type Database = {
           duracao_minutos?: number
           ends_at?: string
           id?: string
+          revisao_liberada?: boolean
           starts_at?: string
           titulo?: string
           total_questoes?: number
