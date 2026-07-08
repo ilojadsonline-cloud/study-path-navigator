@@ -30,6 +30,11 @@ interface QuestaoTaking {
   alt_a: string; alt_b: string; alt_c: string; alt_d: string; alt_e: string;
 }
 interface QuestaoFull extends QuestaoTaking { gabarito: number; comentario: string; anulada?: boolean; }
+interface HistoricoItem {
+  id: string; titulo: string; descricao: string | null;
+  starts_at: string; ends_at: string; total_questoes: number;
+  acertos: number; pontuacao: number; finished_at: string;
+}
 
 type Phase = "loading" | "none" | "intro" | "taking" | "results";
 
