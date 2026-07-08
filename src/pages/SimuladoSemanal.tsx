@@ -10,7 +10,7 @@ import { QuestaoComentario } from "@/components/QuestaoComentario";
 import { Button } from "@/components/ui/button";
 import {
   CalendarClock, Loader2, Clock, Trophy, AlertTriangle, CheckCircle2, XCircle,
-  Flag, ShieldCheck, Award, Lock, ListChecks, Target,
+  Flag, ShieldCheck, Award, Lock, ListChecks, Target, History, ChevronRight, ArrowLeft,
 } from "lucide-react";
 import { AnaliseDificuldade, type DesempenhoItem } from "@/components/AnaliseDificuldade";
 import {
