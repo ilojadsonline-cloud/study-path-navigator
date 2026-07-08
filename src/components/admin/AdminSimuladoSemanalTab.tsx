@@ -26,6 +26,7 @@ interface SimuladoRow {
   duracao_minutos: number;
   total_questoes: number;
   ativo: boolean;
+  revisao_liberada: boolean;
   created_at: string;
 }
 
