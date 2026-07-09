@@ -10,7 +10,7 @@ import { QuestaoComentario } from "@/components/QuestaoComentario";
 import { Button } from "@/components/ui/button";
 import {
   CalendarClock, Loader2, Clock, Trophy, AlertTriangle, CheckCircle2, XCircle,
-  Flag, ShieldCheck, Award, Lock, ListChecks, Target, History, ChevronRight, ArrowLeft,
+  Flag, ShieldCheck, Award, Lock, ListChecks, Target, History, ChevronRight, ArrowLeft, Scissors,
 } from "lucide-react";
 import { AnaliseDificuldade, type DesempenhoItem } from "@/components/AnaliseDificuldade";
 import {
@@ -54,6 +54,7 @@ const SimuladoSemanal = () => {
   const [simulado, setSimulado] = useState<any>(null);
   const [questoes, setQuestoes] = useState<QuestaoTaking[]>([]);
   const [respostas, setRespostas] = useState<Record<string, number>>({});
+  const [cortadas, setCortadas] = useState<Record<string, number[]>>({});
   const [remaining, setRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
@@ -187,6 +188,16 @@ const SimuladoSemanal = () => {
     setRespostas((prev) => ({ ...prev, [qid]: idx }));
   };
 
+  const toggleCortada = (qid: string, idx: number) => {
+    setCortadas((prev) => {
+      const atual = prev[qid] || [];
+      const nova = atual.includes(idx) ? atual.filter((i) => i !== idx) : [...atual, idx];
+      return { ...prev, [qid]: nova };
+    });
+    // ao cortar a alternativa marcada, remove a seleção
+    setRespostas((prev) => (prev[qid] === idx ? (() => { const n = { ...prev }; delete n[qid]; return n; })() : prev));
+  };
+
   const respondidas = Object.keys(respostas).length;
 
   const finalizar = useCallback(async (auto = false) => {
@@ -291,15 +302,31 @@ const SimuladoSemanal = () => {
                   <div className="space-y-2">
                     {alts(q).map((alt, idx) => {
                       const sel = respostas[q.id] === idx;
+                      const cut = (cortadas[q.id] || []).includes(idx);
                       return (
-                        <button
+                        <div
                           key={idx}
-                          onClick={() => responder(q.id, idx)}
-                          className={`w-full text-left flex gap-3 p-3 rounded-lg border transition-all ${sel ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border/60 hover:border-primary/40 hover:bg-secondary/40"}`}
+                          className={`w-full flex items-stretch gap-2 rounded-lg border transition-all ${sel ? "border-primary bg-primary/10 ring-1 ring-primary" : cut ? "border-border/40 bg-secondary/20" : "border-border/60 hover:border-primary/40 hover:bg-secondary/40"}`}
                         >
-                          <span translate="no" className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${sel ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{LETRAS[idx]}</span>
-                          <span className="text-sm"><FormattedText text={alt} /></span>
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => !cut && responder(q.id, idx)}
+                            disabled={cut}
+                            className={`flex-1 text-left flex gap-3 p-3 ${cut ? "opacity-45 line-through cursor-default" : ""}`}
+                          >
+                            <span translate="no" className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${sel ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{LETRAS[idx]}</span>
+                            <span className="text-sm"><FormattedText text={alt} /></span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleCortada(q.id, idx)}
+                            aria-label={cut ? "Restaurar alternativa" : "Cortar alternativa"}
+                            title={cut ? "Restaurar alternativa" : "Cortar alternativa"}
+                            className={`shrink-0 px-3 flex items-center justify-center rounded-r-lg transition-colors ${cut ? "text-primary" : "text-muted-foreground hover:text-destructive"}`}
+                          >
+                            <Scissors className="w-4 h-4" />
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
