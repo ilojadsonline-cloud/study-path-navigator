@@ -123,7 +123,7 @@ serve(async (req) => {
 
       const bestStoredMs = storedCandidates.length ? Math.max(...storedCandidates) : null;
 
-      if (bestStoredMs && bestStoredMs > now) {
+      if (bestStoredMs && bestStoredMs > Date.now()) {
         const storedEndIso = new Date(bestStoredMs).toISOString();
         logStep("Acesso garantido por registro local (stored access)", {
           userId: user.id,
