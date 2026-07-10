@@ -92,6 +92,61 @@ serve(async (req) => {
       logStep("Profile email found", { profileEmail: profileData.email });
     }
 
+    // ===== PRIORIDADE 0: Acesso já confirmado localmente (fonte da verdade) =====
+    // Quando um pagamento já foi confirmado por webhook/verificação, gravamos a
+    // data de expiração do acesso em app_metadata.access_expires_at (e em
+    // trial_usage.converted_to_paid + trial_ends_at). Se essa data ainda está no
+    // futuro, o acesso É garantido SEM depender de uma nova ida à API do
+    // Stripe/Mercado Pago. Isso evita que uma falha transitória de API — ou um
+    // pagamento avulso que saiu da janela de busca — derrube o acesso de quem
+    // JÁ pagou (bug "acesso expirado" mesmo com assinatura reconhecida no admin).
+    try {
+      const storedCandidates: number[] = [];
+
+      const metaExpires = (user.app_metadata as any)?.access_expires_at;
+      const metaMs = metaExpires ? new Date(metaExpires).getTime() : NaN;
+      const metaBlocked = (user.app_metadata as any)?.trial_blocked === true;
+      if (Number.isFinite(metaMs) && !metaBlocked) storedCandidates.push(metaMs);
+
+      const { data: paidRecord } = await supabaseClient
+        .from("trial_usage")
+        .select("converted_to_paid, trial_ends_at")
+        .eq("user_id", user.id)
+        .order("trial_started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (paidRecord?.converted_to_paid && paidRecord.trial_ends_at) {
+        const paidMs = new Date(paidRecord.trial_ends_at).getTime();
+        if (Number.isFinite(paidMs)) storedCandidates.push(paidMs);
+      }
+
+      const bestStoredMs = storedCandidates.length ? Math.max(...storedCandidates) : null;
+
+      if (bestStoredMs && bestStoredMs > Date.now()) {
+        const storedEndIso = new Date(bestStoredMs).toISOString();
+        logStep("Acesso garantido por registro local (stored access)", {
+          userId: user.id,
+          accessExpiresAt: storedEndIso,
+        });
+        // Garante que um bloqueio antigo não impeça o login de quem pagou.
+        await unbanAuthUser(supabaseClient, user.id);
+        return new Response(JSON.stringify({
+          subscribed: true,
+          subscription_end: storedEndIso,
+          is_trial: false,
+          trial_ends_at: null,
+          provider: (user.app_metadata as any)?.payment_source ?? null,
+          source: "stored",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+    } catch (e) {
+      logStep("stored access check warning", { error: String(e) });
+    }
+
     logStep("Searching Stripe with emails", { emails: emailsToSearch });
 
     // ===== PRIORIDADE 1: MercadoPago Preapproval (assinatura recorrente nativa) =====
