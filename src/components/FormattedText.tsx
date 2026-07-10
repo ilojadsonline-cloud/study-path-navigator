@@ -48,6 +48,43 @@ function parseInline(text: string, active: Omit<Token, "text"> = {}): Token[] {
   ];
 }
 
+// Corrige quebras de linha "soltas" no meio de frases (comuns em textos
+// importados que vieram quebrados a ~80 colunas), preservando as quebras
+// legítimas: parágrafos (linha em branco) e fim de frase (. ! ? : ;).
+function normalizeSoftBreaks(raw: string): string {
+  if (!raw) return "";
+  // Normaliza CR e reduz 3+ quebras seguidas para separador de parágrafo.
+  const text = raw.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n");
+  const lines = text.split("\n");
+  let out = "";
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    out += line;
+    if (i === lines.length - 1) break;
+
+    const next = lines[i + 1];
+    const prevTrim = line.trimEnd();
+    // Linha em branco (parágrafo) ou próxima linha em branco: mantém a quebra.
+    if (prevTrim === "" || next.trim() === "") {
+      out += "\n";
+      continue;
+    }
+    // Fim de frase: mantém a quebra.
+    if (/[.!?:;]$/.test(prevTrim)) {
+      out += "\n";
+      continue;
+    }
+    // Início de alternativa/lista/verso na próxima linha: mantém a quebra.
+    if (/^\s*([a-eA-E][)\].-]|[IVX]+[)\].-]|[-•*]\s|\d+[)\].-])/.test(next)) {
+      out += "\n";
+      continue;
+    }
+    // Caso contrário é quebra "solta" no meio da frase: vira espaço.
+    out += prevTrim.endsWith(" ") ? "" : " ";
+  }
+  return out;
+}
+
 interface Props {
   text: string;
   className?: string;
@@ -64,7 +101,7 @@ export function FormattedText({ text, className }: Props) {
     );
   }
 
-  const tokens = parseInline(text || "");
+  const tokens = parseInline(normalizeSoftBreaks(text || ""));
 
   return (
     <p className={cn("whitespace-pre-wrap leading-relaxed", className)}>
