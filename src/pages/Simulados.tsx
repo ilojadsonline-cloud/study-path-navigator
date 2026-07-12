@@ -509,21 +509,41 @@ const Simulados = () => {
                     const isSelected = selectedAnswer[q.id] === ai;
                     const isCorrect = q.gabaritoShuffled === ai;
                     const isRevealed = revealed[q.id];
+                    const isCrossed = !isRevealed && (crossedOut[q.id] || []).includes(ai);
+
                     let altClass = "bg-secondary/50 hover:bg-secondary border-transparent";
                     if (isRevealed && isCorrect) altClass = "bg-success/10 border-success/40 text-success";
                     else if (isRevealed && isSelected && !isCorrect) altClass = "bg-destructive/10 border-destructive/40 text-destructive";
-                    else if (isSelected) altClass = "bg-primary/10 border-primary/40 text-primary";
+                    else if (isSelected) altClass = "bg-primary/10 border-primary/40 text-primary ring-1 ring-primary/40";
+                    else if (isCrossed) altClass = "bg-secondary/20 border-transparent";
 
                     return (
-                      <button key={ai} onClick={() => { if (!revealed[q.id]) setSelectedAnswer(prev => ({ ...prev, [q.id]: ai })); }}
-                        className={`w-full text-left flex items-start gap-3 p-3 rounded-lg border text-sm transition-all duration-200 ${altClass}`}>
-                        <span className="w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5" translate="no">
-                          {String.fromCharCode(65 + ai)}
-                        </span>
-                        <FormattedText text={alt} className="flex-1" />
-                        {isRevealed && isCorrect && <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-success" />}
-                        {isRevealed && isSelected && !isCorrect && <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />}
-                      </button>
+                      <div key={ai} className={`flex items-stretch gap-2 rounded-lg border text-sm transition-all duration-200 ${altClass}`}>
+                        {!isRevealed && !isSelected && (
+                          <button
+                            onClick={() => toggleCrossed(q.id, ai)}
+                            title={isCrossed ? "Restaurar alternativa" : "Riscar alternativa"}
+                            aria-label={isCrossed ? "Restaurar alternativa" : "Riscar alternativa"}
+                            className={`shrink-0 self-center ml-1.5 w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
+                              isCrossed ? "text-primary hover:bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                            }`}
+                          >
+                            {isCrossed ? <RotateCcw className="w-4 h-4" /> : <Scissors className="w-4 h-4" />}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleAnswer(q.id, ai)}
+                          disabled={isCrossed}
+                          className={`flex-1 text-left flex items-start gap-3 p-3 ${isCrossed ? "opacity-40 cursor-default" : "cursor-pointer"}`}
+                        >
+                          <span className="w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5" translate="no">
+                            {String.fromCharCode(65 + ai)}
+                          </span>
+                          <FormattedText text={alt} className={`flex-1 ${isCrossed ? "line-through" : ""}`} />
+                          {isRevealed && isCorrect && <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-success" />}
+                          {isRevealed && isSelected && !isCorrect && <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />}
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
