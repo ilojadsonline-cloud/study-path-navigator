@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
-import { Shuffle, Settings, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowLeft, Loader2, RotateCcw, Flag } from "lucide-react";
+import { Shuffle, Settings, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowLeft, Loader2, RotateCcw, Flag, Scissors } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -122,7 +122,32 @@ const Simulados = () => {
   const [started, setStarted] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<Record<number, number>>({});
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+  const [crossedOut, setCrossedOut] = useState<Record<number, number[]>>({});
   const [finished, setFinished] = useState(false);
+
+  const handleAnswer = (questaoId: number, altIndex: number) => {
+    if (revealed[questaoId]) return;
+    if ((crossedOut[questaoId] || []).includes(altIndex)) return;
+    setSelectedAnswer(prev => ({ ...prev, [questaoId]: altIndex }));
+  };
+
+  const toggleCrossed = (questaoId: number, altIndex: number) => {
+    if (revealed[questaoId]) return;
+    setCrossedOut(prev => {
+      const current = prev[questaoId] || [];
+      const next = current.includes(altIndex)
+        ? current.filter(i => i !== altIndex)
+        : [...current, altIndex];
+      return { ...prev, [questaoId]: next };
+    });
+    setSelectedAnswer(prev => {
+      if (prev[questaoId] === altIndex && !(crossedOut[questaoId] || []).includes(altIndex)) {
+        const { [questaoId]: _omit, ...rest } = prev;
+        return rest;
+      }
+      return prev;
+    });
+  };
 
   // ─── Report question error ───
   const [reportOpen, setReportOpen] = useState(false);
