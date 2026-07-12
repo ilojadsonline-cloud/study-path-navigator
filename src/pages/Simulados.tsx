@@ -365,6 +365,7 @@ const Simulados = () => {
     setSimulado(questoesSimulado);
     setSelectedAnswer({});
     setRevealed({});
+    setCrossedOut({});
     setFinished(false);
     setStarted(true);
     setLoading(false);
