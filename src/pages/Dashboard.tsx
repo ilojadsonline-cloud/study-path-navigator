@@ -690,7 +690,7 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   <div className="space-y-3.5">
-                    {disciplinas.slice(0, 6).map(d => {
+                    {disciplinas.map(d => {
                       const pct = d.total > 0 ? Math.round((d.corretas / d.total) * 100) : 0;
                       const colorClass = pct >= 70 ? "from-success to-success/70"
                         : pct >= 50 ? "from-warning to-warning/70"
@@ -711,12 +711,10 @@ const Dashboard = () => {
                         </div>
                       );
                     })}
-                    {disciplinas.length > 6 && (
-                      <button onClick={() => navigate("/edital")}
-                        className="w-full mt-2 text-xs text-primary font-medium flex items-center justify-center gap-1 py-2 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors">
-                        Ver todas as disciplinas <ArrowUpRight className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                    <button onClick={() => navigate("/edital")}
+                      className="w-full mt-2 text-xs text-primary font-medium flex items-center justify-center gap-1 py-2 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors">
+                      Ver detalhes por disciplina <ArrowUpRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 )}
               </motion.div>
