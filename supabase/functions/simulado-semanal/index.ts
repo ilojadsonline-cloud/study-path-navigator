@@ -310,11 +310,8 @@ serve(async (req) => {
       if (!tentativa || tentativa.status !== "finished") {
         return json({ error: "Tentativa não finalizada." }, 403);
       }
-      // Simulado encerrado só pode ser revisado se o admin liberou a revisão.
-      const janelaAberta = Date.now() <= new Date(sim.ends_at).getTime();
-      if (!janelaAberta && !sim.revisao_liberada) {
-        return json({ error: "review_locked", message: "A revisão deste simulado ainda não foi liberada." }, 403);
-      }
+      // O usuário sempre pode revisar a PRÓPRIA tentativa (desempenho, gabarito e comentários).
+      // A flag 'revisao_liberada' controla apenas exposições públicas/agregadas.
       const { data: qs } = await admin
         .from("simulado_semanal_questoes")
         .select("*")
