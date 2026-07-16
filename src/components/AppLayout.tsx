@@ -113,7 +113,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <span className="text-sm font-semibold text-gradient-primary">Método CHOA</span>
               </div>
             </div>
-            <div className="flex items-center gap-3 relative">
+            <div className="flex items-center gap-1 sm:gap-2 relative">
+              <ThemeToggle />
               <button
                 onClick={() => { setShowNotifications(!showNotifications); if (!showNotifications) fetchNotifications(); }}
                 className="relative p-2 rounded-lg hover:bg-secondary transition-colors"
