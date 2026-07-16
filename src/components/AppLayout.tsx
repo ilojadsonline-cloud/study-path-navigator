@@ -5,6 +5,7 @@ import { UserMenu } from "@/components/UserMenu";
 import { Shield, Bell, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Notification {
   id: number;
@@ -112,7 +113,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <span className="text-sm font-semibold text-gradient-primary">Método CHOA</span>
               </div>
             </div>
-            <div className="flex items-center gap-3 relative">
+            <div className="flex items-center gap-1 sm:gap-2 relative">
+              <ThemeToggle />
               <button
                 onClick={() => { setShowNotifications(!showNotifications); if (!showNotifications) fetchNotifications(); }}
                 className="relative p-2 rounded-lg hover:bg-secondary transition-colors"
