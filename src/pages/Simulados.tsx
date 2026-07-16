@@ -467,23 +467,39 @@ const Simulados = () => {
             </div>
           </motion.div>
 
-          {finished && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`p-3 rounded-xl shrink-0 ${(acertos / stableSimulado.length) >= 0.7 ? 'bg-success/15' : 'bg-warning/15'}`}>
-                  <CheckCircle className={`w-5 h-5 ${(acertos / stableSimulado.length) >= 0.7 ? 'text-success' : 'text-warning'}`} />
+          {finished && (() => {
+            const total = stableSimulado.length || 1;
+            const pct = (acertos / total) * 100;
+            const nota = (acertos / total) * 10;
+            const tone = pct >= 70 ? "success" : pct >= 50 ? "warning" : "destructive";
+            const label = pct >= 70 ? "Excelente!" : pct >= 50 ? "Quase lá — continue firme" : "Foco na revisão!";
+            return (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-xl p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className={`shrink-0 w-24 h-24 rounded-2xl bg-${tone}/15 border border-${tone}/30 flex flex-col items-center justify-center`}>
+                    <span className={`text-3xl font-black text-${tone} leading-none`}>{nota.toFixed(1)}</span>
+                    <span className={`text-[10px] uppercase tracking-wide text-${tone}/80 mt-1`}>Nota / 10</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Simulado finalizado</p>
+                    <p className="text-lg font-bold">{label}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      <span className="font-semibold text-foreground">{acertos}</span> de <span className="font-semibold text-foreground">{stableSimulado.length}</span> acertos
+                      {" • "}<span className={`font-semibold text-${tone}`}>{pct.toFixed(1)}% de aproveitamento</span>
+                    </p>
+                    <div className="mt-2 h-2 w-full rounded-full bg-secondary overflow-hidden">
+                      <div className={`h-full bg-${tone} transition-all`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                  <button onClick={reiniciarSimulado} className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Novo Simulado
+                  </button>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-sm">Simulado Finalizado!</p>
-                  <p className="text-xs text-muted-foreground">Revise as questões abaixo</p>
-                </div>
-              </div>
-              <button onClick={reiniciarSimulado} className="px-4 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold flex items-center justify-center gap-1.5 w-full sm:w-auto">
-                <RotateCcw className="w-3.5 h-3.5" />
-                Novo Simulado
-              </button>
-            </motion.div>
-          )}
+                <p className="text-[11px] text-muted-foreground">Revise as questões abaixo para consolidar o aprendizado.</p>
+              </motion.div>
+            );
+          })()}
 
           <div className="space-y-6">
             {stableSimulado.map((q, qi) => (
