@@ -270,7 +270,26 @@ const SimuladoSemanal = () => {
         )}
 
         {phase === "intro" && simulado && (
-          <IntroCard simulado={simulado} onStart={() => iniciar(simulado.id)} />
+          <>
+            <IntroCard simulado={simulado} onStart={() => iniciar(simulado.id)} />
+            <OutrosDisponiveis
+              atualId={simulado.id}
+              disponiveis={disponiveis}
+              onSelecionar={(s) => { setSimulado(s); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            />
+          </>
+        )}
+
+        {phase === "results" && simulado && disponiveis.some((d) => d.id !== simulado.id) && (
+          <OutrosDisponiveis
+            atualId={simulado.id}
+            disponiveis={disponiveis}
+            onSelecionar={async (s) => {
+              setSimulado(s);
+              setPhase("intro");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         )}
 
         {phase === "taking" && simulado && (
