@@ -130,6 +130,7 @@ const SimuladoSemanal = () => {
       const { data } = await call("status");
       if (!data || !data.simulado) { setPhase("none"); return; }
       setSimulado(data.simulado);
+      setDisponiveis((data.disponiveis as any[]) || []);
       const t = data.tentativa;
       if (t?.status === "finished") {
         await carregarResultados(data.simulado.id);
