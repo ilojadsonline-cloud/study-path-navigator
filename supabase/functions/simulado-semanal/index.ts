@@ -193,13 +193,38 @@ serve(async (req) => {
     // ───────────────── STATUS ─────────────────
 
     if (action === "status") {
-      const sim = await loadSimulado();
-      if (!sim) return json({ simulado: null, tentativa: null });
-      let tentativa = await loadTentativa(sim.id);
+      const ativos = await loadSimuladosAtivos();
+      if (ativos.length === 0) return json({ simulado: null, tentativa: null, disponiveis: [] });
+
+      // Busca tentativas do usuário em todos os ativos, escolhendo como
+      // "primário" o simulado mais recente que ainda NÃO foi finalizado.
+      const ids = ativos.map((s) => s.id);
+      const { data: tents } = await admin
+        .from("simulado_semanal_tentativas")
+        .select("*")
+        .eq("user_id", user.id)
+        .in("simulado_id", ids);
+      const tMap = new Map<string, Tentativa>();
+      for (const t of (tents as Tentativa[]) || []) tMap.set(t.simulado_id, t);
+
+      const naoFinalizado = ativos.find((s) => (tMap.get(s.id)?.status ?? null) !== "finished");
+      const sim = naoFinalizado ?? ativos[0];
+      let tentativa = tMap.get(sim.id) ?? null;
+
       // auto-finaliza se expirou
       if (tentativa && tentativa.status === "in_progress" && remainingSeconds(tentativa, sim.duracao_minutos, sim.ends_at) <= 0) {
         tentativa = await finalizar(tentativa, sim);
       }
+
+      const disponiveis = ativos
+        .filter((s) => (tMap.get(s.id)?.status ?? null) !== "finished")
+        .map((s) => ({
+          id: s.id, titulo: s.titulo, descricao: s.descricao,
+          starts_at: s.starts_at, ends_at: s.ends_at,
+          total_questoes: s.total_questoes, duracao_minutos: s.duracao_minutos,
+          em_andamento: tMap.get(s.id)?.status === "in_progress",
+        }));
+
       return json({
         simulado: sim,
         tentativa: tentativa
@@ -212,6 +237,7 @@ serve(async (req) => {
               remaining_seconds: tentativa.status === "in_progress" ? remainingSeconds(tentativa, sim.duracao_minutos, sim.ends_at) : 0,
             }
           : null,
+        disponiveis,
       });
     }
 
