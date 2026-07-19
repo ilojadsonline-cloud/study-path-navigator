@@ -601,7 +601,9 @@ function ResultsView({ simulado, tentativa, questoes, ranking, userId }: {
                 })}
               </div>
               {q.comentario && <QuestaoComentario comentario={q.comentario} />}
+              <RecursoQuestao simuladoId={simulado.id} questaoId={q.id} />
             </div>
+
           );
         })}
       </div>
