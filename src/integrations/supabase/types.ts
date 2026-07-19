@@ -884,6 +884,63 @@ export type Database = {
           },
         ]
       }
+      simulado_semanal_recursos: {
+        Row: {
+          argumento: string
+          created_at: string
+          decidido_em: string | null
+          decidido_por: string | null
+          decisao_admin: string | null
+          id: string
+          questao_id: string
+          simulado_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          argumento: string
+          created_at?: string
+          decidido_em?: string | null
+          decidido_por?: string | null
+          decisao_admin?: string | null
+          id?: string
+          questao_id: string
+          simulado_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          argumento?: string
+          created_at?: string
+          decidido_em?: string | null
+          decidido_por?: string | null
+          decisao_admin?: string | null
+          id?: string
+          questao_id?: string
+          simulado_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulado_semanal_recursos_questao_id_fkey"
+            columns: ["questao_id"]
+            isOneToOne: false
+            referencedRelation: "simulado_semanal_questoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "simulado_semanal_recursos_simulado_id_fkey"
+            columns: ["simulado_id"]
+            isOneToOne: false
+            referencedRelation: "simulados_semanais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       simulado_semanal_tentativas: {
         Row: {
           acertos: number
