@@ -8,10 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CalendarClock, Loader2, Upload, Trophy, Trash2, CheckCircle2, AlertTriangle,
-  Power, PowerOff, Plus, Users, Pencil, Eye, EyeOff,
+  Power, PowerOff, Plus, Users, Pencil, Eye, EyeOff, RotateCw, Gavel,
+  ThumbsUp, ThumbsDown, MessageSquare,
 } from "lucide-react";
 import { parseMarkdownQuestoes } from "@/lib/markdown-questoes-parser";
 import { SimuladoSemanalEditor } from "@/components/admin/SimuladoSemanalEditor";
+
 import {
   EDITAL_DISTRIBUICAO, DURACAO_PADRAO_MINUTOS, VALOR_QUESTAO,
   TOTAL_QUESTOES_SIMULADO, situacaoLabel,
@@ -53,6 +55,12 @@ export function AdminSimuladoSemanalTab() {
   const [ranking, setRanking] = useState<any[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
   const [editOpen, setEditOpen] = useState<string | null>(null);
+  const [reopenFor, setReopenFor] = useState<string | null>(null);
+  const [reopenDate, setReopenDate] = useState("");
+  const [recursosOpen, setRecursosOpen] = useState<string | null>(null);
+  const [recursos, setRecursos] = useState<any[]>([]);
+  const [loadingRecursos, setLoadingRecursos] = useState(false);
+
 
 
   const fetchLista = useCallback(async () => {
@@ -197,6 +205,76 @@ export function AdminSimuladoSemanalTab() {
     setLoadingRanking(false);
   };
 
+  const abrirReopen = (s: SimuladoRow) => {
+    if (reopenFor === s.id) { setReopenFor(null); return; }
+    setReopenFor(s.id);
+    const base = new Date(Math.max(Date.now(), new Date(s.ends_at).getTime()));
+    base.setDate(base.getDate() + 7);
+    setReopenDate(toLocalInput(base));
+  };
+
+  const confirmarReopen = async (id: string) => {
+    if (!reopenDate) return;
+    const { data, error } = await supabase.functions.invoke("simulado-semanal", {
+      body: { action: "reopen", simulado_id: id, ends_at: new Date(reopenDate).toISOString() },
+    });
+    if (error || (data as any)?.error) {
+      toast({ title: "Erro ao reabrir", description: (data as any)?.error || error?.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Simulado reaberto.", description: "Alunos que ainda não responderam poderão participar." });
+    setReopenFor(null);
+    fetchLista();
+  };
+
+  const verRecursos = async (id: string) => {
+    if (recursosOpen === id) { setRecursosOpen(null); return; }
+    setRecursosOpen(id);
+    setLoadingRecursos(true);
+    const { data, error } = await supabase
+      .from("simulado_semanal_recursos")
+      .select("id, argumento, status, decisao_admin, created_at, user_id, questao_id, simulado_semanal_questoes(ordem, disciplina, enunciado)")
+      .eq("simulado_id", id)
+      .order("created_at", { ascending: false });
+    if (error) toast({ title: "Erro ao carregar recursos", description: error.message, variant: "destructive" });
+    let list: any[] = (data as any[]) || [];
+    if (list.length) {
+      const ids = Array.from(new Set(list.map((r) => r.user_id)));
+      const { data: profs } = await supabase.from("profiles").select("user_id, nome").in("user_id", ids);
+      const map = new Map((profs as any[] || []).map((p) => [p.user_id, p.nome]));
+      list = list.map((r) => ({ ...r, _nome: map.get(r.user_id) || "Aluno" }));
+    }
+    setRecursos(list);
+    setLoadingRecursos(false);
+  };
+
+
+  const decidirRecurso = async (r: any, decisao: "procedente" | "improcedente", justificativa: string, simuladoId: string) => {
+    if (!justificativa.trim()) {
+      toast({ title: "Escreva a justificativa da decisão.", variant: "destructive" });
+      return;
+    }
+    // Atualiza status do recurso
+    const { error } = await supabase
+      .from("simulado_semanal_recursos")
+      .update({ status: decisao, decisao_admin: justificativa.trim(), decidido_em: new Date().toISOString(), decidido_por: user?.id ?? null })
+      .eq("id", r.id);
+    if (error) {
+      toast({ title: "Erro ao decidir", description: error.message, variant: "destructive" });
+      return;
+    }
+    // Se deferido → anula a questão (todos pontuam)
+    if (decisao === "procedente") {
+      await supabase.functions.invoke("simulado-semanal", {
+        body: { action: "annul", simulado_id: simuladoId, questao_id: r.questao_id },
+      });
+    }
+    toast({ title: decisao === "procedente" ? "Recurso deferido — questão anulada." : "Recurso indeferido." });
+    verRecursos(simuladoId);
+  };
+
+
+
   return (
     <div className="space-y-6">
       <div>
@@ -322,14 +400,59 @@ export function AdminSimuladoSemanalTab() {
                   <Button size="sm" variant="outline" onClick={() => toggleAtivo(s)} title={s.ativo ? "Desativar" : "Ativar"}>
                     {s.ativo ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => abrirReopen(s)} title="Reabrir (estender prazo)">
+                    <RotateCw className="w-3.5 h-3.5" />
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => verRanking(s.id)} title="Ranking">
                     <Trophy className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => verRecursos(s.id)} title="Recursos">
+                    <Gavel className="w-3.5 h-3.5" />
                   </Button>
                   <Button size="sm" variant="outline" className="text-destructive" onClick={() => excluir(s.id)} title="Excluir">
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </div>
+
+              {reopenFor === s.id && (
+                <div className="rounded-lg bg-secondary/40 p-3 space-y-2">
+                  <p className="text-xs font-semibold flex items-center gap-1.5"><RotateCw className="w-3.5 h-3.5 text-primary" /> Reabrir simulado</p>
+                  <p className="text-[11px] text-muted-foreground">Estender o encerramento para permitir que quem ainda não respondeu participe. Quem já tentou não poderá refazer.</p>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Novo encerramento</Label>
+                      <Input type="datetime-local" value={reopenDate} onChange={(e) => setReopenDate(e.target.value)} className="h-8 text-xs" />
+                    </div>
+                    <Button size="sm" onClick={() => confirmarReopen(s.id)} className="gradient-primary">
+                      Reabrir
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setReopenFor(null)}>Cancelar</Button>
+                  </div>
+                </div>
+              )}
+
+              {recursosOpen === s.id && (
+                <div className="rounded-lg bg-secondary/40 p-3 space-y-2">
+                  <p className="text-xs font-semibold flex items-center gap-1.5"><Gavel className="w-3.5 h-3.5 text-primary" /> Recursos dos alunos</p>
+                  {loadingRecursos ? (
+                    <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
+                  ) : recursos.length === 0 ? (
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" /> Nenhum recurso registrado.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {recursos.map((r) => (
+                        <RecursoItem
+                          key={r.id}
+                          recurso={r}
+                          onDecidir={(dec, just) => decidirRecurso(r, dec, just, s.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
 
               {editOpen === s.id && (
                 <SimuladoSemanalEditor
@@ -368,3 +491,52 @@ export function AdminSimuladoSemanalTab() {
     </div>
   );
 }
+
+function RecursoItem({ recurso, onDecidir }: {
+  recurso: any;
+  onDecidir: (decisao: "procedente" | "improcedente", justificativa: string) => void | Promise<void>;
+}) {
+  const [just, setJust] = useState(recurso.decisao_admin ?? "");
+  const [open, setOpen] = useState(false);
+  const q = recurso.simulado_semanal_questoes;
+  const badge = recurso.status === "procedente"
+    ? "bg-success/15 text-success"
+    : recurso.status === "improcedente"
+      ? "bg-destructive/15 text-destructive"
+      : "bg-warning/15 text-warning";
+  return (
+    <div className="rounded-lg border border-border/50 bg-background/40 p-2.5 space-y-2">
+      <button className="w-full text-left flex items-center gap-2" onClick={() => setOpen((v) => !v)}>
+        <span className={`text-[10px] px-1.5 py-0.5 rounded ${badge}`}>{recurso.status}</span>
+        <span className="text-[11px] font-semibold">Q{q?.ordem ?? "?"} · {q?.disciplina ?? ""}</span>
+        <span className="text-[11px] flex-1 truncate">{recurso._nome}</span>
+        <span className="text-[10px] text-muted-foreground">{new Date(recurso.created_at).toLocaleDateString("pt-BR")}</span>
+      </button>
+      {open && (
+        <div className="space-y-2 pt-1 border-t border-border/40">
+          <div className="text-[11px]"><strong>Aluno:</strong> {recurso._nome}</div>
+          <div className="text-[11px] whitespace-pre-wrap"><strong>Argumento:</strong> {recurso.argumento}</div>
+          {q?.enunciado && (
+            <div className="text-[11px] text-muted-foreground max-h-24 overflow-y-auto"><strong>Enunciado:</strong> {q.enunciado.replace(/<[^>]+>/g, "").slice(0, 400)}</div>
+          )}
+          {recurso.status === "pendente" ? (
+            <>
+              <Textarea value={just} onChange={(e) => setJust(e.target.value)} placeholder="Justificativa da decisão..." className="min-h-[60px] text-xs" />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => onDecidir("procedente", just)} className="bg-success hover:bg-success/90 text-white">
+                  <ThumbsUp className="w-3.5 h-3.5 mr-1.5" /> Deferir e anular questão
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => onDecidir("improcedente", just)} className="text-destructive">
+                  <ThumbsDown className="w-3.5 h-3.5 mr-1.5" /> Indeferir
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="text-[11px] italic text-muted-foreground">Decisão: {recurso.decisao_admin || "—"}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+

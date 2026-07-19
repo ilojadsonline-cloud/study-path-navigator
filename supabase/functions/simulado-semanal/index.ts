@@ -159,6 +159,28 @@ serve(async (req) => {
       return json({ ok: true, anulada: anular, recalculadas });
     }
 
+    // ───────────────── REOPEN (admin) ─────────────────
+    // Estende ends_at (e reativa) para permitir novas respostas de quem ainda não fez.
+    // A unicidade da tentativa por usuário garante que quem já respondeu não repita.
+    if (action === "reopen") {
+      const { data: isAdmin } = await admin.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      if (!isAdmin) return json({ error: "forbidden" }, 403);
+      const simuladoId = body.simulado_id as string;
+      const newEndsAt = body.ends_at as string;
+      if (!simuladoId || !newEndsAt) return json({ error: "Parâmetros inválidos." }, 400);
+      const when = new Date(newEndsAt);
+      if (isNaN(when.getTime()) || when.getTime() <= Date.now()) {
+        return json({ error: "Nova data de encerramento precisa ser futura." }, 400);
+      }
+      const { error: upErr } = await admin
+        .from("simulados_semanais")
+        .update({ ends_at: when.toISOString(), ativo: true })
+        .eq("id", simuladoId);
+      if (upErr) return json({ error: upErr.message }, 500);
+      return json({ ok: true, ends_at: when.toISOString() });
+    }
+
+
     // ───────────────── STATUS ─────────────────
 
     if (action === "status") {
