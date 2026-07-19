@@ -231,24 +231,23 @@ export function AdminSimuladoSemanalTab() {
     if (recursosOpen === id) { setRecursosOpen(null); return; }
     setRecursosOpen(id);
     setLoadingRecursos(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("simulado_semanal_recursos")
-      .select("id, argumento, status, decisao_admin, created_at, user_id, questao_id, simulado_semanal_questoes(ordem, disciplina, enunciado), profiles!simulado_semanal_recursos_user_id_fkey(nome)")
+      .select("id, argumento, status, decisao_admin, created_at, user_id, questao_id, simulado_semanal_questoes(ordem, disciplina, enunciado)")
       .eq("simulado_id", id)
       .order("created_at", { ascending: false });
-    // fallback: se o join com profiles falhar (fk implícita), busca nomes manualmente
+    if (error) toast({ title: "Erro ao carregar recursos", description: error.message, variant: "destructive" });
     let list: any[] = (data as any[]) || [];
-    if (list.length && !list[0].profiles) {
+    if (list.length) {
       const ids = Array.from(new Set(list.map((r) => r.user_id)));
       const { data: profs } = await supabase.from("profiles").select("user_id, nome").in("user_id", ids);
       const map = new Map((profs as any[] || []).map((p) => [p.user_id, p.nome]));
       list = list.map((r) => ({ ...r, _nome: map.get(r.user_id) || "Aluno" }));
-    } else {
-      list = list.map((r) => ({ ...r, _nome: r.profiles?.nome || "Aluno" }));
     }
     setRecursos(list);
     setLoadingRecursos(false);
   };
+
 
   const decidirRecurso = async (r: any, decisao: "procedente" | "improcedente", justificativa: string, simuladoId: string) => {
     if (!justificativa.trim()) {
