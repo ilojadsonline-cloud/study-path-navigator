@@ -205,6 +205,77 @@ export function AdminSimuladoSemanalTab() {
     setLoadingRanking(false);
   };
 
+  const abrirReopen = (s: SimuladoRow) => {
+    if (reopenFor === s.id) { setReopenFor(null); return; }
+    setReopenFor(s.id);
+    const base = new Date(Math.max(Date.now(), new Date(s.ends_at).getTime()));
+    base.setDate(base.getDate() + 7);
+    setReopenDate(toLocalInput(base));
+  };
+
+  const confirmarReopen = async (id: string) => {
+    if (!reopenDate) return;
+    const { data, error } = await supabase.functions.invoke("simulado-semanal", {
+      body: { action: "reopen", simulado_id: id, ends_at: new Date(reopenDate).toISOString() },
+    });
+    if (error || (data as any)?.error) {
+      toast({ title: "Erro ao reabrir", description: (data as any)?.error || error?.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Simulado reaberto.", description: "Alunos que ainda não responderam poderão participar." });
+    setReopenFor(null);
+    fetchLista();
+  };
+
+  const verRecursos = async (id: string) => {
+    if (recursosOpen === id) { setRecursosOpen(null); return; }
+    setRecursosOpen(id);
+    setLoadingRecursos(true);
+    const { data } = await supabase
+      .from("simulado_semanal_recursos")
+      .select("id, argumento, status, decisao_admin, created_at, user_id, questao_id, simulado_semanal_questoes(ordem, disciplina, enunciado), profiles!simulado_semanal_recursos_user_id_fkey(nome)")
+      .eq("simulado_id", id)
+      .order("created_at", { ascending: false });
+    // fallback: se o join com profiles falhar (fk implícita), busca nomes manualmente
+    let list: any[] = (data as any[]) || [];
+    if (list.length && !list[0].profiles) {
+      const ids = Array.from(new Set(list.map((r) => r.user_id)));
+      const { data: profs } = await supabase.from("profiles").select("user_id, nome").in("user_id", ids);
+      const map = new Map((profs as any[] || []).map((p) => [p.user_id, p.nome]));
+      list = list.map((r) => ({ ...r, _nome: map.get(r.user_id) || "Aluno" }));
+    } else {
+      list = list.map((r) => ({ ...r, _nome: r.profiles?.nome || "Aluno" }));
+    }
+    setRecursos(list);
+    setLoadingRecursos(false);
+  };
+
+  const decidirRecurso = async (r: any, decisao: "procedente" | "improcedente", justificativa: string, simuladoId: string) => {
+    if (!justificativa.trim()) {
+      toast({ title: "Escreva a justificativa da decisão.", variant: "destructive" });
+      return;
+    }
+    // Atualiza status do recurso
+    const { error } = await supabase
+      .from("simulado_semanal_recursos")
+      .update({ status: decisao, decisao_admin: justificativa.trim(), decidido_em: new Date().toISOString(), decidido_por: user?.id ?? null })
+      .eq("id", r.id);
+    if (error) {
+      toast({ title: "Erro ao decidir", description: error.message, variant: "destructive" });
+      return;
+    }
+    // Se deferido → anula a questão (todos pontuam)
+    if (decisao === "procedente") {
+      await supabase.functions.invoke("simulado-semanal", {
+        body: { action: "annul", simulado_id: simuladoId, questao_id: r.questao_id },
+      });
+    }
+    toast({ title: decisao === "procedente" ? "Recurso deferido — questão anulada." : "Recurso indeferido." });
+    verRecursos(simuladoId);
+  };
+
+
+
   return (
     <div className="space-y-6">
       <div>
