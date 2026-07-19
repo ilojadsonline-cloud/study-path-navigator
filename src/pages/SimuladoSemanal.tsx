@@ -612,3 +612,109 @@ function ResultsView({ simulado, tentativa, questoes, ranking, userId }: {
 }
 
 export default SimuladoSemanal;
+
+function RecursoQuestao({ simuladoId, questaoId }: { simuladoId: string; questaoId: string }) {
+  const [existing, setExisting] = useState<any | null>(null);
+  const [open, setOpen] = useState(false);
+  const [argumento, setArgumento] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const loadRecurso = useCallback(async () => {
+    const { data } = await supabase
+      .from("simulado_semanal_recursos")
+      .select("id, argumento, status, decisao_admin")
+      .eq("questao_id", questaoId)
+      .maybeSingle();
+    setExisting(data);
+    if (data) setArgumento(data.argumento);
+    setLoaded(true);
+  }, [questaoId]);
+
+  useEffect(() => { loadRecurso(); }, [loadRecurso]);
+
+  const submit = async () => {
+    if (argumento.trim().length < 20) {
+      toast.error("Escreva ao menos 20 caracteres de argumentação.");
+      return;
+    }
+    setSaving(true);
+    if (existing && existing.status === "pendente") {
+      const { error } = await supabase
+        .from("simulado_semanal_recursos")
+        .update({ argumento: argumento.trim() })
+        .eq("id", existing.id);
+      setSaving(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Recurso atualizado.");
+      setOpen(false);
+      loadRecurso();
+    } else {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setSaving(false); return; }
+      const { error } = await supabase.from("simulado_semanal_recursos").insert({
+        simulado_id: simuladoId,
+        questao_id: questaoId,
+        user_id: user.id,
+        argumento: argumento.trim(),
+      });
+      setSaving(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Recurso enviado para análise.");
+      setOpen(false);
+      loadRecurso();
+    }
+  };
+
+  if (!loaded) return null;
+
+  const badge = existing?.status === "procedente"
+    ? { cls: "bg-success/15 text-success", label: "Recurso deferido — questão anulada" }
+    : existing?.status === "improcedente"
+      ? { cls: "bg-destructive/15 text-destructive", label: "Recurso indeferido" }
+      : existing
+        ? { cls: "bg-warning/15 text-warning", label: "Recurso em análise" }
+        : null;
+
+  return (
+    <div className="pt-2 border-t border-border/40 space-y-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="text-xs font-medium text-primary hover:underline flex items-center gap-1.5"
+        >
+          <Gavel className="w-3.5 h-3.5" />
+          {existing ? (existing.status === "pendente" ? "Editar recurso" : "Ver recurso") : "Abrir recurso"}
+        </button>
+        {badge && <span className={`text-[10px] px-1.5 py-0.5 rounded ${badge.cls}`}>{badge.label}</span>}
+      </div>
+      {open && (
+        <div className="space-y-2">
+          <Textarea
+            value={argumento}
+            onChange={(e) => setArgumento(e.target.value)}
+            placeholder="Exponha, com fundamento, por que a questão deve ser anulada ou o gabarito alterado..."
+            className="min-h-[100px] text-sm"
+            disabled={!!existing && existing.status !== "pendente"}
+          />
+          {existing?.status !== "pendente" && existing?.decisao_admin && (
+            <div className="text-xs bg-secondary/40 rounded p-2">
+              <strong>Resposta do professor:</strong> {existing.decisao_admin}
+            </div>
+          )}
+          {(!existing || existing.status === "pendente") && (
+            <div className="flex gap-2">
+              <Button size="sm" onClick={submit} disabled={saving} className="gradient-primary">
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Gavel className="w-3.5 h-3.5 mr-1.5" />}
+                {existing ? "Atualizar recurso" : "Enviar recurso"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
