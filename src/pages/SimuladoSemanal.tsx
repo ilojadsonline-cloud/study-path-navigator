@@ -54,6 +54,7 @@ const SimuladoSemanal = () => {
   const { user } = useAuth();
   const [phase, setPhase] = useState<Phase>("loading");
   const [simulado, setSimulado] = useState<any>(null);
+  const [disponiveis, setDisponiveis] = useState<any[]>([]);
   const [questoes, setQuestoes] = useState<QuestaoTaking[]>([]);
   const [respostas, setRespostas] = useState<Record<string, number>>({});
   const [cortadas, setCortadas] = useState<Record<string, number[]>>({});
@@ -129,6 +130,7 @@ const SimuladoSemanal = () => {
       const { data } = await call("status");
       if (!data || !data.simulado) { setPhase("none"); return; }
       setSimulado(data.simulado);
+      setDisponiveis((data.disponiveis as any[]) || []);
       const t = data.tentativa;
       if (t?.status === "finished") {
         await carregarResultados(data.simulado.id);
@@ -268,7 +270,26 @@ const SimuladoSemanal = () => {
         )}
 
         {phase === "intro" && simulado && (
-          <IntroCard simulado={simulado} onStart={() => iniciar(simulado.id)} />
+          <>
+            <IntroCard simulado={simulado} onStart={() => iniciar(simulado.id)} />
+            <OutrosDisponiveis
+              atualId={simulado.id}
+              disponiveis={disponiveis}
+              onSelecionar={(s) => { setSimulado(s); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            />
+          </>
+        )}
+
+        {phase === "results" && simulado && disponiveis.some((d) => d.id !== simulado.id) && (
+          <OutrosDisponiveis
+            atualId={simulado.id}
+            disponiveis={disponiveis}
+            onSelecionar={async (s) => {
+              setSimulado(s);
+              setPhase("intro");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         )}
 
         {phase === "taking" && simulado && (
@@ -364,6 +385,44 @@ const SimuladoSemanal = () => {
     </AppLayout>
   );
 };
+// ── Outros simulados disponíveis para responder ──
+function OutrosDisponiveis({ atualId, disponiveis, onSelecionar }: {
+  atualId: string; disponiveis: any[]; onSelecionar: (s: any) => void;
+}) {
+  const outros = (disponiveis || []).filter((s) => s.id !== atualId);
+  if (outros.length === 0) return null;
+  return (
+    <div className="glass-card rounded-xl p-5 space-y-3 border border-primary/20">
+      <div>
+        <h2 className="font-semibold flex items-center gap-2">
+          <ListChecks className="w-5 h-5 text-primary" /> Outros simulados abertos para você
+        </h2>
+        <p className="text-xs text-muted-foreground mt-1">
+          Simulados reabertos pelo administrador que você ainda não respondeu. Você tem 1 tentativa em cada.
+        </p>
+      </div>
+      <div className="space-y-2">
+        {outros.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => onSelecionar(s)}
+            className="w-full text-left flex items-center gap-3 p-3 rounded-lg border border-border/60 bg-secondary/30 hover:border-primary/50 hover:bg-secondary/50 transition-all"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold truncate">{s.titulo}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {s.total_questoes} questões • encerra em {new Date(s.ends_at).toLocaleString("pt-BR")}
+                {s.em_andamento && <span className="ml-2 text-warning font-semibold">• em andamento</span>}
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 
 // ── Histórico de simulados anteriores (liberados p/ revisão) ──
 function HistoricoSimulados({ historico, loadingId, onAbrir }: {
