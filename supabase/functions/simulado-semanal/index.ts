@@ -68,17 +68,26 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body.action as string;
 
-    // ── localizar simulado ──
+    // ── localizar simulado(s) ativo(s) ──
+    const loadSimuladosAtivos = async () => {
+      const nowIso = new Date().toISOString();
+      const { data } = await admin
+        .from("simulados_semanais")
+        .select("*")
+        .eq("ativo", true)
+        .lte("starts_at", nowIso)
+        .gte("ends_at", nowIso)
+        .order("starts_at", { ascending: false });
+      return (data as any[]) || [];
+    };
+
     const loadSimulado = async (simuladoId?: string) => {
-      let q = admin.from("simulados_semanais").select("*");
       if (simuladoId) {
-        q = q.eq("id", simuladoId);
-      } else {
-        const nowIso = new Date().toISOString();
-        q = q.eq("ativo", true).lte("starts_at", nowIso).gte("ends_at", nowIso).order("starts_at", { ascending: false });
+        const { data } = await admin.from("simulados_semanais").select("*").eq("id", simuladoId).maybeSingle();
+        return data as any;
       }
-      const { data } = await q.limit(1).maybeSingle();
-      return data as any;
+      const ativos = await loadSimuladosAtivos();
+      return ativos[0] ?? null;
     };
 
     const loadTentativa = async (simuladoId: string): Promise<Tentativa | null> => {
