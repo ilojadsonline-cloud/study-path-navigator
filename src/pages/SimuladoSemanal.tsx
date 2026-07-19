@@ -54,6 +54,7 @@ const SimuladoSemanal = () => {
   const { user } = useAuth();
   const [phase, setPhase] = useState<Phase>("loading");
   const [simulado, setSimulado] = useState<any>(null);
+  const [disponiveis, setDisponiveis] = useState<any[]>([]);
   const [questoes, setQuestoes] = useState<QuestaoTaking[]>([]);
   const [respostas, setRespostas] = useState<Record<string, number>>({});
   const [cortadas, setCortadas] = useState<Record<string, number[]>>({});
