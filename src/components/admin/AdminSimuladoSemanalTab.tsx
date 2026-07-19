@@ -55,6 +55,12 @@ export function AdminSimuladoSemanalTab() {
   const [ranking, setRanking] = useState<any[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
   const [editOpen, setEditOpen] = useState<string | null>(null);
+  const [reopenFor, setReopenFor] = useState<string | null>(null);
+  const [reopenDate, setReopenDate] = useState("");
+  const [recursosOpen, setRecursosOpen] = useState<string | null>(null);
+  const [recursos, setRecursos] = useState<any[]>([]);
+  const [loadingRecursos, setLoadingRecursos] = useState(false);
+
 
 
   const fetchLista = useCallback(async () => {
