@@ -491,3 +491,52 @@ export function AdminSimuladoSemanalTab() {
     </div>
   );
 }
+
+function RecursoItem({ recurso, onDecidir }: {
+  recurso: any;
+  onDecidir: (decisao: "procedente" | "improcedente", justificativa: string) => void | Promise<void>;
+}) {
+  const [just, setJust] = useState(recurso.decisao_admin ?? "");
+  const [open, setOpen] = useState(false);
+  const q = recurso.simulado_semanal_questoes;
+  const badge = recurso.status === "procedente"
+    ? "bg-success/15 text-success"
+    : recurso.status === "improcedente"
+      ? "bg-destructive/15 text-destructive"
+      : "bg-warning/15 text-warning";
+  return (
+    <div className="rounded-lg border border-border/50 bg-background/40 p-2.5 space-y-2">
+      <button className="w-full text-left flex items-center gap-2" onClick={() => setOpen((v) => !v)}>
+        <span className={`text-[10px] px-1.5 py-0.5 rounded ${badge}`}>{recurso.status}</span>
+        <span className="text-[11px] font-semibold">Q{q?.ordem ?? "?"} · {q?.disciplina ?? ""}</span>
+        <span className="text-[11px] flex-1 truncate">{recurso._nome}</span>
+        <span className="text-[10px] text-muted-foreground">{new Date(recurso.created_at).toLocaleDateString("pt-BR")}</span>
+      </button>
+      {open && (
+        <div className="space-y-2 pt-1 border-t border-border/40">
+          <div className="text-[11px]"><strong>Aluno:</strong> {recurso._nome}</div>
+          <div className="text-[11px] whitespace-pre-wrap"><strong>Argumento:</strong> {recurso.argumento}</div>
+          {q?.enunciado && (
+            <div className="text-[11px] text-muted-foreground max-h-24 overflow-y-auto"><strong>Enunciado:</strong> {q.enunciado.replace(/<[^>]+>/g, "").slice(0, 400)}</div>
+          )}
+          {recurso.status === "pendente" ? (
+            <>
+              <Textarea value={just} onChange={(e) => setJust(e.target.value)} placeholder="Justificativa da decisão..." className="min-h-[60px] text-xs" />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => onDecidir("procedente", just)} className="bg-success hover:bg-success/90 text-white">
+                  <ThumbsUp className="w-3.5 h-3.5 mr-1.5" /> Deferir e anular questão
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => onDecidir("improcedente", just)} className="text-destructive">
+                  <ThumbsDown className="w-3.5 h-3.5 mr-1.5" /> Indeferir
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="text-[11px] italic text-muted-foreground">Decisão: {recurso.decisao_admin || "—"}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
