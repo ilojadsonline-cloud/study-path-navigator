@@ -400,14 +400,59 @@ export function AdminSimuladoSemanalTab() {
                   <Button size="sm" variant="outline" onClick={() => toggleAtivo(s)} title={s.ativo ? "Desativar" : "Ativar"}>
                     {s.ativo ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => abrirReopen(s)} title="Reabrir (estender prazo)">
+                    <RotateCw className="w-3.5 h-3.5" />
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => verRanking(s.id)} title="Ranking">
                     <Trophy className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => verRecursos(s.id)} title="Recursos">
+                    <Gavel className="w-3.5 h-3.5" />
                   </Button>
                   <Button size="sm" variant="outline" className="text-destructive" onClick={() => excluir(s.id)} title="Excluir">
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </div>
+
+              {reopenFor === s.id && (
+                <div className="rounded-lg bg-secondary/40 p-3 space-y-2">
+                  <p className="text-xs font-semibold flex items-center gap-1.5"><RotateCw className="w-3.5 h-3.5 text-primary" /> Reabrir simulado</p>
+                  <p className="text-[11px] text-muted-foreground">Estender o encerramento para permitir que quem ainda não respondeu participe. Quem já tentou não poderá refazer.</p>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Novo encerramento</Label>
+                      <Input type="datetime-local" value={reopenDate} onChange={(e) => setReopenDate(e.target.value)} className="h-8 text-xs" />
+                    </div>
+                    <Button size="sm" onClick={() => confirmarReopen(s.id)} className="gradient-primary">
+                      Reabrir
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setReopenFor(null)}>Cancelar</Button>
+                  </div>
+                </div>
+              )}
+
+              {recursosOpen === s.id && (
+                <div className="rounded-lg bg-secondary/40 p-3 space-y-2">
+                  <p className="text-xs font-semibold flex items-center gap-1.5"><Gavel className="w-3.5 h-3.5 text-primary" /> Recursos dos alunos</p>
+                  {loadingRecursos ? (
+                    <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
+                  ) : recursos.length === 0 ? (
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" /> Nenhum recurso registrado.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {recursos.map((r) => (
+                        <RecursoItem
+                          key={r.id}
+                          recurso={r}
+                          onDecidir={(dec, just) => decidirRecurso(r, dec, just, s.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
 
               {editOpen === s.id && (
                 <SimuladoSemanalEditor
