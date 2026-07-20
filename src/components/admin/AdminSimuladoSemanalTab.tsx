@@ -516,13 +516,17 @@ export function AdminSimuladoSemanalTab() {
   );
 }
 
-function RecursoItem({ recurso, onDecidir }: {
+function RecursoItem({ recurso, onDecidir, onReabrir }: {
   recurso: any;
   onDecidir: (decisao: "procedente" | "improcedente", justificativa: string) => void | Promise<void>;
+  onReabrir: () => void | Promise<void>;
 }) {
   const [just, setJust] = useState(recurso.decisao_admin ?? "");
   const [open, setOpen] = useState(false);
+  const [editando, setEditando] = useState(false);
   const q = recurso.simulado_semanal_questoes;
+  const decidido = recurso.status !== "pendente";
+  const emEdicao = !decidido || editando;
   const badge = recurso.status === "procedente"
     ? "bg-success/15 text-success"
     : recurso.status === "improcedente"
@@ -543,20 +547,34 @@ function RecursoItem({ recurso, onDecidir }: {
           {q?.enunciado && (
             <div className="text-[11px] text-muted-foreground max-h-24 overflow-y-auto"><strong>Enunciado:</strong> {q.enunciado.replace(/<[^>]+>/g, "").slice(0, 400)}</div>
           )}
-          {recurso.status === "pendente" ? (
+          {decidido && !editando && (
             <>
-              <Textarea value={just} onChange={(e) => setJust(e.target.value)} placeholder="Justificativa da decisão..." className="min-h-[60px] text-xs" />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={() => onDecidir("procedente", just)} className="bg-success hover:bg-success/90 text-white">
-                  <ThumbsUp className="w-3.5 h-3.5 mr-1.5" /> Deferir e anular questão
+              <div className="text-[11px] italic text-muted-foreground whitespace-pre-wrap"><strong>Decisão atual ({recurso.status}):</strong> {recurso.decisao_admin || "—"}</div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => { setJust(recurso.decisao_admin ?? ""); setEditando(true); }}>
+                  Editar decisão
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => onDecidir("improcedente", just)} className="text-destructive">
-                  <ThumbsDown className="w-3.5 h-3.5 mr-1.5" /> Indeferir
+                <Button size="sm" variant="outline" onClick={() => onReabrir()}>
+                  Reabrir p/ reanálise
                 </Button>
               </div>
             </>
-          ) : (
-            <div className="text-[11px] italic text-muted-foreground">Decisão: {recurso.decisao_admin || "—"}</div>
+          )}
+          {emEdicao && (
+            <>
+              <Textarea value={just} onChange={(e) => setJust(e.target.value)} placeholder="Justificativa da decisão..." className="min-h-[60px] text-xs" />
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" onClick={async () => { await onDecidir("procedente", just); setEditando(false); }} className="bg-success hover:bg-success/90 text-white">
+                  <ThumbsUp className="w-3.5 h-3.5 mr-1.5" /> Deferir e anular questão
+                </Button>
+                <Button size="sm" variant="outline" onClick={async () => { await onDecidir("improcedente", just); setEditando(false); }} className="text-destructive">
+                  <ThumbsDown className="w-3.5 h-3.5 mr-1.5" /> Indeferir
+                </Button>
+                {decidido && (
+                  <Button size="sm" variant="ghost" onClick={() => setEditando(false)}>Cancelar</Button>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
