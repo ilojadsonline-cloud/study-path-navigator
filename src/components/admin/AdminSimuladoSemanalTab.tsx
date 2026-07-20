@@ -469,6 +469,7 @@ export function AdminSimuladoSemanalTab() {
                           key={r.id}
                           recurso={r}
                           onDecidir={(dec, just) => decidirRecurso(r, dec, just, s.id)}
+                          onReabrir={() => reabrirRecurso(r, s.id)}
                         />
                       ))}
                     </div>
