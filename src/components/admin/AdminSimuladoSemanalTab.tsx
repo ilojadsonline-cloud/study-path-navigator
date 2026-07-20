@@ -254,7 +254,7 @@ export function AdminSimuladoSemanalTab() {
       toast({ title: "Escreva a justificativa da decisão.", variant: "destructive" });
       return;
     }
-    // Atualiza status do recurso
+    const statusAnterior = r.status;
     const { error } = await supabase
       .from("simulado_semanal_recursos")
       .update({ status: decisao, decisao_admin: justificativa.trim(), decidido_em: new Date().toISOString(), decidido_por: user?.id ?? null })
@@ -263,13 +263,36 @@ export function AdminSimuladoSemanalTab() {
       toast({ title: "Erro ao decidir", description: error.message, variant: "destructive" });
       return;
     }
-    // Se deferido → anula a questão (todos pontuam)
-    if (decisao === "procedente") {
+    // Mudou para deferido → anula. Antes era deferido e agora não é mais → desanula.
+    if (decisao === "procedente" && statusAnterior !== "procedente") {
       await supabase.functions.invoke("simulado-semanal", {
         body: { action: "annul", simulado_id: simuladoId, questao_id: r.questao_id },
       });
+    } else if (statusAnterior === "procedente" && decisao !== "procedente") {
+      await supabase.functions.invoke("simulado-semanal", {
+        body: { action: "unannul", simulado_id: simuladoId, questao_id: r.questao_id },
+      });
     }
     toast({ title: decisao === "procedente" ? "Recurso deferido — questão anulada." : "Recurso indeferido." });
+    verRecursos(simuladoId);
+  };
+
+  const reabrirRecurso = async (r: any, simuladoId: string) => {
+    const eraProcedente = r.status === "procedente";
+    const { error } = await supabase
+      .from("simulado_semanal_recursos")
+      .update({ status: "pendente", decidido_em: null, decidido_por: null })
+      .eq("id", r.id);
+    if (error) {
+      toast({ title: "Erro ao reabrir recurso", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (eraProcedente) {
+      await supabase.functions.invoke("simulado-semanal", {
+        body: { action: "unannul", simulado_id: simuladoId, questao_id: r.questao_id },
+      });
+    }
+    toast({ title: "Recurso reaberto para reanálise." });
     verRecursos(simuladoId);
   };
 
@@ -446,6 +469,7 @@ export function AdminSimuladoSemanalTab() {
                           key={r.id}
                           recurso={r}
                           onDecidir={(dec, just) => decidirRecurso(r, dec, just, s.id)}
+                          onReabrir={() => reabrirRecurso(r, s.id)}
                         />
                       ))}
                     </div>
@@ -492,13 +516,17 @@ export function AdminSimuladoSemanalTab() {
   );
 }
 
-function RecursoItem({ recurso, onDecidir }: {
+function RecursoItem({ recurso, onDecidir, onReabrir }: {
   recurso: any;
   onDecidir: (decisao: "procedente" | "improcedente", justificativa: string) => void | Promise<void>;
+  onReabrir: () => void | Promise<void>;
 }) {
   const [just, setJust] = useState(recurso.decisao_admin ?? "");
   const [open, setOpen] = useState(false);
+  const [editando, setEditando] = useState(false);
   const q = recurso.simulado_semanal_questoes;
+  const decidido = recurso.status !== "pendente";
+  const emEdicao = !decidido || editando;
   const badge = recurso.status === "procedente"
     ? "bg-success/15 text-success"
     : recurso.status === "improcedente"
@@ -519,20 +547,34 @@ function RecursoItem({ recurso, onDecidir }: {
           {q?.enunciado && (
             <div className="text-[11px] text-muted-foreground max-h-24 overflow-y-auto"><strong>Enunciado:</strong> {q.enunciado.replace(/<[^>]+>/g, "").slice(0, 400)}</div>
           )}
-          {recurso.status === "pendente" ? (
+          {decidido && !editando && (
             <>
-              <Textarea value={just} onChange={(e) => setJust(e.target.value)} placeholder="Justificativa da decisão..." className="min-h-[60px] text-xs" />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={() => onDecidir("procedente", just)} className="bg-success hover:bg-success/90 text-white">
-                  <ThumbsUp className="w-3.5 h-3.5 mr-1.5" /> Deferir e anular questão
+              <div className="text-[11px] italic text-muted-foreground whitespace-pre-wrap"><strong>Decisão atual ({recurso.status}):</strong> {recurso.decisao_admin || "—"}</div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => { setJust(recurso.decisao_admin ?? ""); setEditando(true); }}>
+                  Editar decisão
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => onDecidir("improcedente", just)} className="text-destructive">
-                  <ThumbsDown className="w-3.5 h-3.5 mr-1.5" /> Indeferir
+                <Button size="sm" variant="outline" onClick={() => onReabrir()}>
+                  Reabrir p/ reanálise
                 </Button>
               </div>
             </>
-          ) : (
-            <div className="text-[11px] italic text-muted-foreground">Decisão: {recurso.decisao_admin || "—"}</div>
+          )}
+          {emEdicao && (
+            <>
+              <Textarea value={just} onChange={(e) => setJust(e.target.value)} placeholder="Justificativa da decisão..." className="min-h-[60px] text-xs" />
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" onClick={async () => { await onDecidir("procedente", just); setEditando(false); }} className="bg-success hover:bg-success/90 text-white">
+                  <ThumbsUp className="w-3.5 h-3.5 mr-1.5" /> Deferir e anular questão
+                </Button>
+                <Button size="sm" variant="outline" onClick={async () => { await onDecidir("improcedente", just); setEditando(false); }} className="text-destructive">
+                  <ThumbsDown className="w-3.5 h-3.5 mr-1.5" /> Indeferir
+                </Button>
+                {decidido && (
+                  <Button size="sm" variant="ghost" onClick={() => setEditando(false)}>Cancelar</Button>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
