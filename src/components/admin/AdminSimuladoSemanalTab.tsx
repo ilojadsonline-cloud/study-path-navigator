@@ -254,7 +254,7 @@ export function AdminSimuladoSemanalTab() {
       toast({ title: "Escreva a justificativa da decisão.", variant: "destructive" });
       return;
     }
-    // Atualiza status do recurso
+    const statusAnterior = r.status;
     const { error } = await supabase
       .from("simulado_semanal_recursos")
       .update({ status: decisao, decisao_admin: justificativa.trim(), decidido_em: new Date().toISOString(), decidido_por: user?.id ?? null })
@@ -263,13 +263,36 @@ export function AdminSimuladoSemanalTab() {
       toast({ title: "Erro ao decidir", description: error.message, variant: "destructive" });
       return;
     }
-    // Se deferido → anula a questão (todos pontuam)
-    if (decisao === "procedente") {
+    // Mudou para deferido → anula. Antes era deferido e agora não é mais → desanula.
+    if (decisao === "procedente" && statusAnterior !== "procedente") {
       await supabase.functions.invoke("simulado-semanal", {
         body: { action: "annul", simulado_id: simuladoId, questao_id: r.questao_id },
       });
+    } else if (statusAnterior === "procedente" && decisao !== "procedente") {
+      await supabase.functions.invoke("simulado-semanal", {
+        body: { action: "unannul", simulado_id: simuladoId, questao_id: r.questao_id },
+      });
     }
     toast({ title: decisao === "procedente" ? "Recurso deferido — questão anulada." : "Recurso indeferido." });
+    verRecursos(simuladoId);
+  };
+
+  const reabrirRecurso = async (r: any, simuladoId: string) => {
+    const eraProcedente = r.status === "procedente";
+    const { error } = await supabase
+      .from("simulado_semanal_recursos")
+      .update({ status: "pendente", decidido_em: null, decidido_por: null })
+      .eq("id", r.id);
+    if (error) {
+      toast({ title: "Erro ao reabrir recurso", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (eraProcedente) {
+      await supabase.functions.invoke("simulado-semanal", {
+        body: { action: "unannul", simulado_id: simuladoId, questao_id: r.questao_id },
+      });
+    }
+    toast({ title: "Recurso reaberto para reanálise." });
     verRecursos(simuladoId);
   };
 
