@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading, subscribed, subscriptionLoading, trialExpired, signOut } = useAuth();
+  const { session, loading, subscribed, subscriptionLoading, trialExpired, isAdmin, signOut } = useAuth();
 
   if (loading || subscriptionLoading) {
     return (
@@ -15,6 +15,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Admins nunca precisam de assinatura e nunca têm acesso expirado.
+  if (isAdmin) {
+    return <>{children}</>;
   }
 
   if (trialExpired) {
