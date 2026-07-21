@@ -69,6 +69,33 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    // ===== BYPASS ADMIN: admins nunca precisam de assinatura =====
+    try {
+      const { data: adminRows } = await supabaseClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .limit(1);
+      if (adminRows && adminRows.length > 0) {
+        logStep("Admin user — bypassing subscription checks");
+        await unbanAuthUser(supabaseClient, user.id);
+        return new Response(
+          JSON.stringify({
+            subscribed: true,
+            subscription_end: null,
+            trial_expired: false,
+            trial_ends_at: null,
+            has_trial: false,
+            source: "admin",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+        );
+      }
+    } catch (e) {
+      logStep("admin role check failed", { error: String(e) });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Collect all email variants to search in Stripe (case-sensitive API!)
