@@ -367,9 +367,37 @@ const SimuladoSemanal = () => {
               ))}
             </div>
 
-            <Button onClick={() => finalizar(false)} disabled={submitting} className="w-full gradient-primary h-12">
+            <Button onClick={tentarFinalizar} disabled={submitting} className="w-full gradient-primary h-12">
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Flag className="w-4 h-4 mr-2" />Finalizar e enviar simulado</>}
             </Button>
+
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                    Finalizar com questões em branco?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2 text-sm">
+                      <p>
+                        Você respondeu <strong>{respondidas} de {questoes.length}</strong> questões.
+                      </p>
+                      <p className="text-destructive font-semibold">
+                        {questoes.length - respondidas} {questoes.length - respondidas === 1 ? "questão ficará em branco" : "questões ficarão em branco"} e serão contabilizadas como erro.
+                      </p>
+                      <p>Você tem apenas <strong>1 tentativa</strong>. Deseja realmente finalizar agora?</p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Voltar e responder</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => { setConfirmOpen(false); finalizar(false); }} className="bg-destructive hover:bg-destructive/90">
+                    Finalizar mesmo assim
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
 
