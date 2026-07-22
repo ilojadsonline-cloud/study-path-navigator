@@ -13,6 +13,10 @@ import {
   Flag, ShieldCheck, Award, Lock, ListChecks, Target, History, ChevronRight, ArrowLeft, Scissors, Gavel,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { AnaliseDificuldade, type DesempenhoItem } from "@/components/AnaliseDificuldade";
 import {
@@ -60,6 +64,7 @@ const SimuladoSemanal = () => {
   const [cortadas, setCortadas] = useState<Record<string, number[]>>({});
   const [remaining, setRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // resultados
   const [resultQuestoes, setResultQuestoes] = useState<QuestaoFull[]>([]);
@@ -206,9 +211,6 @@ const SimuladoSemanal = () => {
 
   const finalizar = useCallback(async (auto = false) => {
     if (!simulado) return;
-    if (!auto && respondidas < questoes.length) {
-      if (!confirm(`Você respondeu ${respondidas} de ${questoes.length} questões. Deseja finalizar mesmo assim? Você tem apenas 1 tentativa.`)) return;
-    }
     setSubmitting(true);
     const { data, error } = await call("submit", { simulado_id: simulado.id, respostas: respostasRef.current });
     setSubmitting(false);
@@ -219,7 +221,15 @@ const SimuladoSemanal = () => {
     if (auto) toast.info("Tempo esgotado — simulado enviado automaticamente.");
     else toast.success("Simulado finalizado!");
     await carregarResultados(simulado.id);
-  }, [simulado, respondidas, questoes.length, call, carregarResultados]);
+  }, [simulado, call, carregarResultados]);
+
+  const tentarFinalizar = useCallback(() => {
+    if (respondidas < questoes.length) {
+      setConfirmOpen(true);
+    } else {
+      finalizar(false);
+    }
+  }, [respondidas, questoes.length, finalizar]);
 
   // ─────────────────────── RENDER ───────────────────────
   if (phase === "loading") {
@@ -308,7 +318,7 @@ const SimuladoSemanal = () => {
                   <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Respondidas</p>
                   <p className="font-bold text-lg leading-none">{respondidas}/{questoes.length}</p>
                 </div>
-                <Button onClick={() => finalizar(false)} disabled={submitting} className="gradient-primary shrink-0">
+                <Button onClick={tentarFinalizar} disabled={submitting} className="gradient-primary shrink-0">
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Flag className="w-4 h-4 mr-1.5" />Finalizar</>}
                 </Button>
               </div>
@@ -357,9 +367,37 @@ const SimuladoSemanal = () => {
               ))}
             </div>
 
-            <Button onClick={() => finalizar(false)} disabled={submitting} className="w-full gradient-primary h-12">
+            <Button onClick={tentarFinalizar} disabled={submitting} className="w-full gradient-primary h-12">
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Flag className="w-4 h-4 mr-2" />Finalizar e enviar simulado</>}
             </Button>
+
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                    Finalizar com questões em branco?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2 text-sm">
+                      <p>
+                        Você respondeu <strong>{respondidas} de {questoes.length}</strong> questões.
+                      </p>
+                      <p className="text-destructive font-semibold">
+                        {questoes.length - respondidas} {questoes.length - respondidas === 1 ? "questão ficará em branco" : "questões ficarão em branco"} e serão contabilizadas como erro.
+                      </p>
+                      <p>Você tem apenas <strong>1 tentativa</strong>. Deseja realmente finalizar agora?</p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Voltar e responder</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => { setConfirmOpen(false); finalizar(false); }} className="bg-destructive hover:bg-destructive/90">
+                    Finalizar mesmo assim
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
 
