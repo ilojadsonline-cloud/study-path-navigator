@@ -64,6 +64,7 @@ const SimuladoSemanal = () => {
   const [cortadas, setCortadas] = useState<Record<string, number[]>>({});
   const [remaining, setRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // resultados
   const [resultQuestoes, setResultQuestoes] = useState<QuestaoFull[]>([]);
