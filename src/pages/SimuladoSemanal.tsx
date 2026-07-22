@@ -13,6 +13,10 @@ import {
   Flag, ShieldCheck, Award, Lock, ListChecks, Target, History, ChevronRight, ArrowLeft, Scissors, Gavel,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { AnaliseDificuldade, type DesempenhoItem } from "@/components/AnaliseDificuldade";
 import {
