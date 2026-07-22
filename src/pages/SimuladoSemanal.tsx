@@ -211,9 +211,6 @@ const SimuladoSemanal = () => {
 
   const finalizar = useCallback(async (auto = false) => {
     if (!simulado) return;
-    if (!auto && respondidas < questoes.length) {
-      if (!confirm(`Você respondeu ${respondidas} de ${questoes.length} questões. Deseja finalizar mesmo assim? Você tem apenas 1 tentativa.`)) return;
-    }
     setSubmitting(true);
     const { data, error } = await call("submit", { simulado_id: simulado.id, respostas: respostasRef.current });
     setSubmitting(false);
@@ -224,7 +221,15 @@ const SimuladoSemanal = () => {
     if (auto) toast.info("Tempo esgotado — simulado enviado automaticamente.");
     else toast.success("Simulado finalizado!");
     await carregarResultados(simulado.id);
-  }, [simulado, respondidas, questoes.length, call, carregarResultados]);
+  }, [simulado, call, carregarResultados]);
+
+  const tentarFinalizar = useCallback(() => {
+    if (respondidas < questoes.length) {
+      setConfirmOpen(true);
+    } else {
+      finalizar(false);
+    }
+  }, [respondidas, questoes.length, finalizar]);
 
   // ─────────────────────── RENDER ───────────────────────
   if (phase === "loading") {
