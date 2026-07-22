@@ -318,7 +318,7 @@ const SimuladoSemanal = () => {
                   <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Respondidas</p>
                   <p className="font-bold text-lg leading-none">{respondidas}/{questoes.length}</p>
                 </div>
-                <Button onClick={() => finalizar(false)} disabled={submitting} className="gradient-primary shrink-0">
+                <Button onClick={tentarFinalizar} disabled={submitting} className="gradient-primary shrink-0">
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Flag className="w-4 h-4 mr-1.5" />Finalizar</>}
                 </Button>
               </div>
