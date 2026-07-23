@@ -15,6 +15,7 @@ import {
 interface EnrichedUser {
   user_id: string; nome: string; cpf: string; email: string | null; telefone: string | null; created_at: string;
   is_admin: boolean; is_blocked: boolean; subscribed: boolean; subscription_end: string | null;
+  subscription_start?: string | null;
   trial_expired?: boolean; provider?: "stripe" | "mercadopago"; is_trial?: boolean;
   _sub_loading?: boolean;
 }
@@ -76,7 +77,7 @@ export function AdminUsersTab() {
         setUsers(prev => prev.map(u => {
           const sub = subs[u.user_id];
           if (!sub) return u;
-          return { ...u, subscribed: sub.subscribed, subscription_end: sub.subscription_end, provider: sub.provider, is_trial: sub.is_trial, trial_expired: sub.trial_expired, _sub_loading: false };
+          return { ...u, subscribed: sub.subscribed, subscription_end: sub.subscription_end, subscription_start: sub.subscription_start ?? null, provider: sub.provider, is_trial: sub.is_trial, trial_expired: sub.trial_expired, _sub_loading: false };
         }));
       } catch { /* ignore */ }
     }
@@ -287,13 +288,14 @@ export function AdminUsersTab() {
                 <TableHead>Telefone</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Assinatura</TableHead>
+                <TableHead>Vigência</TableHead>
                 <TableHead>Cadastro</TableHead>
                 <TableHead className="w-40">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
               ) : users.map((u) => (
                 <TableRow key={u.user_id} className={u.is_blocked ? "opacity-60" : ""}>
                   <TableCell className="font-medium">
@@ -313,6 +315,24 @@ export function AdminUsersTab() {
                     )}
                   </TableCell>
                   <TableCell>{renderSubscriptionCell(u)}</TableCell>
+                  <TableCell className="text-xs">
+                    {u.is_admin ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : u._sub_loading ? (
+                      <Skeleton className="h-4 w-24" />
+                    ) : u.subscribed ? (
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-muted-foreground">
+                          Pgto: <span className="text-foreground font-medium">{u.subscription_start ? new Date(u.subscription_start).toLocaleDateString("pt-BR") : "—"}</span>
+                        </span>
+                        <span className="text-muted-foreground">
+                          Vence: <span className="text-foreground font-medium">{u.subscription_end ? new Date(u.subscription_end).toLocaleDateString("pt-BR") : "—"}</span>
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-xs">{new Date(u.created_at).toLocaleDateString("pt-BR")}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
