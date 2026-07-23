@@ -15,6 +15,7 @@ import {
 interface EnrichedUser {
   user_id: string; nome: string; cpf: string; email: string | null; telefone: string | null; created_at: string;
   is_admin: boolean; is_blocked: boolean; subscribed: boolean; subscription_end: string | null;
+  subscription_start?: string | null;
   trial_expired?: boolean; provider?: "stripe" | "mercadopago"; is_trial?: boolean;
   _sub_loading?: boolean;
 }
