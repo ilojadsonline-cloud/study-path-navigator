@@ -275,10 +275,8 @@ serve(async (req) => {
       const { user_ids } = params;
       if (!Array.isArray(user_ids) || user_ids.length === 0) throw new Error("user_ids é obrigatório");
 
-      // Cap batch size
       const ids = user_ids.slice(0, 20);
 
-      // Get emails for these users
       const { data: profiles } = await supabaseAdmin
         .from("profiles")
         .select("user_id, email, created_at")
@@ -294,15 +292,77 @@ serve(async (req) => {
       const now = Date.now();
       const TRIAL_MS = 24 * 60 * 60 * 1000;
 
-      // Check MercadoPago
+      // ── PRIORIDADE 0: fonte da verdade local (app_metadata) ──
+      // Evita "acesso expirado" quando a API do Stripe/MP falha ou o pagamento sai da janela.
+      await Promise.all(
+        profiles.map(async (p: any) => {
+          try {
+            const { data: authData } = await supabaseAdmin.auth.admin.getUserById(p.user_id);
+            const meta: any = authData?.user?.app_metadata || {};
+            const expiresAt = meta.access_expires_at ? new Date(meta.access_expires_at).getTime() : 0;
+            if (expiresAt > now && meta.trial_blocked !== true) {
+              subscriptions[p.user_id] = {
+                subscribed: true,
+                subscription_end: meta.access_expires_at,
+                subscription_start: meta.reactivated_at ?? null,
+                provider: meta.payment_source === "stripe" ? "stripe" : "mercadopago",
+                is_trial: false,
+                source: "stored",
+              };
+            }
+          } catch { /* ignore */ }
+        })
+      );
+
+      // Complementar via trial_usage (avulso PIX/boleto)
+      const emailsLcTU = profiles
+        .filter((p: any) => p.email && !subscriptions[p.user_id])
+        .map((p: any) => String(p.email).toLowerCase());
+      if (emailsLcTU.length > 0) {
+        const { data: tuRows } = await supabaseAdmin
+          .from("trial_usage")
+          .select("email, trial_ends_at, converted_to_paid, provider, trial_started_at")
+          .in("email", emailsLcTU)
+          .eq("converted_to_paid", true);
+        const tuByEmail = new Map<string, any>();
+        for (const row of tuRows || []) {
+          const em = String(row.email).toLowerCase();
+          const cur = tuByEmail.get(em);
+          if (!cur || new Date(row.trial_ends_at ?? 0).getTime() > new Date(cur.trial_ends_at ?? 0).getTime()) {
+            tuByEmail.set(em, row);
+          }
+        }
+        for (const p of profiles) {
+          if (subscriptions[p.user_id]) continue;
+          const em = p.email ? String(p.email).toLowerCase() : null;
+          if (!em) continue;
+          const row = tuByEmail.get(em);
+          if (!row) continue;
+          const endMs = row.trial_ends_at ? new Date(row.trial_ends_at).getTime() : 0;
+          if (endMs > now) {
+            subscriptions[p.user_id] = {
+              subscribed: true,
+              subscription_end: row.trial_ends_at,
+              subscription_start: row.trial_started_at ?? null,
+              provider: row.provider === "stripe" ? "stripe" : "mercadopago",
+              is_trial: false,
+              source: "trial_usage",
+            };
+          }
+        }
+      }
+
+      // MercadoPago (API) — apenas para quem não tem registro local
       const mpToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
-      const mpMap = new Map<string, { subscription_end: string }>();
+      const mpMap = new Map<string, any>();
       if (mpToken) {
         try {
-          const emails = profiles.filter((p: any) => p.email).map((p: any) => String(p.email).toLowerCase());
-          const found = await getMercadoPagoSubscriptionsByEmail(mpToken, emails);
-          for (const [email, sub] of found) {
-            mpMap.set(email, sub);
+          const emails = profiles
+            .filter((p: any) => p.email && !subscriptions[p.user_id])
+            .map((p: any) => String(p.email).toLowerCase());
+          if (emails.length > 0) {
+            const found = await getMercadoPagoSubscriptionsByEmail(mpToken, emails);
+            for (const [email, sub] of found) mpMap.set(email, sub);
           }
         } catch (e) {
           logStep("MP warning", { err: e instanceof Error ? e.message : String(e) });
@@ -310,14 +370,22 @@ serve(async (req) => {
       }
 
       for (const p of profiles) {
+        if (subscriptions[p.user_id]) continue;
         const email = p.email ? String(p.email).toLowerCase() : null;
         if (email && mpMap.has(email)) {
-          const mp = mpMap.get(email)!;
-          subscriptions[p.user_id] = { subscribed: true, subscription_end: mp.subscription_end, provider: "mercadopago", is_trial: false };
+          const mp: any = mpMap.get(email)!;
+          subscriptions[p.user_id] = {
+            subscribed: true,
+            subscription_end: mp.subscription_end,
+            subscription_start: mp.paid_at ?? null,
+            provider: "mercadopago",
+            is_trial: false,
+            source: "mp_api",
+          };
         }
       }
 
-      // Check Stripe
+      // Stripe (API) — apenas para quem não tem registro local
       const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
       if (stripeKey) {
         const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
@@ -333,8 +401,10 @@ serve(async (req) => {
                   subscriptions[p.user_id] = {
                     subscribed: true,
                     subscription_end: access.subscription_end,
+                    subscription_start: null,
                     provider: access.provider,
                     is_trial: access.is_trial,
+                    source: "stripe_api",
                   };
                 }
               } catch { /* ignore */ }
@@ -343,16 +413,15 @@ serve(async (req) => {
         }
       }
 
-      // Fill in trial_expired for users without subscription
       for (const p of profiles) {
         if (!subscriptions[p.user_id]) {
           const createdMs = p.created_at ? new Date(p.created_at).getTime() : 0;
           const trialExpired = createdMs > 0 && now - createdMs > TRIAL_MS;
-          subscriptions[p.user_id] = { subscribed: false, subscription_end: null, trial_expired: trialExpired };
+          subscriptions[p.user_id] = { subscribed: false, subscription_end: null, subscription_start: null, trial_expired: trialExpired };
         }
       }
 
-      // Ban sync for this batch
+      // Ban sync — NUNCA banir quem tem pagamento válido; SEMPRE desbanir quem tem
       const { data: adminRoles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin").in("user_id", ids);
       const adminSet = new Set((adminRoles || []).map((r: any) => r.user_id));
 
