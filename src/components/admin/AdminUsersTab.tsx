@@ -295,7 +295,7 @@ export function AdminUsersTab() {
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
               ) : users.map((u) => (
                 <TableRow key={u.user_id} className={u.is_blocked ? "opacity-60" : ""}>
                   <TableCell className="font-medium">
@@ -315,6 +315,24 @@ export function AdminUsersTab() {
                     )}
                   </TableCell>
                   <TableCell>{renderSubscriptionCell(u)}</TableCell>
+                  <TableCell className="text-xs">
+                    {u.is_admin ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : u._sub_loading ? (
+                      <Skeleton className="h-4 w-24" />
+                    ) : u.subscribed ? (
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-muted-foreground">
+                          Pgto: <span className="text-foreground font-medium">{u.subscription_start ? new Date(u.subscription_start).toLocaleDateString("pt-BR") : "—"}</span>
+                        </span>
+                        <span className="text-muted-foreground">
+                          Vence: <span className="text-foreground font-medium">{u.subscription_end ? new Date(u.subscription_end).toLocaleDateString("pt-BR") : "—"}</span>
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-xs">{new Date(u.created_at).toLocaleDateString("pt-BR")}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
