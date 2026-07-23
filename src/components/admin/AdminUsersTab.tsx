@@ -288,6 +288,7 @@ export function AdminUsersTab() {
                 <TableHead>Telefone</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Assinatura</TableHead>
+                <TableHead>Vigência</TableHead>
                 <TableHead>Cadastro</TableHead>
                 <TableHead className="w-40">Ações</TableHead>
               </TableRow>
