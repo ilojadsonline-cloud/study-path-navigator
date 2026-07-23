@@ -77,7 +77,7 @@ export function AdminUsersTab() {
         setUsers(prev => prev.map(u => {
           const sub = subs[u.user_id];
           if (!sub) return u;
-          return { ...u, subscribed: sub.subscribed, subscription_end: sub.subscription_end, provider: sub.provider, is_trial: sub.is_trial, trial_expired: sub.trial_expired, _sub_loading: false };
+          return { ...u, subscribed: sub.subscribed, subscription_end: sub.subscription_end, subscription_start: sub.subscription_start ?? null, provider: sub.provider, is_trial: sub.is_trial, trial_expired: sub.trial_expired, _sub_loading: false };
         }));
       } catch { /* ignore */ }
     }
