@@ -48,3 +48,6 @@ verify_jwt = false
 [functions.simulado-semanal]
 verify_jwt = false
 
+[functions.resolve-recurso-ai]
+verify_jwt = false
+
