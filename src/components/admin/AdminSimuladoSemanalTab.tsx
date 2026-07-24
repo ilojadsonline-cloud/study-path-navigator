@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   CalendarClock, Loader2, Upload, Trophy, Trash2, CheckCircle2, AlertTriangle,
   Power, PowerOff, Plus, Users, Pencil, Eye, EyeOff, RotateCw, Gavel,
-  ThumbsUp, ThumbsDown, MessageSquare,
+  ThumbsUp, ThumbsDown, MessageSquare, Sparkles,
 } from "lucide-react";
 import { parseMarkdownQuestoes } from "@/lib/markdown-questoes-parser";
 import { SimuladoSemanalEditor } from "@/components/admin/SimuladoSemanalEditor";
