@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { runAiStage, type ChatMessage } from "../_shared/aiRouter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -128,21 +127,50 @@ serve(async (req) => {
       .limit(3);
     const legalText = (legalRows ?? []).map((r: any) => r.content).filter(Boolean).join("\n\n") || null;
 
-    const messages: ChatMessage[] = [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: buildUserPrompt(questao, argumentos, legalText) },
-    ];
+    // Chama DeepSeek diretamente (modelo configurável; default: deepseek-reasoner p/ análise jurídica rigorosa).
+    const deepseekKey = Deno.env.get("DEEPSEEK_API_KEY");
+    if (!deepseekKey) {
+      return new Response(JSON.stringify({ error: "DEEPSEEK_API_KEY não configurada" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const deepseekBase = (Deno.env.get("AI_DEEPSEEK_BASE_URL") ?? "https://api.deepseek.com").replace(/\/$/, "");
+    const deepseekModel = Deno.env.get("AI_DEEPSEEK_AUDIT_MODEL") ?? "deepseek-reasoner";
+    const isReasoner = deepseekModel === "deepseek-reasoner";
 
-    const ai = await runAiStage("heavy_reported_question_audit", messages, {
-      jsonResponse: true,
-      questionId: questao.id,
-      complexity: "high",
-      metadata: { feature: "resolve-recurso-ai", recurso_id: recursoId },
+    const dsBody: Record<string, unknown> = {
+      model: deepseekModel,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: buildUserPrompt(questao, argumentos, legalText) },
+      ],
+      max_tokens: 4096,
+    };
+    // deepseek-reasoner NÃO aceita temperature/response_format.
+    if (!isReasoner) {
+      dsBody.temperature = 0.2;
+      dsBody.response_format = { type: "json_object" };
+    }
+
+    const dsResp = await fetch(`${deepseekBase}/v1/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${deepseekKey}`,
+      },
+      body: JSON.stringify(dsBody),
     });
-
-    const parsed = safeJsonParse(ai.content);
+    if (!dsResp.ok) {
+      const errText = await dsResp.text().catch(() => "");
+      return new Response(JSON.stringify({ error: `DeepSeek ${dsResp.status}`, detail: errText.slice(0, 500) }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const dsJson = await dsResp.json();
+    const rawContent: string = dsJson?.choices?.[0]?.message?.content ?? "";
+    const parsed = safeJsonParse(rawContent);
     if (!parsed) {
-      return new Response(JSON.stringify({ error: "Falha ao interpretar resposta da IA", raw: ai.content?.slice(0, 500) }), {
+      return new Response(JSON.stringify({ error: "Falha ao interpretar resposta da IA", raw: rawContent.slice(0, 500) }), {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -155,7 +183,8 @@ serve(async (req) => {
       needs_human_review: Boolean(parsed.needs_human_review),
       confianca: Number(parsed.confianca ?? 0),
       justificativa: String(parsed.justificativa ?? ""),
-      provider: `${ai.provider}:${ai.model}`,
+      base_legal_disponivel: !!legalText,
+      provider: `deepseek:${deepseekModel}`,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
