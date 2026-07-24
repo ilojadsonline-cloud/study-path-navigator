@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   CalendarClock, Loader2, Upload, Trophy, Trash2, CheckCircle2, AlertTriangle,
   Power, PowerOff, Plus, Users, Pencil, Eye, EyeOff, RotateCw, Gavel,
-  ThumbsUp, ThumbsDown, MessageSquare,
+  ThumbsUp, ThumbsDown, MessageSquare, Sparkles,
 } from "lucide-react";
 import { parseMarkdownQuestoes } from "@/lib/markdown-questoes-parser";
 import { SimuladoSemanalEditor } from "@/components/admin/SimuladoSemanalEditor";
@@ -470,6 +470,7 @@ export function AdminSimuladoSemanalTab() {
                           recurso={r}
                           onDecidir={(dec, just) => decidirRecurso(r, dec, just, s.id)}
                           onReabrir={() => reabrirRecurso(r, s.id)}
+                          toast={toast}
                         />
                       ))}
                     </div>
@@ -516,14 +517,17 @@ export function AdminSimuladoSemanalTab() {
   );
 }
 
-function RecursoItem({ recurso, onDecidir, onReabrir }: {
+function RecursoItem({ recurso, onDecidir, onReabrir, toast }: {
   recurso: any;
   onDecidir: (decisao: "procedente" | "improcedente", justificativa: string) => void | Promise<void>;
   onReabrir: () => void | Promise<void>;
+  toast: ReturnType<typeof useToast>["toast"];
 }) {
   const [just, setJust] = useState(recurso.decisao_admin ?? "");
   const [open, setOpen] = useState(false);
   const [editando, setEditando] = useState(false);
+  const [analisando, setAnalisando] = useState(false);
+  const [aiResult, setAiResult] = useState<{ procedente: boolean; needs_human_review: boolean; confianca: number; justificativa: string; provider: string } | null>(null);
   const q = recurso.simulado_semanal_questoes;
   const decidido = recurso.status !== "pendente";
   const emEdicao = !decidido || editando;
@@ -532,6 +536,23 @@ function RecursoItem({ recurso, onDecidir, onReabrir }: {
     : recurso.status === "improcedente"
       ? "bg-destructive/15 text-destructive"
       : "bg-warning/15 text-warning";
+
+  const analisarComIA = async () => {
+    setAnalisando(true);
+    setAiResult(null);
+    const { data, error } = await supabase.functions.invoke("resolve-recurso-ai", {
+      body: { recurso_id: recurso.id },
+    });
+    setAnalisando(false);
+    if (error || (data as any)?.error) {
+      toast({ title: "Erro na análise por IA", description: (data as any)?.error || error?.message, variant: "destructive" });
+      return;
+    }
+    setAiResult(data as any);
+    setJust((data as any).justificativa || "");
+    setEditando(true);
+    setOpen(true);
+  };
   return (
     <div className="rounded-lg border border-border/50 bg-background/40 p-2.5 space-y-2">
       <button className="w-full text-left flex items-center gap-2" onClick={() => setOpen((v) => !v)}>
@@ -546,6 +567,28 @@ function RecursoItem({ recurso, onDecidir, onReabrir }: {
           <div className="text-[11px] whitespace-pre-wrap"><strong>Argumento:</strong> {recurso.argumento}</div>
           {q?.enunciado && (
             <div className="text-[11px] text-muted-foreground max-h-24 overflow-y-auto"><strong>Enunciado:</strong> {q.enunciado.replace(/<[^>]+>/g, "").slice(0, 400)}</div>
+          )}
+          <div>
+            <Button size="sm" variant="outline" onClick={analisarComIA} disabled={analisando} className="text-primary">
+              {analisando ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
+              Analisar com IA
+            </Button>
+          </div>
+          {aiResult && (
+            <div className={`rounded-md p-2 text-[11px] space-y-1 border ${aiResult.procedente ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5"}`}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${aiResult.procedente ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}>
+                  IA: {aiResult.procedente ? "PROCEDENTE (anular)" : "IMPROCEDENTE (manter)"}
+                </span>
+                <span className="text-[10px] text-muted-foreground">Confiança: {Math.round((aiResult.confianca || 0) * 100)}%</span>
+                {aiResult.needs_human_review && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/20 text-warning font-semibold">Requer revisão humana</span>
+                )}
+                <span className="text-[10px] text-muted-foreground ml-auto">{aiResult.provider}</span>
+              </div>
+              <div className="whitespace-pre-wrap"><strong>Parecer da IA:</strong> {aiResult.justificativa}</div>
+              <p className="text-[10px] text-muted-foreground italic">Sugestão pré-preenchida no campo de justificativa abaixo — revise antes de decidir.</p>
+            </div>
           )}
           {decidido && !editando && (
             <>
