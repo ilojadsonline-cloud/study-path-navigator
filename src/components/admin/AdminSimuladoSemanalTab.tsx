@@ -517,14 +517,17 @@ export function AdminSimuladoSemanalTab() {
   );
 }
 
-function RecursoItem({ recurso, onDecidir, onReabrir }: {
+function RecursoItem({ recurso, onDecidir, onReabrir, toast }: {
   recurso: any;
   onDecidir: (decisao: "procedente" | "improcedente", justificativa: string) => void | Promise<void>;
   onReabrir: () => void | Promise<void>;
+  toast: ReturnType<typeof useToast>["toast"];
 }) {
   const [just, setJust] = useState(recurso.decisao_admin ?? "");
   const [open, setOpen] = useState(false);
   const [editando, setEditando] = useState(false);
+  const [analisando, setAnalisando] = useState(false);
+  const [aiResult, setAiResult] = useState<{ procedente: boolean; needs_human_review: boolean; confianca: number; justificativa: string; provider: string } | null>(null);
   const q = recurso.simulado_semanal_questoes;
   const decidido = recurso.status !== "pendente";
   const emEdicao = !decidido || editando;
@@ -533,6 +536,23 @@ function RecursoItem({ recurso, onDecidir, onReabrir }: {
     : recurso.status === "improcedente"
       ? "bg-destructive/15 text-destructive"
       : "bg-warning/15 text-warning";
+
+  const analisarComIA = async () => {
+    setAnalisando(true);
+    setAiResult(null);
+    const { data, error } = await supabase.functions.invoke("resolve-recurso-ai", {
+      body: { recurso_id: recurso.id },
+    });
+    setAnalisando(false);
+    if (error || (data as any)?.error) {
+      toast({ title: "Erro na análise por IA", description: (data as any)?.error || error?.message, variant: "destructive" });
+      return;
+    }
+    setAiResult(data as any);
+    setJust((data as any).justificativa || "");
+    setEditando(true);
+    setOpen(true);
+  };
   return (
     <div className="rounded-lg border border-border/50 bg-background/40 p-2.5 space-y-2">
       <button className="w-full text-left flex items-center gap-2" onClick={() => setOpen((v) => !v)}>
