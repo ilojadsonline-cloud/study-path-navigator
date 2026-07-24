@@ -568,6 +568,28 @@ function RecursoItem({ recurso, onDecidir, onReabrir, toast }: {
           {q?.enunciado && (
             <div className="text-[11px] text-muted-foreground max-h-24 overflow-y-auto"><strong>Enunciado:</strong> {q.enunciado.replace(/<[^>]+>/g, "").slice(0, 400)}</div>
           )}
+          <div>
+            <Button size="sm" variant="outline" onClick={analisarComIA} disabled={analisando} className="text-primary">
+              {analisando ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
+              Analisar com IA
+            </Button>
+          </div>
+          {aiResult && (
+            <div className={`rounded-md p-2 text-[11px] space-y-1 border ${aiResult.procedente ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5"}`}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${aiResult.procedente ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}>
+                  IA: {aiResult.procedente ? "PROCEDENTE (anular)" : "IMPROCEDENTE (manter)"}
+                </span>
+                <span className="text-[10px] text-muted-foreground">Confiança: {Math.round((aiResult.confianca || 0) * 100)}%</span>
+                {aiResult.needs_human_review && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/20 text-warning font-semibold">Requer revisão humana</span>
+                )}
+                <span className="text-[10px] text-muted-foreground ml-auto">{aiResult.provider}</span>
+              </div>
+              <div className="whitespace-pre-wrap"><strong>Parecer da IA:</strong> {aiResult.justificativa}</div>
+              <p className="text-[10px] text-muted-foreground italic">Sugestão pré-preenchida no campo de justificativa abaixo — revise antes de decidir.</p>
+            </div>
+          )}
           {decidido && !editando && (
             <>
               <div className="text-[11px] italic text-muted-foreground whitespace-pre-wrap"><strong>Decisão atual ({recurso.status}):</strong> {recurso.decisao_admin || "—"}</div>
