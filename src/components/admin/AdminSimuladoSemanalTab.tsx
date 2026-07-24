@@ -470,6 +470,7 @@ export function AdminSimuladoSemanalTab() {
                           recurso={r}
                           onDecidir={(dec, just) => decidirRecurso(r, dec, just, s.id)}
                           onReabrir={() => reabrirRecurso(r, s.id)}
+                          toast={toast}
                         />
                       ))}
                     </div>
