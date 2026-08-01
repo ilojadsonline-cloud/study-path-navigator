@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
+import { useCurso } from "@/contexts/CursoContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen, CreditCard, Brain, Youtube, Wrench, FileText, Lock, CalendarClock } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
