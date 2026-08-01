@@ -93,6 +93,7 @@ export default function AdminEditalTab() {
   const [addingId, setAddingId] = useState<string | null>(null);
 
   // Edição inline de um material existente
+  const { cursoSlug } = useCurso();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(emptyForm());
   const [editFile, setEditFile] = useState<File | null>(null);
@@ -106,7 +107,7 @@ export default function AdminEditalTab() {
         list: materials[disc.id] ?? [],
         newForm: newForms[disc.id] ?? emptyForm(),
       })),
-    [materials, newForms],
+    [materials, newForms, cursoSlug],
   );
 
   const loadConfig = async () => {
