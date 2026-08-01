@@ -18,25 +18,11 @@ const Login = () => {
 
   useEffect(() => {
     if (!session || subscriptionLoading) return;
-    if (subscribed) {
-      navigate("/dashboard", { replace: true });
-      return;
-    }
+    // Após o login o usuário escolhe o curso; o acesso é verificado lá.
+    navigate("/cursos", { replace: true });
+  }, [session, subscriptionLoading, navigate]);
 
-    if (trialExpired) {
-      void signOut().finally(() => {
-        toast({
-          title: "Acesso bloqueado",
-          description: "Sua assinatura não está ativa. Assine o plano trimestral para continuar.",
-          variant: "destructive",
-        });
-        navigate("/assinatura", { replace: true });
-      });
-      return;
-    }
 
-    navigate("/assinatura", { replace: true });
-  }, [session, subscriptionLoading, subscribed, trialExpired, navigate, toast, signOut]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
