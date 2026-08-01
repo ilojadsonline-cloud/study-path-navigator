@@ -1,11 +1,13 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurso } from "@/contexts/CursoContext";
 import { Loader2 } from "lucide-react";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading, subscribed, subscriptionLoading, trialExpired, isAdmin, signOut } = useAuth();
+  const { session, loading, subscriptionLoading, isAdmin } = useAuth();
+  const { cursoAtivo, temAcesso, loading: cursoLoading } = useCurso();
 
-  if (loading || subscriptionLoading) {
+  if (loading || subscriptionLoading || cursoLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -22,13 +24,9 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (trialExpired) {
-    void signOut();
-    return <Navigate to="/assinatura" replace />;
-  }
-
-  if (!subscribed) {
-    return <Navigate to="/assinatura" replace />;
+  // Sem acesso ao curso selecionado → volta para a escolha de curso
+  if (!temAcesso(cursoAtivo)) {
+    return <Navigate to="/cursos" replace />;
   }
 
   return <>{children}</>;
