@@ -17,10 +17,11 @@ interface Props {
 
 export function GeradorPersonalizado({ onGenerate, onBack }: Props) {
   const { cursoSlug } = useCurso();
+  const padrao = getDistribuicaoPadrao(cursoSlug);
   const [horas, setHoras] = useState(20);
-  const [videoaulas, setVideoaulas] = useState(40);
-  const [lei, setLei] = useState(30);
-  const [questoes, setQuestoes] = useState(30);
+  const [videoaulas, setVideoaulas] = useState(padrao.videoaulas);
+  const [lei, setLei] = useState(padrao.lei);
+  const [questoes, setQuestoes] = useState(padrao.questoes);
   const [dias, setDias] = useState<string[]>(["segunda", "terca", "quarta", "quinta", "sexta"]);
   const [horarioInicio, setHorarioInicio] = useState("19:00");
   const [horarioFim, setHorarioFim] = useState("23:00");
