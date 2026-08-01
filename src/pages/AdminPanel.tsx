@@ -62,7 +62,7 @@ const AdminPanel = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-gradient-primary">Painel Administrativo</h1>
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleChange}>
+        <Tabs value={!isPmto && activeTab === "pop" ? "stats" : activeTab} onValueChange={handleChange}>
           <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
             <TabsList className="flex w-max sm:w-auto sm:flex-wrap gap-1 h-auto sm:max-w-3xl">
               <TabsTrigger value="stats" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><BarChart3 className="w-3.5 h-3.5" />Estatísticas</TabsTrigger>
