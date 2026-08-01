@@ -79,7 +79,7 @@ export function CbmtoFontesCard() {
       status,
       capitulos_autorizados: escopo?.capitulosAutorizados ?? [],
       capitulos_excluidos: escopo?.capitulosExcluidos ?? [],
-      artigos_autorizados: escopo?.artigosAutorizados ?? [],
+      artigos_autorizados: JSON.parse(JSON.stringify(escopo?.artigosAutorizados ?? [])),
       observacao: escopo?.observacao ?? null,
     };
     const existente = fontePorArquivo(selecionado);
