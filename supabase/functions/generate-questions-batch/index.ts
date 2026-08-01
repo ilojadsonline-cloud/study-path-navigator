@@ -1295,9 +1295,14 @@ serve(async (req: Request) => {
     }
 
     // Fetch existing questions for dedup (now also brings semantic signature + main article)
-    const { data: existingQ } = await supabase
+    // Dedup escopado no curso: cada curso tem seu próprio banco (legado curso_id NULL = PMTO).
+    let existingQuery = supabase
       .from("questoes").select("id, enunciado, comentario, alt_a, alt_b, alt_c, alt_d, alt_e, gabarito, assunto, assinatura_semantica, artigo_principal")
-      .eq("disciplina", disc.disciplina).order("id", { ascending: false }).limit(1000);
+      .eq("disciplina", disc.disciplina);
+    existingQuery = cursoId
+      ? existingQuery.or(`curso_id.eq.${cursoId}${cursoSlug === "pmto" ? ",curso_id.is.null" : ""}`)
+      : existingQuery.is("curso_id", null);
+    const { data: existingQ } = await existingQuery.order("id", { ascending: false }).limit(1000);
 
     const existingFingerprints = new Set<string>();
     const existingSemanticFPs = new Set<string>();
