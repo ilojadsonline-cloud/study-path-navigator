@@ -413,14 +413,17 @@ const Dashboard = () => {
         setIncompleteSimulado({ disciplina: progressData.disciplina, respondidas: Object.keys(respostas).length, total: progressData.total });
       }
 
-      // BizuAulas: contagem de vídeos por disciplina (Análise do Edital sempre em destaque)
-      const { data: bizuRows } = await supabase
-        .from("bizuaulas_videos").select("disciplina_id");
+      // BizuAulas: contagem de vídeos por disciplina (filtrado pelo curso ativo)
+      let bizuQuery = supabase.from("bizuaulas_videos").select("disciplina_id");
+      const bizuFilter = cursoOrFilter(cursoId, cursoSlug);
+      if (bizuFilter) bizuQuery = bizuQuery.or(bizuFilter);
+      const { data: bizuRows } = await bizuQuery;
       const bizuCount: Record<string, number> = {};
       (bizuRows || []).forEach((r: { disciplina_id: string }) => {
         bizuCount[r.disciplina_id] = (bizuCount[r.disciplina_id] || 0) + 1;
       });
-      const bizuList: BizuAulaItem[] = getBizuAulaDisciplinas(cursoSlug)
+      const temVideos = (bizuRows || []).length > 0;
+      const bizuList: BizuAulaItem[] = !temVideos ? [] : getBizuAulaDisciplinas(cursoSlug)
         .map((d) => ({
           id: d.id,
           title: d.title,
