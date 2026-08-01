@@ -46,6 +46,7 @@ function getRetryDelay(attempt: number): number {
 export function AdminGerarTab() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { cursoId, cursoAtivo } = useCurso();
   const [results, setResults] = useState<BatchResult[]>([]);
   const [running, setRunning] = useState(false);
   const [totalGeradas, setTotalGeradas] = useState(0);
