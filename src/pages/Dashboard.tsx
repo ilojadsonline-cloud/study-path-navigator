@@ -171,7 +171,7 @@ const Dashboard = () => {
   const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
   const [bizuAulas, setBizuAulas] = useState<BizuAulaItem[]>([]);
   const [diagnostico, setDiagnostico] = useState<DesempenhoItem[]>([]);
-  const { cursoId, cursoSlug } = useCurso();
+  const { cursoId, cursoSlug, cursoAtivo } = useCurso();
 
   useEffect(() => {
     if (!user) return;
