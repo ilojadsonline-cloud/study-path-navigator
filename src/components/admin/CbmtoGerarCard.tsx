@@ -141,7 +141,7 @@ export function CbmtoGerarCard({ onGerado }: { onGerado?: () => void }) {
             <p className="text-xs font-medium">Cotas obrigatórias do edital</p>
             <div className="flex flex-wrap gap-1.5">
               {COTAS_OFICIAIS_CBMTO.map((c) => (
-                <Badge key={c.bloco} variant="secondary" className="text-[10px]">{c.bloco}: {c.questoes}</Badge>
+                <Badge key={c.cota} variant="secondary" className="text-[10px]">{c.cota}: {c.questoes}</Badge>
               ))}
             </div>
             <p className="text-xs font-medium pt-1">Distribuição planejada de gabaritos</p>
