@@ -15,12 +15,15 @@ export interface Curso {
 
 interface CursoContextType {
   cursos: Curso[];            // cursos que o usuário pode acessar
+  todosCursos: Curso[];       // todos os cursos ativos (para a tela de escolha)
   cursoAtivo: Curso | null;
   cursoId: string | null;
   setCursoSlug: (slug: string) => void;
+  temAcesso: (curso: Curso | null) => boolean;
   loading: boolean;
   refresh: () => Promise<void>;
 }
+
 
 const STORAGE_KEY = "choa.curso.slug";
 const DEFAULT_SLUG = "pmto";
