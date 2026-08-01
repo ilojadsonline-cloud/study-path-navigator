@@ -101,7 +101,7 @@ export default function AdminEditalTab() {
 
   const items = useMemo(
     () =>
-      editalAdminItems.map((disc) => ({
+      getEditalAdminItems(cursoSlug).map((disc) => ({
         ...disc,
         list: materials[disc.id] ?? [],
         newForm: newForms[disc.id] ?? emptyForm(),

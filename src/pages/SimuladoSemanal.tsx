@@ -510,6 +510,11 @@ function HistoricoSimulados({ historico, loadingId, onAbrir }: {
 // ── Intro ──
 function IntroCard({ simulado, onStart }: { simulado: any; onStart: () => void }) {
   const [confirming, setConfirming] = useState(false);
+  const { cursoSlug } = useCurso();
+  const PONTUACAO_TOTAL = getPontuacaoTotal(cursoSlug);
+  const NOTA_MINIMA_APROVACAO = getNotaMinima(cursoSlug);
+  const VAGAS_CLASSIFICACAO = getVagas(cursoSlug);
+  const EDITAL_DISTRIBUICAO = getDistribuicao(cursoSlug);
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
       <div className="glass-card rounded-2xl p-6 sm:p-8 space-y-4 relative overflow-hidden">
@@ -531,7 +536,7 @@ function IntroCard({ simulado, onStart }: { simulado: any; onStart: () => void }
         <div className="rounded-xl bg-secondary/40 p-4 space-y-2 text-xs">
           <p className="font-semibold flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-primary" /> Regras (conforme o edital)</p>
           <ul className="space-y-1 text-muted-foreground list-disc pl-5">
-            <li>Distribuição fiel ao Conteúdo Programático (Anexo II).</li>
+            <li>Distribuição fiel ao Conteúdo Programático do edital.</li>
             <li><strong className="text-foreground">Aprovado:</strong> nota ≥ {NOTA_MINIMA_APROVACAO},0 pontos.</li>
             <li><strong className="text-foreground">Classificado:</strong> aprovado dentro das {VAGAS_CLASSIFICACAO} vagas, por ordem decrescente de pontuação.</li>
             <li>O cronômetro de {Math.round(simulado.duracao_minutos / 60)}h <strong className="text-foreground">não pausa</strong> após iniciar — corre mesmo se você sair.</li>
@@ -577,6 +582,10 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
 function ResultsView({ simulado, tentativa, questoes, ranking, userId }: {
   simulado: any; tentativa: any; questoes: QuestaoFull[]; ranking: any[]; userId?: string;
 }) {
+  const { cursoSlug } = useCurso();
+  const PONTUACAO_TOTAL = getPontuacaoTotal(cursoSlug);
+  const NOTA_MINIMA_APROVACAO = getNotaMinima(cursoSlug);
+  const VAGAS_CLASSIFICACAO = getVagas(cursoSlug);
   const minha = useMemo(() => ranking.find((r) => r.user_id === userId), [ranking, userId]);
   const pontuacao = Number(tentativa?.pontuacao ?? 0);
   const aprovado = pontuacao >= NOTA_MINIMA_APROVACAO;
