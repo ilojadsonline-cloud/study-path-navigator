@@ -1426,7 +1426,7 @@ export type Database = {
       }
       excluir_questoes_por_ids: { Args: { p_ids: number[] }; Returns: number }
       get_desempenho_disciplinas: {
-        Args: { p_user_id?: string }
+        Args: { p_curso_id?: string; p_user_id?: string }
         Returns: {
           corretas: number
           disciplina: string
@@ -1435,7 +1435,7 @@ export type Database = {
       }
       get_email_by_cpf: { Args: { p_cpf: string }; Returns: string }
       get_my_ranking_position: {
-        Args: { p_period?: string }
+        Args: { p_curso_id?: string; p_period?: string }
         Returns: {
           rank: number
           taxa_acertos: number
@@ -1452,7 +1452,7 @@ export type Database = {
         }[]
       }
       get_ranking: {
-        Args: { p_period?: string }
+        Args: { p_curso_id?: string; p_period?: string }
         Returns: {
           nome: string
           taxa_acertos: number
@@ -1476,7 +1476,7 @@ export type Database = {
         }[]
       }
       get_top10_ranking: {
-        Args: never
+        Args: { p_curso_id?: string }
         Returns: {
           nome: string
           taxa_acertos: number
