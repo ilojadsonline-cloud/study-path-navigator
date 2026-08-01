@@ -20,7 +20,7 @@ interface Props {
 
 export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
   const { toast } = useToast();
-  const { cursoSlug } = useCurso();
+  const { cursoId, cursoSlug } = useCurso();
   const qtdAlternativas = getQtdAlternativas(cursoSlug);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
