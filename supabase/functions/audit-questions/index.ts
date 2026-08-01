@@ -1113,14 +1113,14 @@ type ProofMatrixValidation = {
 };
 
 /** P1.5 — Valida programaticamente a matriz de prova literal por alternativa. */
-function validateProofMatrix(matrix: unknown, legalText: string | null): ProofMatrixValidation {
+function validateProofMatrix(matrix: unknown, legalText: string | null, expectedLen = 5): ProofMatrixValidation {
   const errors: string[] = [];
   const normalized: ProofMatrixEntry[] = [];
   if (!Array.isArray(matrix)) {
     return { valid: false, errors: ["proof_matrix ausente ou não é array"], trueCount: 0, evidenceFound: 0, normalized: [] };
   }
-  if (matrix.length !== 5) {
-    errors.push(`proof_matrix deve ter exatamente 5 entradas (recebeu ${matrix.length})`);
+  if (matrix.length !== expectedLen) {
+    errors.push(`proof_matrix deve ter exatamente ${expectedLen} entradas (recebeu ${matrix.length})`);
   }
   const seenLetters = new Set<string>();
   let trueCount = 0;
