@@ -58,7 +58,7 @@ const alts = (q: QuestaoTaking) =>
 
 const SimuladoSemanal = () => {
   const { user } = useAuth();
-  const { cursoId } = useCurso();
+  const { cursoId, cursoSlug } = useCurso();
   const [phase, setPhase] = useState<Phase>("loading");
   const [simulado, setSimulado] = useState<any>(null);
   const [disponiveis, setDisponiveis] = useState<any[]>([]);
@@ -84,7 +84,7 @@ const SimuladoSemanal = () => {
   const savedSig = useRef("");
 
   const call = useCallback(async (action: string, extra: Record<string, unknown> = {}) => {
-    const { data, error } = await supabase.functions.invoke("simulado-semanal", { body: { action, curso_id: cursoId, ...extra } });
+    const { data, error } = await supabase.functions.invoke("simulado-semanal", { body: { action, curso_id: cursoId, curso_slug: cursoSlug, ...extra } });
     if (error) {
       // tenta extrair mensagem do corpo
       try {

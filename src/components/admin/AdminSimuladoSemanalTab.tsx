@@ -317,7 +317,7 @@ export function AdminSimuladoSemanalTab() {
           <CalendarClock className="w-5 h-5 text-primary" /> Simulado Semanal
         </h2>
         <p className="text-sm text-muted-foreground">
-          Publique a prova da semana ({TOTAL_QUESTOES_SIMULADO} questões, {DURACAO_PADRAO_MINUTOS / 60}h, 1 tentativa por aluno) seguindo a distribuição do edital.
+          Publique a prova da semana ({TOTAL_QUESTOES_SIMULADO} questões, {duracao / 60}h, 1 tentativa por aluno) seguindo a distribuição do edital.
         </p>
       </div>
 

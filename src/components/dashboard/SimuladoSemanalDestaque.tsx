@@ -35,7 +35,7 @@ export function SimuladoSemanalDestaque() {
 
   useEffect(() => {
     (async () => {
-      const { data: res, error } = await supabase.functions.invoke("simulado-semanal", { body: { action: "status", curso_id: cursoId } });
+      const { data: res, error } = await supabase.functions.invoke("simulado-semanal", { body: { action: "status", curso_id: cursoId, curso_slug: cursoSlug } });
       if (!error && res) setData(res as StatusData);
       setLoading(false);
     })();
