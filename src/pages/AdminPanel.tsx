@@ -32,6 +32,8 @@ const Fallback = () => (
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAuth();
+  const { cursoSlug } = useCurso();
+  const isPmto = (cursoSlug || "pmto").toLowerCase() === "pmto";
   const [activeTab, setActiveTab] = useState("stats");
   // Mantém abas já visitadas montadas (preserva estado entre trocas)
   const [visited, setVisited] = useState<Set<string>>(new Set(["stats"]));
