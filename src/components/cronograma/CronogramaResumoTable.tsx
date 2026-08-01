@@ -4,6 +4,7 @@ import {
 import {
   AtividadeBloco, calcularResumo, formatMinutes, getDisciplinasCronograma, getCorDisciplina,
 } from "@/lib/cronograma-generator";
+import { useCurso } from "@/contexts/CursoContext";
 
 interface Props {
   atividades: AtividadeBloco[];

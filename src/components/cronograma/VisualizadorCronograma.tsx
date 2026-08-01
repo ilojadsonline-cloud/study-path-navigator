@@ -25,6 +25,7 @@ interface Props {
 
 export function VisualizadorCronograma({ cronograma: initial, onBack, onSaved, existingId }: Props) {
   const { user } = useAuth();
+  const { cursoId, cursoSlug } = useCurso();
   const [atividades, setAtividades] = useState<AtividadeBloco[]>(initial.atividades);
   const [editBloco, setEditBloco] = useState<AtividadeBloco | null>(null);
   const [saving, setSaving] = useState(false);

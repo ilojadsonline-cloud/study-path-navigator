@@ -21,6 +21,7 @@ interface Props {
 }
 
 export function EditarBlocoDialog({ bloco, open, onClose, onSave, onDelete }: Props) {
+  const { cursoSlug } = useCurso();
   const [form, setForm] = useState<AtividadeBloco | null>(null);
 
   useEffect(() => {

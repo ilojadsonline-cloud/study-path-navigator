@@ -16,6 +16,7 @@ interface Props {
 }
 
 export function GeradorPersonalizado({ onGenerate, onBack }: Props) {
+  const { cursoSlug } = useCurso();
   const [horas, setHoras] = useState(20);
   const [videoaulas, setVideoaulas] = useState(40);
   const [lei, setLei] = useState(30);
