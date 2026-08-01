@@ -1698,10 +1698,13 @@ serve(async (req) => {
       // Resumo do estado atual da fila de auditoria.
       const counts: Record<string, number> = {};
       for (const s of [Q_STATUS.PENDING, Q_STATUS.APPROVED, Q_STATUS.AUTO_CORRECTED, Q_STATUS.MANUAL, Q_STATUS.ADMIN_RESOLVED]) {
-        const { count } = await supabase
+        let cq = supabase
           .from("questoes")
           .select("id", { count: "exact", head: true })
           .eq("audit_status", s);
+        const statsExpr = cursoOrExpr(body.curso_id ?? null, body.curso_slug ?? null);
+        if (statsExpr) cq = cq.or(statsExpr);
+        const { count } = await cq;
         counts[s] = count ?? 0;
       }
       return new Response(JSON.stringify({ counts }), {
@@ -1728,8 +1731,13 @@ serve(async (req) => {
       // mode: 'all' | 'discipline' | 'unaudited' | 'reported' | 'selected'
       const mode: "all" | "discipline" | "unaudited" | "reported" | "selected" =
         ["all", "discipline", "unaudited", "reported", "selected"].includes(body.mode) ? body.mode : "all";
+      const cursoId: string | null = body.curso_id ?? null;
+      const cursoSlug: string | null = body.curso_slug ?? null;
+      const cursoExpr = cursoOrExpr(cursoId, cursoSlug);
       const scope: any = {
         mode,
+        curso_id: cursoId,
+        curso_slug: cursoSlug,
         disciplinas: Array.isArray(body.disciplinas) ? body.disciplinas : null,
         only_unaudited: mode === "unaudited",
         limit: Math.min(Number(body.limit ?? 200), 100000),
@@ -1745,6 +1753,11 @@ serve(async (req) => {
         const ids = Array.isArray(body.question_ids)
           ? body.question_ids.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n))
           : [];
+        if (cursoExpr && ids.length) {
+          const { data: doCurso } = await supabase.from("questoes").select("id").in("id", ids).or(cursoExpr);
+          const allowed = new Set((doCurso ?? []).map((r: any) => r.id));
+          for (let i = ids.length - 1; i >= 0; i--) if (!allowed.has(ids[i])) ids.splice(i, 1);
+        }
         scope.question_ids = ids;
         scope.limit = Math.min(scope.limit, Math.max(ids.length, 1));
         // Reset em lotes para entrar na fila (vence teto de itens por chamada do .in()).
@@ -1764,7 +1777,12 @@ serve(async (req) => {
           .select("questao_id")
           .eq("status", "pendente")
           .limit(100000);
-        const ids = Array.from(new Set((reps ?? []).map((r: any) => r.questao_id))).filter(Boolean);
+        let ids = Array.from(new Set((reps ?? []).map((r: any) => r.questao_id))).filter(Boolean);
+        if (cursoExpr && ids.length) {
+          const { data: doCurso } = await supabase.from("questoes").select("id").in("id", ids).or(cursoExpr);
+          const allowed = new Set((doCurso ?? []).map((r: any) => r.id));
+          ids = ids.filter((id: number) => allowed.has(id));
+        }
         scope.question_ids = ids;
         if (ids.length) {
           await supabase
@@ -1790,6 +1808,7 @@ serve(async (req) => {
             .order("id", { ascending: true })
             .limit(RESET_PAGE);
           if (scope.disciplinas?.length) pageSel = pageSel.in("disciplina", scope.disciplinas);
+          if (cursoExpr) pageSel = pageSel.or(cursoExpr);
           const { data: pageRows, error: pageErr } = await pageSel;
           if (pageErr || !pageRows || pageRows.length === 0) break;
           const pageIds = (pageRows as any[]).map((r) => r.id);
@@ -1809,6 +1828,7 @@ serve(async (req) => {
         .eq("audit_status", Q_STATUS.PENDING);
       if (scope.disciplinas?.length) countQ = countQ.in("disciplina", scope.disciplinas);
       if (scope.question_ids?.length) countQ = countQ.in("id", scope.question_ids);
+      if (cursoExpr) countQ = countQ.or(cursoExpr);
       const { count } = await countQ;
 
       const { data: job } = await supabase.from("audit_jobs").insert({
@@ -1869,6 +1889,8 @@ serve(async (req) => {
         .limit(PAGE_Q);
       if (job.scope?.disciplinas?.length) qBuilder = qBuilder.in("disciplina", job.scope.disciplinas);
       if (job.scope?.question_ids?.length) qBuilder = qBuilder.in("id", job.scope.question_ids);
+      const jobCursoExpr = cursoOrExpr(job.scope?.curso_id ?? null, job.scope?.curso_slug ?? null);
+      if (jobCursoExpr) qBuilder = qBuilder.or(jobCursoExpr);
       const { data: candidates, error: cErr } = await qBuilder;
       if (cErr || !candidates || candidates.length === 0) break;
       const candidateIds = (candidates as any[]).map((q) => q.id);
