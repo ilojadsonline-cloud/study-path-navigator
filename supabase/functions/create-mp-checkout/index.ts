@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,7 +11,8 @@ const logStep = (step: string, details?: any) => {
   console.log(`[MP-CHECKOUT] ${step}${detailsStr}`);
 };
 
-const PLAN_AMOUNT = 99.99;
+const DEFAULT_PLAN = "pmto-trimestral";
+const FALLBACK_AMOUNT = 99.99;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -27,8 +29,7 @@ serve(async (req) => {
     } catch {}
 
     const payerEmail = (body?.email || "").trim().toLowerCase();
-    // O parâmetro `trial` é mantido por compatibilidade com chamadas existentes,
-    // mas o trial de 1 dia é SEMPRE aplicado pelo plano (regra de negócio atual).
+    const planoSlug = String(body?.planoSlug || DEFAULT_PLAN).trim();
 
     if (!payerEmail) {
       return new Response(JSON.stringify({ error: "Informe o email para iniciar a assinatura." }), {
@@ -44,14 +45,34 @@ serve(async (req) => {
       });
     }
 
-    const origin = req.headers.get("origin") || "https://www.metodochoa.com.br";
-    const externalReference = `choa-sub-${Date.now()}-${payerEmail}`;
+    // Busca o plano no banco (preço e cursos vinculados)
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } },
+    );
+    const { data: plano } = await admin
+      .from("planos")
+      .select("slug, nome, preco_centavos, ativo")
+      .eq("slug", planoSlug)
+      .maybeSingle();
 
-    // ===== Assinatura recorrente via MP (preapproval) =====
-    // - SEM período de teste gratuito (cobrança imediata na adesão)
-    // - Cobrança automática de R$ 99,99 a cada 3 meses
+    if (planoSlug !== DEFAULT_PLAN && (!plano || !plano.ativo)) {
+      return new Response(JSON.stringify({ error: "Plano indisponível." }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    const amount = plano ? Number(plano.preco_centavos) / 100 : FALLBACK_AMOUNT;
+    const reason = plano ? `Método CHOA — ${plano.nome}` : "Método CHOA — Assinatura Trimestral";
+
+    const origin = req.headers.get("origin") || "https://www.metodochoa.com.br";
+    // formato: choa-sub-{ts}-{planoSlug}::{email}
+    const externalReference = `choa-sub-${Date.now()}-${planoSlug}::${payerEmail}`;
+
     const preapprovalBody: any = {
-      reason: "Método CHOA — Assinatura Trimestral",
+      reason,
       external_reference: externalReference,
       payer_email: payerEmail,
       back_url: `${origin}/cadastro?mp_status=success`,
@@ -59,12 +80,12 @@ serve(async (req) => {
       auto_recurring: {
         frequency: 3,
         frequency_type: "months",
-        transaction_amount: PLAN_AMOUNT,
+        transaction_amount: amount,
         currency_id: "BRL",
       },
     };
 
-    logStep("Criando preapproval", { email: payerEmail });
+    logStep("Criando preapproval", { email: payerEmail, planoSlug, amount });
 
     const mpRes = await fetch("https://api.mercadopago.com/preapproval", {
       method: "POST",
