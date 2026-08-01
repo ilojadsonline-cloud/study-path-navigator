@@ -6,7 +6,22 @@ import { useToast } from "@/hooks/use-toast";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
+type Plano = {
+  slug: string;
+  nome: string;
+  descricao: string | null;
+  preco_centavos: number;
+  dias_acesso: number;
+  cursos_slugs: string[];
+  destaque: boolean;
+};
+
+const formatPreco = (centavos: number) =>
+  (centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 const Assinatura = () => {
+  const [planos, setPlanos] = useState<Plano[]>([]);
+  const [planoSlug, setPlanoSlug] = useState<string>("pmto-trimestral");
   const [loadingCard, setLoadingCard] = useState(false);
   const [loadingPix, setLoadingPix] = useState(false);
   const [mpEmail, setMpEmail] = useState("");
@@ -44,6 +59,23 @@ const Assinatura = () => {
   };
 
   useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("planos")
+        .select("slug, nome, descricao, preco_centavos, dias_acesso, cursos_slugs, destaque")
+        .eq("ativo", true)
+        .order("ordem");
+      const lista = (data || []) as Plano[];
+      setPlanos(lista);
+      if (lista.length) {
+        setPlanoSlug(lista.find((p) => p.destaque)?.slug ?? lista[0].slug);
+      }
+    })();
+  }, []);
+
+  const planoAtual = planos.find((p) => p.slug === planoSlug) || null;
+
+  useEffect(() => {
     if (paymentStatus === "success" && user) checkSubscription();
     if (paymentStatus === "canceled") {
       toast({ title: "Pagamento cancelado", description: "O pagamento não foi concluído.", variant: "destructive" });
@@ -72,7 +104,7 @@ const Assinatura = () => {
     if (!email) return;
     setLoadingCard(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-mp-checkout", { body: { email } });
+      const { data, error } = await supabase.functions.invoke("create-mp-checkout", { body: { email, planoSlug } });
       if (error) throw error;
       if (data?.error) { toast({ title: "Erro", description: data.error, variant: "destructive" }); return; }
       if (data?.url) window.location.href = data.url;
@@ -87,7 +119,7 @@ const Assinatura = () => {
     setLoadingPix(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-mp-pix-boleto", {
-        body: { email, userId: user?.id ?? null },
+        body: { email, userId: user?.id ?? null, planoSlug },
       });
       if (error) throw error;
       if (data?.error) { toast({ title: "Erro", description: data.error, variant: "destructive" }); return; }
@@ -108,9 +140,13 @@ const Assinatura = () => {
             <Shield className="w-7 h-7 text-gold-foreground" />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold">
-            <span className="text-gradient-gold">Plano Método CHOA Trimestral — R$ 99,99</span>
+            <span className="text-gradient-gold">
+              {planoAtual ? `${planoAtual.nome} — ${formatPreco(planoAtual.preco_centavos)}` : "Plano Método CHOA Trimestral — R$ 99,99"}
+            </span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Acesso completo à plataforma por 90 dias</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {planoAtual?.descricao || `Acesso completo à plataforma por ${planoAtual?.dias_acesso ?? 90} dias`}
+          </p>
           {isExpired && (
             <div className="mt-3 flex items-center justify-center gap-2 text-warning text-xs font-medium">
               <AlertTriangle className="w-4 h-4" /> Sua assinatura expirou. Renove para continuar acessando.
@@ -153,6 +189,41 @@ const Assinatura = () => {
           </div>
         )}
 
+        {planos.length > 1 && (
+          <div className="glass-card rounded-2xl p-4 mb-4">
+            <label className="text-xs font-semibold text-muted-foreground mb-2 block">Escolha seu plano</label>
+            <div className="grid sm:grid-cols-3 gap-2">
+              {planos.map((p) => {
+                const ativo = p.slug === planoSlug;
+                return (
+                  <button
+                    key={p.slug}
+                    onClick={() => setPlanoSlug(p.slug)}
+                    className={`text-left p-3 rounded-xl border transition-colors ${
+                      ativo ? "border-gold bg-gold/10" : "border-border/60 hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-sm font-bold">{p.nome}</span>
+                      {p.destaque && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[9px] font-bold">
+                          MELHOR VALOR
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatPreco(p.preco_centavos)} · {p.dias_acesso} dias
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wide">
+                      {p.cursos_slugs.join(" + ")}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="grid md:grid-cols-2 gap-4">
           {/* Cartão de crédito recorrente */}
           <div className="glass-card rounded-2xl p-6 border-gold/20 glow-gold flex flex-col">
@@ -167,7 +238,7 @@ const Assinatura = () => {
             <h2 className="text-lg font-bold mb-1">Cartão de Crédito</h2>
             <p className="text-xs text-muted-foreground mb-3">Renovação automática</p>
             <p className="text-sm text-foreground mb-4">
-              Pague <strong>R$ 99,99 a cada 3 meses</strong>. Cancele quando quiser.
+              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 9999)} a cada 3 meses</strong>. Cancele quando quiser.
             </p>
             <ul className="space-y-2 text-xs text-foreground/80 mb-5">
               <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-success" /> Renovação sem dor de cabeça</li>
@@ -199,8 +270,8 @@ const Assinatura = () => {
               Pagamento único <Barcode className="w-3.5 h-3.5" />
             </p>
             <p className="text-sm text-foreground mb-4">
-              Pague <strong>R$ 99,99 uma única vez</strong> e tenha acesso por
-              <strong> 90 dias</strong>. Sem renovação automática.
+              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 9999)} uma única vez</strong> e tenha acesso por
+              <strong> {planoAtual?.dias_acesso ?? 90} dias</strong>. Sem renovação automática.
             </p>
             <ul className="space-y-2 text-xs text-foreground/80 mb-5">
               <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-success" /> Pix com confirmação em minutos</li>
