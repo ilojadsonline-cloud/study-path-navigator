@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurso } from "@/contexts/CursoContext";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Trophy, Loader2, Info, Shield, Medal } from "lucide-react";
@@ -39,6 +40,7 @@ const Ranking = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const { cursoId, cursoAtivo, cursos } = useCurso();
   const [period, setPeriod] = useState<Period>("all");
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [myPosition, setMyPosition] = useState<MyPosition | null>(null);
@@ -49,13 +51,13 @@ const Ranking = () => {
   const fetchRanking = useCallback(async () => {
     setLoading(true);
     const [{ data: rk }, { data: mine }] = await Promise.all([
-      supabase.rpc("get_ranking", { p_period: period }),
-      supabase.rpc("get_my_ranking_position", { p_period: period }),
+      supabase.rpc("get_ranking", { p_period: period, p_curso_id: cursoId }),
+      supabase.rpc("get_my_ranking_position", { p_period: period, p_curso_id: cursoId }),
     ]);
     setRanking((rk as RankingEntry[]) || []);
     setMyPosition(mine && (mine as MyPosition[])[0] ? (mine as MyPosition[])[0] : null);
     setLoading(false);
-  }, [period]);
+  }, [period, cursoId]);
 
   useEffect(() => {
     fetchRanking();

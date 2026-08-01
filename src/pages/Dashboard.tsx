@@ -335,7 +335,7 @@ const Dashboard = () => {
       setDisciplinas(discArr);
 
       // Diagnóstico geral por disciplina (banco + simulados + simulado semanal)
-      const { data: diagData } = await supabase.rpc("get_desempenho_disciplinas");
+      const { data: diagData } = await supabase.rpc("get_desempenho_disciplinas", { p_curso_id: cursoId });
       const diagMap: Record<string, { total: number; corretas: number }> = {};
       (diagData || []).forEach((row: { disciplina: string; total: number; corretas: number }) => {
         const nome = normalizarDisciplina(row.disciplina) || row.disciplina;

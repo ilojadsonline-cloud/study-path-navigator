@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Trophy, Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurso } from "@/contexts/CursoContext";
 
 type RankingEntry = {
   user_id: string;
@@ -16,20 +17,21 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 
 export function RankingCard() {
   const { user } = useAuth();
+  const { cursoId } = useCurso();
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchRanking = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc("get_top10_ranking");
+      const { data, error } = await supabase.rpc("get_top10_ranking", { p_curso_id: cursoId });
       if (!error && data) {
         setRanking(data as RankingEntry[]);
       }
       setLoading(false);
     };
     fetchRanking();
-  }, []);
+  }, [cursoId]);
 
   const getInitials = (nome: string) => {
     const parts = nome.trim().split(" ");
