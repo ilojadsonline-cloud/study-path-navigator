@@ -57,6 +57,7 @@ const alts = (q: QuestaoTaking) => [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e]
 
 const SimuladoSemanal = () => {
   const { user } = useAuth();
+  const { cursoId } = useCurso();
   const [phase, setPhase] = useState<Phase>("loading");
   const [simulado, setSimulado] = useState<any>(null);
   const [disponiveis, setDisponiveis] = useState<any[]>([]);
