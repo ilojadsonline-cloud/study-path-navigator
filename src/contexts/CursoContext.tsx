@@ -129,6 +129,7 @@ export function CursoProvider({ children }: { children: ReactNode }) {
         todosCursos: todos,
         cursoAtivo,
         cursoId: cursoAtivo?.id ?? null,
+        cursoSlug: cursoAtivo?.slug ?? slug,
         setCursoSlug,
         temAcesso,
         loading,
