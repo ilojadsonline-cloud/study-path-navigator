@@ -915,8 +915,9 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
           const g = Number(clean.gabarito);
           if (!Number.isInteger(g) || g < 0 || g > 4) delete clean.gabarito;
         }
-        if (Object.keys(clean).length) {
-          patch = clean;
+        const safe = enforceAltStructure(q, Object.keys(clean).length ? clean : null);
+        if (safe) {
+          patch = safe;
           rewriteSummary = "Correção simples aplicada pelo DeepSeek (sem reescrita de prosa).";
         }
       }
