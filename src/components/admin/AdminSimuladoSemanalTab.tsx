@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { parseMarkdownQuestoes } from "@/lib/markdown-questoes-parser";
 import { SimuladoSemanalEditor } from "@/components/admin/SimuladoSemanalEditor";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 
 import {
   EDITAL_DISTRIBUICAO, DURACAO_PADRAO_MINUTOS, VALOR_QUESTAO,
@@ -39,6 +40,7 @@ function toLocalInput(d: Date) {
 
 export function AdminSimuladoSemanalTab() {
   const { user } = useAuth();
+  const { cursoId } = useCurso();
   const { toast } = useToast();
 
   const [titulo, setTitulo] = useState("");
@@ -65,13 +67,16 @@ export function AdminSimuladoSemanalTab() {
 
   const fetchLista = useCallback(async () => {
     setLoadingList(true);
-    const { data } = await supabase
+    let query = supabase
       .from("simulados_semanais")
       .select("*")
       .order("created_at", { ascending: false });
+    const filter = cursoOrFilter(cursoId);
+    if (filter) query = query.or(filter);
+    const { data } = await query;
     setLista((data as SimuladoRow[]) || []);
     setLoadingList(false);
-  }, []);
+  }, [cursoId]);
 
   useEffect(() => { fetchLista(); }, [fetchLista]);
 
@@ -132,6 +137,7 @@ export function AdminSimuladoSemanalTab() {
         total_questoes: TOTAL_QUESTOES_SIMULADO,
         ativo: true,
         created_by: user?.id ?? null,
+        curso_id: cursoId,
       })
       .select("*")
       .single();

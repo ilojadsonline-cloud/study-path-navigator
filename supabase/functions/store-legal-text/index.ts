@@ -49,7 +49,7 @@ serve(async (req) => {
       });
     }
 
-    const { disciplina, lei_nome, content } = await req.json();
+    const { disciplina, lei_nome, content, curso_id } = await req.json();
 
     if (!disciplina || !lei_nome || !content) {
       return new Response(
@@ -60,17 +60,20 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // Delete old version completely before inserting new one
-    await supabase
+    // Delete old version completely before inserting new one (escopado no curso)
+    let del = supabase
       .from("discipline_legal_texts")
       .delete()
       .eq("disciplina", disciplina);
+    del = curso_id ? del.or(`curso_id.eq.${curso_id},curso_id.is.null`) : del.is("curso_id", null);
+    await del;
 
     const { data, error } = await supabase
       .from("discipline_legal_texts")
-      .insert({ disciplina, lei_nome, content, updated_at: new Date().toISOString() })
+      .insert({ disciplina, lei_nome, content, curso_id: curso_id ?? null, updated_at: new Date().toISOString() })
       .select("id, disciplina, updated_at")
       .single();
+
 
     if (error) {
       return new Response(

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { BackButton } from "@/components/BackButton";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurso } from "@/contexts/CursoContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { FormattedText } from "@/components/FormattedText";
@@ -56,6 +57,7 @@ const alts = (q: QuestaoTaking) => [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e]
 
 const SimuladoSemanal = () => {
   const { user } = useAuth();
+  const { cursoId } = useCurso();
   const [phase, setPhase] = useState<Phase>("loading");
   const [simulado, setSimulado] = useState<any>(null);
   const [disponiveis, setDisponiveis] = useState<any[]>([]);
@@ -81,7 +83,7 @@ const SimuladoSemanal = () => {
   const savedSig = useRef("");
 
   const call = useCallback(async (action: string, extra: Record<string, unknown> = {}) => {
-    const { data, error } = await supabase.functions.invoke("simulado-semanal", { body: { action, ...extra } });
+    const { data, error } = await supabase.functions.invoke("simulado-semanal", { body: { action, curso_id: cursoId, ...extra } });
     if (error) {
       // tenta extrair mensagem do corpo
       try {
@@ -91,7 +93,7 @@ const SimuladoSemanal = () => {
       return { data: null, error };
     }
     return { data, error: null };
-  }, []);
+  }, [cursoId]);
 
   const carregarResultados = useCallback(async (simId: string) => {
     const { data } = await call("results", { simulado_id: simId });
