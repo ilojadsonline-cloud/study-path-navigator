@@ -16,7 +16,8 @@ export const DISCIPLINAS_PMTO: DisciplinaCronograma[] = [
 
 // CHOA BM CBMTO — Edital nº 1/2026/GABCOM
 export const DISCIPLINAS_CBMTO: DisciplinaCronograma[] = [
-  { nome: "Direito Penal Militar e Processual Penal Militar", cor: "#EF4444" },
+  { nome: "CPM — Código Penal Militar", cor: "#EF4444" },
+  { nome: "CPPM — Código de Processo Penal Militar", cor: "#F43F5E" },
   { nome: "Redação Oficial", cor: "#14B8A6" },
   { nome: "Combate a Incêndio Urbano", cor: "#F97316" },
   { nome: "NPCE", cor: "#3B82F6" },
@@ -25,7 +26,10 @@ export const DISCIPLINAS_CBMTO: DisciplinaCronograma[] = [
   { nome: "Salvamento em Altura", cor: "#8B5CF6" },
   { nome: "Salvamento Aquático", cor: "#0EA5E9" },
   { nome: "Salvamento Terrestre", cor: "#22C55E" },
-  { nome: "Legislação Específica", cor: "#EAB308" },
+  { nome: "Lei nº 2.578/2012 — Estatuto dos Militares do TO", cor: "#EAB308" },
+  { nome: "LC nº 131/2021 — Organização Básica do CBMTO", cor: "#CA8A04" },
+  { nome: "Lei nº 2.665/2012 — Promoções no CBMTO", cor: "#F59E0B" },
+  { nome: "Lei nº 3.798/2021 — Segurança Contra Incêndio", cor: "#D97706" },
 ];
 
 const DISCIPLINAS_POR_CURSO: Record<string, DisciplinaCronograma[]> = {
