@@ -14,6 +14,7 @@ interface Notification {
   message: string;
   created_at: string;
   user_id?: string | null;
+  curso_id?: string | null;
 }
 
 interface AppLayoutProps {
