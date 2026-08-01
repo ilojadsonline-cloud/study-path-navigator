@@ -17,15 +17,22 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const ALLOWED_PATCH_FIELDS = ["enunciado","alt_a","alt_b","alt_c","alt_d","alt_e","gabarito","comentario","assunto","dificuldade"];
 
-function sanitizePatch(p: any): Record<string, unknown> {
+/** Provas de 4 alternativas (CHOA CBMTO): a questão original tem alt_e vazia. */
+function isFourAlt(questao: any): boolean {
+  return !String(questao?.alt_e ?? "").trim();
+}
+
+function sanitizePatch(p: any, questao?: any): Record<string, unknown> {
   if (!p || typeof p !== "object") return {};
   const out: Record<string, unknown> = {};
   for (const k of ALLOWED_PATCH_FIELDS) {
     if (k in p) out[k] = (p as any)[k];
   }
+  const fourAlt = questao ? isFourAlt(questao) : false;
+  if (fourAlt) delete out.alt_e;
   if ("gabarito" in out) {
     const g = Number(out.gabarito);
-    if (!Number.isInteger(g) || g < 0 || g > 4) delete out.gabarito;
+    if (!Number.isInteger(g) || g < 0 || g > (fourAlt ? 3 : 4)) delete out.gabarito;
   }
   return out;
 }
