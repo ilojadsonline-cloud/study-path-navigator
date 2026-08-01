@@ -34,7 +34,7 @@ const Index = () => {
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs font-semibold mb-6 glow-gold">
               <Star className="w-3.5 h-3.5" />
-              Preparação exclusiva para PMTO
+              Processo Seletivo Interno da PM e do Corpo de Bombeiros Militar do Estado do Tocantins
             </div>
             <h1 className="text-4xl md:text-6xl font-black leading-tight mb-4">
               <span className="text-gradient-primary">Método CHOA</span>
@@ -42,7 +42,7 @@ const Index = () => {
               <span className="text-foreground">Rumo ao Oficialato</span>
             </h1>
             <p className="text-muted-foreground max-w-xl mx-auto mb-8 text-sm md:text-base">
-              Plataforma de questões e simulados para preparação do Processo Seletivo Interno da Polícia Militar do Estado do Tocantins.
+              Plataforma de questões e simulados para preparação do Processo Seletivo Interno da Polícia Militar e do Corpo de Bombeiros Militar do Estado do Tocantins.
               100% baseada na legislação do Tocantins.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
