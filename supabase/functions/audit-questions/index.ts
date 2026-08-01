@@ -410,6 +410,8 @@ ${alts}
 
 Gabarito atual: ${correta} (índice ${q.gabarito})
 
+${altStructureNote(q)}
+
 Comentário atual:
 ${q.comentario}
 
