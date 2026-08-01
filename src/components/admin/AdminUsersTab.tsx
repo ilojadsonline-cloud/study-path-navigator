@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UserCursosCell } from "@/components/admin/UserCursosCell";
 import { formatCPF, cleanCPF, validateCPF } from "@/lib/cpf";
 import {
   Users, Trash2, Search, Loader2, ShieldAlert, UserPlus, UserMinus, Ban, Pencil, Save, Clock, Crown, RefreshCw, KeyRound,
@@ -289,13 +290,14 @@ export function AdminUsersTab() {
                 <TableHead>Status</TableHead>
                 <TableHead>Assinatura</TableHead>
                 <TableHead>Vigência</TableHead>
+                <TableHead>Cursos</TableHead>
                 <TableHead>Cadastro</TableHead>
                 <TableHead className="w-40">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</TableCell></TableRow>
               ) : users.map((u) => (
                 <TableRow key={u.user_id} className={u.is_blocked ? "opacity-60" : ""}>
                   <TableCell className="font-medium">
@@ -333,6 +335,7 @@ export function AdminUsersTab() {
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
+                  <TableCell><UserCursosCell userId={u.user_id} /></TableCell>
                   <TableCell className="text-muted-foreground text-xs">{new Date(u.created_at).toLocaleDateString("pt-BR")}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">

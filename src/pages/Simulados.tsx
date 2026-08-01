@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 import { toast } from "sonner";
 import { FormattedText } from "@/components/FormattedText";
 
@@ -106,6 +107,7 @@ async function loadProgress(userId: string) {
 
 const Simulados = () => {
   const { user } = useAuth();
+  const { cursoId } = useCurso();
   const [numQuestoes, setNumQuestoes] = useState<number>(20);
   const [disciplinasSel, setDisciplinasSel] = useState<string[]>([]); // [] = Todas
   const disciplinasAlvo = disciplinasSel.length === 0 ? DISCIPLINAS_OFICIAIS : disciplinasSel;
@@ -303,11 +305,14 @@ const Simulados = () => {
     const distribuicao = distribuirProporcional(total, alvo);
 
     // Single query for all target disciplines (optimized, selecting only needed cols)
-    const { data, error } = await supabase
+    let baseQuery = supabase
       .from("questoes")
       .select("id,disciplina,assunto,dificuldade,enunciado,alt_a,alt_b,alt_c,alt_d,alt_e,gabarito,comentario")
       .in("disciplina", disciplinasAlvo)
       .in("audit_status", ["approved", "auto_corrected", "admin_resolved"]);
+    const cf = cursoOrFilter(cursoId);
+    if (cf) baseQuery = baseQuery.or(cf);
+    const { data, error } = await baseQuery;
 
     if (error || !data) {
       toast.error("Erro ao carregar questões");

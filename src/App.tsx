@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CursoProvider } from "@/contexts/CursoContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { StudyTimerProvider } from "@/components/StudyTimerProvider";
 import Index from "./pages/Index";
@@ -53,6 +54,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <CursoProvider>
           <StudyTimerProvider />
           <Routes>
             <Route path="/" element={<Index />} />
@@ -85,6 +87,7 @@ const App = () => (
             <Route path="/bizuaula" element={<ProtectedRoute><BizuAula /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </CursoProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

@@ -5,6 +5,7 @@ import { Youtube, ChevronDown, ChevronUp, Loader2, Inbox, Play } from "lucide-re
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 import { bizuAulaDisciplinas } from "@/lib/edital-structure";
 import { PopSigilosoNotice, PopSigilosoBadge } from "@/components/PopSigilosoNotice";
 import { toast } from "sonner";
@@ -94,13 +95,17 @@ export default function BizuAula() {
   const [openId, setOpenId] = useState<string>(initialDisc);
   const [rows, setRows] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const { cursoId } = useCurso();
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("bizuaulas_videos")
-        .select("id, disciplina_id, titulo, url_youtube, ordem")
+        .select("id, disciplina_id, titulo, url_youtube, ordem");
+      const cf = cursoOrFilter(cursoId);
+      if (cf) q = q.or(cf);
+      const { data, error } = await q
         .order("disciplina_id", { ascending: true })
         .order("ordem", { ascending: true })
         .order("created_at", { ascending: true });
@@ -110,7 +115,7 @@ export default function BizuAula() {
       setLoading(false);
     })();
     return () => { alive = false; };
-  }, []);
+  }, [cursoId]);
 
   const byDisc = useMemo(() => {
     const m = new Map<string, VideoRow[]>();

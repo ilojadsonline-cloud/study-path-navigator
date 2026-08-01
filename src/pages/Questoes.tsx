@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/BackButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,8 @@ const Questoes = () => {
   const [searchParams] = useSearchParams();
   const initialDisciplina = searchParams.get("disciplina") || "Todos";
   const { user } = useAuth();
+  const { cursoId } = useCurso();
+  const cursoFilter = cursoOrFilter(cursoId);
 
   const [allQuestoes, setAllQuestoes] = useState<QuestaoMapped[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -200,10 +203,10 @@ const Questoes = () => {
     if (!answeredLoaded) return;
     fetchQuestoes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterDisciplina, filterDificuldade, filterStatus, answeredLoaded]);
+  }, [filterDisciplina, filterDificuldade, filterStatus, answeredLoaded, cursoId]);
 
   const fetchQuestoes = async () => {
-    const key = `${filterDisciplina}|${filterDificuldade}|${filterStatus}`;
+    const key = `${filterDisciplina}|${filterDificuldade}|${filterStatus}|${cursoId ?? ""}`;
     if (key === lastFilterKeyRef.current && allQuestoes.length > 0) return;
     lastFilterKeyRef.current = key;
 
@@ -221,6 +224,7 @@ const Questoes = () => {
         .in("audit_status", ["approved", "auto_corrected", "admin_resolved"])
         // POP é sigiloso: nunca listar no Banco de Questões (acesso só via /pop-questoes)
         .neq("disciplina", "POP");
+      if (cursoFilter) query = query.or(cursoFilter);
       if (filterDisciplina !== "Todos") query = query.eq("disciplina", filterDisciplina);
       if (filterDificuldade !== "Todos") query = query.eq("dificuldade", filterDificuldade);
       const { data, error } = await query.order("id").range(from, from + batchSize - 1);

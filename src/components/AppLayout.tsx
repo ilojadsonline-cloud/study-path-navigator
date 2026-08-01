@@ -6,6 +6,7 @@ import { Shield, Bell, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { CursoSwitcher } from "@/components/CursoSwitcher";
 
 interface Notification {
   id: number;
@@ -114,6 +115,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               </div>
             </div>
             <div className="flex items-center gap-1 sm:gap-2 relative">
+              <CursoSwitcher />
               <ThemeToggle />
               <button
                 onClick={() => { setShowNotifications(!showNotifications); if (!showNotifications) fetchNotifications(); }}
