@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, Shield, ArrowRight, Lock, CheckCircle2, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurso, type Curso } from "@/contexts/CursoContext";
+import { cn } from "@/lib/utils";
 
 const EscolherCurso = () => {
   const navigate = useNavigate();
