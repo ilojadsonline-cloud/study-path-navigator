@@ -316,6 +316,28 @@ function altKeysOf(q: any): string[] {
 function altLettersOf(q: any): string[] {
   return altKeysOf(q).map((k) => k.slice(-1).toUpperCase());
 }
+/** CHOA CBMTO: prova de 4 alternativas (A–D) — alt_e sempre vazia. */
+function isFourAlt(q: any): boolean {
+  return altKeysOf(q).length === 4;
+}
+/** Bloco de instrução obrigatória sobre a estrutura de alternativas da questão. */
+function altStructureNote(q: any): string {
+  const letras = altLettersOf(q);
+  return isFourAlt(q)
+    ? `ESTRUTURA OBRIGATÓRIA: esta questão é do CHOA CBMTO e possui EXATAMENTE 4 alternativas (A, B, C e D). É PROIBIDO criar, sugerir ou preencher a alternativa E. O campo alt_e DEVE permanecer vazio e o gabarito é um inteiro de 0 a 3. Toda análise de alternativas no comentário cobre apenas A–D.`
+    : `ESTRUTURA OBRIGATÓRIA: esta questão possui EXATAMENTE 5 alternativas (${letras.join(", ")}) e o gabarito é um inteiro de 0 a 4.`;
+}
+/** Remove alt_e e clampa gabarito em provas de 4 alternativas. */
+function enforceAltStructure(q: any, patch: any): any {
+  if (!patch || !isFourAlt(q)) return patch;
+  if ("alt_e" in patch) delete patch.alt_e;
+  if ("gabarito" in patch) {
+    const g = Number(patch.gabarito);
+    if (!Number.isInteger(g) || g < 0 || g > 3) delete patch.gabarito;
+  }
+  return Object.keys(patch).length ? patch : null;
+}
+
 /** Filtro de curso: registros legados (curso_id NULL) pertencem ao CHOA PMTO. */
 function cursoOrExpr(cursoId: string | null, cursoSlug: string | null): string | null {
   if (!cursoId) return null;
