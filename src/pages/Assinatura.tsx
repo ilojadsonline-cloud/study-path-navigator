@@ -148,11 +148,12 @@ const Assinatura = () => {
           </div>
           <h1 className="text-2xl md:text-3xl font-bold">
             <span className="text-gradient-gold">
-              {planoAtual ? `${planoAtual.nome} — ${formatPreco(planoAtual.preco_centavos)}` : "Plano Método CHOA Trimestral — R$ 99,99"}
+              {planoAtual ? `${planoAtual.nome} — ${formatPreco(planoAtual.preco_centavos)}` : "Planos Método CHOA"}
             </span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {planoAtual?.descricao || `Acesso completo à plataforma por ${planoAtual?.dias_acesso ?? 90} dias`}
+            {planoAtual?.descricao || `Acesso completo à plataforma por ${planoAtual?.dias_acesso ?? 30} dias`}
+
           </p>
           {isExpired && (
             <div className="mt-3 flex items-center justify-center gap-2 text-warning text-xs font-medium">
