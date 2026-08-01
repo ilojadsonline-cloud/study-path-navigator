@@ -352,7 +352,12 @@ export function AdminGerarTab() {
         <p className="text-sm text-muted-foreground">
           Gera questões com alvo em artigos menos explorados, menor desperdício de créditos e resposta mais rápida.
         </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          As questões geradas/importadas serão vinculadas ao curso ativo:{" "}
+          <span className="font-semibold text-primary">{cursoAtivo?.nome ?? "—"}</span>
+        </p>
       </div>
+
 
       <ManualQuestaoForm disciplinas={DISCIPLINES} />
 
