@@ -69,6 +69,7 @@ export function VisualizadorCronograma({ cronograma: initial, onBack, onSaved, e
         horario_inicio: initial.horario_inicio,
         horario_fim: initial.horario_fim,
         atividades: atividades as any,
+        curso_id: cursoId ?? null,
       };
 
       if (existingId) {
