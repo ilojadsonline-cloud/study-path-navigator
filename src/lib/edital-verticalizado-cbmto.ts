@@ -116,6 +116,20 @@ export const disciplinasCbmto: DisciplinaEditalData[] = [
           "Falsificação de documento, certidão ou atestado e uso de documento falso.",
         ],
       },
+    ],
+  },
+  {
+    id: "cppm",
+    iconKey: "gavel",
+    title: "CPPM — Código de Processo Penal Militar",
+    subtitle: "Decreto-Lei nº 1.002/1969 • 2 questões",
+    color: "from-rose-500/20 to-rose-600/20",
+    disciplinaFilter: "CPPM — Código de Processo Penal Militar",
+    leiSecaUrl: "https://www.planalto.gov.br/ccivil_03/decreto-lei/del1002.htm",
+    leiSecaLabel: "CPPM — Decreto-Lei nº 1.002/1969",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
+    items: [
       {
         topic: "CPPM — Lei de Processo Penal Militar e sua aplicação (art. 1º a 6º)",
         details: [
