@@ -69,6 +69,7 @@ function patchToEditable(patch: any): Record<string, string | number> {
 }
 
 export function AdminPendingPatchesTab() {
+  const { cursoId, cursoSlug } = useCurso();
   const [rows, setRows] = useState<PendingPatch[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<PendingPatch | null>(null);
@@ -97,10 +98,21 @@ export function AdminPendingPatchesTab() {
       .limit(500);
     if (error) toast.error("Falha ao carregar patches: " + error.message);
     else {
-      setRows((data ?? []) as PendingPatch[]);
+      let list = (data ?? []) as PendingPatch[];
+      // Restringe ao curso ativo
+      const filter = cursoOrFilter(cursoId, cursoSlug);
+      const qIds = [...new Set(list.map((r: any) => r.questao_id))];
+      if (filter && qIds.length > 0) {
+        const q = supabase.from("questoes").select("id").in("id", qIds);
+        q.or(filter);
+        const { data: qs } = await q;
+        const allowed = new Set(((qs as any[]) || []).map((x) => x.id));
+        list = list.filter((r: any) => allowed.has(r.questao_id));
+      }
+      setRows(list);
       // Limpa seleções que sumiram
       setChecked(prev => {
-        const ids = new Set((data ?? []).map((d: any) => d.id));
+        const ids = new Set(list.map((d: any) => d.id));
         const next = new Set<number>();
         prev.forEach(id => { if (ids.has(id)) next.add(id); });
         return next;
@@ -109,7 +121,7 @@ export function AdminPendingPatchesTab() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [cursoId, cursoSlug]);
 
   async function openDetail(p: PendingPatch) {
     setSelected(p);
