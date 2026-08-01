@@ -107,7 +107,7 @@ async function loadProgress(userId: string) {
 
 const Simulados = () => {
   const { user } = useAuth();
-  const { cursoId } = useCurso();
+  const { cursoId, cursoSlug } = useCurso();
   const [numQuestoes, setNumQuestoes] = useState<number>(20);
   const [disciplinasSel, setDisciplinasSel] = useState<string[]>([]); // [] = Todas
   const disciplinasAlvo = disciplinasSel.length === 0 ? DISCIPLINAS_OFICIAIS : disciplinasSel;
@@ -310,7 +310,7 @@ const Simulados = () => {
       .select("id,disciplina,assunto,dificuldade,enunciado,alt_a,alt_b,alt_c,alt_d,alt_e,gabarito,comentario")
       .in("disciplina", disciplinasAlvo)
       .in("audit_status", ["approved", "auto_corrected", "admin_resolved"]);
-    const cf = cursoOrFilter(cursoId);
+    const cf = cursoOrFilter(cursoId, cursoSlug);
     if (cf) baseQuery = baseQuery.or(cf);
     const { data, error } = await baseQuery;
 

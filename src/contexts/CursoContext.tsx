@@ -18,6 +18,7 @@ interface CursoContextType {
   todosCursos: Curso[];       // todos os cursos ativos (para a tela de escolha)
   cursoAtivo: Curso | null;
   cursoId: string | null;
+  cursoSlug: string;
   setCursoSlug: (slug: string) => void;
   temAcesso: (curso: Curso | null) => boolean;
   loading: boolean;
@@ -33,6 +34,7 @@ const CursoContext = createContext<CursoContextType>({
   todosCursos: [],
   cursoAtivo: null,
   cursoId: null,
+  cursoSlug: DEFAULT_SLUG,
   setCursoSlug: () => {},
   temAcesso: () => false,
   loading: true,
@@ -44,10 +46,17 @@ export const useCurso = () => useContext(CursoContext);
 
 /**
  * Filtro reutilizável para tabelas de conteúdo com coluna `curso_id`.
- * Inclui registros sem curso definido (legado) para não esconder nada do que já existe.
+ * Registros legados (sem curso definido) pertencem ao CHOA PMTO — por isso só
+ * são incluídos quando o curso ativo é o PMTO. Nos demais cursos o conteúdo
+ * fica totalmente individualizado.
  */
-export const cursoOrFilter = (cursoId: string | null) =>
-  cursoId ? `curso_id.eq.${cursoId},curso_id.is.null` : null;
+export const cursoOrFilter = (cursoId: string | null, slug: string = DEFAULT_SLUG) => {
+  if (!cursoId) return null;
+  return slug === DEFAULT_SLUG
+    ? `curso_id.eq.${cursoId},curso_id.is.null`
+    : `curso_id.eq.${cursoId}`;
+};
+
 
 export function CursoProvider({ children }: { children: ReactNode }) {
   const { user, isAdmin, subscribed } = useAuth();
@@ -120,6 +129,7 @@ export function CursoProvider({ children }: { children: ReactNode }) {
         todosCursos: todos,
         cursoAtivo,
         cursoId: cursoAtivo?.id ?? null,
+        cursoSlug: cursoAtivo?.slug ?? slug,
         setCursoSlug,
         temAcesso,
         loading,

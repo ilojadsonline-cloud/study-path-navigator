@@ -26,7 +26,7 @@ export default function MapasMentais() {
   const [loading, setLoading] = useState(true);
   const [openingId, setOpeningId] = useState<string | null>(null);
 
-  const { cursoId } = useCurso();
+  const { cursoId, cursoSlug } = useCurso();
 
   useEffect(() => {
     let alive = true;
@@ -34,7 +34,7 @@ export default function MapasMentais() {
       let q = supabase
         .from("mapas_mentais")
         .select("id, disciplina_id, topico, nome_arquivo, storage_path");
-      const cf = cursoOrFilter(cursoId);
+      const cf = cursoOrFilter(cursoId, cursoSlug);
       if (cf) q = q.or(cf);
       const { data, error } = await q;
       if (!alive) return;

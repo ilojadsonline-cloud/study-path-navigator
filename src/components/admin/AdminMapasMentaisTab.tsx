@@ -18,7 +18,7 @@ type MapaRow = {
 };
 
 export function AdminMapasMentaisTab() {
-  const { cursoId, cursoAtivo } = useCurso();
+  const { cursoId, cursoSlug, cursoAtivo } = useCurso();
   const [rows, setRows] = useState<MapaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [discId, setDiscId] = useState<string>(disciplinasSelecionaveis[0].id);
@@ -40,7 +40,7 @@ export function AdminMapasMentaisTab() {
       .select("*")
       .order("disciplina_id", { ascending: true })
       .order("created_at", { ascending: true });
-    const filter = cursoOrFilter(cursoId);
+    const filter = cursoOrFilter(cursoId, cursoSlug);
     if (filter) query = query.or(filter);
     const { data, error } = await query;
     if (error) toast.error("Erro ao carregar mapas mentais");

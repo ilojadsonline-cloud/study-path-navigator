@@ -61,7 +61,7 @@ export function AdminQuestoesTab() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkAction, setBulkAction] = useState<null | "restore" | "soft_delete" | "hard_delete">(null);
 
-  const { cursoId } = useCurso();
+  const { cursoId, cursoSlug } = useCurso();
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export function AdminQuestoesTab() {
     const from = p * PAGE_SIZE;
     let countQuery = supabase.from("questoes").select("*", { count: "exact", head: true });
     let query = supabase.from("questoes").select("*").order("id", { ascending: false }).range(from, from + PAGE_SIZE - 1);
-    const cFilter = cursoOrFilter(cursoId);
+    const cFilter = cursoOrFilter(cursoId, cursoSlug);
     if (cFilter) { countQuery = countQuery.or(cFilter); query = query.or(cFilter); }
     if (disciplinaFilter !== "todas") { countQuery = countQuery.eq("disciplina", disciplinaFilter); query = query.eq("disciplina", disciplinaFilter); }
     if (status === "publicaveis") {

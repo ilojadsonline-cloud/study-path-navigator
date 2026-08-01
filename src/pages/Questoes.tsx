@@ -73,8 +73,8 @@ const Questoes = () => {
   const [searchParams] = useSearchParams();
   const initialDisciplina = searchParams.get("disciplina") || "Todos";
   const { user } = useAuth();
-  const { cursoId } = useCurso();
-  const cursoFilter = cursoOrFilter(cursoId);
+  const { cursoId, cursoSlug } = useCurso();
+  const cursoFilter = cursoOrFilter(cursoId, cursoSlug);
 
   const [allQuestoes, setAllQuestoes] = useState<QuestaoMapped[]>([]);
   const [currentPage, setCurrentPage] = useState(1);

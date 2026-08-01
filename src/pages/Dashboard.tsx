@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useCurso } from "@/contexts/CursoContext";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp, TrendingDown,
   Trophy, Calendar, Flame, Shield, Loader2, FileText, PlayCircle,
@@ -89,22 +89,25 @@ function calculateStudyMetrics(sessions: StudySession[]) {
   return { totalSec, todaySec, monthSec, byHour };
 }
 
-async function fetchAllRespostas(userId: string) {
+async function fetchAllRespostas(userId: string, cursoFilter: string | null) {
   const PAGE = 1000;
   let all: { id: number; correta: boolean; created_at: string; questao_id: number }[] = [];
   let from = 0;
   while (true) {
-    const { data } = await supabase.from("respostas_usuario")
-      .select("id, correta, created_at, questao_id")
+    let q = supabase.from("respostas_usuario")
+      .select("id, correta, created_at, questao_id, questoes!inner(curso_id)")
       .eq("user_id", userId).order("id", { ascending: true })
       .range(from, from + PAGE - 1);
+    if (cursoFilter) q = q.or(cursoFilter, { referencedTable: "questoes" });
+    const { data } = await q;
     if (!data || data.length === 0) break;
-    all = all.concat(data);
+    all = all.concat(data as unknown as typeof all);
     if (data.length < PAGE) break;
     from += PAGE;
   }
   return all;
 }
+
 
 const COLORS = {
   success: "hsl(142, 71%, 45%)",
@@ -168,14 +171,18 @@ const Dashboard = () => {
   const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
   const [bizuAulas, setBizuAulas] = useState<BizuAulaItem[]>([]);
   const [diagnostico, setDiagnostico] = useState<DesempenhoItem[]>([]);
-  const { cursoId } = useCurso();
+  const { cursoId, cursoSlug } = useCurso();
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       setLoading(true);
 
-      const { count: qCount } = await supabase.from("questoes").select("*", { count: "exact", head: true });
+      const cf = cursoOrFilter(cursoId, cursoSlug);
+
+      let qCountQuery = supabase.from("questoes").select("*", { count: "exact", head: true });
+      if (cf) qCountQuery = qCountQuery.or(cf);
+      const { count: qCount } = await qCountQuery;
       setTotalQuestoes(qCount || 0);
 
       // Cronograma ativo -> define meta diária
@@ -200,7 +207,7 @@ const Dashboard = () => {
       }
 
 
-      const allRespostas = await fetchAllRespostas(user.id);
+      const allRespostas = await fetchAllRespostas(user.id, cf);
       setTotalRespondidas(allRespostas.length);
       setTotalCorretas(allRespostas.filter(r => r.correta).length);
 
@@ -234,13 +241,17 @@ const Dashboard = () => {
       setSparkRespostas(days);
 
       // Simulados
-      const { count: simCount } = await supabase.from("simulados")
+      let simCountQuery = supabase.from("simulados")
         .select("*", { count: "exact", head: true }).eq("user_id", user.id);
+      if (cf) simCountQuery = simCountQuery.or(cf);
+      const { count: simCount } = await simCountQuery;
       setTotalSimulados(simCount || 0);
 
-      const { data: allSims } = await supabase.from("simulados")
+      let simsQuery = supabase.from("simulados")
         .select("id, disciplina, acertos, total, created_at, finalizado")
         .eq("user_id", user.id).order("created_at", { ascending: false }).limit(200);
+      if (cf) simsQuery = simsQuery.or(cf);
+      const { data: allSims } = await simsQuery;
 
       const sims = allSims || [];
       const simMes = sims.filter(s => new Date(s.created_at) >= monthStart).length;
@@ -261,8 +272,10 @@ const Dashboard = () => {
       setSparkSimulados(simDays);
 
       // Study sessions
-      const { data: sessions } = await supabase.from("study_sessions")
+      let sessionsQuery = supabase.from("study_sessions")
         .select("id, duration_seconds, started_at, created_at").eq("user_id", user.id);
+      if (cf) sessionsQuery = sessionsQuery.or(cf);
+      const { data: sessions } = await sessionsQuery;
 
       const storedSessions = (sessions || []) as StudySession[];
       const localTimer = getLocalStudyTimerSnapshot();
@@ -422,7 +435,7 @@ const Dashboard = () => {
 
       setLoading(false);
     })();
-  }, [user, cursoId]);
+  }, [user, cursoId, cursoSlug]);
 
   useEffect(() => {
     if (!user) return;

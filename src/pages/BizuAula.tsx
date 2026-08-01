@@ -95,7 +95,7 @@ export default function BizuAula() {
   const [openId, setOpenId] = useState<string>(initialDisc);
   const [rows, setRows] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const { cursoId } = useCurso();
+  const { cursoId, cursoSlug } = useCurso();
 
   useEffect(() => {
     let alive = true;
@@ -103,7 +103,7 @@ export default function BizuAula() {
       let q = supabase
         .from("bizuaulas_videos")
         .select("id, disciplina_id, titulo, url_youtube, ordem");
-      const cf = cursoOrFilter(cursoId);
+      const cf = cursoOrFilter(cursoId, cursoSlug);
       if (cf) q = q.or(cf);
       const { data, error } = await q
         .order("disciplina_id", { ascending: true })
