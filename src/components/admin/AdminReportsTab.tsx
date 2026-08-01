@@ -32,6 +32,7 @@ type AiResult = {
 
 export function AdminReportsTab() {
   const { toast } = useToast();
+  const { cursoId, cursoSlug } = useCurso();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editQuestion, setEditQuestion] = useState<Questao | null>(null);
