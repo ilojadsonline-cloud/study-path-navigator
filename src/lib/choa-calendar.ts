@@ -179,6 +179,213 @@ export const CHOA_EVENTS: ChoaEvent[] = [
   },
 ];
 
+/* ─────────── CHOA BM 2026 (CBMTO) — Edital nº 1/2026/GABCOM, Anexo I ─────────── */
+
+export const EXAME_CONHECIMENTOS_DATE_CBMTO = "2026-09-04";
+
+export const CHOA_EVENTS_CBMTO: ChoaEvent[] = [
+  {
+    id: "cbm-inscricoes",
+    title: "Período de inscrições",
+    date: "2026-07-03",
+    category: "inscricao",
+    description: "Inscrições pela intranet do CBMTO, das 8h de 03/07 às 18h de 12/07/2026.",
+    priority: "alta",
+    isCritical: true,
+  },
+  {
+    id: "cbm-encerramento-inscricoes",
+    title: "Encerramento das inscrições",
+    date: "2026-07-12",
+    category: "inscricao",
+    description: "Último dia para inscrição e envio das certidões exigidas no item 3.7 do edital.",
+    priority: "alta",
+    isCritical: true,
+  },
+  {
+    id: "cbm-divulgacao-inscricoes",
+    title: "Divulgação das inscrições deferidas e indeferidas",
+    date: "2026-07-15",
+    category: "inscricao",
+    description: "Edital nº 7/2026/DEP — resultado da análise das inscrições e retificação do conteúdo programático.",
+    priority: "media",
+    isCritical: false,
+  },
+  {
+    id: "cbm-recurso-inscricao",
+    title: "Recurso contra o indeferimento da inscrição",
+    date: "2026-07-17",
+    category: "recurso",
+    description: "Envio exclusivo por e-mail (csichoa2026@gmail.com), aos cuidados do Presidente da CSI.",
+    priority: "alta",
+    isCritical: true,
+  },
+  {
+    id: "cbm-homologacao-inscricoes",
+    title: "Homologação das inscrições",
+    date: "2026-07-21",
+    category: "inscricao",
+    description: "Publicação da lista definitiva de inscrições homologadas.",
+    priority: "media",
+    isCritical: false,
+  },
+  {
+    id: "cbm-condicoes-especiais",
+    title: "Solicitação de condições especiais para a prova",
+    date: "2026-07-22",
+    category: "documentacao",
+    description: "Prazo de 22 e 23/07/2026 para requerer condições especiais (Anexo II do edital).",
+    priority: "media",
+    isCritical: false,
+  },
+  {
+    id: "cbm-resultado-prelim-condicoes",
+    title: "Resultado preliminar das condições especiais",
+    date: "2026-07-27",
+    category: "resultado",
+    description: "Divulgação do resultado preliminar dos pedidos de condições especiais.",
+    priority: "baixa",
+    isCritical: false,
+  },
+  {
+    id: "cbm-recurso-condicoes",
+    title: "Recurso contra o indeferimento das condições especiais",
+    date: "2026-07-29",
+    category: "recurso",
+    description: "Prazo para interposição de recurso quanto às condições especiais.",
+    priority: "media",
+    isCritical: false,
+  },
+  {
+    id: "cbm-resultado-final-condicoes",
+    title: "Resultado final dos pedidos de condições especiais",
+    date: "2026-08-03",
+    category: "resultado",
+    description: "Divulgação definitiva sobre os pedidos de condições especiais.",
+    priority: "baixa",
+    isCritical: false,
+  },
+  {
+    id: "cbm-locais-prova",
+    title: "Divulgação dos locais da prova objetiva",
+    date: "2026-08-05",
+    category: "prova",
+    description: "Publicação dos locais de prova da segunda etapa, em Palmas-TO.",
+    priority: "media",
+    isCritical: false,
+  },
+  {
+    id: "cbm-prova-objetiva",
+    title: "Prova objetiva — 2ª etapa",
+    date: EXAME_CONHECIMENTOS_DATE_CBMTO,
+    category: "prova",
+    description: "50 questões (4 alternativas), 2,0 pontos cada, das 8h às 12h. Portões fecham às 7h50.",
+    priority: "alta",
+    isCritical: true,
+  },
+  {
+    id: "cbm-gabarito-preliminar",
+    title: "Gabarito preliminar da prova objetiva",
+    date: "2026-09-04",
+    category: "resultado",
+    description: "Publicação do gabarito preliminar no mesmo dia da prova.",
+    priority: "media",
+    isCritical: false,
+  },
+  {
+    id: "cbm-recurso-gabarito",
+    title: "Recurso contra o gabarito preliminar",
+    date: "2026-09-07",
+    category: "recurso",
+    description: "Prazo para interposição de recurso contra o gabarito preliminar.",
+    priority: "alta",
+    isCritical: true,
+  },
+  {
+    id: "cbm-gabarito-definitivo",
+    title: "Gabarito definitivo e resultado preliminar",
+    date: "2026-09-11",
+    category: "resultado",
+    description: "Divulgação do gabarito definitivo e do resultado preliminar da prova objetiva.",
+    priority: "alta",
+    isCritical: false,
+  },
+  {
+    id: "cbm-recurso-resultado",
+    title: "Recurso contra o resultado preliminar da prova objetiva",
+    date: "2026-09-16",
+    category: "recurso",
+    description: "Prazo para recurso quanto ao resultado preliminar da segunda etapa.",
+    priority: "media",
+    isCritical: false,
+  },
+  {
+    id: "cbm-resultado-final-objetiva",
+    title: "Resultado final da prova objetiva e convocação médica",
+    date: "2026-09-18",
+    category: "resultado",
+    description: "Convocação dos 15 primeiros classificados para a inspeção de saúde.",
+    priority: "alta",
+    isCritical: true,
+  },
+  {
+    id: "cbm-inspecao-medica",
+    title: "Inspeção médica oficial — 3ª etapa",
+    date: "2026-09-23",
+    category: "avaliacao_medica",
+    description: "Apresentação na DISAS (403 Sul, Palmas-TO) com os exames exigidos no edital.",
+    priority: "alta",
+    isCritical: true,
+  },
+  {
+    id: "cbm-resultado-prelim-3etapa",
+    title: "Resultado preliminar da terceira etapa",
+    date: "2026-09-24",
+    category: "resultado",
+    description: "Divulgação do resultado preliminar da inspeção de saúde.",
+    priority: "media",
+    isCritical: false,
+  },
+  {
+    id: "cbm-recurso-3etapa",
+    title: "Recurso contra o resultado preliminar da terceira etapa",
+    date: "2026-09-25",
+    category: "recurso",
+    description: "Prazo para interposição de recurso quanto à inspeção de saúde.",
+    priority: "media",
+    isCritical: false,
+  },
+  {
+    id: "cbm-resultado-final",
+    title: "Resultado final da seleção interna — CHOA BM 2026",
+    date: "2026-09-29",
+    category: "resultado",
+    description: "Resultado definitivo da terceira etapa e resultado final do processo seletivo (15 vagas).",
+    priority: "alta",
+    isCritical: true,
+  },
+];
+
+const EVENTS_POR_CURSO: Record<string, ChoaEvent[]> = {
+  pmto: CHOA_EVENTS,
+  cbmto: CHOA_EVENTS_CBMTO,
+};
+
+const EXAME_DATE_POR_CURSO: Record<string, string> = {
+  pmto: EXAME_CONHECIMENTOS_DATE,
+  cbmto: EXAME_CONHECIMENTOS_DATE_CBMTO,
+};
+
+export function getChoaEvents(cursoSlug?: string | null): ChoaEvent[] {
+  return EVENTS_POR_CURSO[(cursoSlug || "pmto").toLowerCase()] ?? CHOA_EVENTS;
+}
+
+export function getExameDate(cursoSlug?: string | null): string {
+  return EXAME_DATE_POR_CURSO[(cursoSlug || "pmto").toLowerCase()] ?? EXAME_CONHECIMENTOS_DATE;
+}
+
+
+
 export const CATEGORY_LABELS: Record<ChoaEventCategory, string> = {
   prova: "Prova",
   inscricao: "Inscrição",
