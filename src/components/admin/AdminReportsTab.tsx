@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ type AiResult = {
 
 export function AdminReportsTab() {
   const { toast } = useToast();
+  const { cursoId, cursoSlug } = useCurso();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editQuestion, setEditQuestion] = useState<Questao | null>(null);
@@ -43,12 +45,23 @@ export function AdminReportsTab() {
   const [aiLoading, setAiLoading] = useState<number | null>(null);
   const [applyingPatch, setApplyingPatch] = useState<number | null>(null);
 
-  useEffect(() => { loadReports(); }, []);
+  useEffect(() => { loadReports(); }, [cursoId, cursoSlug]);
 
   const loadReports = async () => {
     setLoading(true);
     const { data } = await supabase.from("question_reports" as any).select("*").order("created_at", { ascending: false }).limit(100);
-    const reports = (data as any[]) || [];
+    let reports = (data as any[]) || [];
+
+    // Mantém apenas reportes de questões do curso ativo
+    const filter = cursoOrFilter(cursoId, cursoSlug);
+    const questaoIds = [...new Set(reports.map((r: any) => r.questao_id))];
+    if (filter && questaoIds.length > 0) {
+      const q = supabase.from("questoes").select("id").in("id", questaoIds);
+      q.or(filter);
+      const { data: qs } = await q;
+      const allowed = new Set(((qs as any[]) || []).map((x) => x.id));
+      reports = reports.filter((r: any) => allowed.has(r.questao_id));
+    }
     setReports(reports);
 
     // Fetch reporter names

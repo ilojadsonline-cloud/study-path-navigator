@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
+import { useCurso } from "@/contexts/CursoContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Shield, Users, HelpCircle, BarChart3, Zap, ShieldCheck, Flag, Bell, Wifi, BookOpen, CreditCard, Brain, Youtube, Wrench, FileText, Lock, CalendarClock } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
@@ -32,6 +33,8 @@ const Fallback = () => (
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAuth();
+  const { cursoSlug } = useCurso();
+  const isPmto = (cursoSlug || "pmto").toLowerCase() === "pmto";
   const [activeTab, setActiveTab] = useState("stats");
   // Mantém abas já visitadas montadas (preserva estado entre trocas)
   const [visited, setVisited] = useState<Set<string>>(new Set(["stats"]));
@@ -59,7 +62,7 @@ const AdminPanel = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-gradient-primary">Painel Administrativo</h1>
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleChange}>
+        <Tabs value={!isPmto && activeTab === "pop" ? "stats" : activeTab} onValueChange={handleChange}>
           <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
             <TabsList className="flex w-max sm:w-auto sm:flex-wrap gap-1 h-auto sm:max-w-3xl">
               <TabsTrigger value="stats" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><BarChart3 className="w-3.5 h-3.5" />Estatísticas</TabsTrigger>
@@ -77,7 +80,7 @@ const AdminPanel = () => {
               <TabsTrigger value="mapas" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Brain className="w-3.5 h-3.5" />Mapas Mentais</TabsTrigger>
               <TabsTrigger value="bizuaula" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Youtube className="w-3.5 h-3.5" />BizuAula</TabsTrigger>
               <TabsTrigger value="edital" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><FileText className="w-3.5 h-3.5" />Edital</TabsTrigger>
-              <TabsTrigger value="pop" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Lock className="w-3.5 h-3.5" />POP (Sigiloso)</TabsTrigger>
+              {isPmto && <TabsTrigger value="pop" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Lock className="w-3.5 h-3.5" />POP (Sigiloso)</TabsTrigger>}
             </TabsList>
           </div>
 
@@ -97,7 +100,7 @@ const AdminPanel = () => {
           <TabsContent value="mapas" className="mt-6" forceMount={visited.has("mapas") ? true : undefined} hidden={activeTab !== "mapas"}>{renderTab("mapas", AdminMapasMentaisTab)}</TabsContent>
           <TabsContent value="bizuaula" className="mt-6" forceMount={visited.has("bizuaula") ? true : undefined} hidden={activeTab !== "bizuaula"}>{renderTab("bizuaula", AdminBizuAulaTab)}</TabsContent>
           <TabsContent value="edital" className="mt-6" forceMount={visited.has("edital") ? true : undefined} hidden={activeTab !== "edital"}>{renderTab("edital", AdminEditalTab)}</TabsContent>
-          <TabsContent value="pop" className="mt-6" forceMount={visited.has("pop") ? true : undefined} hidden={activeTab !== "pop"}>{renderTab("pop", AdminPopAccessTab)}</TabsContent>
+          {isPmto && <TabsContent value="pop" className="mt-6" forceMount={visited.has("pop") ? true : undefined} hidden={activeTab !== "pop"}>{renderTab("pop", AdminPopAccessTab)}</TabsContent>}
         </Tabs>
       </div>
     </AppLayout>
