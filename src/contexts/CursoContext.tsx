@@ -15,24 +15,30 @@ export interface Curso {
 
 interface CursoContextType {
   cursos: Curso[];            // cursos que o usuário pode acessar
+  todosCursos: Curso[];       // todos os cursos ativos (para a tela de escolha)
   cursoAtivo: Curso | null;
   cursoId: string | null;
   setCursoSlug: (slug: string) => void;
+  temAcesso: (curso: Curso | null) => boolean;
   loading: boolean;
   refresh: () => Promise<void>;
 }
+
 
 const STORAGE_KEY = "choa.curso.slug";
 const DEFAULT_SLUG = "pmto";
 
 const CursoContext = createContext<CursoContextType>({
   cursos: [],
+  todosCursos: [],
   cursoAtivo: null,
   cursoId: null,
   setCursoSlug: () => {},
+  temAcesso: () => false,
   loading: true,
   refresh: async () => {},
 });
+
 
 export const useCurso = () => useContext(CursoContext);
 
@@ -44,7 +50,7 @@ export const cursoOrFilter = (cursoId: string | null) =>
   cursoId ? `curso_id.eq.${cursoId},curso_id.is.null` : null;
 
 export function CursoProvider({ children }: { children: ReactNode }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, subscribed } = useAuth();
   const [todos, setTodos] = useState<Curso[]>([]);
   const [acessos, setAcessos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,17 +101,32 @@ export function CursoProvider({ children }: { children: ReactNode }) {
     setSlug(s);
   }, []);
 
+  const temAcesso = useCallback(
+    (curso: Curso | null) => {
+      if (!curso) return false;
+      if (isAdmin) return true;
+      if (acessos.includes(curso.id)) return true;
+      // Legado: assinantes antigos (sem registro em acessos_curso) mantêm o CHOA PMTO
+      if (subscribed && curso.slug === DEFAULT_SLUG) return true;
+      return false;
+    },
+    [acessos, isAdmin, subscribed],
+  );
+
   return (
     <CursoContext.Provider
       value={{
         cursos,
+        todosCursos: todos,
         cursoAtivo,
         cursoId: cursoAtivo?.id ?? null,
         setCursoSlug,
+        temAcesso,
         loading,
         refresh: load,
       }}
     >
+
       {children}
     </CursoContext.Provider>
   );

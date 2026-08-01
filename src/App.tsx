@@ -10,6 +10,7 @@ import { StudyTimerProvider } from "@/components/StudyTimerProvider";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
+import EscolherCurso from "./pages/EscolherCurso";
 import Dashboard from "./pages/Dashboard";
 import Edital from "./pages/Edital";
 import Questoes from "./pages/Questoes";
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
             <Route path="/assinatura" element={<Assinatura />} />
+            <Route path="/cursos" element={<EscolherCurso />} />
             <Route path="/esqueci-senha" element={<EsqueciSenha />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/contato-publico" element={<ContatoPublico />} />

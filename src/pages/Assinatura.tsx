@@ -58,6 +58,8 @@ const Assinatura = () => {
     setReactLoading(false);
   };
 
+  const cursoParam = searchParams.get("curso");
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -65,13 +67,18 @@ const Assinatura = () => {
         .select("slug, nome, descricao, preco_centavos, dias_acesso, cursos_slugs, destaque")
         .eq("ativo", true)
         .order("ordem");
-      const lista = (data || []) as Plano[];
+      let lista = (data || []) as Plano[];
+      if (cursoParam) {
+        const doCurso = lista.filter((p) => (p.cursos_slugs || []).includes(cursoParam));
+        if (doCurso.length) lista = doCurso;
+      }
       setPlanos(lista);
       if (lista.length) {
         setPlanoSlug(lista.find((p) => p.destaque)?.slug ?? lista[0].slug);
       }
     })();
-  }, []);
+  }, [cursoParam]);
+
 
   const planoAtual = planos.find((p) => p.slug === planoSlug) || null;
 

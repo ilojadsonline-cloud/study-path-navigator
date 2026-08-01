@@ -17,7 +17,7 @@ const Cadastro = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termos, setTermos] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [paymentVerified, setPaymentVerified] = useState(true); // cadastro gratuito: pagamento é feito depois, ao escolher o curso
   const [verifyingPayment, setVerifyingPayment] = useState(true);
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [recoveringPayment, setRecoveringPayment] = useState(false);
@@ -234,7 +234,7 @@ const Cadastro = () => {
       }
 
       toast({ title: "Conta criada com sucesso!", description: "Você já pode acessar a plataforma." });
-      navigate("/dashboard");
+      navigate("/cursos");
     }
 
     setLoading(false);
