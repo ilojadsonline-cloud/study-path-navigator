@@ -719,14 +719,19 @@ const DISCIPLINES_CBMTO = [
   { disciplina: "LC nº 131/2021 — Organização Básica do CBMTO", assuntos: ["Competências e missão institucional", "Órgãos de direção, apoio e execução", "Unidades operacionais", "Quadros e efetivo"] },
   { disciplina: "Lei nº 2.665/2012 — Promoções no CBMTO", assuntos: ["Critérios e requisitos de promoção", "Quadros de acesso e interstícios", "Modalidades de promoção", "Ingresso no QOA e CHOA"] },
   { disciplina: "Lei nº 3.798/2021 — Segurança Contra Incêndio", assuntos: ["Disposições iniciais e definições", "Competência do CBMTO", "Projetos técnicos e vistorias", "Fiscalização e sanções administrativas"] },
-].map((d) => ({
-  disciplina: d.disciplina,
-  leiNome: `Texto oficial de "${d.disciplina}" (CHOA BM 2026 — Edital nº 1/2026/GABCOM)`,
-  tipo: "manual" as const,
-  assuntos: d.assuntos,
-  diretrizes: CBMTO_DIRETRIZES_PADRAO,
-  alternativas: 4 as const,
-}));
+].map((d) => {
+  const isLei = /^(CPM|CPPM|Lei|LC)\b/.test(d.disciplina);
+  return {
+    disciplina: d.disciplina,
+    leiNome: isLei
+      ? `${d.disciplina} (texto legal integral — CHOA BM 2026, Edital nº 1/2026/GABCOM)`
+      : `Texto oficial de "${d.disciplina}" (CHOA BM 2026 — Edital nº 1/2026/GABCOM)`,
+    tipo: (isLei ? "lei" : "manual") as "lei" | "manual",
+    assuntos: d.assuntos,
+    diretrizes: CBMTO_DIRETRIZES_PADRAO,
+    alternativas: 4 as const,
+  };
+});
 
 function getDisciplinesByCurso(cursoSlug?: string | null) {
   return (cursoSlug || "pmto").toLowerCase() === "cbmto" ? DISCIPLINES_CBMTO : DISCIPLINES;
