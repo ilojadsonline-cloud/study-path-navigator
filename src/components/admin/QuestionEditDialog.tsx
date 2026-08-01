@@ -5,6 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Save } from "lucide-react";
 import type { Questao } from "./AdminQuestoesTab";
+import { useCurso } from "@/contexts/CursoContext";
+import { getQtdAlternativas } from "@/lib/edital-distribuicao";
+
+const ALT_KEYS = ["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const;
 
 interface Props {
   question: Questao | null;
@@ -15,7 +19,10 @@ interface Props {
 }
 
 export function QuestionEditDialog({ question, onClose, onSave, saving, onChange }: Props) {
+  const { cursoSlug } = useCurso();
+  const qtdAlternativas = getQtdAlternativas(cursoSlug);
   if (!question) return null;
+
 
   return (
     <Dialog open={!!question} onOpenChange={onClose}>
