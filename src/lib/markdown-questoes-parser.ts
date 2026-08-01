@@ -208,7 +208,7 @@ export function parseMarkdownQuestoes(markdown: string, cursoSlug?: string | nul
   return { validas, ignoradas };
 }
 
-export const MODELO_MARKDOWN = `Disciplina: CPPM
+const MODELO_MARKDOWN_PMTO = `Disciplina: CPPM
 Assunto: Inquérito Policial Militar
 Dificuldade: Médio
 Banca: PMTO
@@ -236,3 +236,36 @@ E) ...
 Gabarito: A
 Comentário: ...
 `;
+
+const MODELO_MARKDOWN_CBMTO = `Disciplina: Combate a Incêndio Urbano
+Assunto: Técnicas de combate
+Dificuldade: Médio
+Banca: CBMTO
+Ano: 2026
+Prova: CHOA BM
+Enunciado: Sobre as técnicas de combate a incêndio em ambiente confinado, assinale a alternativa correta.
+A) primeira alternativa
+B) segunda alternativa
+C) terceira alternativa
+D) quarta alternativa
+Gabarito: C
+Comentário: A alternativa C está correta porque... (cite a base normativa/manual).
+
+---
+
+Disciplina: Atendimento Pré-Hospitalar
+Assunto: Avaliação da vítima
+Enunciado: De acordo com o Manual de APH do CBMTO...
+A) ...
+B) ...
+C) ...
+D) ...
+Gabarito: A
+Comentário: ...
+`;
+
+export const MODELO_MARKDOWN = MODELO_MARKDOWN_PMTO;
+
+export function getModeloMarkdown(cursoSlug?: string | null): string {
+  return (cursoSlug || "pmto").toLowerCase() === "cbmto" ? MODELO_MARKDOWN_CBMTO : MODELO_MARKDOWN_PMTO;
+}
