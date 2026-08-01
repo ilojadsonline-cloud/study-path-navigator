@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 import { toast } from "sonner";
 import {
   Loader2, RefreshCw, CheckCircle2, X, AlertTriangle,
