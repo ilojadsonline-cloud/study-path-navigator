@@ -40,6 +40,7 @@ function toLocalInput(d: Date) {
 
 export function AdminSimuladoSemanalTab() {
   const { user } = useAuth();
+  const { cursoId } = useCurso();
   const { toast } = useToast();
 
   const [titulo, setTitulo] = useState("");
