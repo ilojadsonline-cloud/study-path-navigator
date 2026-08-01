@@ -37,7 +37,8 @@ export type DisciplinaEditalData = {
 };
 
 export const navLabelsCbmto: Record<string, string> = {
-  "direito-militar": "Direito Militar",
+  cpm: "CPM",
+  cppm: "CPPM",
   redacao: "Redação Oficial",
   incendio: "Incêndio Urbano",
   npce: "NPCE",
@@ -46,7 +47,10 @@ export const navLabelsCbmto: Record<string, string> = {
   "salvamento-altura": "Salv. Altura",
   "salvamento-aquatico": "Salv. Aquático",
   "salvamento-terrestre": "Salv. Terrestre",
-  legislacao: "Legislação",
+  estatuto: "Lei 2.578/2012",
+  "organizacao-cbmto": "LC 131/2021",
+  promocoes: "Lei 2.665/2012",
+  coscie: "Lei 3.798/2021",
 };
 
 export const disciplinasCbmto: DisciplinaEditalData[] = [
