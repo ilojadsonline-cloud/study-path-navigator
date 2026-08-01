@@ -513,10 +513,40 @@ export async function runAiStage(
   messages: ChatMessage[],
   opts: RunAiOptions = {},
 ): Promise<RunAiResult> {
-  const attempts = buildAttemptsForStage(stage, { complexity: opts.complexity });
+  let attempts = buildAttemptsForStage(stage, { complexity: opts.complexity });
+
+  // Provedor preferencial (ex.: módulo CBMTO usa DeepSeek como primário).
+  // Reordena as tentativas: preferido primeiro, demais mantidos como fallback.
+  if (opts.preferProvider && providerAvailable(opts.preferProvider)) {
+    const pref = opts.preferProvider;
+    const preferidas = attempts.filter((a) => a.provider === pref);
+    const restantes = attempts.filter((a) => a.provider !== pref);
+    if (preferidas.length === 0 && pref === "deepseek") {
+      preferidas.push({
+        provider: "deepseek",
+        model: opts.preferModel ?? MODELS.deepseekGeneration(),
+        temperature: restantes[0]?.temperature ?? 0.3,
+        maxOutputTokens: restantes[0]?.maxOutputTokens ?? 4096,
+        allowFallback: true,
+        legalRisk: restantes[0]?.legalRisk ?? "high",
+        attemptIndex: 0,
+        fallbackReason: null,
+        jsonResponse: true,
+      });
+    } else if (opts.preferModel) {
+      for (const a of preferidas) a.model = opts.preferModel;
+    }
+    attempts = [...preferidas, ...restantes].map((a, i) => ({
+      ...a,
+      attemptIndex: i,
+      fallbackReason: i === 0 ? null : (a.fallbackReason ?? "preferred_provider_failed"),
+    }));
+  }
+
   if (attempts.length === 0) {
     throw new Error(`NO_PROVIDER_AVAILABLE_FOR_STAGE:${stage} (mode=${getRoutingMode()})`);
   }
+
 
   let lastError: unknown = null;
   for (const attempt of attempts) {
