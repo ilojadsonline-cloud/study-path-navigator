@@ -2079,6 +2079,7 @@ Responda APENAS JSON:
     // Insert valid questions
     let insertedCount = 0;
     if (validQuestions.length > 0) {
+      if (cursoId) for (const q of validQuestions) (q as any).curso_id = cursoId;
       const { error: insertError } = await supabase.from("questoes").insert(validQuestions);
       if (insertError) {
         console.error("[GERAR] Insert error:", insertError.message);
