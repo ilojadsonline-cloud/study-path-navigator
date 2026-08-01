@@ -717,6 +717,7 @@ function DisciplinaBlock({
   open: boolean;
   onToggle: () => void;
   materials: EditalMaterialEntry[];
+  restrictedUnlocked?: boolean;
 }) {
   const navigate = useNavigate();
   const { peso, clean } = parseSubtitle(d.subtitle);
