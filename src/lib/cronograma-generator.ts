@@ -118,11 +118,15 @@ function getTimeDiffMinutes(start: string, end: string): number {
 
 const TIPOS_ATIVIDADE: TipoAtividade[] = ["videoaula", "lei", "questoes"];
 
-/** Distribuição padrão por curso: CBMTO ainda não tem videoaulas. */
+/**
+ * Distribuição padrão por curso.
+ * A base do estudo é lei seca/conteúdo do edital + resolução de questões;
+ * videoaula entra em proporção menor (zerada no CBMTO, que ainda não tem acervo).
+ */
 export function getDistribuicaoPadrao(cursoSlug?: string | null): Distribuicao {
   return (cursoSlug || "pmto").toLowerCase() === "cbmto"
     ? { videoaulas: 0, lei: 50, questoes: 50 }
-    : { videoaulas: 40, lei: 30, questoes: 30 };
+    : { videoaulas: 10, lei: 45, questoes: 45 };
 }
 
 /**
@@ -180,11 +184,17 @@ export function gerarCronograma(params: {
   if (dias_semana.length === 0) return [];
 
   const totalMinutos = horas_semanais * 60;
-  const minutosPorDia = Math.floor(totalMinutos / dias_semana.length);
   const minutosDisponiveis = getTimeDiffMinutes(horario_inicio, horario_fim);
-  const minutosEfetivos = Math.min(minutosPorDia, minutosDisponiveis);
 
-  const blockDuration = 60; // blocos de 1 hora
+  // Tipos "base" do estudo: lei seca/conteúdo + questões. Precisam cobrir todo o
+  // edital; se não couber em blocos de 1h, reduzimos a duração do bloco.
+  const tiposBase: TipoAtividade[] = ["lei", "questoes"].filter(
+    (t) => distribuicao[t === "lei" ? "lei" : "questoes"] > 0,
+  ) as TipoAtividade[];
+  const blocosNecessarios = DISCIPLINAS_ATIVAS.length * Math.max(1, tiposBase.length);
+  const blockDuration =
+    [60, 45, 30].find((d) => Math.floor(totalMinutos / d) >= blocosNecessarios) ?? 30;
+
   const totalBlocosSemana = Math.max(0, Math.round(totalMinutos / blockDuration));
 
   // Blocos por tipo — percentual 0 gera exatamente 0 blocos
@@ -200,21 +210,14 @@ export function gerarCronograma(params: {
   }
 
   const totalBlocos = blocos.videoaula + blocos.lei + blocos.questoes;
-  const sequencia = montarSequenciaDisciplinas(DISCIPLINAS_ATIVAS, totalBlocos, params.curso_slug);
 
-  // Distribui a sequência entre os tipos, alternando para variedade
-  const byType: Record<TipoAtividade, string[]> = { videoaula: [], lei: [], questoes: [] };
-  let idx = 0;
-  let tipoIdx = 0;
-  while (idx < sequencia.length) {
-    const tipo = TIPOS_ATIVIDADE[tipoIdx % 3];
-    if (byType[tipo].length < blocos[tipo]) {
-      byType[tipo].push(sequencia[idx]);
-      idx++;
-    }
-    tipoIdx++;
-    if (tipoIdx > sequencia.length * 6 + 12) break;
-  }
+  // Cobertura garantida POR TIPO: cada disciplina aparece em lei e em questões
+  // antes de qualquer repetição.
+  const byType: Record<TipoAtividade, string[]> = {
+    videoaula: montarSequenciaDisciplinas(DISCIPLINAS_ATIVAS, blocos.videoaula, params.curso_slug),
+    lei: montarSequenciaDisciplinas(DISCIPLINAS_ATIVAS, blocos.lei, params.curso_slug),
+    questoes: montarSequenciaDisciplinas(DISCIPLINAS_ATIVAS, blocos.questoes, params.curso_slug),
+  };
 
   // Ordem final alternando tipos
   const sortedPool: { disciplina: DisciplinaNome; tipo: TipoAtividade }[] = [];
@@ -228,8 +231,10 @@ export function gerarCronograma(params: {
     if (t > totalBlocos * 6 + 12) break;
   }
 
-  // Distribui blocos pelos dias
-  const blocksPerDay = Math.max(1, Math.floor(minutosEfetivos / blockDuration));
+  // Distribui blocos pelos dias (respeitando a janela de horário disponível)
+  const capacidadeDia = Math.max(1, Math.floor(minutosDisponiveis / blockDuration));
+  const necessarioDia = Math.ceil(totalBlocos / dias_semana.length);
+  const blocksPerDay = Math.max(1, Math.min(capacidadeDia, necessarioDia));
 
   const atividades: AtividadeBloco[] = [];
   let poolIdx = 0;
