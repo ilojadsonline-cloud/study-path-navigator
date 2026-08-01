@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Upload, CheckCircle, FileText, Trash2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 
 interface LegalText {
   id: number;
@@ -24,6 +25,7 @@ const DISCIPLINES = [
 ];
 
 export default function AdminTextosLegaisContent() {
+  const { cursoId, cursoAtivo } = useCurso();
   const [texts, setTexts] = useState<LegalText[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -32,15 +34,19 @@ export default function AdminTextosLegaisContent() {
 
   const fetchTexts = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("discipline_legal_texts")
       .select("*")
       .order("disciplina");
+    const filter = cursoOrFilter(cursoId);
+    if (filter) query = query.or(filter);
+    const { data, error } = await query;
     if (!error && data) setTexts(data as LegalText[]);
     setLoading(false);
   };
 
-  useEffect(() => { fetchTexts(); }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchTexts(); }, [cursoId]);
 
   const uploadText = async (disciplina: string, lei_nome: string) => {
     const content = pasteContent[disciplina];
@@ -51,7 +57,7 @@ export default function AdminTextosLegaisContent() {
     setUploading(disciplina);
     try {
       const { data, error } = await supabase.functions.invoke("store-legal-text", {
-        body: { disciplina, lei_nome, content: content.trim() },
+        body: { disciplina, lei_nome, content: content.trim(), curso_id: cursoId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -65,7 +71,10 @@ export default function AdminTextosLegaisContent() {
   };
 
   const deleteText = async (disciplina: string) => {
-    const { error } = await supabase.from("discipline_legal_texts").delete().eq("disciplina", disciplina);
+    let delQuery = supabase.from("discipline_legal_texts").delete().eq("disciplina", disciplina);
+    const delFilter = cursoOrFilter(cursoId);
+    if (delFilter) delQuery = delQuery.or(delFilter);
+    const { error } = await delQuery;
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
