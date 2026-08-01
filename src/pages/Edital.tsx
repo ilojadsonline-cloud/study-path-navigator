@@ -15,6 +15,7 @@ import {
 } from "@/lib/edital-materials";
 import { ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
 import { useCurso } from "@/contexts/CursoContext";
+import { supabase } from "@/integrations/supabase/client";
 import { disciplinasCbmto, type IconKey } from "@/lib/edital-verticalizado-cbmto";
 import { Flame, GraduationCap, Network, HeartPulse, Mountain, Waves, LifeBuoy } from "lucide-react";
 
