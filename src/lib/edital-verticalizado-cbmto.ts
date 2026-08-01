@@ -629,51 +629,113 @@ export const disciplinasCbmto: DisciplinaEditalData[] = [
     ],
   },
   {
-    id: "legislacao",
+    id: "estatuto",
     iconKey: "landmark",
-    title: "Legislação Específica",
-    subtitle: "Lei nº 2.578/2012, LC nº 131/2021, Lei nº 2.665/2012 e Lei nº 3.798/2021 • 8 questões",
+    title: "Lei nº 2.578/2012 — Estatuto dos Militares do TO",
+    subtitle: "Estatuto dos Militares Estaduais do Tocantins • 2 questões",
     color: "from-amber-500/20 to-amber-600/20",
-    disciplinaFilter: "Legislação Específica",
+    disciplinaFilter: "Lei nº 2.578/2012 — Estatuto dos Militares do TO",
     leiSecaUrl: "https://www.to.gov.br/bombeiros/leis-estaduais/5scoko7cf3s4",
-    leiSecaLabel: "Leis estaduais — CBMTO",
+    leiSecaLabel: "Lei nº 2.578/2012",
     videoAulaUrl: "",
     videoAulaLabel: "",
     items: [
       {
-        topic: "Lei nº 2.578/2012 — Estatuto dos Militares Estaduais do TO",
+        topic: "Parte geral, ingresso e conceitos",
         details: [
           "Ingresso, situações do militar e conceitos legais.",
           "Hierarquia, disciplina, círculos hierárquicos e precedência.",
+        ],
+      },
+      {
+        topic: "Deveres, disciplina e direitos",
+        details: [
           "Obrigações, ética, valor militar e vedações.",
           "Transgressões disciplinares, sindicância e conselhos.",
           "Direitos, remuneração, inatividade e prerrogativas.",
         ],
       },
+    ],
+  },
+  {
+    id: "organizacao-cbmto",
+    iconKey: "landmark",
+    title: "LC nº 131/2021 — Organização Básica do CBMTO",
+    subtitle: "Lei Complementar nº 131/2021 • 2 questões",
+    color: "from-yellow-500/20 to-yellow-600/20",
+    disciplinaFilter: "LC nº 131/2021 — Organização Básica do CBMTO",
+    leiSecaUrl: "https://www.to.gov.br/bombeiros/leis-estaduais/5scoko7cf3s4",
+    leiSecaLabel: "LC nº 131/2021",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
+    items: [
       {
-        topic: "LC nº 131/2021 — Organização Básica do CBMTO",
+        topic: "Competências e estrutura",
         details: [
           "Competências institucionais e missão do CBMTO.",
           "Estrutura organizacional: órgãos de direção, apoio e execução.",
+        ],
+      },
+      {
+        topic: "Unidades, quadros e disposições finais",
+        details: [
           "Comando-Geral, Estado-Maior, diretorias e unidades operacionais.",
           "Quadros de militares, efetivo e disposições finais.",
         ],
       },
+    ],
+  },
+  {
+    id: "promocoes",
+    iconKey: "landmark",
+    title: "Lei nº 2.665/2012 — Promoções no CBMTO",
+    subtitle: "Promoções de praças do CBMTO • 2 questões",
+    color: "from-orange-500/20 to-orange-600/20",
+    disciplinaFilter: "Lei nº 2.665/2012 — Promoções no CBMTO",
+    leiSecaUrl: "https://www.to.gov.br/bombeiros/leis-estaduais/5scoko7cf3s4",
+    leiSecaLabel: "Lei nº 2.665/2012",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
+    items: [
       {
-        topic: "Lei nº 2.665/2012 — Promoções no CBMTO",
+        topic: "Critérios e quadros de acesso",
         details: [
           "Princípios, critérios e requisitos gerais de promoção.",
           "Quadros de acesso, comissões de promoção e interstícios.",
+        ],
+      },
+      {
+        topic: "Modalidades de promoção e CHOA",
+        details: [
           "Promoção por antiguidade, merecimento, bravura e post mortem.",
           "Art. 61 — ingresso no QOA e requisitos do CHOA.",
         ],
       },
+    ],
+  },
+  {
+    id: "coscie",
+    iconKey: "landmark",
+    title: "Lei nº 3.798/2021 — Segurança Contra Incêndio",
+    subtitle: "Código de Segurança Contra Incêndio e Emergência • 2 questões",
+    color: "from-red-500/20 to-orange-600/20",
+    disciplinaFilter: "Lei nº 3.798/2021 — Segurança Contra Incêndio",
+    leiSecaUrl: "https://www.to.gov.br/bombeiros/leis-estaduais/5scoko7cf3s4",
+    leiSecaLabel: "Lei nº 3.798/2021",
+    videoAulaUrl: "",
+    videoAulaLabel: "",
+    items: [
       {
-        topic: "Lei nº 3.798/2021 — Código de Segurança Contra Incêndio e Emergência",
+        topic: "Disposições iniciais, definições e competência",
         details: [
           "Capítulo I — disposições iniciais e abrangência.",
           "Capítulo II — definições técnicas.",
           "Capítulo III, seção 2 — competência do CBMTO.",
+        ],
+      },
+      {
+        topic: "Projetos, vistorias e sanções",
+        details: [
           "Capítulo VI — dos projetos técnicos.",
           "Capítulo VII — vistoria e emissão de alvarás.",
           "Capítulo VIII — irregularidades e fiscalização.",
