@@ -69,16 +69,19 @@ export function AdminNotificacoesTab() {
       message: message.trim(),
       created_by: user?.id,
       user_id: target === "user" ? selectedUser?.user_id : null,
+      curso_id: cursoAlvo === "global" ? null : cursoAlvo,
     } as any);
     setSending(false);
     if (error) {
       toast({ title: "Erro ao enviar notificação", description: error.message, variant: "destructive" });
     } else {
+      const escopo = cursoAlvo === "global" ? "todos os cursos" : cursoNome(cursoAlvo);
       toast({
         title: target === "user"
           ? `Notificação enviada para ${selectedUser?.nome || selectedUser?.email}`
-          : "Notificação enviada para todos!",
+          : `Notificação enviada (${escopo})`,
       });
+
       setTitle("");
       setMessage("");
       setSelectedUser(null);
