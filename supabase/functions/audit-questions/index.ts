@@ -307,11 +307,29 @@ const CHOA_EDITAL_AUDIT_RULES = `### MATRIZ OFICIAL DO EDITAL CHOA/2026 PMTO (8 
 
 `;
 
+// ── Suporte multi-curso: CHOA PMTO usa 5 alternativas (A–E) e CHOA CBMTO usa 4 (A–D).
+// A estrutura é detectada pela própria questão (alt_e vazio = 4 alternativas).
+const ALL_ALT_KEYS = ["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"];
+function altKeysOf(q: any): string[] {
+  return String(q?.alt_e ?? "").trim() ? ALL_ALT_KEYS : ALL_ALT_KEYS.slice(0, 4);
+}
+function altLettersOf(q: any): string[] {
+  return altKeysOf(q).map((k) => k.slice(-1).toUpperCase());
+}
+/** Filtro de curso: registros legados (curso_id NULL) pertencem ao CHOA PMTO. */
+function cursoOrExpr(cursoId: string | null, cursoSlug: string | null): string | null {
+  if (!cursoId) return null;
+  return (cursoSlug ?? "pmto") === "pmto"
+    ? `curso_id.eq.${cursoId},curso_id.is.null`
+    : `curso_id.eq.${cursoId}`;
+}
+
 function buildAuditPrompt(q: Questao, legalText: string | null): string {
-  const alts = ["A", "B", "C", "D", "E"].map(
-    (l, i) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`
+  const letras = altLettersOf(q);
+  const alts = letras.map(
+    (l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`
   ).join("\n");
-  const correta = ["A", "B", "C", "D", "E"][q.gabarito] ?? "?";
+  const correta = letras[q.gabarito] ?? "?";
   const blocks = legalText ? parseArticleBlocks(legalText) : [];
   const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
   const relevantNums = [...new Set([...cited, ...(q.artigo_principal ? extractArticleNumbers(q.artigo_principal) : [])])];
