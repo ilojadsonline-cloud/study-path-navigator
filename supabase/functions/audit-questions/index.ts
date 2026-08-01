@@ -316,6 +316,28 @@ function altKeysOf(q: any): string[] {
 function altLettersOf(q: any): string[] {
   return altKeysOf(q).map((k) => k.slice(-1).toUpperCase());
 }
+/** CHOA CBMTO: prova de 4 alternativas (A–D) — alt_e sempre vazia. */
+function isFourAlt(q: any): boolean {
+  return altKeysOf(q).length === 4;
+}
+/** Bloco de instrução obrigatória sobre a estrutura de alternativas da questão. */
+function altStructureNote(q: any): string {
+  const letras = altLettersOf(q);
+  return isFourAlt(q)
+    ? `ESTRUTURA OBRIGATÓRIA: esta questão é do CHOA CBMTO e possui EXATAMENTE 4 alternativas (A, B, C e D). É PROIBIDO criar, sugerir ou preencher a alternativa E. O campo alt_e DEVE permanecer vazio e o gabarito é um inteiro de 0 a 3. Toda análise de alternativas no comentário cobre apenas A–D.`
+    : `ESTRUTURA OBRIGATÓRIA: esta questão possui EXATAMENTE 5 alternativas (${letras.join(", ")}) e o gabarito é um inteiro de 0 a 4.`;
+}
+/** Remove alt_e e clampa gabarito em provas de 4 alternativas. */
+function enforceAltStructure(q: any, patch: any): any {
+  if (!patch || !isFourAlt(q)) return patch;
+  if ("alt_e" in patch) delete patch.alt_e;
+  if ("gabarito" in patch) {
+    const g = Number(patch.gabarito);
+    if (!Number.isInteger(g) || g < 0 || g > 3) delete patch.gabarito;
+  }
+  return Object.keys(patch).length ? patch : null;
+}
+
 /** Filtro de curso: registros legados (curso_id NULL) pertencem ao CHOA PMTO. */
 function cursoOrExpr(cursoId: string | null, cursoSlug: string | null): string | null {
   if (!cursoId) return null;
@@ -387,6 +409,8 @@ Alternativas:
 ${alts}
 
 Gabarito atual: ${correta} (índice ${q.gabarito})
+
+${altStructureNote(q)}
 
 Comentário atual:
 ${q.comentario}
@@ -751,7 +775,7 @@ Retorne JSON ESTRITO:
       const g = Number(clean.gabarito);
       if (!Number.isInteger(g) || g < 0 || g > 4) delete clean.gabarito;
     }
-    patch = Object.keys(clean).length ? clean : null;
+    patch = enforceAltStructure(q, Object.keys(clean).length ? clean : null);
   }
   const techniques = Array.isArray(parsed.techniques_used) ? parsed.techniques_used.map((t: any) => String(t)).slice(0, 10) : [];
   (patch ?? {}).__techniques = techniques;
@@ -891,8 +915,9 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
           const g = Number(clean.gabarito);
           if (!Number.isInteger(g) || g < 0 || g > 4) delete clean.gabarito;
         }
-        if (Object.keys(clean).length) {
-          patch = clean;
+        const safe = enforceAltStructure(q, Object.keys(clean).length ? clean : null);
+        if (safe) {
+          patch = safe;
           rewriteSummary = "Correção simples aplicada pelo DeepSeek (sem reescrita de prosa).";
         }
       }
@@ -1088,14 +1113,14 @@ type ProofMatrixValidation = {
 };
 
 /** P1.5 — Valida programaticamente a matriz de prova literal por alternativa. */
-function validateProofMatrix(matrix: unknown, legalText: string | null): ProofMatrixValidation {
+function validateProofMatrix(matrix: unknown, legalText: string | null, expectedLen = 5): ProofMatrixValidation {
   const errors: string[] = [];
   const normalized: ProofMatrixEntry[] = [];
   if (!Array.isArray(matrix)) {
     return { valid: false, errors: ["proof_matrix ausente ou não é array"], trueCount: 0, evidenceFound: 0, normalized: [] };
   }
-  if (matrix.length !== 5) {
-    errors.push(`proof_matrix deve ter exatamente 5 entradas (recebeu ${matrix.length})`);
+  if (matrix.length !== expectedLen) {
+    errors.push(`proof_matrix deve ter exatamente ${expectedLen} entradas (recebeu ${matrix.length})`);
   }
   const seenLetters = new Set<string>();
   let trueCount = 0;
@@ -1137,8 +1162,9 @@ function validateProofMatrix(matrix: unknown, legalText: string | null): ProofMa
 
 /** P1.4 — Constrói o prompt do modo REPAIR (rewriter exige proof_matrix literal). */
 function buildRepairPrompt(q: Questao, diagnosis: { issues: any[]; ai_summary: string } | null, legalText: string): string {
-  const alts = ["A","B","C","D","E"].map((l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
-  const correctaLetra = ["A","B","C","D","E"][q.gabarito] ?? "?";
+  const letras = altLettersOf(q);
+  const alts = letras.map((l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
+  const correctaLetra = letras[q.gabarito] ?? "?";
   const blocks = parseArticleBlocks(legalText);
   const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
   const relevantBlocks = cited.map((num) => blocks.find((b) => b.artNum === num)).filter(Boolean) as ArticleBlock[];
@@ -1162,6 +1188,8 @@ ${alts}
 
 Gabarito atual: ${correctaLetra} (índice ${q.gabarito})
 
+${altStructureNote(q)}
+
 Comentário atual:
 ${q.comentario}
 
@@ -1174,13 +1202,13 @@ REGRAS DE REESCRITA:
 2. ANTI-LENGTH-BIAS: a alternativa correta NUNCA pode ser a única mais longa nem a única mais curta. Paridade ±25%.
 3. CADA distrator usa uma técnica DIFERENTE de erro (≥2 técnicas no conjunto). Encurte distratores longos preservando o erro típico.
 4. PROIBIDO "todas/nenhuma das anteriores", "n.d.a.", duplicatas, alternativa que contradiz o enunciado.
-5. Gabarito = inteiro 0-4. Se trocar a correta, ajuste o gabarito coerentemente.
+5. Gabarito = inteiro ${isFourAlt(q) ? "0-3" : "0-4"}. Se trocar a correta, ajuste o gabarito coerentemente.
 6. HIERARQUIA militar fiel à lei. Cite lei externa por extenso quando inevitável.
 7. COMENTÁRIO em 4 movimentos OBRIGATÓRIOS, parágrafos fluidos, 600-1500 chars.
 
-PROOF_MATRIX (OBRIGATÓRIA, 5 entradas — uma por alternativa A,B,C,D,E na ordem):
+PROOF_MATRIX (OBRIGATÓRIA, ${letras.length} entradas — uma por alternativa ${letras.join(",")} na ordem):
 Cada entrada DEVE conter:
-- letter: "A" | "B" | "C" | "D" | "E"
+- letter: ${letras.map((l) => `"${l}"`).join(" | ")}
 - text: o texto FINAL da alternativa após o patch (idêntico ao patch.alt_X correspondente)
 - verdict: true se for a alternativa CORRETA; false se for distrator. EXATAMENTE UMA entrada deve ter verdict=true.
 - literal_evidence: trecho LITERAL (≥40 chars) copiado do TEXTO LEGAL acima que prove o verdict (para a correta, prove por que é correta; para distrator, prove por que está errado/contradiz a lei). PROIBIDO parafrasear — deve ser cópia literal verificável.
@@ -1192,7 +1220,7 @@ RISCO: classifique o risco da reescrita: "low" (mudança mecânica/comprovada li
 
 CONFIANÇA: 0.0-1.0. Use ≥0.9 SOMENTE quando toda alternativa tem literal_evidence verificável copiada da lei e não há ambiguidade.
 
-NEEDS_HUMAN_REVIEW: true se houver QUALQUER dúvida, se for trocar gabarito sem certeza absoluta, se a literal_evidence depender de interpretação extensiva, ou se você não conseguir cobrir as 5 alternativas com prova literal sólida. Caso contrário false.
+NEEDS_HUMAN_REVIEW: true se houver QUALQUER dúvida, se for trocar gabarito sem certeza absoluta, se a literal_evidence depender de interpretação extensiva, ou se você não conseguir cobrir as ${letras.length} alternativas com prova literal sólida. Caso contrário false.
 
 RECOVERABLE: false se a questão for IRRECUPERÁVEL à luz da lei (sem alternativa correta possível, sem base legal, premissa contraditória). Nesse caso patch=null e proof_matrix=[].
 
@@ -1206,12 +1234,12 @@ Retorne JSON ESTRITO:
   "source_articles": ["Art. X", "Art. Y"],
   "proof_matrix": [
     { "letter": "A", "text": "...", "verdict": false|true, "literal_evidence": "...", "source_article": "Art. X" },
-    { "letter": "B", ... }, { "letter": "C", ... }, { "letter": "D", ... }, { "letter": "E", ... }
+    ${letras.slice(1).map((l) => `{ "letter": "${l}", ... }`).join(", ")}
   ],
   "patch": {
     "enunciado"?: "...",
-    "alt_a"?: "...", "alt_b"?: "...", "alt_c"?: "...", "alt_d"?: "...", "alt_e"?: "...",
-    "gabarito"?: 0-4,
+    ${letras.map((l) => `"alt_${l.toLowerCase()}"?: "..."`).join(", ")},
+    "gabarito"?: ${isFourAlt(q) ? "0-3" : "0-4"},
     "comentario"?: "..."
   } | null,
   "needs_human_review": true|false,
@@ -1320,10 +1348,11 @@ async function repairQuestion(
       if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
     }
     if (!Object.keys(patch).length) patch = null;
+    patch = enforceAltStructure(questao, patch);
   }
 
   // 7) VALIDA proof_matrix (P1.5)
-  const validation = validateProofMatrix(parsed.proof_matrix, legalText);
+  const validation = validateProofMatrix(parsed.proof_matrix, legalText, altKeysOf(questao).length);
 
   // 8) Checagem cruzada: gabarito (efetivo após patch) bate com o índice cuja proof_matrix.verdict é true?
   const effectiveGabarito = typeof patch?.gabarito === "number" ? patch.gabarito : questao.gabarito;
