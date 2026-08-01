@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurso } from "@/contexts/CursoContext";
 import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp, TrendingDown,
   Trophy, Calendar, Flame, Shield, Loader2, FileText, PlayCircle,
@@ -167,6 +168,7 @@ const Dashboard = () => {
   const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
   const [bizuAulas, setBizuAulas] = useState<BizuAulaItem[]>([]);
   const [diagnostico, setDiagnostico] = useState<DesempenhoItem[]>([]);
+  const { cursoId } = useCurso();
 
   useEffect(() => {
     if (!user) return;
@@ -335,7 +337,7 @@ const Dashboard = () => {
       setDisciplinas(discArr);
 
       // Diagnóstico geral por disciplina (banco + simulados + simulado semanal)
-      const { data: diagData } = await supabase.rpc("get_desempenho_disciplinas");
+      const { data: diagData } = await supabase.rpc("get_desempenho_disciplinas", { p_curso_id: cursoId });
       const diagMap: Record<string, { total: number; corretas: number }> = {};
       (diagData || []).forEach((row: { disciplina: string; total: number; corretas: number }) => {
         const nome = normalizarDisciplina(row.disciplina) || row.disciplina;
@@ -420,7 +422,7 @@ const Dashboard = () => {
 
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, cursoId]);
 
   useEffect(() => {
     if (!user) return;
