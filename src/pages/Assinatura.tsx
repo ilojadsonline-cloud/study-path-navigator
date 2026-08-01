@@ -21,7 +21,7 @@ const formatPreco = (centavos: number) =>
 
 const Assinatura = () => {
   const [planos, setPlanos] = useState<Plano[]>([]);
-  const [planoSlug, setPlanoSlug] = useState<string>("pmto-trimestral");
+  const [planoSlug, setPlanoSlug] = useState<string>("pmto-mensal");
   const [loadingCard, setLoadingCard] = useState(false);
   const [loadingPix, setLoadingPix] = useState(false);
   const [mpEmail, setMpEmail] = useState("");
