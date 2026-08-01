@@ -8,7 +8,7 @@ import {
   getCorDisciplina,
   calcularResumo,
   formatMinutes,
-  DISCIPLINAS,
+  getDisciplinasCronograma,
   TIPO_LABELS,
 } from "./cronograma-generator";
 
@@ -20,7 +20,8 @@ function hexToRgb(hex: string): [number, number, number] {
   return [r, g, b];
 }
 
-export function exportCronogramaPDF(cronograma: CronogramaData) {
+export function exportCronogramaPDF(cronograma: CronogramaData, cursoSlug?: string | null) {
+  const disciplinas = getDisciplinasCronograma(cursoSlug);
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 12;
@@ -101,7 +102,7 @@ export function exportCronogramaPDF(cronograma: CronogramaData) {
         const dia = orderedDias[data.column.index];
         const b = atividadesPorDia[dia]?.[data.row.index];
         if (b) {
-          const [r, g, bl] = hexToRgb(getCorDisciplina(b.disciplina));
+          const [r, g, bl] = hexToRgb(getCorDisciplina(b.disciplina, cursoSlug));
           // Less wash-out: only lighten 50% instead of 85%
           data.cell.styles.fillColor = [
             Math.round(r + (255 - r) * 0.5),
@@ -117,7 +118,7 @@ export function exportCronogramaPDF(cronograma: CronogramaData) {
   });
 
   // ========== SUMMARY TABLE ==========
-  const { porDisciplina, totais } = calcularResumo(cronograma.atividades);
+  const { porDisciplina, totais } = calcularResumo(cronograma.atividades, cursoSlug);
   const finalY = (doc as any).lastAutoTable?.finalY || 36;
 
   doc.setFontSize(14);
@@ -129,7 +130,7 @@ export function exportCronogramaPDF(cronograma: CronogramaData) {
     startY: finalY + 17,
     margin: { left: marginX, right: marginX },
     head: [["Disciplina", "Videoaulas", "Lei Seca", "Questões", "Total"]],
-    body: DISCIPLINAS.map((d) => [
+    body: disciplinas.map((d) => [
       d.nome,
       formatMinutes(porDisciplina[d.nome]?.videoaula || 0),
       formatMinutes(porDisciplina[d.nome]?.lei || 0),
