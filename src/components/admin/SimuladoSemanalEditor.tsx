@@ -35,6 +35,9 @@ interface QuestaoRow {
   anulada: boolean;
 }
 
+import { useCurso } from "@/contexts/CursoContext";
+import { getQtdAlternativas } from "@/lib/edital-distribuicao";
+
 const LETRAS = ["A", "B", "C", "D", "E"];
 const ALT_KEYS = ["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const;
 
@@ -48,6 +51,8 @@ export function SimuladoSemanalEditor({ simulado, onClose, onSaved }: {
   simulado: SimuladoRow; onClose: () => void; onSaved: () => void;
 }) {
   const { toast } = useToast();
+  const { cursoSlug } = useCurso();
+  const qtdAlternativas = getQtdAlternativas(cursoSlug);
 
   const [titulo, setTitulo] = useState(simulado.titulo);
   const [descricao, setDescricao] = useState(simulado.descricao ?? "");
