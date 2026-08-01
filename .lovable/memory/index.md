@@ -17,6 +17,7 @@
 - [Notificações Direcionadas](mem://features/notificacoes-direcionadas-alerta-flutuante) — notifications.user_id (null=todos/id=individual), realtime, sino + alerta flutuante
 - [Simulado Semanal + Import Markdown](mem://features/simulado-semanal-importacao-markdown) — importação por Markdown e simulado semanal online com ranking
 - [Análise de Desempenho por Disciplina/Assunto](mem://features/analise-desempenho-disciplina-assunto) — AnaliseDificuldade + RPC get_desempenho_disciplinas
+- [Multi-curso Fase 5](mem://features/multi-curso-fase5-auditoria-geracao-assinaturas) — auditoria IA, geração/dedup e listas de disciplinas por curso; usuários/assinaturas/online compartilhados; coluna "Curso assinado" no admin
 - [Maritaca Geração Primária](mem://technical/maritaca-geracao-primaria) — sabia-4 primário; fallback DeepSeek
 - [Prompt Mestre Banca](mem://pedagogical/prompt-mestre-banca) — Diretriz oficial 16 regras para toda disciplina
 - [Auditoria Escopo Literal](mem://features/auditoria-escopo-literal) — escopo de reauditoria por banco/disciplina
