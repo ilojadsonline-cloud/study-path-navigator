@@ -168,7 +168,9 @@ export function AdminAuditoriaTab() {
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (data) setJob(data as AuditJob);
+    const jobCurso = (data as any)?.scope?.curso_id ?? null;
+    if (data && (!cursoId || !jobCurso || jobCurso === cursoId)) setJob(data as AuditJob);
+    else setJob(null);
   }
 
   async function loadAudits(statusOverride = filterStatus, activeJob = job) {
