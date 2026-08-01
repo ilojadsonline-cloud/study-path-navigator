@@ -422,7 +422,7 @@ const Dashboard = () => {
 
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, cursoId]);
 
   useEffect(() => {
     if (!user) return;
