@@ -1,5 +1,6 @@
 // Estrutura compartilhada (lite) do Edital Verticalizado — usada por
 // Edital, Mapas Mentais e Painel Admin. Mantenha em sincronia com src/pages/Edital.tsx.
+import { disciplinasCbmto } from "./edital-verticalizado-cbmto";
 
 export type DisciplinaLite = {
   id: string;
