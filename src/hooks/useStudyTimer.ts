@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurso } from "@/contexts/CursoContext";
 
 const INTERVAL_SECONDS = 60;
 const LS_KEY = "study_timer_state";
@@ -54,6 +55,7 @@ function notifyTimerUpdated(state: TimerState) {
 
 export function useStudyTimer() {
   const { user } = useAuth();
+  const { cursoId } = useCurso();
   const stateRef = useRef<TimerState>(loadState());
 
   const markActive = useCallback(() => {
@@ -106,7 +108,7 @@ export function useStudyTimer() {
       // Create new session
       const { data, error } = await supabase
         .from("study_sessions")
-        .insert({ user_id: user.id, duration_seconds: 0 })
+        .insert({ user_id: user.id, duration_seconds: 0, curso_id: cursoId })
         .select("id, started_at")
         .single();
       if (!error && data) {
