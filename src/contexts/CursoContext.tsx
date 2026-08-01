@@ -101,17 +101,32 @@ export function CursoProvider({ children }: { children: ReactNode }) {
     setSlug(s);
   }, []);
 
+  const temAcesso = useCallback(
+    (curso: Curso | null) => {
+      if (!curso) return false;
+      if (isAdmin) return true;
+      if (acessos.includes(curso.id)) return true;
+      // Legado: assinantes antigos (sem registro em acessos_curso) mantêm o CHOA PMTO
+      if (subscribed && curso.slug === DEFAULT_SLUG) return true;
+      return false;
+    },
+    [acessos, isAdmin, subscribed],
+  );
+
   return (
     <CursoContext.Provider
       value={{
         cursos,
+        todosCursos: todos,
         cursoAtivo,
         cursoId: cursoAtivo?.id ?? null,
         setCursoSlug,
+        temAcesso,
         loading,
         refresh: load,
       }}
     >
+
       {children}
     </CursoContext.Provider>
   );
