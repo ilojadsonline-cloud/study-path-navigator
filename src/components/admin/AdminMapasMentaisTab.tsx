@@ -35,17 +35,21 @@ export function AdminMapasMentaisTab() {
 
   const fetchRows = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("mapas_mentais")
       .select("*")
       .order("disciplina_id", { ascending: true })
       .order("created_at", { ascending: true });
+    const filter = cursoOrFilter(cursoId);
+    if (filter) query = query.or(filter);
+    const { data, error } = await query;
     if (error) toast.error("Erro ao carregar mapas mentais");
     setRows((data as MapaRow[]) || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchRows(); }, []);
+  useEffect(() => { fetchRows(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [cursoId]);
+
 
   const handleUpload = async () => {
     if (!titulo.trim()) { toast.error("Informe o título do mapa mental"); return; }
