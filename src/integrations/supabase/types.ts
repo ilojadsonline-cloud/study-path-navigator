@@ -207,6 +207,286 @@ export type Database = {
           },
         ]
       }
+      cbmto_auditoria_log: {
+        Row: {
+          camadas: Json
+          correcoes: Json
+          created_at: string
+          criterios: Json
+          executado_por: string | null
+          falhas: Json
+          id: number
+          pontuacao: number
+          questao_editorial_id: string
+          status_resultante: string
+          versao: number
+        }
+        Insert: {
+          camadas?: Json
+          correcoes?: Json
+          created_at?: string
+          criterios?: Json
+          executado_por?: string | null
+          falhas?: Json
+          id?: number
+          pontuacao?: number
+          questao_editorial_id: string
+          status_resultante: string
+          versao?: number
+        }
+        Update: {
+          camadas?: Json
+          correcoes?: Json
+          created_at?: string
+          criterios?: Json
+          executado_por?: string | null
+          falhas?: Json
+          id?: number
+          pontuacao?: number
+          questao_editorial_id?: string
+          status_resultante?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cbmto_auditoria_log_questao_editorial_id_fkey"
+            columns: ["questao_editorial_id"]
+            isOneToOne: false
+            referencedRelation: "cbmto_questoes_editoriais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cbmto_fontes_oficiais: {
+        Row: {
+          arquivo: string
+          artigos_autorizados: Json
+          capitulos_autorizados: Json
+          capitulos_excluidos: Json
+          conteudo: string | null
+          created_at: string
+          curso_id: string | null
+          data_documento: string | null
+          disciplina: string | null
+          hash: string | null
+          id: string
+          observacao: string | null
+          papel: string
+          status: string
+          storage_path: string | null
+          tipo: string
+          updated_at: string
+          uploaded_by: string | null
+          versao: string
+        }
+        Insert: {
+          arquivo: string
+          artigos_autorizados?: Json
+          capitulos_autorizados?: Json
+          capitulos_excluidos?: Json
+          conteudo?: string | null
+          created_at?: string
+          curso_id?: string | null
+          data_documento?: string | null
+          disciplina?: string | null
+          hash?: string | null
+          id?: string
+          observacao?: string | null
+          papel?: string
+          status?: string
+          storage_path?: string | null
+          tipo?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          versao?: string
+        }
+        Update: {
+          arquivo?: string
+          artigos_autorizados?: Json
+          capitulos_autorizados?: Json
+          capitulos_excluidos?: Json
+          conteudo?: string | null
+          created_at?: string
+          curso_id?: string | null
+          data_documento?: string | null
+          disciplina?: string | null
+          hash?: string | null
+          id?: string
+          observacao?: string | null
+          papel?: string
+          status?: string
+          storage_path?: string | null
+          tipo?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          versao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cbmto_fontes_oficiais_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cbmto_questoes_editoriais: {
+        Row: {
+          alt_a: string
+          alt_b: string
+          alt_c: string
+          alt_d: string
+          analise_alternativas: string | null
+          aprovado_em: string | null
+          aprovado_por: string | null
+          arquivo_fonte: string | null
+          artigo: number | null
+          assinatura_ineditismo: string | null
+          assunto: string | null
+          base_normativa: string | null
+          capitulo: number | null
+          comentario: string | null
+          created_at: string
+          created_by: string | null
+          criterios: Json
+          curso_id: string | null
+          data_vigencia: string | null
+          demo: boolean
+          dica_prova: string | null
+          disciplina: string
+          dispositivo: string | null
+          edital_autorizador: string | null
+          enunciado: string
+          evidencias: Json
+          formato: string | null
+          gabarito: number
+          hipotese_concorrente: string | null
+          id: string
+          logica_distratores: Json
+          lote_id: string | null
+          lote_tipo: string | null
+          operacao_cognitiva: string | null
+          ordem: number | null
+          pontuacao: number
+          questao_id: number | null
+          relatorio_auditoria: Json
+          revisado_em: string | null
+          revisado_por: string | null
+          status: string
+          subtopico: string | null
+          updated_at: string
+          versao: number
+        }
+        Insert: {
+          alt_a?: string
+          alt_b?: string
+          alt_c?: string
+          alt_d?: string
+          analise_alternativas?: string | null
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          arquivo_fonte?: string | null
+          artigo?: number | null
+          assinatura_ineditismo?: string | null
+          assunto?: string | null
+          base_normativa?: string | null
+          capitulo?: number | null
+          comentario?: string | null
+          created_at?: string
+          created_by?: string | null
+          criterios?: Json
+          curso_id?: string | null
+          data_vigencia?: string | null
+          demo?: boolean
+          dica_prova?: string | null
+          disciplina: string
+          dispositivo?: string | null
+          edital_autorizador?: string | null
+          enunciado: string
+          evidencias?: Json
+          formato?: string | null
+          gabarito?: number
+          hipotese_concorrente?: string | null
+          id?: string
+          logica_distratores?: Json
+          lote_id?: string | null
+          lote_tipo?: string | null
+          operacao_cognitiva?: string | null
+          ordem?: number | null
+          pontuacao?: number
+          questao_id?: number | null
+          relatorio_auditoria?: Json
+          revisado_em?: string | null
+          revisado_por?: string | null
+          status?: string
+          subtopico?: string | null
+          updated_at?: string
+          versao?: number
+        }
+        Update: {
+          alt_a?: string
+          alt_b?: string
+          alt_c?: string
+          alt_d?: string
+          analise_alternativas?: string | null
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          arquivo_fonte?: string | null
+          artigo?: number | null
+          assinatura_ineditismo?: string | null
+          assunto?: string | null
+          base_normativa?: string | null
+          capitulo?: number | null
+          comentario?: string | null
+          created_at?: string
+          created_by?: string | null
+          criterios?: Json
+          curso_id?: string | null
+          data_vigencia?: string | null
+          demo?: boolean
+          dica_prova?: string | null
+          disciplina?: string
+          dispositivo?: string | null
+          edital_autorizador?: string | null
+          enunciado?: string
+          evidencias?: Json
+          formato?: string | null
+          gabarito?: number
+          hipotese_concorrente?: string | null
+          id?: string
+          logica_distratores?: Json
+          lote_id?: string | null
+          lote_tipo?: string | null
+          operacao_cognitiva?: string | null
+          ordem?: number | null
+          pontuacao?: number
+          questao_id?: number | null
+          relatorio_auditoria?: Json
+          revisado_em?: string | null
+          revisado_por?: string | null
+          status?: string
+          subtopico?: string | null
+          updated_at?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cbmto_questoes_editoriais_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cbmto_questoes_editoriais_questao_id_fkey"
+            columns: ["questao_id"]
+            isOneToOne: false
+            referencedRelation: "questoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cronogramas: {
         Row: {
           atividades: Json

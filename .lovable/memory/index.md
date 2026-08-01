@@ -29,3 +29,4 @@
 - [POP Sigiloso](mem://features/pop-sigiloso-acesso-restrito) — /pop-questoes com allowlist; POP nunca aparece no banco geral
 - [Verificação de Assinatura em Background](mem://features/verificacao-assinatura-background)
 - [Anti-fraude Trial](mem://security/anti-fraude-trial) — janela única de 24h
+- [Módulo Editorial CBMTO 2026](mem://features/modulo-editorial-cbmto-2026) — Aba admin exclusiva CBMTO: fontes locais validadas, geração com cotas/gabarito planejado, auditoria em 5 camadas + matriz 11 critérios, publicação só do aprovado
