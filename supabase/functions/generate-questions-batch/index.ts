@@ -692,6 +692,42 @@ const DISCIPLINES = [
   },
 ] as const;
 
+
+// ============================================================
+// CHOA BM 2026 (CBMTO) — Edital nº 1/2026/GABCOM.
+// Prova com 4 alternativas (a–d). Fonte única: discipline_legal_texts do curso.
+// ============================================================
+const CBMTO_DIRETRIZES_PADRAO =
+  "ESCOPO ESTRITO: cobrar SOMENTE o que consta no texto oficial/manual fornecido na base interna desta disciplina. " +
+  "CUIDADOS: não inventar procedimentos, equipamentos, protocolos, prazos, competências ou nomenclaturas ausentes do texto; " +
+  "não misturar conteúdo de outras disciplinas do certame; manter rigor técnico e terminologia oficial do CBMTO. " +
+  "ESTILO: casos práticos de emprego operacional, identificação do procedimento correto, sequência de ações, " +
+  "critérios de decisão e identificação de conduta conforme/desconforme ao manual.";
+
+const DISCIPLINES_CBMTO = [
+  { disciplina: "Direito Penal Militar e Processual Penal Militar", assuntos: ["Crimes militares em espécie", "Aplicação da lei penal militar", "Inquérito Policial Militar", "Prisão em flagrante e providências"] },
+  { disciplina: "Redação Oficial", assuntos: ["Atos de correspondência", "Atos normativos", "Atos ordinatórios", "Atos enunciativos", "Atos comprobatórios"] },
+  { disciplina: "Combate a Incêndio Urbano", assuntos: ["Teoria do fogo", "Agentes extintores", "Técnicas e táticas de combate", "Ventilação tática", "Equipamentos de proteção respiratória"] },
+  { disciplina: "NPCE", assuntos: ["Exigências de segurança contra incêndio", "Saídas de emergência", "Sistemas preventivos", "Análise de projetos", "Vistorias"] },
+  { disciplina: "Sistema de Comando de Incidentes", assuntos: ["Princípios e características do SCI", "Estrutura organizacional", "Funções do comando", "Plano de ação do incidente"] },
+  { disciplina: "Atendimento Pré-Hospitalar", assuntos: ["Avaliação da vítima", "Suporte básico de vida", "Hemorragias e choque", "Trauma e imobilizações", "Emergências clínicas"] },
+  { disciplina: "Salvamento em Altura", assuntos: ["Equipamentos e EPIs", "Nós e ancoragens", "Sistemas de descida e içamento", "Segurança operacional"] },
+  { disciplina: "Salvamento Aquático", assuntos: ["Técnicas de abordagem", "Equipamentos de flutuação", "Salvamento em enchentes", "Segurança do socorrista"] },
+  { disciplina: "Salvamento Terrestre", assuntos: ["Desencarceramento veicular", "Estabilização de veículos", "Ferramentas de salvamento", "Espaços confinados"] },
+  { disciplina: "Legislação Específica", assuntos: ["Lei de organização do CBMTO", "Estatuto dos militares", "Regulamento disciplinar", "Promoções de praças"] },
+].map((d) => ({
+  disciplina: d.disciplina,
+  leiNome: `Texto oficial de "${d.disciplina}" (CHOA BM 2026 — Edital nº 1/2026/GABCOM)`,
+  tipo: "manual" as const,
+  assuntos: d.assuntos,
+  diretrizes: CBMTO_DIRETRIZES_PADRAO,
+  alternativas: 4 as const,
+}));
+
+function getDisciplinesByCurso(cursoSlug?: string | null) {
+  return (cursoSlug || "pmto").toLowerCase() === "cbmto" ? DISCIPLINES_CBMTO : DISCIPLINES;
+}
+
 /**
  * Redação Oficial: o edital (Item 6, 6.1–6.8) cobra APENAS aspectos conceituais
  * (definição, finalidade e hipóteses de uso). Questões geradas que escorregarem para
@@ -933,6 +969,11 @@ async function generateNonLegalBatch(ctx: {
   } = ctx;
 
   const isTexto = disc.tipo === "texto"; // Língua Portuguesa
+  const isManual = (disc as any).tipo === "manual"; // CBMTO — manuais operacionais
+  const numAlts: number = (disc as any).alternativas === 4 ? 4 : 5;
+  const LETRAS_ALT = ["A", "B", "C", "D", "E"].slice(0, numAlts);
+  const faixaGab = LETRAS_ALT.map((l, i) => `${l}(${i})`).join(", ");
+  const altFields = LETRAS_ALT.map((l) => `"alt_${l.toLowerCase()}"`).join(", ");
   const leastCoveredAssuntos = disc.assuntos
     .map((a: string) => ({ assunto: a, count: assuntoCoverage.get(a) || 0 }))
     .sort((a: any, b: any) => a.count - b.count)
@@ -944,7 +985,19 @@ async function generateNonLegalBatch(ctx: {
     ? `\nABERTURAS JÁ MUITO USADAS (varie, não comece igual):\n${openingsToAvoid.map((o, i) => `${i + 1}) "${o}..."`).join("\n")}`
     : "";
 
-  const systemPrompt = isTexto
+  const manualSystemPrompt = `${MASTER_BANCA_DIRECTIVE}
+
+Você é uma BANCA EXAMINADORA TÉCNICA DE ALTÍSSIMO NÍVEL do Corpo de Bombeiros Militar do Estado do Tocantins (CHOA BM 2026 — Edital nº 1/2026/GABCOM). Sua missão é elaborar questões objetivas da disciplina "${disc.disciplina}", com ${numAlts} alternativas (${LETRAS_ALT.join(", ")}) e apenas uma correta.
+
+REGRAS OBRIGATÓRIAS:
+1. FONTE ÚNICA: use exclusivamente o TEXTO OFICIAL fornecido na mensagem do usuário. Nada de conhecimento externo, outros manuais, normas de outros estados ou analogias.
+2. Cada questão deve ter EXATAMENTE ${numAlts} alternativas (${LETRAS_ALT.join(", ")}), com apenas uma correta.
+3. As ${numAlts - 1} alternativas incorretas devem ser plausíveis e tecnicamente coerentes (troca de etapa, inversão de sequência, parâmetro alterado, competência trocada), nunca absurdas.
+4. Terminologia oficial do CBMTO, linguagem impessoal e técnica.
+5. A correta não pode ser a mais longa nem a mais curta; todas com estrutura semelhante.
+6. PADRÃO ELITE: questões de aplicação operacional real, não decoreba superficial.`;
+
+  const systemPrompt = isManual ? manualSystemPrompt : isTexto
     ? `${MASTER_BANCA_DIRECTIVE}
 
 Você é uma BANCA EXAMINADORA DE LÍNGUA PORTUGUESA DE ALTÍSSIMO NÍVEL para o concurso interno CHOA/2026 da PMTO, no padrão de bancas como CEBRASPE, FGV e FCC. Sua missão é elaborar questões objetivas de INTERPRETAÇÃO E COMPREENSÃO DE TEXTO, com 5 alternativas e apenas uma correta.
@@ -972,7 +1025,9 @@ REGRAS OBRIGATÓRIAS:
 5. Exatamente UMA alternativa correta; as cinco com comprimento e estrutura semelhantes (a correta não pode ser a mais longa nem a mais curta).
 6. PADRÃO ELITE: questões que diferenciem documentos próximos (Ofício x Memorando x Parte x Requerimento; Parecer x Relatório x Estudo de Caso x Projeto).`;
 
-  const fonteBlock = isTexto
+  const fonteBlock = isManual
+    ? `TEXTO OFICIAL — FONTE ÚNICA (${disc.leiNome}):\n"""${(sourceContent || "").slice(0, 14000)}"""`
+    : isTexto
     ? `Você cria o próprio TEXTO-BASE de cada questão (não há fonte externa). Cada texto-base deve ser inédito e diferente dos demais do lote.`
     : `TEXTO OFICIAL — FONTE ÚNICA (Manual de Redação Oficial da PMTO, Item 6):\n"""${(sourceContent || "").slice(0, 14000)}"""`;
 
@@ -982,7 +1037,7 @@ Quantidade exata de questões a gerar: ${batchSize}
 Assuntos a priorizar (menos explorados): ${leastCoveredAssuntos}
 Assuntos possíveis: ${disc.assuntos.join(", ")}
 
-DIRETRIZES ESPECÍFICAS DA DISCIPLINA (Edital nº 001/2026 — CHOA/2026 PMTO) — obrigatórias:
+DIRETRIZES ESPECÍFICAS DA DISCIPLINA (${isManual ? "Edital nº 1/2026/GABCOM — CHOA BM 2026 CBMTO" : "Edital nº 001/2026 — CHOA/2026 PMTO"}) — obrigatórias:
 ${disc.diretrizes}
 
 ${fonteBlock}
@@ -990,12 +1045,12 @@ ${openingsBlock}
 
 REGRAS DE QUALIDADE:
 - Cada questão do lote deve abordar um ASPECTO/${isTexto ? "TEXTO" : "DOCUMENTO"} DIFERENTE. Não repita tema, estrutura ou pegadinha.
-- Distribua o gabarito entre A(0), B(1), C(2), D(3), E(4) — não concentre na mesma letra.
-- O comentário é a parte MAIS importante e deve funcionar como uma AULA CURTA (tom de professor altamente didático, entre 900 e 2400 caracteres). Consolide no campo "comentario", nesta ordem e com estes rótulos em negrito markdown: **Comentário do professor:** (por que a correta está certa, com referência ao trecho do texto-base/${isTexto ? "texto" : "documento"} e à pegadinha); **Análise das alternativas:** (CADA alternativa A–E comentada individualmente, uma por linha, no padrão "**A)** ...", explicando por que está correta ou incorreta — nunca escreva "as demais estão erradas"); **Dica de prova:** (resumo estratégico/alerta de pegadinha curto); **Base normativa:** (${isTexto ? "elemento do texto-base que fundamenta a resposta" : "subitem do Manual — ex.: 6.1, 6.5 — que fundamenta a resposta"}). Proibido comentário raso ou que apenas repita o gabarito.
+- Distribua o gabarito entre ${faixaGab} — não concentre na mesma letra.
+- O comentário é a parte MAIS importante e deve funcionar como uma AULA CURTA (tom de professor altamente didático, entre 900 e 2400 caracteres). Consolide no campo "comentario", nesta ordem e com estes rótulos em negrito markdown: **Comentário do professor:** (por que a correta está certa, com referência ao trecho do texto-base/${isTexto ? "texto" : "documento"} e à pegadinha); **Análise das alternativas:** (CADA alternativa ${LETRAS_ALT[0]}–${LETRAS_ALT[LETRAS_ALT.length - 1]} comentada individualmente, uma por linha, no padrão "**A)** ...", explicando por que está correta ou incorreta — nunca escreva "as demais estão erradas"); **Dica de prova:** (resumo estratégico/alerta de pegadinha curto); **Base normativa:** (${isManual ? "item/seção do manual oficial que fundamenta a resposta" : isTexto ? "elemento do texto-base que fundamenta a resposta" : "subitem do Manual — ex.: 6.1, 6.5 — que fundamenta a resposta"}). Proibido comentário raso ou que apenas repita o gabarito.
 
 REGRAS DE SAÍDA — responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown e sem texto fora do objeto, no formato {"questions":[...]}.
-Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" ("Fácil|Médio|Difícil"), "enunciado"${isTexto ? " (inclui o TEXTO-BASE + linha em branco + a pergunta)" : ""}, "alt_a".."alt_e" (sem prefixo de letra), "gabarito" (0=A,1=B,2=C,3=D,4=E), "comentario", "cognitive_skill", "trap_type".
-{"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Médio","enunciado":"...","alt_a":"...","alt_b":"...","alt_c":"...","alt_d":"...","alt_e":"...","gabarito":0,"comentario":"...","cognitive_skill":"interpretação","trap_type":"..."}]}
+Campos obrigatórios por questão: "disciplina", "assunto", "dificuldade" ("Fácil|Médio|Difícil"), "enunciado"${isTexto ? " (inclui o TEXTO-BASE + linha em branco + a pergunta)" : ""}, ${altFields} (sem prefixo de letra), "gabarito" (${LETRAS_ALT.map((l, i) => `${i}=${l}`).join(",")}), "comentario", "cognitive_skill", "trap_type".
+{"questions":[{"disciplina":"${disc.disciplina}","assunto":"...","dificuldade":"Médio","enunciado":"...",${LETRAS_ALT.map((l) => `"alt_${l.toLowerCase()}":"..."`).join(",")},"gabarito":0,"comentario":"...","cognitive_skill":"interpretação","trap_type":"..."}]}
 
 Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {"questions":[],"erro":"NAO_FOI_POSSIVEL_GERAR"}.`;
 
@@ -1074,14 +1129,16 @@ Se NÃO for possível gerar nenhuma questão válida dentro do escopo, retorne {
       dificuldade: normalizeWhitespace(raw.dificuldade) || "Médio",
       enunciado: normalizeWhitespace(raw.enunciado),
       comentario: normalizeWhitespace(raw.comentario),
-      gabarito: Math.min(Math.max(Number(raw.gabarito) || 0, 0), 4),
+      gabarito: Math.min(Math.max(Number(raw.gabarito) || 0, 0), numAlts - 1),
       cognitive_skill: normalizeWhitespace(raw.cognitive_skill) || null,
       trap_type: normalizeWhitespace(raw.trap_type) || null,
       artigo_principal: null,
     };
     for (const k of ALT_KEYS) q[k] = stripAlternativePrefix(raw[k]);
+    // Provas de 4 alternativas (CBMTO): alt_e fica vazia e não é exibida ao aluno.
+    if (numAlts === 4) q["alt_e"] = "";
 
-    const alts = ALT_KEYS.map(k => q[k] as string);
+    const alts = ALT_KEYS.slice(0, numAlts).map(k => q[k] as string);
     const minEnun = isTexto ? 120 : 25; // texto-base exige enunciado mais longo
     // FLUXO OFICIAL: só descartamos por integridade estrutural (questão inutilizável).
     // Qualidade/duplicidade fica para a auditoria manual na lista de pendentes.
@@ -1162,28 +1219,40 @@ serve(async (req: Request) => {
       });
     }
 
-    const { disciplina_index, batch_size, curso_id } = await req.json();
+    const { disciplina_index, batch_size, curso_id, curso_slug, disciplina_nome } = await req.json();
     const cursoId: string | null = curso_id ?? null;
+    const cursoSlug: string = String(curso_slug || "pmto").toLowerCase();
+    const DISCIPLINES_ATIVAS: any[] = getDisciplinesByCurso(cursoSlug);
     const requestedBatchSize = Number(batch_size) || 2;
     // Mínimo 2 questões por lote (resiliência: se uma falha, sobra outra). Cap em 2 pelo budget de tempo.
     const batchSize = Math.max(2, Math.min(2, requestedBatchSize));
     const discIndex = disciplina_index ?? 0;
 
-    if (discIndex < 0 || discIndex >= DISCIPLINES.length) {
+    const byName = disciplina_nome
+      ? DISCIPLINES_ATIVAS.findIndex((d: any) => d.disciplina === disciplina_nome)
+      : -1;
+    const resolvedIndex = byName >= 0 ? byName : discIndex;
+
+    if (resolvedIndex < 0 || resolvedIndex >= DISCIPLINES_ATIVAS.length) {
       return new Response(JSON.stringify({
         status: "erro", mensagem: "Índice de disciplina inválido.",
-        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "INVALID_INDEX", descricao: `Índice ${discIndex} fora do range 0-${DISCIPLINES.length - 1}` }] },
+        detalhes: { total_processado: 0, questoes_criadas: 0, questoes_corrigidas: 0, questoes_revisao_manual: [], erros_encontrados: [{ codigo: "INVALID_INDEX", descricao: `Índice ${resolvedIndex} fora do range 0-${DISCIPLINES_ATIVAS.length - 1}` }] },
         timestamp,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const disc = DISCIPLINES[discIndex];
+    const disc: any = DISCIPLINES_ATIVAS[resolvedIndex];
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Fetch source text. Para tipo "lei"/"conceitual" é fonte obrigatória.
     // Para tipo "texto" (Língua Portuguesa) a IA cria o próprio texto-base → fonte opcional.
-    const { data: legalTextRow } = await supabase
-      .from("discipline_legal_texts").select("content").eq("disciplina", disc.disciplina).single();
+    let legalTextQuery = supabase
+      .from("discipline_legal_texts").select("content").eq("disciplina", disc.disciplina);
+    legalTextQuery = cursoId
+      ? legalTextQuery.or(`curso_id.eq.${cursoId}${cursoSlug === "pmto" ? ",curso_id.is.null" : ""}`)
+      : legalTextQuery.is("curso_id", null);
+    const { data: legalTextRows } = await legalTextQuery.limit(1);
+    const legalTextRow = legalTextRows?.[0] ?? null;
 
     const sourceContent = legalTextRow?.content ? String(legalTextRow.content).trim() : "";
     const requiresSource = disc.tipo !== "texto";
@@ -1674,7 +1743,7 @@ FIDELIDADE EXCLUSIVA AO TEXTO LEGAL DO BANCO (REFORÇO):
 - Toda alternativa correta deve ter um trecho LITERAL rastreável no texto fornecido. Toda alternativa incorreta deve contradizer um trecho LITERAL identificável no texto fornecido.
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
 
-DIRETRIZES ESPECÍFICAS DA DISCIPLINA (Edital nº 001/2026 — CHOA/2026 PMTO) — obrigatórias:
+DIRETRIZES ESPECÍFICAS DA DISCIPLINA (${isManual ? "Edital nº 1/2026/GABCOM — CHOA BM 2026 CBMTO" : "Edital nº 001/2026 — CHOA/2026 PMTO"}) — obrigatórias:
 ${disc.diretrizes}
 
 15. REGRAS DE SAÍDA — OBJETO JSON OBRIGATÓRIO (sem markdown, sem comentários, sem texto fora do objeto).
