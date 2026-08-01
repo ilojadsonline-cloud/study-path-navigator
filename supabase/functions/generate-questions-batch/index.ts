@@ -1162,7 +1162,8 @@ serve(async (req: Request) => {
       });
     }
 
-    const { disciplina_index, batch_size } = await req.json();
+    const { disciplina_index, batch_size, curso_id } = await req.json();
+    const cursoId: string | null = curso_id ?? null;
     const requestedBatchSize = Number(batch_size) || 2;
     // Mínimo 2 questões por lote (resiliência: se uma falha, sobra outra). Cap em 2 pelo budget de tempo.
     const batchSize = Math.max(2, Math.min(2, requestedBatchSize));
