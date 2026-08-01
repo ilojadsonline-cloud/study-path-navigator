@@ -18,6 +18,7 @@ type MapaRow = {
 };
 
 export function AdminMapasMentaisTab() {
+  const { cursoId, cursoAtivo } = useCurso();
   const [rows, setRows] = useState<MapaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [discId, setDiscId] = useState<string>(disciplinasSelecionaveis[0].id);
