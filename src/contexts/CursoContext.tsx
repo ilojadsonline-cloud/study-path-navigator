@@ -30,12 +30,15 @@ const DEFAULT_SLUG = "pmto";
 
 const CursoContext = createContext<CursoContextType>({
   cursos: [],
+  todosCursos: [],
   cursoAtivo: null,
   cursoId: null,
   setCursoSlug: () => {},
+  temAcesso: () => false,
   loading: true,
   refresh: async () => {},
 });
+
 
 export const useCurso = () => useContext(CursoContext);
 
