@@ -5,6 +5,7 @@ import { Brain, FileDown, ChevronDown, ChevronUp, BookMarked, Loader2, Inbox } f
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 import { disciplinasLite } from "@/lib/edital-structure";
 import { PopSigilosoNotice, PopSigilosoBadge } from "@/components/PopSigilosoNotice";
 import { toast } from "sonner";
@@ -25,19 +26,24 @@ export default function MapasMentais() {
   const [loading, setLoading] = useState(true);
   const [openingId, setOpeningId] = useState<string | null>(null);
 
+  const { cursoId } = useCurso();
+
   useEffect(() => {
     let alive = true;
     (async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("mapas_mentais")
         .select("id, disciplina_id, topico, nome_arquivo, storage_path");
+      const cf = cursoOrFilter(cursoId);
+      if (cf) q = q.or(cf);
+      const { data, error } = await q;
       if (!alive) return;
       if (error) toast.error("Erro ao carregar mapas mentais");
       setRows((data as MapaRow[]) || []);
       setLoading(false);
     })();
     return () => { alive = false; };
-  }, []);
+  }, [cursoId]);
 
   const mapsByDisc = useMemo(() => {
     const m = new Map<string, MapaRow[]>();
