@@ -105,7 +105,7 @@ export function VisualizadorCronograma({ cronograma: initial, onBack, onSaved, e
           <Button variant="outline" size="sm" onClick={() => setEditing(!editing)} className="flex-1 sm:flex-none">
             <Pencil className="w-4 h-4 mr-1" /> {editing ? "Concluir" : "Editar"}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => exportCronogramaPDF({ ...initial, atividades })} className="flex-1 sm:flex-none">
+          <Button variant="outline" size="sm" onClick={() => exportCronogramaPDF({ ...initial, atividades }, cursoSlug)} className="flex-1 sm:flex-none">
             <FileDown className="w-4 h-4 mr-1" /> Exportar PDF
           </Button>
           <Button size="sm" onClick={handleSave} disabled={saving} className="flex-1 sm:flex-none">
