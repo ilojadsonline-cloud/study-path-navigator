@@ -61,11 +61,49 @@ function normalizeEmail(value: unknown): string | null {
 
 function extractEmailFromExternalRef(ref: unknown): string | null {
   if (typeof ref !== "string") return null;
-  // formato: choa-paid-{timestamp}-{email}
+  // formatos: choa-paid-{ts}-{email} | choa-paid-{ts}-{planoSlug}::{email}
   const match = ref.match(/choa-(?:paid|sub)-\d+-(.+)$/i);
-  if (match) return normalizeEmail(match[1]);
+  if (match) {
+    const tail = match[1];
+    const withPlan = tail.split("::");
+    return normalizeEmail(withPlan.length > 1 ? withPlan[1] : tail);
+  }
   if (ref.includes("@")) return normalizeEmail(ref);
   return null;
+}
+
+function extractPlanoFromExternalRef(ref: unknown): string | null {
+  if (typeof ref !== "string") return null;
+  const match = ref.match(/choa-(?:paid|sub)-\d+-([^:]+)::/i);
+  return match ? match[1] : null;
+}
+
+// Concede acesso aos cursos vinculados ao plano pago
+async function grantCursoAccess(
+  admin: any, userId: string, planoSlug: string | null, expiresAtIso: string, origem: string,
+): Promise<void> {
+  try {
+    const slug = planoSlug || "pmto-trimestral";
+    const { data: plano } = await admin
+      .from("planos").select("slug, cursos_slugs").eq("slug", slug).maybeSingle();
+    const cursosSlugs: string[] = plano?.cursos_slugs?.length ? plano.cursos_slugs : ["pmto"];
+    const { data: cursos } = await admin
+      .from("cursos").select("id, slug").in("slug", cursosSlugs);
+    for (const c of cursos || []) {
+      await admin.from("acessos_curso").upsert({
+        user_id: userId,
+        curso_id: c.id,
+        plano_slug: slug,
+        origem,
+        starts_at: new Date().toISOString(),
+        expires_at: expiresAtIso,
+        ativo: true,
+      }, { onConflict: "user_id,curso_id" });
+    }
+    log("curso access granted", { userId, slug, cursos: (cursos || []).map((c: any) => c.slug) });
+  } catch (e) {
+    log("grantCursoAccess failed", { error: String(e) });
+  }
 }
 
 async function findUserByEmail(admin: any, email: string): Promise<any | null> {
@@ -272,13 +310,19 @@ serve(async (req) => {
         }
 
         const user = await findUserByEmail(admin, email);
-        const expiresAt = new Date(Date.now() + ACCESS_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
+        const planDays = Number(payment?.metadata?.days) > 0
+          ? Number(payment.metadata.days) : ACCESS_WINDOW_DAYS;
+        const expiresAt = new Date(Date.now() + planDays * 24 * 3600 * 1000).toISOString();
         const isAvulso = payment?.metadata?.payment_type === "avulso";
         const source = isAvulso ? "mercadopago_avulso" : "mercadopago";
         const typeLabel = isAvulso ? "pix_ou_boleto" : (paymentMethod || null);
 
         if (user) {
           await reactivateUser(admin, user, expiresAt, source, typeLabel);
+          const planoSlug = (payment?.metadata?.plano_slug as string | undefined)
+            || (payment?.metadata?.plan as string | undefined)
+            || extractPlanoFromExternalRef(payment?.external_reference);
+          await grantCursoAccess(admin, user.id, planoSlug ?? null, expiresAt, source);
           try {
             await admin.from("trial_usage").upsert(
               { email, user_id: user.id, provider: "mercadopago", converted_to_paid: true },
@@ -327,6 +371,10 @@ serve(async (req) => {
 
         if (user) {
           await reactivateUser(admin, user, expiresAt);
+          await grantCursoAccess(
+            admin, user.id, extractPlanoFromExternalRef(sub?.external_reference),
+            expiresAt, "mercadopago",
+          );
           try {
             await admin.from("trial_usage").upsert(
               { email, user_id: user.id, provider: "mercadopago", converted_to_paid: true },
