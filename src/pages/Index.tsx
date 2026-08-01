@@ -139,15 +139,16 @@ const Index = () => {
             transition={{ delay: 0.5 }}
             className="glass-card rounded-2xl p-8 glow-primary border-primary/20"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-bold mb-3 animate-pulse">
-              🔥 OFERTA POR TEMPO LIMITADO
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-3">
+              PLANOS DISPONÍVEIS
             </div>
             <h2 className="text-2xl font-black mb-2">
-              <span className="text-base font-normal text-muted-foreground line-through mr-2">R$ 129,90</span>
-              <span className="text-gradient-gold">R$ 99,99</span>
-              <span className="text-base font-normal text-muted-foreground ml-2">/ 90 dias</span>
+              <span className="text-gradient-gold">A partir de R$ 89,99</span>
+              <span className="text-base font-normal text-muted-foreground ml-2">/ mês</span>
             </h2>
-            <p className="text-sm text-muted-foreground mb-6">Acesso completo a toda a plataforma</p>
+            <p className="text-sm text-muted-foreground mb-2">CHOA PMTO mensal R$ 89,99 · anual R$ 1.000,00</p>
+            <p className="text-sm text-muted-foreground mb-6">CHOA CBMTO mensal R$ 299,99</p>
+
             <Link
               to="/assinatura"
               className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl gradient-gold text-gold-foreground font-bold text-sm hover:opacity-90 transition-opacity glow-gold"
