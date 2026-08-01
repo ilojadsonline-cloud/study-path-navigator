@@ -70,6 +70,11 @@ serve(async (req) => {
 
     // ── localizar simulado(s) ativo(s) ──
     const cursoId = (body.curso_id as string | undefined) ?? null;
+    const cursoSlug = ((body.curso_slug as string | undefined) ?? "").toLowerCase();
+    // Conteúdo legado (curso_id nulo) pertence apenas ao CHOA PMTO.
+    const cursoFilter = cursoId
+      ? (cursoSlug === "" || cursoSlug === "pmto" ? `curso_id.eq.${cursoId},curso_id.is.null` : `curso_id.eq.${cursoId}`)
+      : null;
 
     const loadSimuladosAtivos = async () => {
       const nowIso = new Date().toISOString();
@@ -80,7 +85,7 @@ serve(async (req) => {
         .lte("starts_at", nowIso)
         .gte("ends_at", nowIso)
         .order("starts_at", { ascending: false });
-      if (cursoId) query = query.or(`curso_id.eq.${cursoId},curso_id.is.null`);
+      if (cursoFilter) query = query.or(cursoFilter);
       const { data } = await query;
       return (data as any[]) || [];
     };
@@ -338,10 +343,12 @@ serve(async (req) => {
         .order("finished_at", { ascending: false });
       const ids = ((tents as any[]) || []).map((t) => t.simulado_id);
       if (ids.length === 0) return json({ historico: [] });
-      const { data: sims } = await admin
+      let simsQuery = admin
         .from("simulados_semanais")
         .select("id, titulo, descricao, starts_at, ends_at, total_questoes, revisao_liberada")
         .in("id", ids);
+      if (cursoFilter) simsQuery = simsQuery.or(cursoFilter);
+      const { data: sims } = await simsQuery;
       const sMap = new Map(((sims as any[]) || []).map((s) => [s.id, s]));
       const historico = ((tents as any[]) || [])
         .filter((t) => sMap.has(t.simulado_id))
