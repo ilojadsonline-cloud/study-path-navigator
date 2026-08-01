@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurso } from "@/contexts/CursoContext";
 import { CalendarClock, Clock, Trophy, ArrowRight, PlayCircle, CheckCircle2, Loader2 } from "lucide-react";
-import { PONTUACAO_TOTAL } from "@/lib/edital-distribuicao";
+import { getPontuacaoTotal } from "@/lib/edital-distribuicao";
 
 interface StatusData {
   simulado: any | null;
@@ -28,7 +28,8 @@ function fmtRestante(toIso: string) {
 
 export function SimuladoSemanalDestaque() {
   const navigate = useNavigate();
-  const { cursoId } = useCurso();
+  const { cursoId, cursoSlug } = useCurso();
+  const PONTUACAO_TOTAL = getPontuacaoTotal(cursoSlug);
   const [data, setData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
 

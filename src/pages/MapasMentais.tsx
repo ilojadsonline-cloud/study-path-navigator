@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
-import { disciplinasLite } from "@/lib/edital-structure";
+import { getDisciplinasLite } from "@/lib/edital-structure";
 import { PopSigilosoNotice, PopSigilosoBadge } from "@/components/PopSigilosoNotice";
 import { toast } from "sonner";
 
@@ -20,13 +20,13 @@ type MapaRow = {
 
 export default function MapasMentais() {
   const [params] = useSearchParams();
-  const initialDisc = params.get("disciplina") || disciplinasLite[0].id;
+  const { cursoId, cursoSlug } = useCurso();
+  const disciplinas = getDisciplinasLite(cursoSlug);
+  const initialDisc = params.get("disciplina") || disciplinas[0].id;
   const [openId, setOpenId] = useState<string>(initialDisc);
   const [rows, setRows] = useState<MapaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [openingId, setOpeningId] = useState<string | null>(null);
-
-  const { cursoId, cursoSlug } = useCurso();
 
   useEffect(() => {
     let alive = true;
@@ -90,7 +90,7 @@ export default function MapasMentais() {
           </div>
         ) : (
           <div className="space-y-3">
-            {disciplinasLite.map((d, i) => {
+            {disciplinas.map((d, i) => {
               const open = openId === d.id;
               return (
                 <motion.div
