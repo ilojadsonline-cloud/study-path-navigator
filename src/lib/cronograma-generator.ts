@@ -118,11 +118,15 @@ function getTimeDiffMinutes(start: string, end: string): number {
 
 const TIPOS_ATIVIDADE: TipoAtividade[] = ["videoaula", "lei", "questoes"];
 
-/** Distribuição padrão por curso: CBMTO ainda não tem videoaulas. */
+/**
+ * Distribuição padrão por curso.
+ * A base do estudo é lei seca/conteúdo do edital + resolução de questões;
+ * videoaula entra em proporção menor (zerada no CBMTO, que ainda não tem acervo).
+ */
 export function getDistribuicaoPadrao(cursoSlug?: string | null): Distribuicao {
   return (cursoSlug || "pmto").toLowerCase() === "cbmto"
     ? { videoaulas: 0, lei: 50, questoes: 50 }
-    : { videoaulas: 40, lei: 30, questoes: 30 };
+    : { videoaulas: 10, lei: 45, questoes: 45 };
 }
 
 /**
