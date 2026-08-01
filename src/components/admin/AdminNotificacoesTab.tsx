@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurso } from "@/contexts/CursoContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Trash2, Send, Users, User, Search, X } from "lucide-react";
+import { Loader2, Trash2, Send, Users, User, Search, X, Globe, GraduationCap } from "lucide-react";
 
 type ProfileLite = { user_id: string; nome: string | null; email: string | null };
 
 export function AdminNotificacoesTab() {
   const { user } = useAuth();
+  const { cursos } = useCurso();
   const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -21,12 +23,16 @@ export function AdminNotificacoesTab() {
 
   // Destinatário
   const [target, setTarget] = useState<"all" | "user">("all");
+  const [cursoAlvo, setCursoAlvo] = useState<string>("global"); // "global" | curso.id
   const [search, setSearch] = useState("");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<ProfileLite[]>([]);
   const [selectedUser, setSelectedUser] = useState<ProfileLite | null>(null);
 
+  const cursoNome = (id: string | null) => cursos.find((c) => c.id === id)?.sigla || "Curso";
+
   useEffect(() => { loadNotifications(); }, []);
+
 
   const loadNotifications = async () => {
     setLoading(true);
