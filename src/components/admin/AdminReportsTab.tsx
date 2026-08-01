@@ -43,12 +43,23 @@ export function AdminReportsTab() {
   const [aiLoading, setAiLoading] = useState<number | null>(null);
   const [applyingPatch, setApplyingPatch] = useState<number | null>(null);
 
-  useEffect(() => { loadReports(); }, []);
+  useEffect(() => { loadReports(); }, [cursoId, cursoSlug]);
 
   const loadReports = async () => {
     setLoading(true);
     const { data } = await supabase.from("question_reports" as any).select("*").order("created_at", { ascending: false }).limit(100);
-    const reports = (data as any[]) || [];
+    let reports = (data as any[]) || [];
+
+    // Mantém apenas reportes de questões do curso ativo
+    const filter = cursoOrFilter(cursoId, cursoSlug);
+    const questaoIds = [...new Set(reports.map((r: any) => r.questao_id))];
+    if (filter && questaoIds.length > 0) {
+      const q = supabase.from("questoes").select("id").in("id", questaoIds);
+      q.or(filter);
+      const { data: qs } = await q;
+      const allowed = new Set(((qs as any[]) || []).map((x) => x.id));
+      reports = reports.filter((r: any) => allowed.has(r.questao_id));
+    }
     setReports(reports);
 
     // Fetch reporter names
