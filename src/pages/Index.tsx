@@ -143,10 +143,10 @@ const Index = () => {
               PLANOS DISPONÍVEIS
             </div>
             <h2 className="text-2xl font-black mb-2">
-              <span className="text-gradient-gold">A partir de R$ 89,99</span>
+              <span className="text-gradient-gold">A partir de R$ 69,99</span>
               <span className="text-base font-normal text-muted-foreground ml-2">/ mês</span>
             </h2>
-            <p className="text-sm text-muted-foreground mb-2">CHOA PMTO mensal R$ 89,99 · anual R$ 1.000,00</p>
+            <p className="text-sm text-muted-foreground mb-2">CHOA PMTO mensal R$ 69,99 · anual R$ 749,99</p>
             <p className="text-sm text-muted-foreground mb-6">CHOA CBMTO mensal R$ 299,99</p>
 
             <Link
