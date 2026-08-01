@@ -1162,8 +1162,9 @@ function validateProofMatrix(matrix: unknown, legalText: string | null): ProofMa
 
 /** P1.4 — Constrói o prompt do modo REPAIR (rewriter exige proof_matrix literal). */
 function buildRepairPrompt(q: Questao, diagnosis: { issues: any[]; ai_summary: string } | null, legalText: string): string {
-  const alts = ["A","B","C","D","E"].map((l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
-  const correctaLetra = ["A","B","C","D","E"][q.gabarito] ?? "?";
+  const letras = altLettersOf(q);
+  const alts = letras.map((l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
+  const correctaLetra = letras[q.gabarito] ?? "?";
   const blocks = parseArticleBlocks(legalText);
   const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
   const relevantBlocks = cited.map((num) => blocks.find((b) => b.artNum === num)).filter(Boolean) as ArticleBlock[];
