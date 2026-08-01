@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Plus, Trash2, Save, Youtube, ArrowUp, ArrowDown, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { getYoutubeId } from "@/pages/BizuAula";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 
 type VideoRow = {
   id: string;
