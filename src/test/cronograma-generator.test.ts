@@ -37,14 +37,36 @@ describe("cronograma CBMTO", () => {
 });
 
 describe("cronograma PMTO", () => {
-  it("mantém 40/30/30", () => {
-    expect(getDistribuicaoPadrao("pmto")).toEqual({ videoaulas: 40, lei: 30, questoes: 30 });
+  it("prioriza lei seca + questões (10/45/45)", () => {
+    expect(getDistribuicaoPadrao("pmto")).toEqual({ videoaulas: 10, lei: 45, questoes: 45 });
     const cron = gerarCronogramaPadrao("pmto");
-    expect(cron.distribuicao).toEqual({ videoaulas: 40, lei: 30, questoes: 30 });
+    expect(cron.distribuicao).toEqual({ videoaulas: 10, lei: 45, questoes: 45 });
     const resumo = calcularResumo(cron.atividades, "pmto");
     expect(resumo.totais.total).toBe(20 * 60);
-    expect(resumo.totais.videoaula).toBe(8 * 60);
-    expect(resumo.totais.lei).toBe(6 * 60);
-    expect(resumo.totais.questoes).toBe(6 * 60);
+    expect(resumo.totais.videoaula).toBe(2 * 60);
+    expect(resumo.totais.lei).toBe(9 * 60);
+    expect(resumo.totais.questoes).toBe(9 * 60);
+  });
+
+  it("cobre todas as disciplinas em lei e questões", () => {
+    const cron = gerarCronogramaPadrao("pmto");
+    const lei = new Set(cron.atividades.filter(a => a.tipo_atividade === "lei").map(a => a.disciplina));
+    const q = new Set(cron.atividades.filter(a => a.tipo_atividade === "questoes").map(a => a.disciplina));
+    getDisciplinasCronograma("pmto").forEach(d => {
+      expect(lei.has(d.nome)).toBe(true);
+      expect(q.has(d.nome)).toBe(true);
+    });
+  });
+});
+
+describe("cobertura CBMTO por tipo", () => {
+  it("cada disciplina tem lei e questões", () => {
+    const cron = gerarCronogramaPadrao("cbmto");
+    const lei = new Set(cron.atividades.filter(a => a.tipo_atividade === "lei").map(a => a.disciplina));
+    const q = new Set(cron.atividades.filter(a => a.tipo_atividade === "questoes").map(a => a.disciplina));
+    getDisciplinasCronograma("cbmto").forEach(d => {
+      expect(lei.has(d.nome)).toBe(true);
+      expect(q.has(d.nome)).toBe(true);
+    });
   });
 });
