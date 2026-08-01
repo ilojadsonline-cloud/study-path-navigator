@@ -32,17 +32,21 @@ export function AdminBizuAulaTab() {
 
   const fetchRows = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("bizuaulas_videos")
       .select("*")
       .order("disciplina_id", { ascending: true })
       .order("ordem", { ascending: true });
+    const filter = cursoOrFilter(cursoId);
+    if (filter) query = query.or(filter);
+    const { data, error } = await query;
     if (error) toast.error("Erro ao carregar vídeos");
     setRows((data as VideoRow[]) || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchRows(); }, []);
+  useEffect(() => { fetchRows(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [cursoId]);
+
 
   const byDisc = useMemo(() => {
     const m = new Map<string, VideoRow[]>();
