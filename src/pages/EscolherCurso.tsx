@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, Shield, ArrowRight, Lock, CheckCircle2, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurso, type Curso } from "@/contexts/CursoContext";
+import { cn } from "@/lib/utils";
 
 const EscolherCurso = () => {
   const navigate = useNavigate();
@@ -57,6 +58,13 @@ const EscolherCurso = () => {
         <div className="grid gap-4 md:grid-cols-2">
           {todosCursos.map((curso, i) => {
             const liberado = temAcesso(curso);
+            const isCbmto = curso.slug === "cbmto";
+            const badgeClasses = isCbmto
+              ? "bg-destructive-foreground text-destructive"
+              : curso.cor === "gold"
+              ? "bg-gold text-gold-foreground"
+              : "bg-primary text-primary-foreground";
+
             return (
               <motion.button
                 key={curso.id}
@@ -64,32 +72,34 @@ const EscolherCurso = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 * i }}
                 onClick={() => handleSelect(curso)}
-                className="glass-card rounded-2xl p-6 text-left hover:border-primary/40 transition-all group"
+                className={cn(
+                  "rounded-2xl p-6 text-left transition-all group",
+                  isCbmto
+                    ? "bg-destructive text-destructive-foreground border border-destructive-foreground/20 shadow-lg shadow-destructive/30 hover:shadow-destructive/50 hover:brightness-110"
+                    : "glass-card hover:border-primary/40"
+                )}
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm text-primary-foreground"
-                    style={{ backgroundColor: curso.cor }}
-                  >
+                  <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm", badgeClasses)}>
                     {curso.sigla}
                   </div>
                   {liberado ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+                    <span className={cn("inline-flex items-center gap-1 text-xs font-semibold", isCbmto ? "text-destructive-foreground" : "text-success")}>
                       <CheckCircle2 className="w-3.5 h-3.5" /> Liberado
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                    <span className={cn("inline-flex items-center gap-1 text-xs font-semibold", isCbmto ? "text-destructive-foreground/80" : "text-muted-foreground")}>
                       <Lock className="w-3.5 h-3.5" /> Assinar
                     </span>
                   )}
                 </div>
-                <h2 className="text-lg font-bold text-foreground">{curso.nome}</h2>
-                <p className="text-xs text-muted-foreground mt-1">
+                <h2 className={cn("text-lg font-bold", isCbmto ? "text-destructive-foreground" : "text-foreground")}>{curso.nome}</h2>
+                <p className={cn("text-xs mt-1", isCbmto ? "text-destructive-foreground/80" : "text-muted-foreground")}>
                   {liberado
                     ? "Sua assinatura está ativa. Entrar na plataforma."
                     : "Você ainda não tem assinatura ativa para este curso."}
                 </p>
-                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary group-hover:gap-2.5 transition-all">
+                <span className={cn("mt-4 inline-flex items-center gap-1.5 text-sm font-semibold group-hover:gap-2.5 transition-all", isCbmto ? "text-destructive-foreground" : "text-primary")}>
                   {liberado ? "Acessar curso" : "Ver planos"} <ArrowRight className="w-4 h-4" />
                 </span>
               </motion.button>
