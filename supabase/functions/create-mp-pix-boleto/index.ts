@@ -9,8 +9,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const DEFAULT_PLAN = "pmto-trimestral";
-const FALLBACK_AMOUNT = 99.99;
+const DEFAULT_PLAN = "pmto-mensal";
+const FALLBACK_AMOUNT = 89.99;
 const FALLBACK_DAYS = 90;
 const log = (s: string, d?: any) => console.log(`[MP-PIX-BOLETO] ${s}${d ? " - " + JSON.stringify(d) : ""}`);
 

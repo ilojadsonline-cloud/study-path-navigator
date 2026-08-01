@@ -11,8 +11,8 @@ const logStep = (step: string, details?: any) => {
   console.log(`[MP-CHECKOUT] ${step}${detailsStr}`);
 };
 
-const DEFAULT_PLAN = "pmto-trimestral";
-const FALLBACK_AMOUNT = 99.99;
+const DEFAULT_PLAN = "pmto-mensal";
+const FALLBACK_AMOUNT = 89.99;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
