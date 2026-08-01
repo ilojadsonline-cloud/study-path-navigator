@@ -8,6 +8,7 @@ import { Loader2, CheckCircle, AlertCircle, Zap, AlertTriangle, StopCircle, Rota
 import { useAuth } from "@/contexts/AuthContext";
 import { ManualQuestaoForm } from "@/components/admin/ManualQuestaoForm";
 import { MarkdownImportCard } from "@/components/admin/MarkdownImportCard";
+import { useCurso } from "@/contexts/CursoContext";
 
 const DISCIPLINES = [
   "Lei nº 2.578/2012", "LC nº 128/2021", "Lei nº 2.575/2012",
