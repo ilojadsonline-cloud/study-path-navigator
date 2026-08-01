@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      acessos_curso: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          curso_id: string
+          expires_at: string | null
+          id: string
+          observacao: string | null
+          origem: string
+          plano_slug: string | null
+          starts_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          curso_id: string
+          expires_at?: string | null
+          id?: string
+          observacao?: string | null
+          origem?: string
+          plano_slug?: string | null
+          starts_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          curso_id?: string
+          expires_at?: string | null
+          id?: string
+          observacao?: string | null
+          origem?: string
+          plano_slug?: string | null
+          starts_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acessos_curso_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_provider_attempts: {
         Row: {
           attempt_index: number
@@ -119,6 +169,7 @@ export type Database = {
       bizuaulas_videos: {
         Row: {
           created_at: string
+          curso_id: string | null
           disciplina_id: string
           id: string
           ordem: number
@@ -128,6 +179,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          curso_id?: string | null
           disciplina_id: string
           id?: string
           ordem?: number
@@ -137,6 +189,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          curso_id?: string | null
           disciplina_id?: string
           id?: string
           ordem?: number
@@ -144,13 +197,22 @@ export type Database = {
           updated_at?: string
           url_youtube?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bizuaulas_videos_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cronogramas: {
         Row: {
           atividades: Json
           ativo: boolean
           created_at: string
+          curso_id: string | null
           dias_semana: string[]
           distribuicao: Json
           horario_fim: string
@@ -166,6 +228,7 @@ export type Database = {
           atividades?: Json
           ativo?: boolean
           created_at?: string
+          curso_id?: string | null
           dias_semana?: string[]
           distribuicao?: Json
           horario_fim?: string
@@ -181,6 +244,7 @@ export type Database = {
           atividades?: Json
           ativo?: boolean
           created_at?: string
+          curso_id?: string | null
           dias_semana?: string[]
           distribuicao?: Json
           horario_fim?: string
@@ -192,12 +256,63 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "cronogramas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cursos: {
+        Row: {
+          ativo: boolean
+          cor: string
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          ordem: number
+          sigla: string
+          slug: string
+          updated_at: string
+          visivel: boolean
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          ordem?: number
+          sigla: string
+          slug: string
+          updated_at?: string
+          visivel?: boolean
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          sigla?: string
+          slug?: string
+          updated_at?: string
+          visivel?: boolean
+        }
         Relationships: []
       }
       discipline_legal_texts: {
         Row: {
           content: string
           created_at: string
+          curso_id: string | null
           disciplina: string
           id: number
           lei_nome: string
@@ -206,6 +321,7 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string
+          curso_id?: string | null
           disciplina: string
           id?: never
           lei_nome: string
@@ -214,12 +330,21 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
+          curso_id?: string | null
           disciplina?: string
           id?: never
           lei_nome?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "discipline_legal_texts_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       generation_jobs: {
         Row: {
@@ -269,6 +394,7 @@ export type Database = {
       mapas_mentais: {
         Row: {
           created_at: string
+          curso_id: string | null
           disciplina_id: string
           id: string
           nome_arquivo: string
@@ -278,6 +404,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          curso_id?: string | null
           disciplina_id: string
           id?: string
           nome_arquivo: string
@@ -287,6 +414,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          curso_id?: string | null
           disciplina_id?: string
           id?: string
           nome_arquivo?: string
@@ -294,7 +422,15 @@ export type Database = {
           topico?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mapas_mentais_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_reads: {
         Row: {
@@ -394,6 +530,54 @@ export type Database = {
           raw_payload?: Json | null
           status?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      planos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          cursos_slugs: string[]
+          descricao: string | null
+          destaque: boolean
+          dias_acesso: number
+          id: string
+          nome: string
+          ordem: number
+          preco_centavos: number
+          recorrente: boolean
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          cursos_slugs?: string[]
+          descricao?: string | null
+          destaque?: boolean
+          dias_acesso?: number
+          id?: string
+          nome: string
+          ordem?: number
+          preco_centavos: number
+          recorrente?: boolean
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          cursos_slugs?: string[]
+          descricao?: string | null
+          destaque?: boolean
+          dias_acesso?: number
+          id?: string
+          nome?: string
+          ordem?: number
+          preco_centavos?: number
+          recorrente?: boolean
+          slug?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -679,6 +863,7 @@ export type Database = {
           cognitive_skill: string | null
           comentario: string
           created_at: string
+          curso_id: string | null
           difficulty_level: string | null
           dificuldade: string
           disciplina: string
@@ -708,6 +893,7 @@ export type Database = {
           cognitive_skill?: string | null
           comentario: string
           created_at?: string
+          curso_id?: string | null
           difficulty_level?: string | null
           dificuldade?: string
           disciplina: string
@@ -737,6 +923,7 @@ export type Database = {
           cognitive_skill?: string | null
           comentario?: string
           created_at?: string
+          curso_id?: string | null
           difficulty_level?: string | null
           dificuldade?: string
           disciplina?: string
@@ -749,7 +936,15 @@ export type Database = {
           prova?: string | null
           trap_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "questoes_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       respostas_usuario: {
         Row: {
@@ -789,6 +984,7 @@ export type Database = {
       simulado_progress: {
         Row: {
           created_at: string
+          curso_id: string | null
           disciplina: string
           id: number
           questao_ids: number[]
@@ -799,6 +995,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          curso_id?: string | null
           disciplina: string
           id?: never
           questao_ids: number[]
@@ -809,6 +1006,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          curso_id?: string | null
           disciplina?: string
           id?: never
           questao_ids?: number[]
@@ -817,7 +1015,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "simulado_progress_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       simulado_semanal_questoes: {
         Row: {
@@ -992,6 +1198,7 @@ export type Database = {
         Row: {
           acertos: number
           created_at: string
+          curso_id: string | null
           disciplina: string
           finalizado: boolean
           id: number
@@ -1002,6 +1209,7 @@ export type Database = {
         Insert: {
           acertos?: number
           created_at?: string
+          curso_id?: string | null
           disciplina: string
           finalizado?: boolean
           id?: never
@@ -1012,6 +1220,7 @@ export type Database = {
         Update: {
           acertos?: number
           created_at?: string
+          curso_id?: string | null
           disciplina?: string
           finalizado?: boolean
           id?: never
@@ -1019,13 +1228,22 @@ export type Database = {
           total?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "simulados_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       simulados_semanais: {
         Row: {
           ativo: boolean
           created_at: string
           created_by: string | null
+          curso_id: string | null
           descricao: string | null
           duracao_minutos: number
           ends_at: string
@@ -1040,6 +1258,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           created_by?: string | null
+          curso_id?: string | null
           descricao?: string | null
           duracao_minutos?: number
           ends_at: string
@@ -1054,6 +1273,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           created_by?: string | null
+          curso_id?: string | null
           descricao?: string | null
           duracao_minutos?: number
           ends_at?: string
@@ -1064,11 +1284,20 @@ export type Database = {
           total_questoes?: number
           valor_questao?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "simulados_semanais_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       study_sessions: {
         Row: {
           created_at: string
+          curso_id: string | null
           duration_seconds: number
           id: number
           started_at: string
@@ -1076,6 +1305,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          curso_id?: string | null
           duration_seconds?: number
           id?: never
           started_at?: string
@@ -1083,12 +1313,21 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          curso_id?: string | null
           duration_seconds?: number
           id?: never
           started_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "study_sessions_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trial_usage: {
         Row: {
@@ -1153,6 +1392,7 @@ export type Database = {
     }
     Functions: {
       check_cpf_exists: { Args: { p_cpf: string }; Returns: boolean }
+      curso_pmto_id: { Args: never; Returns: string }
       dedup_disciplina_preview: {
         Args: {
           p_disciplina: string
@@ -1244,6 +1484,10 @@ export type Database = {
           total_respondidas: number
           user_id: string
         }[]
+      }
+      has_curso_access: {
+        Args: { _curso_slug: string; _user_id?: string }
+        Returns: boolean
       }
       has_pop_access: { Args: never; Returns: boolean }
       has_role: {
