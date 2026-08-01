@@ -1348,10 +1348,11 @@ async function repairQuestion(
       if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
     }
     if (!Object.keys(patch).length) patch = null;
+    patch = enforceAltStructure(questao, patch);
   }
 
   // 7) VALIDA proof_matrix (P1.5)
-  const validation = validateProofMatrix(parsed.proof_matrix, legalText);
+  const validation = validateProofMatrix(parsed.proof_matrix, legalText, altKeysOf(questao).length);
 
   // 8) Checagem cruzada: gabarito (efetivo após patch) bate com o índice cuja proof_matrix.verdict é true?
   const effectiveGabarito = typeof patch?.gabarito === "number" ? patch.gabarito : questao.gabarito;
