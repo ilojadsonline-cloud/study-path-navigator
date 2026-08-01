@@ -129,6 +129,39 @@ export function AdminNotificacoesTab() {
             </div>
           </div>
 
+          {/* Escopo por curso */}
+          <div>
+            <label className="text-sm font-medium text-foreground">Escopo do curso</label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              <Button
+                type="button"
+                variant={cursoAlvo === "global" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCursoAlvo("global")}
+                className="gap-1"
+              >
+                <Globe className="w-4 h-4" /> Global (todos os cursos)
+              </Button>
+              {cursos.map((c) => (
+                <Button
+                  key={c.id}
+                  type="button"
+                  variant={cursoAlvo === c.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCursoAlvo(c.id)}
+                  className="gap-1"
+                >
+                  <GraduationCap className="w-4 h-4" /> {c.sigla}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Notificações de curso aparecem apenas para quem estiver com aquele curso ativo.
+            </p>
+          </div>
+
+
+
           {target === "user" && (
             <div className="space-y-2 rounded-lg border border-border/50 bg-secondary/20 p-3">
               {selectedUser ? (
