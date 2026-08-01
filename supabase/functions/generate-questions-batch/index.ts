@@ -924,11 +924,12 @@ async function generateNonLegalBatch(ctx: {
   questoesRevisaoManual: Array<{ id?: string; motivo: string }>;
   errosEncontrados: Array<{ codigo: string; descricao: string }>;
   useLovable: boolean;
+  cursoId?: string | null;
 }): Promise<Response> {
   const {
     supabase, disc, sourceContent, batchSize,
     existingFingerprints, existingSemanticFPs, existingForSimilarity,
-    assuntoCoverage, openingsToAvoid, timestamp, questoesRevisaoManual, errosEncontrados, useLovable,
+    assuntoCoverage, openingsToAvoid, timestamp, questoesRevisaoManual, errosEncontrados, useLovable, cursoId,
   } = ctx;
 
   const isTexto = disc.tipo === "texto"; // Língua Portuguesa
