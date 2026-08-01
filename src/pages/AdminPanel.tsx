@@ -100,7 +100,7 @@ const AdminPanel = () => {
           <TabsContent value="mapas" className="mt-6" forceMount={visited.has("mapas") ? true : undefined} hidden={activeTab !== "mapas"}>{renderTab("mapas", AdminMapasMentaisTab)}</TabsContent>
           <TabsContent value="bizuaula" className="mt-6" forceMount={visited.has("bizuaula") ? true : undefined} hidden={activeTab !== "bizuaula"}>{renderTab("bizuaula", AdminBizuAulaTab)}</TabsContent>
           <TabsContent value="edital" className="mt-6" forceMount={visited.has("edital") ? true : undefined} hidden={activeTab !== "edital"}>{renderTab("edital", AdminEditalTab)}</TabsContent>
-          <TabsContent value="pop" className="mt-6" forceMount={visited.has("pop") ? true : undefined} hidden={activeTab !== "pop"}>{renderTab("pop", AdminPopAccessTab)}</TabsContent>
+          {isPmto && <TabsContent value="pop" className="mt-6" forceMount={visited.has("pop") ? true : undefined} hidden={activeTab !== "pop"}>{renderTab("pop", AdminPopAccessTab)}</TabsContent>}
         </Tabs>
       </div>
     </AppLayout>
