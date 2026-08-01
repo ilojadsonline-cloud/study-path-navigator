@@ -705,7 +705,8 @@ const CBMTO_DIRETRIZES_PADRAO =
   "critérios de decisão e identificação de conduta conforme/desconforme ao manual.";
 
 const DISCIPLINES_CBMTO = [
-  { disciplina: "Direito Penal Militar e Processual Penal Militar", assuntos: ["Crimes militares em espécie", "Aplicação da lei penal militar", "Inquérito Policial Militar", "Prisão em flagrante e providências"] },
+  { disciplina: "CPM — Código Penal Militar", assuntos: ["Aplicação da lei penal militar", "Do crime e da culpabilidade", "Crimes contra a autoridade e disciplina militar", "Crimes contra o serviço e o dever militar", "Crimes contra a administração militar"] },
+  { disciplina: "CPPM — Código de Processo Penal Militar", assuntos: ["Aplicação da lei processual penal militar", "Polícia Judiciária Militar", "Inquérito Policial Militar", "Prisão em flagrante e providências", "Processos de deserção"] },
   { disciplina: "Redação Oficial", assuntos: ["Atos de correspondência", "Atos normativos", "Atos ordinatórios", "Atos enunciativos", "Atos comprobatórios"] },
   { disciplina: "Combate a Incêndio Urbano", assuntos: ["Teoria do fogo", "Agentes extintores", "Técnicas e táticas de combate", "Ventilação tática", "Equipamentos de proteção respiratória"] },
   { disciplina: "NPCE", assuntos: ["Exigências de segurança contra incêndio", "Saídas de emergência", "Sistemas preventivos", "Análise de projetos", "Vistorias"] },
@@ -714,15 +715,23 @@ const DISCIPLINES_CBMTO = [
   { disciplina: "Salvamento em Altura", assuntos: ["Equipamentos e EPIs", "Nós e ancoragens", "Sistemas de descida e içamento", "Segurança operacional"] },
   { disciplina: "Salvamento Aquático", assuntos: ["Técnicas de abordagem", "Equipamentos de flutuação", "Salvamento em enchentes", "Segurança do socorrista"] },
   { disciplina: "Salvamento Terrestre", assuntos: ["Desencarceramento veicular", "Estabilização de veículos", "Ferramentas de salvamento", "Espaços confinados"] },
-  { disciplina: "Legislação Específica", assuntos: ["Lei de organização do CBMTO", "Estatuto dos militares", "Regulamento disciplinar", "Promoções de praças"] },
-].map((d) => ({
-  disciplina: d.disciplina,
-  leiNome: `Texto oficial de "${d.disciplina}" (CHOA BM 2026 — Edital nº 1/2026/GABCOM)`,
-  tipo: "manual" as const,
-  assuntos: d.assuntos,
-  diretrizes: CBMTO_DIRETRIZES_PADRAO,
-  alternativas: 4 as const,
-}));
+  { disciplina: "Lei nº 2.578/2012 — Estatuto dos Militares do TO", assuntos: ["Ingresso e situações do militar", "Hierarquia e disciplina", "Deveres e vedações", "Direitos, remuneração e prerrogativas"] },
+  { disciplina: "LC nº 131/2021 — Organização Básica do CBMTO", assuntos: ["Competências e missão institucional", "Órgãos de direção, apoio e execução", "Unidades operacionais", "Quadros e efetivo"] },
+  { disciplina: "Lei nº 2.665/2012 — Promoções no CBMTO", assuntos: ["Critérios e requisitos de promoção", "Quadros de acesso e interstícios", "Modalidades de promoção", "Ingresso no QOA e CHOA"] },
+  { disciplina: "Lei nº 3.798/2021 — Segurança Contra Incêndio", assuntos: ["Disposições iniciais e definições", "Competência do CBMTO", "Projetos técnicos e vistorias", "Fiscalização e sanções administrativas"] },
+].map((d) => {
+  const isLei = /^(CPM|CPPM|Lei|LC)\b/.test(d.disciplina);
+  return {
+    disciplina: d.disciplina,
+    leiNome: isLei
+      ? `${d.disciplina} (texto legal integral — CHOA BM 2026, Edital nº 1/2026/GABCOM)`
+      : `Texto oficial de "${d.disciplina}" (CHOA BM 2026 — Edital nº 1/2026/GABCOM)`,
+    tipo: (isLei ? "lei" : "manual") as "lei" | "manual",
+    assuntos: d.assuntos,
+    diretrizes: CBMTO_DIRETRIZES_PADRAO,
+    alternativas: 4 as const,
+  };
+});
 
 function getDisciplinesByCurso(cursoSlug?: string | null) {
   return (cursoSlug || "pmto").toLowerCase() === "cbmto" ? DISCIPLINES_CBMTO : DISCIPLINES;
