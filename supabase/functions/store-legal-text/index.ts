@@ -60,13 +60,19 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // Delete old version completely before inserting new one (escopado no curso)
+    // Remove a versão anterior APENAS do mesmo curso (não afeta outros cursos)
     let del = supabase
       .from("discipline_legal_texts")
       .delete()
       .eq("disciplina", disciplina);
-    del = curso_id ? del.or(`curso_id.eq.${curso_id},curso_id.is.null`) : del.is("curso_id", null);
-    await del;
+    del = curso_id ? del.eq("curso_id", curso_id) : del.is("curso_id", null);
+    const { error: delError } = await del;
+    if (delError) {
+      return new Response(
+        JSON.stringify({ error: `Falha ao remover versão anterior: ${delError.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const { data, error } = await supabase
       .from("discipline_legal_texts")
