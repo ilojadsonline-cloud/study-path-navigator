@@ -15,7 +15,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-signature, x-request-id",
 };
 
-const ACCESS_WINDOW_DAYS = 90;
+const ACCESS_WINDOW_DAYS = 30;
 const PLAN_AMOUNT = 99.99;
 
 const log = (step: string, details?: any) => {
@@ -83,7 +83,7 @@ async function grantCursoAccess(
   admin: any, userId: string, planoSlug: string | null, expiresAtIso: string, origem: string,
 ): Promise<void> {
   try {
-    const slug = planoSlug || "pmto-trimestral";
+    const slug = planoSlug || "pmto-mensal";
     const { data: plano } = await admin
       .from("planos").select("slug, cursos_slugs").eq("slug", slug).maybeSingle();
     const cursosSlugs: string[] = plano?.cursos_slugs?.length ? plano.cursos_slugs : ["pmto"];

@@ -9,9 +9,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const DEFAULT_PLAN = "pmto-trimestral";
-const FALLBACK_AMOUNT = 99.99;
-const FALLBACK_DAYS = 90;
+const DEFAULT_PLAN = "pmto-mensal";
+const FALLBACK_AMOUNT = 89.99;
+const FALLBACK_DAYS = 30;
 const log = (s: string, d?: any) => console.log(`[MP-PIX-BOLETO] ${s}${d ? " - " + JSON.stringify(d) : ""}`);
 
 serve(async (req) => {
@@ -53,7 +53,7 @@ serve(async (req) => {
 
     const amount = plano ? Number(plano.preco_centavos) / 100 : FALLBACK_AMOUNT;
     const days = plano ? Number(plano.dias_acesso) : FALLBACK_DAYS;
-    const title = plano ? `Método CHOA — ${plano.nome}` : "Método CHOA — Acesso Trimestral (90 dias)";
+    const title = plano ? `Método CHOA — ${plano.nome}` : "Método CHOA — Acesso Mensal (30 dias)";
 
     const origin = req.headers.get("origin") || "https://www.metodochoa.com.br";
     const externalReference = `choa-paid-${Date.now()}-${planoSlug}::${email}`;

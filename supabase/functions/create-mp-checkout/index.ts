@@ -11,8 +11,8 @@ const logStep = (step: string, details?: any) => {
   console.log(`[MP-CHECKOUT] ${step}${detailsStr}`);
 };
 
-const DEFAULT_PLAN = "pmto-trimestral";
-const FALLBACK_AMOUNT = 99.99;
+const DEFAULT_PLAN = "pmto-mensal";
+const FALLBACK_AMOUNT = 89.99;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -53,7 +53,7 @@ serve(async (req) => {
     );
     const { data: plano } = await admin
       .from("planos")
-      .select("slug, nome, preco_centavos, ativo")
+      .select("slug, nome, preco_centavos, dias_acesso, ativo")
       .eq("slug", planoSlug)
       .maybeSingle();
 
@@ -65,7 +65,11 @@ serve(async (req) => {
     }
 
     const amount = plano ? Number(plano.preco_centavos) / 100 : FALLBACK_AMOUNT;
-    const reason = plano ? `Método CHOA — ${plano.nome}` : "Método CHOA — Assinatura Trimestral";
+    const reason = plano ? `Método CHOA — ${plano.nome}` : "Método CHOA — Assinatura Mensal";
+
+    // Recorrência derivada dos dias de acesso do plano (30 = mensal, 365 = anual)
+    const dias = plano ? Number(plano.dias_acesso) : 30;
+    const frequency = dias >= 360 ? 12 : Math.max(1, Math.round(dias / 30));
 
     const origin = req.headers.get("origin") || "https://www.metodochoa.com.br";
     // formato: choa-sub-{ts}-{planoSlug}::{email}
@@ -78,12 +82,13 @@ serve(async (req) => {
       back_url: `${origin}/cadastro?mp_status=success`,
       status: "pending",
       auto_recurring: {
-        frequency: 3,
+        frequency,
         frequency_type: "months",
         transaction_amount: amount,
         currency_id: "BRL",
       },
     };
+
 
     logStep("Criando preapproval", { email: payerEmail, planoSlug, amount });
 

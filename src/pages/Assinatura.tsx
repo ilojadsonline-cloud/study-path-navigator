@@ -21,7 +21,7 @@ const formatPreco = (centavos: number) =>
 
 const Assinatura = () => {
   const [planos, setPlanos] = useState<Plano[]>([]);
-  const [planoSlug, setPlanoSlug] = useState<string>("pmto-trimestral");
+  const [planoSlug, setPlanoSlug] = useState<string>("pmto-mensal");
   const [loadingCard, setLoadingCard] = useState(false);
   const [loadingPix, setLoadingPix] = useState(false);
   const [mpEmail, setMpEmail] = useState("");
@@ -148,11 +148,12 @@ const Assinatura = () => {
           </div>
           <h1 className="text-2xl md:text-3xl font-bold">
             <span className="text-gradient-gold">
-              {planoAtual ? `${planoAtual.nome} — ${formatPreco(planoAtual.preco_centavos)}` : "Plano Método CHOA Trimestral — R$ 99,99"}
+              {planoAtual ? `${planoAtual.nome} — ${formatPreco(planoAtual.preco_centavos)}` : "Planos Método CHOA"}
             </span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {planoAtual?.descricao || `Acesso completo à plataforma por ${planoAtual?.dias_acesso ?? 90} dias`}
+            {planoAtual?.descricao || `Acesso completo à plataforma por ${planoAtual?.dias_acesso ?? 30} dias`}
+
           </p>
           {isExpired && (
             <div className="mt-3 flex items-center justify-center gap-2 text-warning text-xs font-medium">
@@ -245,7 +246,7 @@ const Assinatura = () => {
             <h2 className="text-lg font-bold mb-1">Cartão de Crédito</h2>
             <p className="text-xs text-muted-foreground mb-3">Renovação automática</p>
             <p className="text-sm text-foreground mb-4">
-              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 9999)} a cada 3 meses</strong>. Cancele quando quiser.
+              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 8999)} a cada {planoAtual?.dias_acesso ?? 30} dias</strong>. Cancele quando quiser.
             </p>
             <ul className="space-y-2 text-xs text-foreground/80 mb-5">
               <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-success" /> Renovação sem dor de cabeça</li>
@@ -277,8 +278,9 @@ const Assinatura = () => {
               Pagamento único <Barcode className="w-3.5 h-3.5" />
             </p>
             <p className="text-sm text-foreground mb-4">
-              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 9999)} uma única vez</strong> e tenha acesso por
-              <strong> {planoAtual?.dias_acesso ?? 90} dias</strong>. Sem renovação automática.
+              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 8999)} uma única vez</strong> e tenha acesso por
+              <strong> {planoAtual?.dias_acesso ?? 30} dias</strong>. Sem renovação automática.
+
             </p>
             <ul className="space-y-2 text-xs text-foreground/80 mb-5">
               <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-success" /> Pix com confirmação em minutos</li>
