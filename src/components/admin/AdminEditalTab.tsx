@@ -24,10 +24,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { disciplinasLite, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
+import { getDisciplinasLite, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
+import { useCurso } from "@/contexts/CursoContext";
 
 // Inclui o tópico especial "Análise do Edital" (em primeiro) junto das disciplinas.
-const editalAdminItems = [ANALISE_EDITAL_DISC, ...disciplinasLite];
+const getEditalAdminItems = (cursoSlug?: string | null) => [ANALISE_EDITAL_DISC, ...getDisciplinasLite(cursoSlug)];
 import {
   EDITAL_MATERIALS_BUCKET,
   EDITAL_MATERIALS_UPLOAD_PREFIX,

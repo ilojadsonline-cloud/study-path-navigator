@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { disciplinasLite, disciplinasSelecionaveis } from "@/lib/edital-structure";
+import { getDisciplinasLite, getDisciplinasSelecionaveis } from "@/lib/edital-structure";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ type MapaRow = {
 
 export function AdminMapasMentaisTab() {
   const { cursoId, cursoSlug, cursoAtivo } = useCurso();
+  const disciplinasLite = getDisciplinasLite(cursoSlug);
+  const disciplinasSelecionaveis = getDisciplinasSelecionaveis(cursoSlug);
   const [rows, setRows] = useState<MapaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [discId, setDiscId] = useState<string>(disciplinasSelecionaveis[0].id);

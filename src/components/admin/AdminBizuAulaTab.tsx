@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { bizuAulaDisciplinas, bizuAulaSelecionaveis } from "@/lib/edital-structure";
+import { getBizuAulaDisciplinas, getBizuAulaSelecionaveis } from "@/lib/edital-structure";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ type VideoRow = {
 
 export function AdminBizuAulaTab() {
   const { cursoId, cursoSlug } = useCurso();
+  const bizuAulaDisciplinas = getBizuAulaDisciplinas(cursoSlug);
+  const bizuAulaSelecionaveis = getBizuAulaSelecionaveis(cursoSlug);
   const [rows, setRows] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [discId, setDiscId] = useState<string>(bizuAulaDisciplinas[0].id);

@@ -16,8 +16,8 @@ import { SimuladoSemanalEditor } from "@/components/admin/SimuladoSemanalEditor"
 import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 
 import {
-  EDITAL_DISTRIBUICAO, DURACAO_PADRAO_MINUTOS, VALOR_QUESTAO,
-  TOTAL_QUESTOES_SIMULADO, situacaoLabel,
+  getDistribuicao, getDuracaoMinutos, getEditalConfig,
+  getTotalQuestoes, situacaoLabel,
 } from "@/lib/edital-distribuicao";
 
 interface SimuladoRow {

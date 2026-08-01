@@ -21,8 +21,8 @@ import {
 
 import { AnaliseDificuldade, type DesempenhoItem } from "@/components/AnaliseDificuldade";
 import {
-  EDITAL_DISTRIBUICAO, NOTA_MINIMA_APROVACAO, VAGAS_CLASSIFICACAO,
-  PONTUACAO_TOTAL, situacaoLabel,
+  getDistribuicao, getNotaMinima, getVagas,
+  getPontuacaoTotal, situacaoLabel,
 } from "@/lib/edital-distribuicao";
 
 const LETRAS = ["A", "B", "C", "D", "E"];
