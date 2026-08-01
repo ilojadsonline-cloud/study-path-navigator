@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CronogramaData, DIAS_SEMANA_ORDER, getDiaLabel, gerarCronograma } from "@/lib/cronograma-generator";
+import { useCurso } from "@/contexts/CursoContext";
 import { ArrowLeft, Sparkles } from "lucide-react";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function GeradorPersonalizado({ onGenerate, onBack }: Props) {
+  const { cursoSlug } = useCurso();
   const [horas, setHoras] = useState(20);
   const [videoaulas, setVideoaulas] = useState(40);
   const [lei, setLei] = useState(30);
@@ -44,7 +46,7 @@ export function GeradorPersonalizado({ onGenerate, onBack }: Props) {
       nome: nome || `Cronograma Personalizado (${horas}h)`,
       tipo: "personalizado",
       ...params,
-      atividades: gerarCronograma(params),
+      atividades: gerarCronograma({ ...params, curso_slug: cursoSlug ?? undefined }),
     });
   };
 

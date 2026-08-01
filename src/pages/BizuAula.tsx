@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
-import { bizuAulaDisciplinas } from "@/lib/edital-structure";
+import { getBizuAulaDisciplinas } from "@/lib/edital-structure";
 import { PopSigilosoNotice, PopSigilosoBadge } from "@/components/PopSigilosoNotice";
 import { toast } from "sonner";
 
@@ -91,11 +91,12 @@ function VideoCard({ row }: { row: VideoRow }) {
 
 export default function BizuAula() {
   const [params] = useSearchParams();
+  const { cursoId, cursoSlug } = useCurso();
+  const bizuAulaDisciplinas = getBizuAulaDisciplinas(cursoSlug);
   const initialDisc = params.get("disciplina") || bizuAulaDisciplinas[0].id;
   const [openId, setOpenId] = useState<string>(initialDisc);
   const [rows, setRows] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const { cursoId, cursoSlug } = useCurso();
 
   useEffect(() => {
     let alive = true;

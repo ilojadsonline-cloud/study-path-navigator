@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CronogramaCalendar } from "./CronogramaCalendar";
 import { CronogramaResumoTable } from "./CronogramaResumoTable";
 import { EditarBlocoDialog } from "./EditarBlocoDialog";
-import { CronogramaData, AtividadeBloco, DIAS_SEMANA_ORDER, getDiaLabel, DISCIPLINAS, DisciplinaNome, getCorDisciplina } from "@/lib/cronograma-generator";
+import { CronogramaData, AtividadeBloco, DIAS_SEMANA_ORDER, getDiaLabel, getDisciplinasCronograma, DisciplinaNome, getCorDisciplina } from "@/lib/cronograma-generator";
+import { useCurso } from "@/contexts/CursoContext";
 import { Save, ArrowLeft, Pencil, Plus, FileDown } from "lucide-react";
 import { exportCronogramaPDF } from "@/lib/cronograma-pdf";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +25,7 @@ interface Props {
 
 export function VisualizadorCronograma({ cronograma: initial, onBack, onSaved, existingId }: Props) {
   const { user } = useAuth();
+  const { cursoId, cursoSlug } = useCurso();
   const [atividades, setAtividades] = useState<AtividadeBloco[]>(initial.atividades);
   const [editBloco, setEditBloco] = useState<AtividadeBloco | null>(null);
   const [saving, setSaving] = useState(false);
@@ -45,7 +47,7 @@ export function VisualizadorCronograma({ cronograma: initial, onBack, onSaved, e
       dia_semana: addDay,
       horario_inicio: initial.horario_inicio,
       horario_fim: "20:00",
-      disciplina: DISCIPLINAS[0].nome,
+      disciplina: getDisciplinasCronograma(cursoSlug)[0].nome,
       tipo_atividade: "videoaula",
       duracao_minutos: 60,
     };
@@ -67,6 +69,7 @@ export function VisualizadorCronograma({ cronograma: initial, onBack, onSaved, e
         horario_inicio: initial.horario_inicio,
         horario_fim: initial.horario_fim,
         atividades: atividades as any,
+        curso_id: cursoId ?? null,
       };
 
       if (existingId) {

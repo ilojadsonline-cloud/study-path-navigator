@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -37,6 +38,7 @@ type View = "list" | "view" | "custom";
 
 export default function Cronograma() {
   const { user } = useAuth();
+  const { cursoId, cursoSlug } = useCurso();
   const [view, setView] = useState<View>("list");
   const [cronogramas, setCronogramas] = useState<CronogramaDB[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,16 +53,17 @@ export default function Cronograma() {
       .from("cronogramas")
       .select("*")
       .eq("user_id", user.id)
+      .or(cursoOrFilter(cursoId, cursoSlug))
       .order("created_at", { ascending: false });
 
     if (!error && data) setCronogramas(data as unknown as CronogramaDB[]);
     setLoading(false);
   };
 
-  useEffect(() => { fetchCronogramas(); }, [user]);
+  useEffect(() => { fetchCronogramas(); }, [user, cursoId, cursoSlug]);
 
   const handleGerarPadrao = () => {
-    const padrao = gerarCronogramaPadrao();
+    const padrao = gerarCronogramaPadrao(cursoSlug);
     setActiveCronograma(padrao);
     setActiveId(undefined);
     setView("view");
@@ -99,6 +102,7 @@ export default function Cronograma() {
       horario_inicio: c.horario_inicio,
       horario_fim: c.horario_fim,
       atividades: c.atividades,
+      curso_id: cursoId ?? null,
     });
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });

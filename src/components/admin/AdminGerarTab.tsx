@@ -10,11 +10,7 @@ import { ManualQuestaoForm } from "@/components/admin/ManualQuestaoForm";
 import { MarkdownImportCard } from "@/components/admin/MarkdownImportCard";
 import { useCurso } from "@/contexts/CursoContext";
 
-const DISCIPLINES = [
-  "Lei nº 2.578/2012", "LC nº 128/2021", "Lei nº 2.575/2012",
-  "CPPM", "RDMETO", "Língua Portuguesa", "Redação Oficial",
-  "POP",
-];
+import { getDisciplinasGeracao } from "@/lib/disciplinas-geracao";
 
 interface BatchResult {
   disciplina: string;
@@ -47,14 +43,16 @@ function getRetryDelay(attempt: number): number {
 export function AdminGerarTab() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { cursoId, cursoAtivo } = useCurso();
+  const { cursoId, cursoSlug, cursoAtivo } = useCurso();
+  const DISCIPLINES = getDisciplinasGeracao(cursoSlug);
   const [results, setResults] = useState<BatchResult[]>([]);
   const [running, setRunning] = useState(false);
   const [totalGeradas, setTotalGeradas] = useState(0);
   const [batchesPerDiscipline, setBatchesPerDiscipline] = useState(3);
   const [batchSize, setBatchSize] = useState(2);
-  const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([...DISCIPLINES]);
+  const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>(() => getDisciplinasGeracao(cursoSlug));
   const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
+  useEffect(() => { setSelectedDisciplines(getDisciplinasGeracao(cursoSlug)); }, [cursoSlug]);
   const [pendingJob, setPendingJob] = useState<PendingJob | null>(null);
   const [checkingPending, setCheckingPending] = useState(true);
   const [etaText, setEtaText] = useState<string>("");
@@ -115,13 +113,13 @@ export function AdminGerarTab() {
     try {
       let usedBatchSize = batchSize;
       let { data, error } = await supabase.functions.invoke("generate-questions-batch", {
-        body: { disciplina_index: discIndex, batch_size: batchSize, curso_id: cursoId },
+        body: { disciplina_index: discIndex, disciplina_nome: disciplina, batch_size: batchSize, curso_id: cursoId, curso_slug: cursoSlug },
       });
 
       if (error && shouldFallback(error.message) && batchSize > 1) {
         usedBatchSize = 1;
         ({ data, error } = await supabase.functions.invoke("generate-questions-batch", {
-          body: { disciplina_index: discIndex, batch_size: 1, curso_id: cursoId },
+          body: { disciplina_index: discIndex, disciplina_nome: disciplina, batch_size: 1, curso_id: cursoId, curso_slug: cursoSlug },
         }));
       }
 

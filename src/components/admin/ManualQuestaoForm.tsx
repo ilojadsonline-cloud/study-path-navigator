@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, Loader2, ChevronDown, Save } from "lucide-react";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { sanitizeRichHtml, htmlToPlainText } from "@/lib/sanitize-html";
+import { useCurso } from "@/contexts/CursoContext";
+import { getQtdAlternativas } from "@/lib/edital-distribuicao";
 
 const ALT_LETTERS = ["A", "B", "C", "D", "E"] as const;
 const DIFICULDADES = ["Fácil", "Médio", "Difícil"];
@@ -18,6 +20,8 @@ interface Props {
 
 export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
   const { toast } = useToast();
+  const { cursoId, cursoSlug } = useCurso();
+  const qtdAlternativas = getQtdAlternativas(cursoSlug);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -28,7 +32,7 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
   const [prova, setProva] = useState("");
   const [ano, setAno] = useState<string>(String(new Date().getFullYear()));
   const [enunciado, setEnunciado] = useState("");
-  const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
+  const [alternativas, setAlternativas] = useState<string[]>(() => Array(qtdAlternativas).fill(""));
   const [gabarito, setGabarito] = useState(0);
   const [comentario, setComentario] = useState("");
 
@@ -37,7 +41,7 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
     setBanca("");
     setProva("");
     setEnunciado("");
-    setAlternativas(["", "", "", "", ""]);
+    setAlternativas(Array(qtdAlternativas).fill(""));
     setGabarito(0);
     setComentario("");
   };
@@ -84,10 +88,11 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
       alt_b: sanitizeRichHtml(alternativas[1]),
       alt_c: sanitizeRichHtml(alternativas[2]),
       alt_d: sanitizeRichHtml(alternativas[3]),
-      alt_e: sanitizeRichHtml(alternativas[4]),
+      alt_e: alternativas[4] ? sanitizeRichHtml(alternativas[4]) : "",
       gabarito,
       comentario: sanitizeRichHtml(comentario),
       audit_status: "approved",
+      curso_id: cursoId,
     } as any);
     setSaving(false);
 

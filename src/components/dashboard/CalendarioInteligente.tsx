@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CalendarClock, AlertTriangle } from "lucide-react";
 import {
-  CHOA_EVENTS,
+  getChoaEvents,
   CATEGORY_LABELS,
   URGENCY_LABELS,
   getDaysUntil,
@@ -13,6 +13,7 @@ import {
   parseEventDate,
   type UrgencyLevel,
 } from "@/lib/choa-calendar";
+import { useCurso } from "@/contexts/CursoContext";
 
 const URGENCY_STYLES: Record<UrgencyLevel, { badge: string; dot: string }> = {
   hoje: { badge: "bg-destructive/15 text-destructive border-destructive/30", dot: "bg-destructive" },
@@ -39,8 +40,10 @@ export function CalendarioInteligente() {
     return () => window.clearInterval(interval);
   }, []);
 
-  const mainEvent = useMemo(() => getNextMainEvent(CHOA_EVENTS, now), [now]);
-  const upcoming = useMemo(() => getUpcomingEvents(CHOA_EVENTS, now), [now]);
+  const { cursoSlug, cursoAtivo } = useCurso();
+  const eventos = useMemo(() => getChoaEvents(cursoSlug), [cursoSlug]);
+  const mainEvent = useMemo(() => getNextMainEvent(eventos, now), [eventos, now]);
+  const upcoming = useMemo(() => getUpcomingEvents(eventos, now), [eventos, now]);
   const diasRestantes = mainEvent ? getDaysUntil(mainEvent.date, now) : null;
 
   return (
@@ -52,7 +55,7 @@ export function CalendarioInteligente() {
     >
       <div className="flex items-center gap-2 mb-4">
         <CalendarClock className="w-5 h-5 text-gold shrink-0" />
-        <h2 className="font-semibold text-sm sm:text-base">Calendário CHOA 2026</h2>
+        <h2 className="font-semibold text-sm sm:text-base">Calendário CHOA 2026 {cursoAtivo?.sigla ? `• ${cursoAtivo.sigla}` : ""}</h2>
       </div>
 
       {/* Contador regressivo */}

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { CalendarioInteligente } from "@/components/dashboard/CalendarioInteligente";
 import { SimuladoSemanalDestaque } from "@/components/dashboard/SimuladoSemanalDestaque";
-import { bizuAulaDisciplinas, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
+import { getBizuAulaDisciplinas, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
 import { AnaliseDificuldade, type DesempenhoItem } from "@/components/AnaliseDificuldade";
 import { normalizarDisciplina } from "@/lib/edital-distribuicao";
 
@@ -353,7 +353,7 @@ const Dashboard = () => {
       const { data: diagData } = await supabase.rpc("get_desempenho_disciplinas", { p_curso_id: cursoId });
       const diagMap: Record<string, { total: number; corretas: number }> = {};
       (diagData || []).forEach((row: { disciplina: string; total: number; corretas: number }) => {
-        const nome = normalizarDisciplina(row.disciplina) || row.disciplina;
+        const nome = normalizarDisciplina(row.disciplina, cursoSlug) || row.disciplina;
         if (!diagMap[nome]) diagMap[nome] = { total: 0, corretas: 0 };
         diagMap[nome].total += Number(row.total) || 0;
         diagMap[nome].corretas += Number(row.corretas) || 0;
@@ -420,7 +420,7 @@ const Dashboard = () => {
       (bizuRows || []).forEach((r: { disciplina_id: string }) => {
         bizuCount[r.disciplina_id] = (bizuCount[r.disciplina_id] || 0) + 1;
       });
-      const bizuList: BizuAulaItem[] = bizuAulaDisciplinas
+      const bizuList: BizuAulaItem[] = getBizuAulaDisciplinas(cursoSlug)
         .map((d) => ({
           id: d.id,
           title: d.title,

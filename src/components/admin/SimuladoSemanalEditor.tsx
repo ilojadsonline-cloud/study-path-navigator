@@ -35,7 +35,11 @@ interface QuestaoRow {
   anulada: boolean;
 }
 
+import { useCurso } from "@/contexts/CursoContext";
+import { getQtdAlternativas } from "@/lib/edital-distribuicao";
+
 const LETRAS = ["A", "B", "C", "D", "E"];
+const ALT_KEYS = ["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const;
 
 function toLocalInput(iso: string) {
   const d = new Date(iso);
@@ -47,6 +51,8 @@ export function SimuladoSemanalEditor({ simulado, onClose, onSaved }: {
   simulado: SimuladoRow; onClose: () => void; onSaved: () => void;
 }) {
   const { toast } = useToast();
+  const { cursoSlug } = useCurso();
+  const qtdAlternativas = getQtdAlternativas(cursoSlug);
 
   const [titulo, setTitulo] = useState(simulado.titulo);
   const [descricao, setDescricao] = useState(simulado.descricao ?? "");
@@ -227,7 +233,7 @@ export function SimuladoSemanalEditor({ simulado, onClose, onSaved }: {
                       <Textarea value={q.enunciado} onChange={(e) => patchQ(q.id, { enunciado: e.target.value })} className="min-h-[80px] text-xs" />
                     </div>
 
-                    {(["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const).map((k, idx) => (
+                    {ALT_KEYS.slice(0, qtdAlternativas).map((k, idx) => (
                       <div key={k} className="space-y-1">
                         <Label className="text-[11px] flex items-center gap-2">
                           <span translate="no">Alternativa {LETRAS[idx]}</span>

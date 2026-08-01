@@ -13,21 +13,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 import { toast } from "sonner";
 import { FormattedText } from "@/components/FormattedText";
-
-const DISCIPLINAS_OFICIAIS = [
-  "Lei nº 2.578/2012",
-  "LC nº 128/2021",
-  "Lei nº 2.575/2012",
-  "CPPM",
-  "RDMETO",
-  "Língua Portuguesa",
-  "Redação Oficial",
-];
+import { getDisciplinasBanco } from "@/lib/edital-distribuicao";
 
 // Obs.: POP não entra (documento sigiloso — Portaria nº 021/2015-Gab. PMTO)
 const DISCIPLINAS_EM_BREVE: string[] = [];
-
-const disciplinasOpcoes = ["Todas as Disciplinas", ...DISCIPLINAS_OFICIAIS];
 
 const TOTAIS_OPCOES = [5, 10, 20, 30, 50];
 
@@ -108,6 +97,7 @@ async function loadProgress(userId: string) {
 const Simulados = () => {
   const { user } = useAuth();
   const { cursoId, cursoSlug } = useCurso();
+  const DISCIPLINAS_OFICIAIS = getDisciplinasBanco(cursoSlug);
   const [numQuestoes, setNumQuestoes] = useState<number>(20);
   const [disciplinasSel, setDisciplinasSel] = useState<string[]>([]); // [] = Todas
   const disciplinasAlvo = disciplinasSel.length === 0 ? DISCIPLINAS_OFICIAIS : disciplinasSel;
@@ -213,7 +203,7 @@ const Simulados = () => {
         assunto: q.assunto,
         dificuldade: q.dificuldade,
         enunciado: q.enunciado,
-        alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e],
+        alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].filter((a) => (a || "").trim().length > 0),
         gabaritoShuffled: q.gabarito,
         comentario: q.comentario,
       }));
@@ -361,7 +351,7 @@ const Simulados = () => {
       assunto: q.assunto,
       dificuldade: q.dificuldade,
       enunciado: q.enunciado,
-      alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e],
+      alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].filter((a) => (a || "").trim().length > 0),
       gabaritoShuffled: q.gabarito,
       comentario: q.comentario,
     }));

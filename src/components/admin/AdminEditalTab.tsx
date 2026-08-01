@@ -24,10 +24,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { disciplinasLite, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
+import { getDisciplinasLite, ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
+import { useCurso } from "@/contexts/CursoContext";
 
 // Inclui o tópico especial "Análise do Edital" (em primeiro) junto das disciplinas.
-const editalAdminItems = [ANALISE_EDITAL_DISC, ...disciplinasLite];
+const getEditalAdminItems = (cursoSlug?: string | null) => [ANALISE_EDITAL_DISC, ...getDisciplinasLite(cursoSlug)];
 import {
   EDITAL_MATERIALS_BUCKET,
   EDITAL_MATERIALS_UPLOAD_PREFIX,
@@ -92,6 +93,7 @@ export default function AdminEditalTab() {
   const [addingId, setAddingId] = useState<string | null>(null);
 
   // Edição inline de um material existente
+  const { cursoSlug } = useCurso();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(emptyForm());
   const [editFile, setEditFile] = useState<File | null>(null);
@@ -100,12 +102,12 @@ export default function AdminEditalTab() {
 
   const items = useMemo(
     () =>
-      editalAdminItems.map((disc) => ({
+      getEditalAdminItems(cursoSlug).map((disc) => ({
         ...disc,
         list: materials[disc.id] ?? [],
         newForm: newForms[disc.id] ?? emptyForm(),
       })),
-    [materials, newForms],
+    [materials, newForms, cursoSlug],
   );
 
   const loadConfig = async () => {

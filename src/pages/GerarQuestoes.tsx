@@ -4,15 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle, AlertCircle, Zap, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const disciplinas = [
-  "Lei nº 2.578/2012",
-  "LC nº 128/2021",
-  "Lei nº 2.575/2012",
-  "CPPM",
-  "RDMETO",
-  "Língua Portuguesa",
-  "Redação Oficial",
-];
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
+import { getDisciplinasGeracao } from "@/lib/disciplinas-geracao";
 
 interface BatchResult {
   disciplina: string;
@@ -23,24 +16,28 @@ interface BatchResult {
 }
 
 const GerarQuestoes = () => {
+  const { cursoId, cursoSlug } = useCurso();
+  const disciplinas = getDisciplinasGeracao(cursoSlug);
   const [results, setResults] = useState<BatchResult[]>([]);
   const [running, setRunning] = useState(false);
   const [totalGeradas, setTotalGeradas] = useState(0);
   const [batchesPerDiscipline, setBatchesPerDiscipline] = useState(3);
   const [batchSize, setBatchSize] = useState(2);
-  const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([...disciplinas]);
+  const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>(() => getDisciplinasGeracao(cursoSlug));
   const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
+    setSelectedDisciplines(getDisciplinasGeracao(cursoSlug));
     const checkTexts = async () => {
-      const { data } = await supabase
-        .from("discipline_legal_texts")
-        .select("disciplina");
+      let q = supabase.from("discipline_legal_texts").select("disciplina");
+      const filter = cursoOrFilter(cursoId, cursoSlug);
+      if (filter) q = q.or(filter);
+      const { data } = await q;
       if (data) setLoadedTexts(data.map((r: any) => r.disciplina));
     };
     checkTexts();
-  }, []);
+  }, [cursoId, cursoSlug]);
 
   const toggleDiscipline = (d: string) => {
     setSelectedDisciplines((prev) =>
@@ -74,7 +71,7 @@ const GerarQuestoes = () => {
       try {
         const discIndex = disciplinas.indexOf(batches[i].disciplina);
         const { data, error } = await supabase.functions.invoke("generate-questions-batch", {
-          body: { disciplina_index: discIndex, batch_size: batchSize },
+          body: { disciplina_index: discIndex, disciplina_nome: batches[i].disciplina, batch_size: batchSize, curso_id: cursoId, curso_slug: cursoSlug },
         });
 
         if (error) {

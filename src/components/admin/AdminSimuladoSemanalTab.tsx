@@ -16,8 +16,8 @@ import { SimuladoSemanalEditor } from "@/components/admin/SimuladoSemanalEditor"
 import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 
 import {
-  EDITAL_DISTRIBUICAO, DURACAO_PADRAO_MINUTOS, VALOR_QUESTAO,
-  TOTAL_QUESTOES_SIMULADO, situacaoLabel,
+  getDistribuicao, getDuracaoMinutos, getEditalConfig,
+  getTotalQuestoes, situacaoLabel,
 } from "@/lib/edital-distribuicao";
 
 interface SimuladoRow {
@@ -42,12 +42,17 @@ export function AdminSimuladoSemanalTab() {
   const { user } = useAuth();
   const { cursoId, cursoSlug } = useCurso();
   const { toast } = useToast();
+  const editalCfg = getEditalConfig(cursoSlug);
+  const EDITAL_DISTRIBUICAO = editalCfg.distribuicao;
+  const TOTAL_QUESTOES_SIMULADO = getTotalQuestoes(cursoSlug);
+  const VALOR_QUESTAO = editalCfg.valorQuestao;
+  const DURACAO_PADRAO_MINUTOS = getDuracaoMinutos(cursoSlug);
 
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [startsAt, setStartsAt] = useState(toLocalInput(new Date()));
   const [endsAt, setEndsAt] = useState(toLocalInput(new Date(Date.now() + 7 * 86400000)));
-  const [duracao, setDuracao] = useState(DURACAO_PADRAO_MINUTOS);
+  const [duracao, setDuracao] = useState(getDuracaoMinutos(cursoSlug));
   const [markdown, setMarkdown] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -79,8 +84,9 @@ export function AdminSimuladoSemanalTab() {
   }, [cursoId]);
 
   useEffect(() => { fetchLista(); }, [fetchLista]);
+  useEffect(() => { setDuracao(getDuracaoMinutos(cursoSlug)); }, [cursoSlug]);
 
-  const analise = useMemo(() => (markdown.trim() ? parseMarkdownQuestoes(markdown) : null), [markdown]);
+  const analise = useMemo(() => (markdown.trim() ? parseMarkdownQuestoes(markdown, cursoSlug) : null), [markdown, cursoSlug]);
 
   // Distribuição encontrada x exigida
   const distribInfo = useMemo(() => {
@@ -96,7 +102,7 @@ export function AdminSimuladoSemanalTab() {
     const extras = Object.keys(contagem).filter((k) => !EDITAL_DISTRIBUICAO.some((d) => d.nome === k));
     const tudoOk = linhas.every((l) => l.ok) && extras.length === 0 && analise.validas.length === TOTAL_QUESTOES_SIMULADO;
     return { linhas, extras, tudoOk };
-  }, [analise]);
+  }, [analise, cursoSlug]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -110,7 +116,7 @@ export function AdminSimuladoSemanalTab() {
       toast({ title: "Informe um título.", variant: "destructive" });
       return;
     }
-    const result = parseMarkdownQuestoes(markdown);
+    const result = parseMarkdownQuestoes(markdown, cursoSlug);
     if (!distribInfo?.tudoOk) {
       toast({
         title: "Distribuição inválida",
@@ -311,7 +317,7 @@ export function AdminSimuladoSemanalTab() {
           <CalendarClock className="w-5 h-5 text-primary" /> Simulado Semanal
         </h2>
         <p className="text-sm text-muted-foreground">
-          Publique a prova da semana (50 questões, {DURACAO_PADRAO_MINUTOS / 60}h, 1 tentativa por aluno) seguindo a distribuição do edital.
+          Publique a prova da semana ({TOTAL_QUESTOES_SIMULADO} questões, {DURACAO_PADRAO_MINUTOS / 60}h, 1 tentativa por aluno) seguindo a distribuição do edital.
         </p>
       </div>
 

@@ -35,7 +35,7 @@ interface Questao {
 
 function getAlternativas(q: Questao) {
   return {
-    alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e],
+    alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].filter((a) => (a || "").trim().length > 0),
     gabarito: q.gabarito,
   };
 }

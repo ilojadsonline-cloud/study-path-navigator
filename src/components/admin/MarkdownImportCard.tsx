@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FileUp, Loader2, ChevronDown, CheckCircle2, AlertTriangle, Upload } from "lucide-react";
-import { parseMarkdownQuestoes, MODELO_MARKDOWN, type ParseResult } from "@/lib/markdown-questoes-parser";
+import { parseMarkdownQuestoes, getModeloMarkdown, type ParseResult } from "@/lib/markdown-questoes-parser";
 import { useCurso } from "@/contexts/CursoContext";
 
 interface Props {
@@ -13,13 +13,13 @@ interface Props {
 
 export function MarkdownImportCard({ onCreated }: Props) {
   const { toast } = useToast();
-  const { cursoId, cursoAtivo } = useCurso();
+  const { cursoId, cursoAtivo, cursoSlug } = useCurso();
   const [open, setOpen] = useState(false);
   const [texto, setTexto] = useState("");
   const [parsed, setParsed] = useState<ParseResult | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const analise = useMemo(() => (texto.trim() ? parseMarkdownQuestoes(texto) : null), [texto]);
+  const analise = useMemo(() => (texto.trim() ? parseMarkdownQuestoes(texto, cursoSlug) : null), [texto, cursoSlug]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -31,7 +31,7 @@ export function MarkdownImportCard({ onCreated }: Props) {
   };
 
   const importar = async () => {
-    const result = parseMarkdownQuestoes(texto);
+    const result = parseMarkdownQuestoes(texto, cursoSlug);
     setParsed(result);
     if (result.validas.length === 0) {
       toast({ title: "Nenhuma questão válida", description: "Verifique o formato do Markdown.", variant: "destructive" });
@@ -105,7 +105,7 @@ export function MarkdownImportCard({ onCreated }: Props) {
               <input type="file" accept=".md,.markdown,.txt" className="hidden" onChange={handleFile} />
             </label>
             <button
-              onClick={() => setTexto(MODELO_MARKDOWN)}
+              onClick={() => setTexto(getModeloMarkdown(cursoSlug))}
               className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium hover:bg-secondary/70"
             >
               Inserir modelo de exemplo

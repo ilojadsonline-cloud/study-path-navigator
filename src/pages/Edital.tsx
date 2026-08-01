@@ -14,6 +14,9 @@ import {
   loadEditalMaterialsConfig,
 } from "@/lib/edital-materials";
 import { ANALISE_EDITAL_DISC } from "@/lib/edital-structure";
+import { useCurso } from "@/contexts/CursoContext";
+import { disciplinasCbmto, type IconKey } from "@/lib/edital-verticalizado-cbmto";
+import { Flame, GraduationCap, Network, HeartPulse, Mountain, Waves, LifeBuoy } from "lucide-react";
 
 type EditalItem = {
   topic: string;
@@ -36,7 +39,7 @@ type Disciplina = {
   restricted?: boolean;
 };
 
-const disciplinas: Disciplina[] = [
+const disciplinasPmto: Disciplina[] = [
   {
     id: "estatuto",
     icon: <Shield className="w-5 h-5" />,
@@ -560,6 +563,29 @@ const disciplinas: Disciplina[] = [
   },
 ];
 
+const CBMTO_ICONS: Record<IconKey, React.ReactNode> = {
+  gavel: <Gavel className="w-5 h-5" />,
+  fileCheck: <FileCheck className="w-5 h-5" />,
+  flame: <Flame className="w-5 h-5" />,
+  graduation: <GraduationCap className="w-5 h-5" />,
+  network: <Network className="w-5 h-5" />,
+  heartPulse: <HeartPulse className="w-5 h-5" />,
+  mountain: <Mountain className="w-5 h-5" />,
+  waves: <Waves className="w-5 h-5" />,
+  lifeBuoy: <LifeBuoy className="w-5 h-5" />,
+  landmark: <Landmark className="w-5 h-5" />,
+};
+
+const disciplinasCbmtoView: Disciplina[] = disciplinasCbmto.map((d) => ({
+  ...d,
+  icon: CBMTO_ICONS[d.iconKey] ?? <BookOpen className="w-5 h-5" />,
+}));
+
+function getDisciplinasEdital(cursoSlug?: string | null): Disciplina[] {
+  return (cursoSlug || "pmto").toLowerCase() === "cbmto" ? disciplinasCbmtoView : disciplinasPmto;
+}
+
+
 // Rótulos curtos para a navegação rápida
 const navLabels: Record<string, string> = {
   estatuto: "Estatuto",
@@ -855,7 +881,13 @@ function DisciplinaBlock({
 }
 
 export default function Edital() {
+  const { cursoSlug } = useCurso();
+  const disciplinas = useMemo(() => getDisciplinasEdital(cursoSlug), [cursoSlug]);
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set([disciplinas[0].id]));
+
+  useEffect(() => {
+    setOpenIds(new Set(disciplinas[0] ? [disciplinas[0].id] : []));
+  }, [disciplinas]);
   const [materials, setMaterials] = useState<Record<string, EditalMaterialEntry[]>>({});
 
   useEffect(() => {

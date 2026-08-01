@@ -12,20 +12,11 @@ interface LegalText {
   updated_at: string;
 }
 
-const DISCIPLINES = [
-  { disciplina: "Lei nº 2.578/2012", lei_nome: "Estatuto dos Policiais Militares e Bombeiros Militares do TO" },
-  { disciplina: "LC nº 128/2021", lei_nome: "Organização Básica da PMTO" },
-  { disciplina: "Lei nº 2.575/2012", lei_nome: "Promoções na PMTO" },
-  { disciplina: "CPPM", lei_nome: "Código de Processo Penal Militar (Arts. 8-28 e 243-253)" },
-  { disciplina: "RDMETO", lei_nome: "Regulamento Disciplinar Militar do TO (Decreto 4.994/2014)" },
-  
-  { disciplina: "Língua Portuguesa", lei_nome: "Língua Portuguesa — Interpretação e Compreensão de Texto" },
-  { disciplina: "Redação Oficial", lei_nome: "Manual de Redação Oficial da PMTO (itens 6.1 a 6.8)" },
-  { disciplina: "POP", lei_nome: "Procedimento Operacional Padrão (POP) — Conteúdo Sigiloso (Restrito)" },
-];
+import { getDisciplinasFonte } from "@/lib/disciplinas-geracao";
 
 export default function AdminTextosLegaisContent() {
   const { cursoId, cursoSlug, cursoAtivo } = useCurso();
+  const DISCIPLINES = getDisciplinasFonte(cursoSlug);
   const [texts, setTexts] = useState<LegalText[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
