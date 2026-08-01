@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurso } from "@/contexts/CursoContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Trash2, Send, Users, User, Search, X } from "lucide-react";
+import { Loader2, Trash2, Send, Users, User, Search, X, Globe, GraduationCap } from "lucide-react";
 
 type ProfileLite = { user_id: string; nome: string | null; email: string | null };
 
 export function AdminNotificacoesTab() {
   const { user } = useAuth();
+  const { cursos } = useCurso();
   const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -21,12 +23,16 @@ export function AdminNotificacoesTab() {
 
   // Destinatário
   const [target, setTarget] = useState<"all" | "user">("all");
+  const [cursoAlvo, setCursoAlvo] = useState<string>("global"); // "global" | curso.id
   const [search, setSearch] = useState("");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<ProfileLite[]>([]);
   const [selectedUser, setSelectedUser] = useState<ProfileLite | null>(null);
 
+  const cursoNome = (id: string | null) => cursos.find((c) => c.id === id)?.sigla || "Curso";
+
   useEffect(() => { loadNotifications(); }, []);
+
 
   const loadNotifications = async () => {
     setLoading(true);
@@ -63,16 +69,19 @@ export function AdminNotificacoesTab() {
       message: message.trim(),
       created_by: user?.id,
       user_id: target === "user" ? selectedUser?.user_id : null,
+      curso_id: cursoAlvo === "global" ? null : cursoAlvo,
     } as any);
     setSending(false);
     if (error) {
       toast({ title: "Erro ao enviar notificação", description: error.message, variant: "destructive" });
     } else {
+      const escopo = cursoAlvo === "global" ? "todos os cursos" : cursoNome(cursoAlvo);
       toast({
         title: target === "user"
           ? `Notificação enviada para ${selectedUser?.nome || selectedUser?.email}`
-          : "Notificação enviada para todos!",
+          : `Notificação enviada (${escopo})`,
       });
+
       setTitle("");
       setMessage("");
       setSelectedUser(null);
@@ -119,6 +128,39 @@ export function AdminNotificacoesTab() {
               </Button>
             </div>
           </div>
+
+          {/* Escopo por curso */}
+          <div>
+            <label className="text-sm font-medium text-foreground">Escopo do curso</label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              <Button
+                type="button"
+                variant={cursoAlvo === "global" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCursoAlvo("global")}
+                className="gap-1"
+              >
+                <Globe className="w-4 h-4" /> Global (todos os cursos)
+              </Button>
+              {cursos.map((c) => (
+                <Button
+                  key={c.id}
+                  type="button"
+                  variant={cursoAlvo === c.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCursoAlvo(c.id)}
+                  className="gap-1"
+                >
+                  <GraduationCap className="w-4 h-4" /> {c.sigla}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Notificações de curso aparecem apenas para quem estiver com aquele curso ativo.
+            </p>
+          </div>
+
+
 
           {target === "user" && (
             <div className="space-y-2 rounded-lg border border-border/50 bg-secondary/20 p-3">
@@ -212,6 +254,9 @@ export function AdminNotificacoesTab() {
                       <p className="font-semibold text-sm">{n.title}</p>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${n.user_id ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"}`}>
                         {n.user_id ? "Individual" : "Todos"}
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${n.curso_id ? "bg-accent/20 text-accent-foreground" : "bg-secondary text-muted-foreground"}`}>
+                        {n.curso_id ? cursoNome(n.curso_id) : "Global"}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{n.message}</p>

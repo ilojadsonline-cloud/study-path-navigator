@@ -745,6 +745,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          curso_id: string | null
           id: number
           message: string
           title: string
@@ -753,6 +754,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          curso_id?: string | null
           id?: number
           message: string
           title: string
@@ -761,12 +763,21 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          curso_id?: string | null
           id?: number
           message?: string
           title?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_events: {
         Row: {

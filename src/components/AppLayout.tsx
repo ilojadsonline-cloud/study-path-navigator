@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CursoSwitcher } from "@/components/CursoSwitcher";
+import { useCurso } from "@/contexts/CursoContext";
 
 interface Notification {
   id: number;
@@ -14,6 +15,7 @@ interface Notification {
   message: string;
   created_at: string;
   user_id?: string | null;
+  curso_id?: string | null;
 }
 
 interface AppLayoutProps {
@@ -23,6 +25,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const { profile, user } = useAuth();
+  const { cursoId } = useCurso();
   const initials = profile?.nome ? profile.nome.charAt(0).toUpperCase() : "U";
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -32,18 +35,18 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
+    let query = supabase
+      .from("notifications" as any)
+      .select("*")
+      .or(`user_id.is.null,user_id.eq.${user.id}`);
+    if (cursoId) query = query.or(`curso_id.is.null,curso_id.eq.${cursoId}`);
     const [{ data: notifs }, { data: reads }] = await Promise.all([
-      supabase
-        .from("notifications" as any)
-        .select("*")
-        .or(`user_id.is.null,user_id.eq.${user.id}`)
-        .order("created_at", { ascending: false })
-        .limit(20),
+      query.order("created_at", { ascending: false }).limit(20),
       supabase.from("notification_reads" as any).select("notification_id").eq("user_id", user.id),
     ]);
     setNotifications((notifs as any[]) || []);
     setReadIds(new Set(((reads as any[]) || []).map((r: any) => r.notification_id)));
-  }, [user]);
+  }, [user, cursoId]);
 
   useEffect(() => {
     fetchNotifications();
@@ -60,6 +63,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         (payload) => {
           const n = payload.new as Notification;
           if (n.user_id && n.user_id !== user.id) return; // não é para mim
+          if (n.curso_id && cursoId && n.curso_id !== cursoId) return; // não é do curso ativo
           setNotifications((prev) => (prev.some((p) => p.id === n.id) ? prev : [n, ...prev]));
           setFloatingAlert(n);
           if (floatingTimer.current) clearTimeout(floatingTimer.current);
@@ -72,9 +76,10 @@ export function AppLayout({ children }: AppLayoutProps) {
       supabase.removeChannel(channel);
       if (floatingTimer.current) clearTimeout(floatingTimer.current);
     };
-  }, [user]);
+  }, [user, cursoId]);
 
   const unreadCount = notifications.filter(n => !readIds.has(n.id)).length;
+
 
   const markAsRead = async (notifId: number) => {
     if (!user || readIds.has(notifId)) return;

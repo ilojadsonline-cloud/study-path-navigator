@@ -1,0 +1,2 @@
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS curso_id uuid REFERENCES public.cursos(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS idx_notifications_curso_id ON public.notifications(curso_id);
