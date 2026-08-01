@@ -68,6 +68,15 @@ const sourceBadge = (src: string | null, daysRemaining: number | null) => {
   return { label: src, variant: "outline" as const };
 };
 
+type AcessoCurso = {
+  slug: string;
+  sigla: string;
+  plano_slug: string | null;
+  origem: string | null;
+  ativo: boolean;
+  expires_at: string | null;
+};
+
 export function AdminAssinaturasTab() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -78,19 +87,40 @@ export function AdminAssinaturasTab() {
   const [period, setPeriod] = useState<"7" | "30" | "all">("30");
   const [confirm, setConfirm] = useState<{ user: OverviewUser; block: boolean } | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [cursosPorUsuario, setCursosPorUsuario] = useState<Record<string, AcessoCurso[]>>({});
+  const [cursoFiltro, setCursoFiltro] = useState<string>("all");
+  const [cursosDisponiveis, setCursosDisponiveis] = useState<{ slug: string; sigla: string }[]>([]);
 
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [{ data: ovr, error: ovrErr }, eventsRes] = await Promise.all([
+      const [{ data: ovr, error: ovrErr }, eventsRes, acessosRes, cursosRes] = await Promise.all([
         supabase.functions.invoke("admin-manage-users", { body: { action: "subscription_overview" } }),
         supabase.from("payment_events").select("*").order("processed_at", { ascending: false }).limit(500),
+        supabase.from("acessos_curso").select("user_id, plano_slug, origem, ativo, expires_at, cursos(slug, sigla)").limit(10000),
+        supabase.from("cursos").select("slug, sigla, ordem").order("ordem"),
       ]);
       if (ovrErr) throw ovrErr;
       setActive(ovr?.active || []);
       setBlocked(ovr?.blocked || []);
       if (eventsRes.error) throw eventsRes.error;
       setEvents((eventsRes.data || []) as PaymentEvent[]);
+
+      const mapa: Record<string, AcessoCurso[]> = {};
+      for (const row of ((acessosRes.data || []) as any[])) {
+        const curso = row.cursos;
+        if (!curso) continue;
+        (mapa[row.user_id] ||= []).push({
+          slug: curso.slug,
+          sigla: curso.sigla,
+          plano_slug: row.plano_slug ?? null,
+          origem: row.origem ?? null,
+          ativo: !!row.ativo,
+          expires_at: row.expires_at ?? null,
+        });
+      }
+      setCursosPorUsuario(mapa);
+      setCursosDisponiveis(((cursosRes.data || []) as any[]).map((c) => ({ slug: c.slug, sigla: c.sigla })));
     } catch (e: any) {
       toast({ title: "Erro ao carregar", description: e?.message || String(e), variant: "destructive" });
     } finally {
@@ -117,17 +147,51 @@ export function AdminAssinaturasTab() {
     }
   };
 
+  const matchCurso = useMemo(() => (userId: string) => {
+    if (cursoFiltro === "all") return true;
+    const lista = cursosPorUsuario[userId] ?? [];
+    return lista.some((a) => a.slug === cursoFiltro && a.ativo);
+  }, [cursoFiltro, cursosPorUsuario]);
+
   const filteredActive = useMemo(() => {
-    if (!search) return active;
     const s = search.toLowerCase();
-    return active.filter((u) => u.nome?.toLowerCase().includes(s) || u.email?.toLowerCase().includes(s) || u.cpf?.includes(s));
-  }, [active, search]);
+    return active.filter((u) =>
+      matchCurso(u.user_id) &&
+      (!search || u.nome?.toLowerCase().includes(s) || u.email?.toLowerCase().includes(s) || u.cpf?.includes(s)),
+    );
+  }, [active, search, matchCurso]);
 
   const filteredBlocked = useMemo(() => {
-    if (!search) return blocked;
     const s = search.toLowerCase();
-    return blocked.filter((u) => u.nome?.toLowerCase().includes(s) || u.email?.toLowerCase().includes(s) || u.cpf?.includes(s));
-  }, [blocked, search]);
+    return blocked.filter((u) =>
+      matchCurso(u.user_id) &&
+      (!search || u.nome?.toLowerCase().includes(s) || u.email?.toLowerCase().includes(s) || u.cpf?.includes(s)),
+    );
+  }, [blocked, search, matchCurso]);
+
+  const renderCursos = (userId: string) => {
+    const lista = (cursosPorUsuario[userId] ?? []).filter((a) => a.ativo);
+    if (lista.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+    return (
+      <div className="flex flex-wrap gap-1">
+        {lista.map((a) => (
+          <Badge
+            key={a.slug}
+            variant={a.slug === "cbmto" ? "destructive" : "default"}
+            title={[
+              `Curso: ${a.sigla}`,
+              a.plano_slug ? `Plano: ${a.plano_slug}` : null,
+              a.origem ? `Origem: ${a.origem}` : null,
+              a.expires_at ? `Expira: ${fmtDate(a.expires_at)}` : "Sem data de expiração",
+            ].filter(Boolean).join(" • ")}
+          >
+            {a.sigla}
+            {a.expires_at ? ` · ${daysLeft(a.expires_at)}d` : ""}
+          </Badge>
+        ))}
+      </div>
+    );
+  };
 
   const filteredEvents = useMemo(() => {
     let evs = events;
@@ -211,6 +275,17 @@ export function AdminAssinaturasTab() {
                   className="pl-8"
                 />
               </div>
+              <Select value={cursoFiltro} onValueChange={setCursoFiltro}>
+                <SelectTrigger className="w-full sm:w-56">
+                  <SelectValue placeholder="Curso" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os cursos</SelectItem>
+                  {cursosDisponiveis.map((c) => (
+                    <SelectItem key={c.slug} value={c.slug}>Assinantes {c.sigla}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* ATIVOS */}
@@ -221,6 +296,7 @@ export function AdminAssinaturasTab() {
                     <TableRow>
                       <TableHead>Usuário</TableHead>
                       <TableHead>E-mail</TableHead>
+                      <TableHead>Curso assinado</TableHead>
                       <TableHead>Reativado em</TableHead>
                       <TableHead>Expira em</TableHead>
                       <TableHead>Dias rest.</TableHead>
@@ -230,11 +306,12 @@ export function AdminAssinaturasTab() {
                   </TableHeader>
                   <TableBody>
                     {filteredActive.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Nenhum usuário ativo encontrado.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Nenhum usuário ativo encontrado.</TableCell></TableRow>
                     ) : filteredActive.map((u) => (
                       <TableRow key={u.user_id}>
                         <TableCell className="font-medium">{u.nome}</TableCell>
                         <TableCell className="text-xs">{u.email || "—"}</TableCell>
+                        <TableCell>{renderCursos(u.user_id)}</TableCell>
                         <TableCell className="text-xs">{fmtDate(u.reactivated_at)}</TableCell>
                         <TableCell className="text-xs">{fmtDate(u.access_expires_at)}</TableCell>
                         <TableCell>{daysLeft(u.access_expires_at) ?? "—"}</TableCell>
@@ -269,6 +346,7 @@ export function AdminAssinaturasTab() {
                       <TableHead>Usuário</TableHead>
                       <TableHead>E-mail</TableHead>
                       <TableHead>CPF</TableHead>
+                      <TableHead>Curso assinado</TableHead>
                       <TableHead>Bloqueado até</TableHead>
                       <TableHead>Último login</TableHead>
                       <TableHead>Motivo</TableHead>
@@ -277,7 +355,7 @@ export function AdminAssinaturasTab() {
                   </TableHeader>
                   <TableBody>
                     {filteredBlocked.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Nenhum usuário bloqueado.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Nenhum usuário bloqueado.</TableCell></TableRow>
                     ) : filteredBlocked.map((u) => {
                       const expired = u.access_expires_at && new Date(u.access_expires_at) < new Date();
                       const reason = u.block_reason === "acesso_expirado_90_dias"
@@ -290,6 +368,7 @@ export function AdminAssinaturasTab() {
                           <TableCell className="font-medium">{u.nome}</TableCell>
                           <TableCell className="text-xs">{u.email || "—"}</TableCell>
                           <TableCell className="text-xs">{u.cpf}</TableCell>
+                          <TableCell>{renderCursos(u.user_id)}</TableCell>
                           <TableCell className="text-xs">{fmtDate(u.banned_until)}</TableCell>
                           <TableCell className="text-xs">{fmtDate(u.last_sign_in_at)}</TableCell>
                           <TableCell><Badge variant="secondary">{reason}</Badge></TableCell>

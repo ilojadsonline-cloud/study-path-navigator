@@ -307,11 +307,56 @@ const CHOA_EDITAL_AUDIT_RULES = `### MATRIZ OFICIAL DO EDITAL CHOA/2026 PMTO (8 
 
 `;
 
+// ── Suporte multi-curso: CHOA PMTO usa 5 alternativas (A–E) e CHOA CBMTO usa 4 (A–D).
+// A estrutura é detectada pela própria questão (alt_e vazio = 4 alternativas).
+const ALL_ALT_KEYS = ["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"];
+function altKeysOf(q: any): string[] {
+  return String(q?.alt_e ?? "").trim() ? ALL_ALT_KEYS : ALL_ALT_KEYS.slice(0, 4);
+}
+function altLettersOf(q: any): string[] {
+  return altKeysOf(q).map((k) => k.slice(-1).toUpperCase());
+}
+/** Filtro de curso: registros legados (curso_id NULL) pertencem ao CHOA PMTO. */
+function cursoOrExpr(cursoId: string | null, cursoSlug: string | null): string | null {
+  if (!cursoId) return null;
+  return (cursoSlug ?? "pmto") === "pmto"
+    ? `curso_id.eq.${cursoId},curso_id.is.null`
+    : `curso_id.eq.${cursoId}`;
+}
+
+
+/**
+ * Texto legal escopado por curso: cada curso tem seu próprio texto para a mesma
+ * disciplina (ex.: "Redação Oficial" do PMTO ≠ do CBMTO). Registros legados
+ * (curso_id NULL) só valem quando a questão também é legada.
+ */
+async function loadLegalTextForQuestion(
+  supabase: any,
+  disciplina: string,
+  cursoId: string | null,
+): Promise<string | null> {
+  let sel = supabase.from("discipline_legal_texts").select("content").eq("disciplina", disciplina).limit(5);
+  sel = cursoId ? sel.eq("curso_id", cursoId) : sel.is("curso_id", null);
+  const { data } = await sel;
+  let rows = data ?? [];
+  if (!rows.length && cursoId) {
+    // Fallback apenas para o curso legado (PMTO): textos antigos sem curso_id.
+    const { data: cursoRow } = await supabase.from("cursos").select("slug").eq("id", cursoId).maybeSingle();
+    if (cursoRow?.slug === "pmto") {
+      const { data: legacy } = await supabase
+        .from("discipline_legal_texts").select("content").eq("disciplina", disciplina).is("curso_id", null).limit(5);
+      rows = legacy ?? [];
+    }
+  }
+  return (rows.map((r: any) => r.content).join("\n\n").slice(0, 18000)) || null;
+}
+
 function buildAuditPrompt(q: Questao, legalText: string | null): string {
-  const alts = ["A", "B", "C", "D", "E"].map(
-    (l, i) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`
+  const letras = altLettersOf(q);
+  const alts = letras.map(
+    (l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`
   ).join("\n");
-  const correta = ["A", "B", "C", "D", "E"][q.gabarito] ?? "?";
+  const correta = letras[q.gabarito] ?? "?";
   const blocks = legalText ? parseArticleBlocks(legalText) : [];
   const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
   const relevantNums = [...new Set([...cited, ...(q.artigo_principal ? extractArticleNumbers(q.artigo_principal) : [])])];
@@ -415,11 +460,11 @@ Se a questão estiver perfeita: confidence alta, issues=[], proposed_patch=null,
 
 /** Detecta distrator com mais de DISTRATOR_LEN_RATIO× o tamanho médio dos demais (incluindo a correta). */
 function detectOversizedDistractors(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_e"|"gabarito">): Array<{ field: string; len: number; mean: number }> {
-  const keys = ["alt_a","alt_b","alt_c","alt_d","alt_e"];
+  const keys = altKeysOf(q);
   const lens = keys.map((k) => String((q as any)[k] ?? "").trim().length);
   const g = q.gabarito;
   const out: Array<{ field: string; len: number; mean: number }> = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < keys.length; i++) {
     if (i === g) continue;
     const others = lens.filter((_, j) => j !== i);
     const mean = others.reduce((a, b) => a + b, 0) / others.length;
@@ -432,9 +477,10 @@ function detectOversizedDistractors(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"al
 
 /** Verifica se o gabarito é a alternativa mais longa OU mais curta do conjunto. */
 function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_e"|"gabarito">): boolean {
-  const lens = ["alt_a","alt_b","alt_c","alt_d","alt_e"].map((k) => String((q as any)[k] ?? "").trim().length);
+  const keys = altKeysOf(q);
+  const lens = keys.map((k) => String((q as any)[k] ?? "").trim().length);
   const g = q.gabarito;
-  if (g < 0 || g > 4) return false;
+  if (g < 0 || g >= keys.length) return false;
   const max = Math.max(...lens);
   const min = Math.min(...lens);
   // Se há empate no extremo, não é viés (não é única).
@@ -466,14 +512,15 @@ function detectArticleNumberCobranca(
     return { hit: true, reason: "enunciado cobra a localização/número do dispositivo como objeto central" };
   }
   // Alternativas formadas apenas por referência seca (Art. N, inciso, §) — sem conteúdo jurídico.
-  const alts = [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].map((a) => String(a ?? "").trim());
+  const altKeys = altKeysOf(q);
+  const alts = altKeys.map((k) => String((q as any)[k] ?? "").trim());
   const isBareRef = (s: string) =>
     s.length > 0 && /^(?:art(?:igo|\.)?\s*\d+[ºo°a]?\s*)+(?:[,;e/]+\s*(?:inciso|§|paragrafo|alinea|item)?\s*[ivxlcdm\d]*\.?\s*)*$/i.test(
       s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
     );
   const bare = alts.filter(isBareRef).length;
-  if (bare >= 4) {
-    return { hit: true, reason: `${bare} de 5 alternativas são apenas referências de artigo/inciso sem conteúdo` };
+  if (bare >= altKeys.length - 1) {
+    return { hit: true, reason: `${bare} de ${altKeys.length} alternativas são apenas referências de artigo/inciso sem conteúdo` };
   }
   return { hit: false, reason: "" };
 }
@@ -497,7 +544,7 @@ function detectRedacaoForaDeEscopo(
   if (!isRedacaoOficial(q.disciplina)) return { hit: false, reason: "" };
   const norm = (s: unknown) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const enun = norm(q.enunciado);
-  const alts = [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].map(norm).join(" \u2022 ");
+  const alts = altKeysOf(q).map((k) => norm((q as any)[k])).join(" \u2022 ");
   const haystack = `${enun} \u2022 ${alts}`;
 
   // Termos que caracterizam cobrança de estrutura/formatação (fora do escopo conceitual).
@@ -744,7 +791,7 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
 
   // ── Detecções determinísticas que complementam o DeepSeek ──
   if (detectLengthBias(q) && !issues.some((i: any) => i?.type === "length_bias")) {
-    const lens = ["alt_a","alt_b","alt_c","alt_d","alt_e"].map((k) => String((q as any)[k] ?? "").length);
+    const lens = altKeysOf(q).map((k) => String((q as any)[k] ?? "").length);
     const isMax = lens[q.gabarito] === Math.max(...lens);
     issues.push({
       type: "length_bias",
@@ -976,7 +1023,7 @@ Retorne JSON ESTRITO:
     return { patch: null, unrecoverable: true, summary: String(parsed.summary ?? "IA classificou como irrecuperável") };
   }
   const newPatch: any = {};
-  for (const k of ["alt_a","alt_b","alt_c","alt_d","alt_e"]) {
+  for (const k of altKeysOf(q)) {
     if (typeof parsed[k] === "string" && parsed[k].trim()) newPatch[k] = parsed[k].trim();
   }
   // Preserva a correta literalmente
@@ -1198,12 +1245,7 @@ async function repairQuestion(
   const questao = q as Questao;
 
   // 2) Carrega texto legal da disciplina
-  const { data: legalRows } = await supabase
-    .from("discipline_legal_texts")
-    .select("content")
-    .eq("disciplina", questao.disciplina)
-    .limit(5);
-  const legalText = (legalRows ?? []).map((r: any) => r.content).join("\n\n").slice(0, 18000);
+  const legalText = (await loadLegalTextForQuestion(supabase, questao.disciplina, (questao as any).curso_id ?? null)) ?? "";
   if (!legalText || legalText.trim().length < 500) {
     const { data: audIns } = await supabase.from("question_audits").insert({
       questao_id: questionId,
@@ -1362,15 +1404,11 @@ async function processQuestion(
   const flagStatus = keepPending ? Q_STATUS.PENDING : Q_STATUS.MANUAL;
   const correctedStatus = keepPending ? Q_STATUS.PENDING : Q_STATUS.AUTO_CORRECTED;
   // Busca texto legal por disciplina (cache)
-  let legal = legalCache.get(q.disciplina);
+  const legalKey = `${(q as any).curso_id ?? "legacy"}::${q.disciplina}`;
+  let legal = legalCache.get(legalKey);
   if (legal === undefined) {
-    const { data } = await supabase
-      .from("discipline_legal_texts")
-      .select("content")
-      .eq("disciplina", q.disciplina)
-      .limit(5);
-    legal = (data ?? []).map((r: any) => r.content).join("\n\n").slice(0, 18000) || null;
-    legalCache.set(q.disciplina, legal);
+    legal = await loadLegalTextForQuestion(supabase, q.disciplina, (q as any).curso_id ?? null);
+    legalCache.set(legalKey, legal);
   }
 
   // BLOQUEIO OPERACIONAL: sem texto legal cadastrado suficiente, NÃO usar conhecimento geral.
@@ -1660,10 +1698,13 @@ serve(async (req) => {
       // Resumo do estado atual da fila de auditoria.
       const counts: Record<string, number> = {};
       for (const s of [Q_STATUS.PENDING, Q_STATUS.APPROVED, Q_STATUS.AUTO_CORRECTED, Q_STATUS.MANUAL, Q_STATUS.ADMIN_RESOLVED]) {
-        const { count } = await supabase
+        let cq = supabase
           .from("questoes")
           .select("id", { count: "exact", head: true })
           .eq("audit_status", s);
+        const statsExpr = cursoOrExpr(body.curso_id ?? null, body.curso_slug ?? null);
+        if (statsExpr) cq = cq.or(statsExpr);
+        const { count } = await cq;
         counts[s] = count ?? 0;
       }
       return new Response(JSON.stringify({ counts }), {
@@ -1690,8 +1731,13 @@ serve(async (req) => {
       // mode: 'all' | 'discipline' | 'unaudited' | 'reported' | 'selected'
       const mode: "all" | "discipline" | "unaudited" | "reported" | "selected" =
         ["all", "discipline", "unaudited", "reported", "selected"].includes(body.mode) ? body.mode : "all";
+      const cursoId: string | null = body.curso_id ?? null;
+      const cursoSlug: string | null = body.curso_slug ?? null;
+      const cursoExpr = cursoOrExpr(cursoId, cursoSlug);
       const scope: any = {
         mode,
+        curso_id: cursoId,
+        curso_slug: cursoSlug,
         disciplinas: Array.isArray(body.disciplinas) ? body.disciplinas : null,
         only_unaudited: mode === "unaudited",
         limit: Math.min(Number(body.limit ?? 200), 100000),
@@ -1707,6 +1753,11 @@ serve(async (req) => {
         const ids = Array.isArray(body.question_ids)
           ? body.question_ids.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n))
           : [];
+        if (cursoExpr && ids.length) {
+          const { data: doCurso } = await supabase.from("questoes").select("id").in("id", ids).or(cursoExpr);
+          const allowed = new Set((doCurso ?? []).map((r: any) => r.id));
+          for (let i = ids.length - 1; i >= 0; i--) if (!allowed.has(ids[i])) ids.splice(i, 1);
+        }
         scope.question_ids = ids;
         scope.limit = Math.min(scope.limit, Math.max(ids.length, 1));
         // Reset em lotes para entrar na fila (vence teto de itens por chamada do .in()).
@@ -1726,7 +1777,12 @@ serve(async (req) => {
           .select("questao_id")
           .eq("status", "pendente")
           .limit(100000);
-        const ids = Array.from(new Set((reps ?? []).map((r: any) => r.questao_id))).filter(Boolean);
+        let ids = Array.from(new Set((reps ?? []).map((r: any) => r.questao_id))).filter(Boolean);
+        if (cursoExpr && ids.length) {
+          const { data: doCurso } = await supabase.from("questoes").select("id").in("id", ids).or(cursoExpr);
+          const allowed = new Set((doCurso ?? []).map((r: any) => r.id));
+          ids = ids.filter((id: number) => allowed.has(id));
+        }
         scope.question_ids = ids;
         if (ids.length) {
           await supabase
@@ -1752,6 +1808,7 @@ serve(async (req) => {
             .order("id", { ascending: true })
             .limit(RESET_PAGE);
           if (scope.disciplinas?.length) pageSel = pageSel.in("disciplina", scope.disciplinas);
+          if (cursoExpr) pageSel = pageSel.or(cursoExpr);
           const { data: pageRows, error: pageErr } = await pageSel;
           if (pageErr || !pageRows || pageRows.length === 0) break;
           const pageIds = (pageRows as any[]).map((r) => r.id);
@@ -1771,6 +1828,7 @@ serve(async (req) => {
         .eq("audit_status", Q_STATUS.PENDING);
       if (scope.disciplinas?.length) countQ = countQ.in("disciplina", scope.disciplinas);
       if (scope.question_ids?.length) countQ = countQ.in("id", scope.question_ids);
+      if (cursoExpr) countQ = countQ.or(cursoExpr);
       const { count } = await countQ;
 
       const { data: job } = await supabase.from("audit_jobs").insert({
@@ -1831,6 +1889,8 @@ serve(async (req) => {
         .limit(PAGE_Q);
       if (job.scope?.disciplinas?.length) qBuilder = qBuilder.in("disciplina", job.scope.disciplinas);
       if (job.scope?.question_ids?.length) qBuilder = qBuilder.in("id", job.scope.question_ids);
+      const jobCursoExpr = cursoOrExpr(job.scope?.curso_id ?? null, job.scope?.curso_slug ?? null);
+      if (jobCursoExpr) qBuilder = qBuilder.or(jobCursoExpr);
       const { data: candidates, error: cErr } = await qBuilder;
       if (cErr || !candidates || candidates.length === 0) break;
       const candidateIds = (candidates as any[]).map((q) => q.id);
