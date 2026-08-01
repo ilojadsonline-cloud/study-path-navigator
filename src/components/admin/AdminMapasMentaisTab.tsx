@@ -67,7 +67,7 @@ export function AdminMapasMentaisTab() {
 
       const { error: insErr } = await supabase
         .from("mapas_mentais")
-        .insert({ disciplina_id: discId, topico: titulo.trim(), nome_arquivo: file.name, storage_path: path });
+        .insert({ disciplina_id: discId, topico: titulo.trim(), nome_arquivo: file.name, storage_path: path, curso_id: cursoId });
       if (insErr) throw insErr;
 
       toast.success("Mapa mental adicionado");
