@@ -108,15 +108,24 @@ const Ranking = () => {
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 w-full min-w-0">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold flex items-center gap-2 flex-wrap">
             <Trophy className="w-7 h-7 text-gold" />
             <span className="text-gradient-primary">Ranking</span>
+            {cursos.length > 1 && cursoAtivo && (
+              <span className="px-2 py-0.5 rounded-full bg-primary/15 text-primary text-xs font-semibold align-middle">
+                {cursoAtivo.sigla}
+              </span>
+            )}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-2 max-w-xl">
             Compita com outros guerreiros e acompanhe seu desempenho. O ranking é
             calculado pela <strong>taxa de acerto</strong>, com desempate por número de
             questões respondidas. É necessário ter pelo menos 10 questões respondidas.
+            {cursos.length > 1 && cursoAtivo && (
+              <> Cada curso tem <strong>ranking próprio</strong> — você está vendo o de <strong>{cursoAtivo.nome}</strong>.</>
+            )}
           </p>
+
         </motion.div>
 
         {/* Privacidade */}
