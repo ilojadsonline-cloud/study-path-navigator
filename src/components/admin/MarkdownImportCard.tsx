@@ -55,6 +55,7 @@ export function MarkdownImportCard({ onCreated }: Props) {
       comentario: q.comentario,
       origem: "manual",
       audit_status: "approved",
+      curso_id: cursoId,
     }));
     const { error } = await supabase.from("questoes").insert(rows as any);
     setSaving(false);
