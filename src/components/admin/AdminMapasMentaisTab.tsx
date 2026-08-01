@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Loader2, Upload, Trash2, FileDown, Brain, Pencil, X, Check } from "lucide-react";
 import { toast } from "sonner";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 
 type MapaRow = {
   id: string;
