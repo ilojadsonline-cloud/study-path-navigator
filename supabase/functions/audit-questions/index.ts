@@ -1234,12 +1234,12 @@ Retorne JSON ESTRITO:
   "source_articles": ["Art. X", "Art. Y"],
   "proof_matrix": [
     { "letter": "A", "text": "...", "verdict": false|true, "literal_evidence": "...", "source_article": "Art. X" },
-    { "letter": "B", ... }, { "letter": "C", ... }, { "letter": "D", ... }, { "letter": "E", ... }
+    ${letras.slice(1).map((l) => `{ "letter": "${l}", ... }`).join(", ")}
   ],
   "patch": {
     "enunciado"?: "...",
-    "alt_a"?: "...", "alt_b"?: "...", "alt_c"?: "...", "alt_d"?: "...", "alt_e"?: "...",
-    "gabarito"?: 0-4,
+    ${letras.map((l) => `"alt_${l.toLowerCase()}"?: "..."`).join(", ")},
+    "gabarito"?: ${isFourAlt(q) ? "0-3" : "0-4"},
     "comentario"?: "..."
   } | null,
   "needs_human_review": true|false,
