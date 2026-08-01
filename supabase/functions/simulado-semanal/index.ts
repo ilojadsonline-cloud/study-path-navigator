@@ -69,15 +69,19 @@ serve(async (req) => {
     const action = body.action as string;
 
     // ── localizar simulado(s) ativo(s) ──
+    const cursoId = (body.curso_id as string | undefined) ?? null;
+
     const loadSimuladosAtivos = async () => {
       const nowIso = new Date().toISOString();
-      const { data } = await admin
+      let query = admin
         .from("simulados_semanais")
         .select("*")
         .eq("ativo", true)
         .lte("starts_at", nowIso)
         .gte("ends_at", nowIso)
         .order("starts_at", { ascending: false });
+      if (cursoId) query = query.or(`curso_id.eq.${cursoId},curso_id.is.null`);
+      const { data } = await query;
       return (data as any[]) || [];
     };
 
