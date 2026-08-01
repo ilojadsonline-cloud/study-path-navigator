@@ -1,4 +1,5 @@
 // Schedule generation logic
+import { getDistribuicao } from "@/lib/edital-distribuicao";
 
 export type DisciplinaCronograma = { nome: string; cor: string };
 
