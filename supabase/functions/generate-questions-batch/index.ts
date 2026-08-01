@@ -1743,7 +1743,7 @@ FIDELIDADE EXCLUSIVA AO TEXTO LEGAL DO BANCO (REFORÇO):
 - Toda alternativa correta deve ter um trecho LITERAL rastreável no texto fornecido. Toda alternativa incorreta deve contradizer um trecho LITERAL identificável no texto fornecido.
 - Assuntos possíveis: ${disc.assuntos.join(", ")}
 
-DIRETRIZES ESPECÍFICAS DA DISCIPLINA (${isManual ? "Edital nº 1/2026/GABCOM — CHOA BM 2026 CBMTO" : "Edital nº 001/2026 — CHOA/2026 PMTO"}) — obrigatórias:
+DIRETRIZES ESPECÍFICAS DA DISCIPLINA (Edital nº 001/2026 — CHOA/2026 PMTO) — obrigatórias:
 ${disc.diretrizes}
 
 15. REGRAS DE SAÍDA — OBJETO JSON OBRIGATÓRIO (sem markdown, sem comentários, sem texto fora do objeto).
