@@ -775,7 +775,7 @@ Retorne JSON ESTRITO:
       const g = Number(clean.gabarito);
       if (!Number.isInteger(g) || g < 0 || g > 4) delete clean.gabarito;
     }
-    patch = Object.keys(clean).length ? clean : null;
+    patch = enforceAltStructure(q, Object.keys(clean).length ? clean : null);
   }
   const techniques = Array.isArray(parsed.techniques_used) ? parsed.techniques_used.map((t: any) => String(t)).slice(0, 10) : [];
   (patch ?? {}).__techniques = techniques;
