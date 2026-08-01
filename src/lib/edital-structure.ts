@@ -118,7 +118,7 @@ export const disciplinasSelecionaveis = disciplinasLite.filter((d) => !d.restric
 export const ANALISE_EDITAL_DISC: DisciplinaLite = {
   id: "analise-edital",
   title: "Análise do Edital",
-  subtitle: "Visão geral e estratégia do CHOA/2026 PMTO",
+  subtitle: "Visão geral e estratégia do CHOA/2026",
   topics: ["Análise completa do edital"],
 };
 
@@ -127,3 +127,42 @@ export const bizuAulaDisciplinas: DisciplinaLite[] = [ANALISE_EDITAL_DISC, ...di
 
 // Selecionáveis no admin das BizuAulas (exclui sigilosos como o POP).
 export const bizuAulaSelecionaveis = bizuAulaDisciplinas.filter((d) => !d.restricted);
+
+/* ─────────────── Estrutura por curso (PMTO / CBMTO) ─────────────── */
+
+export const disciplinasLitePmto = disciplinasLite;
+
+export const disciplinasLiteCbmto: DisciplinaLite[] = disciplinasCbmto.map((d) => ({
+  id: d.id,
+  title: d.title,
+  subtitle: d.subtitle,
+  topics: d.items.map((i) => i.topic),
+  comingSoon: d.comingSoon,
+  restricted: d.restricted,
+}));
+
+const LITE_POR_CURSO: Record<string, DisciplinaLite[]> = {
+  pmto: disciplinasLitePmto,
+  cbmto: disciplinasLiteCbmto,
+};
+
+export function getDisciplinasLite(cursoSlug?: string | null): DisciplinaLite[] {
+  return LITE_POR_CURSO[(cursoSlug || "pmto").toLowerCase()] ?? disciplinasLitePmto;
+}
+
+export function getDisciplinasSelecionaveis(cursoSlug?: string | null): DisciplinaLite[] {
+  return getDisciplinasLite(cursoSlug).filter((d) => !d.restricted);
+}
+
+export function findDisciplinaByCurso(id: string, cursoSlug?: string | null) {
+  return getDisciplinasLite(cursoSlug).find((d) => d.id === id);
+}
+
+export function getBizuAulaDisciplinas(cursoSlug?: string | null): DisciplinaLite[] {
+  return [ANALISE_EDITAL_DISC, ...getDisciplinasLite(cursoSlug)];
+}
+
+export function getBizuAulaSelecionaveis(cursoSlug?: string | null): DisciplinaLite[] {
+  return getBizuAulaDisciplinas(cursoSlug).filter((d) => !d.restricted);
+}
+
