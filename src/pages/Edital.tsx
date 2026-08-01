@@ -710,6 +710,7 @@ function DisciplinaBlock({
   open,
   onToggle,
   materials,
+  restrictedUnlocked = false,
 }: {
   d: Disciplina;
   index: number;
