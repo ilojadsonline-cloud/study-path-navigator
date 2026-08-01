@@ -894,8 +894,22 @@ function DisciplinaBlock({
 
 export default function Edital() {
   const { cursoSlug } = useCurso();
-  const disciplinas = useMemo(() => getDisciplinasEdital(cursoSlug), [cursoSlug]);
-  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set([disciplinas[0].id]));
+  const [popAccess, setPopAccess] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    supabase.rpc("has_pop_access").then(({ data }) => {
+      if (alive) setPopAccess(data === true);
+    });
+    return () => { alive = false; };
+  }, []);
+
+  // Disciplinas sigilosas (POP) só aparecem para quem tem autorização.
+  const disciplinas = useMemo(
+    () => getDisciplinasEdital(cursoSlug).filter((d) => !d.restricted || popAccess),
+    [cursoSlug, popAccess],
+  );
+  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set(disciplinas[0] ? [disciplinas[0].id] : []));
 
   useEffect(() => {
     setOpenIds(new Set(disciplinas[0] ? [disciplinas[0].id] : []));
