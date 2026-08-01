@@ -12,6 +12,7 @@
 
 ## Memories
 - [Multi-curso Fase 2](mem://features/multi-curso-fase2-contexto-filtros) — CursoContext/CursoSwitcher (oculto com 1 curso), filtro curso_id em Questoes/Simulados/Mapas/BizuAula, coluna Cursos no AdminUsersTab
+- [Multi-curso Fase 4](mem://features/multi-curso-fase4-conteudo-admin) — conteúdo do admin por curso: geração IA, import Markdown, mapas, bizu aulas, textos legais, banco de questões admin, simulado semanal (edge aceita curso_id)
 - [Acesso por Registro Local (resiliência)](mem://features/acesso-por-registro-local-resiliencia) — check-subscription confia em app_metadata.access_expires_at / trial_usage.converted_to_paid ANTES de consultar Stripe/MP
 - [Notificações Direcionadas](mem://features/notificacoes-direcionadas-alerta-flutuante) — notifications.user_id (null=todos/id=individual), realtime, sino + alerta flutuante
 - [Simulado Semanal + Import Markdown](mem://features/simulado-semanal-importacao-markdown) — importação por Markdown e simulado semanal online com ranking
