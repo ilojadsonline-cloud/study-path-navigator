@@ -214,8 +214,10 @@ export function AdminQuestoesTab() {
           updates: {
             enunciado: editQuestion.enunciado,
             alt_a: editQuestion.alt_a, alt_b: editQuestion.alt_b, alt_c: editQuestion.alt_c,
-            alt_d: editQuestion.alt_d, alt_e: editQuestion.alt_e,
-            gabarito: editQuestion.gabarito, comentario: editQuestion.comentario,
+            // CHOA CBMTO: prova de 4 alternativas — alt_e sempre vazia.
+            alt_d: editQuestion.alt_d, alt_e: cursoSlug === "cbmto" ? "" : editQuestion.alt_e,
+            gabarito: cursoSlug === "cbmto" ? Math.min(editQuestion.gabarito, 3) : editQuestion.gabarito,
+            comentario: editQuestion.comentario,
             disciplina: editQuestion.disciplina, assunto: editQuestion.assunto, dificuldade: editQuestion.dificuldade,
           },
         },
