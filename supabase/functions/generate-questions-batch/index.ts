@@ -1280,7 +1280,7 @@ serve(async (req: Request) => {
         supabase, disc, sourceContent: leiSeca, batchSize,
         existingFingerprints, existingSemanticFPs, existingForSimilarity,
         assuntoCoverage, openingsToAvoid,
-        timestamp, questoesRevisaoManual, errosEncontrados, useLovable,
+        timestamp, questoesRevisaoManual, errosEncontrados, useLovable, cursoId,
       });
     }
 
