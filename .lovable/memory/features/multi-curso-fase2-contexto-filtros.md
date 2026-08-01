@@ -9,3 +9,10 @@ Arquitetura multi-curso (PMTO / CBMTO), Fase 2 — sem mexer em cobrança.
 - Helper `cursoOrFilter(cursoId)` → `curso_id.eq.<id>,curso_id.is.null` (inclui legado sem curso). Usado com `.or(...)` em: Questoes, Simulados (geração), MapasMentais, BizuAula.
 - `src/components/CursoSwitcher.tsx`: dropdown no header do AppLayout; **oculto quando há menos de 2 cursos disponíveis** (nada muda para os alunos atuais, só PMTO).
 - `src/components/admin/UserCursosCell.tsx`: coluna "Cursos" em AdminUsersTab — badges por sigla + popover para conceder/remover acesso (upsert em `acessos_curso` com `origem='manual_admin'`, onConflict `user_id,curso_id`; remover = `ativo=false`, nunca deleta).
+
+## Rankings por curso (decisão do usuário)
+Ranking geral/semanal/mensal e Top 10 são **separados por curso** — PMTO só compete com PMTO.
+RPCs recebem `p_curso_id` (NULL = tudo) e contam também o histórico legado com `curso_id IS NULL`:
+`get_ranking(p_period, p_curso_id)`, `get_top10_ranking(p_curso_id)`, `get_my_ranking_position(p_period, p_curso_id)`, `get_desempenho_disciplinas(p_user_id, p_curso_id)`.
+Clients passam `cursoId` do `useCurso()` (Ranking.tsx, RankingCard.tsx, Dashboard.tsx) e refazem fetch ao trocar de curso.
+O ranking do **simulado semanal** continua por simulado (já é escopado) e com identificação obrigatória.
