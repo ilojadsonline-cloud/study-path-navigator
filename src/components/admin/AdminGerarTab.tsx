@@ -52,6 +52,7 @@ export function AdminGerarTab() {
   const [batchSize, setBatchSize] = useState(2);
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>(() => getDisciplinasGeracao(cursoSlug));
   const [loadedTexts, setLoadedTexts] = useState<string[]>([]);
+  useEffect(() => { setSelectedDisciplines(getDisciplinasGeracao(cursoSlug)); }, [cursoSlug]);
   const [pendingJob, setPendingJob] = useState<PendingJob | null>(null);
   const [checkingPending, setCheckingPending] = useState(true);
   const [etaText, setEtaText] = useState<string>("");
