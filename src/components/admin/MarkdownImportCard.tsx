@@ -94,6 +94,10 @@ export function MarkdownImportCard({ onCreated }: Props) {
             Questões fora do padrão são automaticamente ignoradas. Campos: Disciplina, Assunto, Dificuldade, Banca, Ano, Prova,
             Enunciado, alternativas A) a E), Gabarito (A–E) e Comentário.
           </p>
+          <p className="text-xs text-muted-foreground">
+            Curso de destino: <span className="font-semibold text-primary">{cursoAtivo?.nome ?? "—"}</span>
+          </p>
+
 
           <div className="flex flex-wrap gap-2">
             <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium cursor-pointer hover:bg-secondary/70">
