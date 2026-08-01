@@ -72,7 +72,11 @@ export type RunAiOptions = {
   contentValidator?: (content: string) => boolean;
   // complexidade da tarefa → escolhe o modelo Maritaca (high=sabia-4; medium/low=sabiazinho-4)
   complexity?: "high" | "medium" | "low";
+  // força um provedor como primário nesta chamada (demais viram fallback)
+  preferProvider?: AiProvider;
+  preferModel?: string;
 };
+
 
 // ----------------------------- Helpers de env --------------------------------
 
