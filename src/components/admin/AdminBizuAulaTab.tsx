@@ -18,6 +18,7 @@ type VideoRow = {
 };
 
 export function AdminBizuAulaTab() {
+  const { cursoId } = useCurso();
   const [rows, setRows] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [discId, setDiscId] = useState<string>(bizuAulaDisciplinas[0].id);
