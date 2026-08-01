@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CronogramaData, DIAS_SEMANA_ORDER, getDiaLabel, gerarCronograma } from "@/lib/cronograma-generator";
+import { CronogramaData, DIAS_SEMANA_ORDER, getDiaLabel, gerarCronograma, getDistribuicaoPadrao } from "@/lib/cronograma-generator";
 import { useCurso } from "@/contexts/CursoContext";
 import { ArrowLeft, Sparkles } from "lucide-react";
 
@@ -17,10 +17,11 @@ interface Props {
 
 export function GeradorPersonalizado({ onGenerate, onBack }: Props) {
   const { cursoSlug } = useCurso();
+  const padrao = getDistribuicaoPadrao(cursoSlug);
   const [horas, setHoras] = useState(20);
-  const [videoaulas, setVideoaulas] = useState(40);
-  const [lei, setLei] = useState(30);
-  const [questoes, setQuestoes] = useState(30);
+  const [videoaulas, setVideoaulas] = useState(padrao.videoaulas);
+  const [lei, setLei] = useState(padrao.lei);
+  const [questoes, setQuestoes] = useState(padrao.questoes);
   const [dias, setDias] = useState<string[]>(["segunda", "terca", "quarta", "quinta", "sexta"]);
   const [horarioInicio, setHorarioInicio] = useState("19:00");
   const [horarioFim, setHorarioFim] = useState("23:00");

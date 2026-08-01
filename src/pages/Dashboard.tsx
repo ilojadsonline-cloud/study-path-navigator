@@ -171,7 +171,7 @@ const Dashboard = () => {
   const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
   const [bizuAulas, setBizuAulas] = useState<BizuAulaItem[]>([]);
   const [diagnostico, setDiagnostico] = useState<DesempenhoItem[]>([]);
-  const { cursoId, cursoSlug } = useCurso();
+  const { cursoId, cursoSlug, cursoAtivo } = useCurso();
 
   useEffect(() => {
     if (!user) return;
@@ -413,14 +413,17 @@ const Dashboard = () => {
         setIncompleteSimulado({ disciplina: progressData.disciplina, respondidas: Object.keys(respostas).length, total: progressData.total });
       }
 
-      // BizuAulas: contagem de vídeos por disciplina (Análise do Edital sempre em destaque)
-      const { data: bizuRows } = await supabase
-        .from("bizuaulas_videos").select("disciplina_id");
+      // BizuAulas: contagem de vídeos por disciplina (filtrado pelo curso ativo)
+      let bizuQuery = supabase.from("bizuaulas_videos").select("disciplina_id");
+      const bizuFilter = cursoOrFilter(cursoId, cursoSlug);
+      if (bizuFilter) bizuQuery = bizuQuery.or(bizuFilter);
+      const { data: bizuRows } = await bizuQuery;
       const bizuCount: Record<string, number> = {};
       (bizuRows || []).forEach((r: { disciplina_id: string }) => {
         bizuCount[r.disciplina_id] = (bizuCount[r.disciplina_id] || 0) + 1;
       });
-      const bizuList: BizuAulaItem[] = getBizuAulaDisciplinas(cursoSlug)
+      const temVideos = (bizuRows || []).length > 0;
+      const bizuList: BizuAulaItem[] = !temVideos ? [] : getBizuAulaDisciplinas(cursoSlug)
         .map((d) => ({
           id: d.id,
           title: d.title,
@@ -851,6 +854,11 @@ const Dashboard = () => {
                   Ver todas <ArrowUpRight className="w-3 h-3" />
                 </Link>
               </div>
+              {bizuAulas.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  BizuAulas em breve para o {cursoAtivo?.nome ?? "curso"}.
+                </p>
+              ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {bizuAulas.map((b) => (
                   <Link
@@ -878,6 +886,7 @@ const Dashboard = () => {
                   </Link>
                 ))}
               </div>
+              )}
             </motion.div>
 
             

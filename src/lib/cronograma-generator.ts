@@ -1,4 +1,5 @@
 // Schedule generation logic
+import { getDistribuicao } from "@/lib/edital-distribuicao";
 
 export type DisciplinaCronograma = { nome: string; cor: string };
 
@@ -117,6 +118,54 @@ function getTimeDiffMinutes(start: string, end: string): number {
 
 const TIPOS_ATIVIDADE: TipoAtividade[] = ["videoaula", "lei", "questoes"];
 
+/** Distribuição padrão por curso: CBMTO ainda não tem videoaulas. */
+export function getDistribuicaoPadrao(cursoSlug?: string | null): Distribuicao {
+  return (cursoSlug || "pmto").toLowerCase() === "cbmto"
+    ? { videoaulas: 0, lei: 50, questoes: 50 }
+    : { videoaulas: 40, lei: 30, questoes: 30 };
+}
+
+/**
+ * Sequência de disciplinas com cobertura garantida: cada disciplina recebe ao
+ * menos um bloco (enquanto houver blocos) e o restante é distribuído por peso
+ * (nº de questões no edital).
+ */
+function montarSequenciaDisciplinas(
+  disciplinas: DisciplinaCronograma[],
+  totalBlocos: number,
+  cursoSlug?: string | null,
+): string[] {
+  if (totalBlocos <= 0 || disciplinas.length === 0) return [];
+  const pesos = new Map<string, number>();
+  getDistribuicao(cursoSlug).forEach((d) => pesos.set(d.nome, d.questoes));
+  const peso = (nome: string) => pesos.get(nome) ?? 1;
+
+  const ordenadas = [...disciplinas].sort((a, b) => peso(b.nome) - peso(a.nome));
+  const contagem = new Map<string, number>();
+  const seq: string[] = [];
+
+  // 1) cobertura mínima
+  for (const d of ordenadas) {
+    if (seq.length >= totalBlocos) break;
+    seq.push(d.nome);
+    contagem.set(d.nome, 1);
+  }
+
+  // 2) restante por maior peso relativo (peso / (blocos já atribuídos + 1))
+  while (seq.length < totalBlocos) {
+    let melhor = ordenadas[0];
+    let melhorScore = -Infinity;
+    for (const d of ordenadas) {
+      const score = peso(d.nome) / ((contagem.get(d.nome) || 0) + 1);
+      if (score > melhorScore) { melhorScore = score; melhor = d; }
+    }
+    seq.push(melhor.nome);
+    contagem.set(melhor.nome, (contagem.get(melhor.nome) || 0) + 1);
+  }
+
+  return seq;
+}
+
 export function gerarCronograma(params: {
   horas_semanais: number;
   distribuicao: Distribuicao;
@@ -135,60 +184,52 @@ export function gerarCronograma(params: {
   const minutosDisponiveis = getTimeDiffMinutes(horario_inicio, horario_fim);
   const minutosEfetivos = Math.min(minutosPorDia, minutosDisponiveis);
 
-  // Minutes per activity type (total for the week)
-  const minVideoaulas = Math.round(totalMinutos * distribuicao.videoaulas / 100);
-  const minLei = Math.round(totalMinutos * distribuicao.lei / 100);
-  const minQuestoes = totalMinutos - minVideoaulas - minLei;
+  const blockDuration = 60; // blocos de 1 hora
+  const totalBlocosSemana = Math.max(0, Math.round(totalMinutos / blockDuration));
 
-  // Build a pool of (discipline, activity) pairs to distribute
-  const pool: { disciplina: DisciplinaNome; tipo: TipoAtividade }[] = [];
-
-  // Create balanced blocks: each discipline gets equal share of each activity type
-  const numDisciplinas = DISCIPLINAS_ATIVAS.length;
-  const blockDuration = 60; // 1-hour blocks
-
-  // Calculate blocks per activity type
-  const blocksVideoaulas = Math.max(1, Math.round(minVideoaulas / blockDuration));
-  const blocksLei = Math.max(1, Math.round(minLei / blockDuration));
-  const blocksQuestoes = Math.max(1, Math.round(minQuestoes / blockDuration));
-
-  // Distribute blocks across disciplines for each type
-  for (let i = 0; i < blocksVideoaulas; i++) {
-    pool.push({ disciplina: DISCIPLINAS_ATIVAS[i % numDisciplinas].nome, tipo: "videoaula" });
-  }
-  for (let i = 0; i < blocksLei; i++) {
-    pool.push({ disciplina: DISCIPLINAS_ATIVAS[i % numDisciplinas].nome, tipo: "lei" });
-  }
-  for (let i = 0; i < blocksQuestoes; i++) {
-    pool.push({ disciplina: DISCIPLINAS_ATIVAS[i % numDisciplinas].nome, tipo: "questoes" });
+  // Blocos por tipo — percentual 0 gera exatamente 0 blocos
+  const blocos: Record<TipoAtividade, number> = {
+    videoaula: Math.round(totalBlocosSemana * distribuicao.videoaulas / 100),
+    lei: Math.round(totalBlocosSemana * distribuicao.lei / 100),
+    questoes: 0,
+  };
+  blocos.questoes = Math.max(0, totalBlocosSemana - blocos.videoaula - blocos.lei);
+  if (distribuicao.questoes === 0) {
+    blocos.lei += blocos.questoes;
+    blocos.questoes = 0;
   }
 
-  // Shuffle pool for variety
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
+  const totalBlocos = blocos.videoaula + blocos.lei + blocos.questoes;
+  const sequencia = montarSequenciaDisciplinas(DISCIPLINAS_ATIVAS, totalBlocos, params.curso_slug);
 
-  // Try to avoid same discipline in consecutive blocks
-  // Simple sort: alternate activity types across days
-  const sortedPool: typeof pool = [];
-  const byType: Record<TipoAtividade, typeof pool> = { videoaula: [], lei: [], questoes: [] };
-  pool.forEach(p => byType[p.tipo].push(p));
-
-  let typeIdx = 0;
-  while (sortedPool.length < pool.length) {
-    const tipo = TIPOS_ATIVIDADE[typeIdx % 3];
-    if (byType[tipo].length > 0) {
-      sortedPool.push(byType[tipo].shift()!);
+  // Distribui a sequência entre os tipos, alternando para variedade
+  const byType: Record<TipoAtividade, string[]> = { videoaula: [], lei: [], questoes: [] };
+  let idx = 0;
+  let tipoIdx = 0;
+  while (idx < sequencia.length) {
+    const tipo = TIPOS_ATIVIDADE[tipoIdx % 3];
+    if (byType[tipo].length < blocos[tipo]) {
+      byType[tipo].push(sequencia[idx]);
+      idx++;
     }
-    typeIdx++;
-    // Safety: avoid infinite loop
-    if (typeIdx > pool.length * 3) break;
+    tipoIdx++;
+    if (tipoIdx > sequencia.length * 6 + 12) break;
   }
 
-  // Distribute blocks across days
+  // Ordem final alternando tipos
+  const sortedPool: { disciplina: DisciplinaNome; tipo: TipoAtividade }[] = [];
+  let t = 0;
+  while (sortedPool.length < totalBlocos) {
+    const tipo = TIPOS_ATIVIDADE[t % 3];
+    if (byType[tipo].length > 0) {
+      sortedPool.push({ disciplina: byType[tipo].shift()!, tipo });
+    }
+    t++;
+    if (t > totalBlocos * 6 + 12) break;
+  }
+
+  // Distribui blocos pelos dias
   const blocksPerDay = Math.max(1, Math.floor(minutosEfetivos / blockDuration));
-  const totalBlocks = dias_semana.length * blocksPerDay;
 
   const atividades: AtividadeBloco[] = [];
   let poolIdx = 0;
@@ -221,7 +262,7 @@ export function gerarCronograma(params: {
 export function gerarCronogramaPadrao(cursoSlug?: string | null): CronogramaData {
   const params = {
     horas_semanais: 20,
-    distribuicao: { videoaulas: 40, lei: 30, questoes: 30 },
+    distribuicao: getDistribuicaoPadrao(cursoSlug),
     dias_semana: ["segunda", "terca", "quarta", "quinta", "sexta"],
     horario_inicio: "19:00",
     horario_fim: "23:00",
