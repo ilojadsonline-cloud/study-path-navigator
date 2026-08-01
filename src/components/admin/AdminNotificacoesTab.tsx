@@ -222,6 +222,9 @@ export function AdminNotificacoesTab() {
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${n.user_id ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"}`}>
                         {n.user_id ? "Individual" : "Todos"}
                       </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${n.curso_id ? "bg-accent/20 text-accent-foreground" : "bg-secondary text-muted-foreground"}`}>
+                        {n.curso_id ? cursoNome(n.curso_id) : "Global"}
+                      </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
                     <p className="text-xs text-muted-foreground/60 mt-1">{new Date(n.created_at).toLocaleString("pt-BR")}</p>
