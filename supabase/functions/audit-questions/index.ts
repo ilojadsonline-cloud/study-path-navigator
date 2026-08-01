@@ -1220,7 +1220,7 @@ RISCO: classifique o risco da reescrita: "low" (mudança mecânica/comprovada li
 
 CONFIANÇA: 0.0-1.0. Use ≥0.9 SOMENTE quando toda alternativa tem literal_evidence verificável copiada da lei e não há ambiguidade.
 
-NEEDS_HUMAN_REVIEW: true se houver QUALQUER dúvida, se for trocar gabarito sem certeza absoluta, se a literal_evidence depender de interpretação extensiva, ou se você não conseguir cobrir as 5 alternativas com prova literal sólida. Caso contrário false.
+NEEDS_HUMAN_REVIEW: true se houver QUALQUER dúvida, se for trocar gabarito sem certeza absoluta, se a literal_evidence depender de interpretação extensiva, ou se você não conseguir cobrir as ${letras.length} alternativas com prova literal sólida. Caso contrário false.
 
 RECOVERABLE: false se a questão for IRRECUPERÁVEL à luz da lei (sem alternativa correta possível, sem base legal, premissa contraditória). Nesse caso patch=null e proof_matrix=[].
 
