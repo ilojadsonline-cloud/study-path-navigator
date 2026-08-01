@@ -54,6 +54,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <CursoProvider>
           <StudyTimerProvider />
           <Routes>
             <Route path="/" element={<Index />} />
@@ -86,6 +87,7 @@ const App = () => (
             <Route path="/bizuaula" element={<ProtectedRoute><BizuAula /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </CursoProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
