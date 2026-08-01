@@ -70,6 +70,7 @@ export function AdminBizuAulaTab() {
         titulo: titulo.trim(),
         url_youtube: url.trim(),
         ordem: nextOrdem,
+        curso_id: cursoId,
       });
       if (error) throw error;
       toast.success("Vídeo adicionado");
