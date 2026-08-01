@@ -324,6 +324,33 @@ function cursoOrExpr(cursoId: string | null, cursoSlug: string | null): string |
     : `curso_id.eq.${cursoId}`;
 }
 
+
+/**
+ * Texto legal escopado por curso: cada curso tem seu próprio texto para a mesma
+ * disciplina (ex.: "Redação Oficial" do PMTO ≠ do CBMTO). Registros legados
+ * (curso_id NULL) só valem quando a questão também é legada.
+ */
+async function loadLegalTextForQuestion(
+  supabase: any,
+  disciplina: string,
+  cursoId: string | null,
+): Promise<string | null> {
+  let sel = supabase.from("discipline_legal_texts").select("content").eq("disciplina", disciplina).limit(5);
+  sel = cursoId ? sel.eq("curso_id", cursoId) : sel.is("curso_id", null);
+  const { data } = await sel;
+  let rows = data ?? [];
+  if (!rows.length && cursoId) {
+    // Fallback apenas para o curso legado (PMTO): textos antigos sem curso_id.
+    const { data: cursoRow } = await supabase.from("cursos").select("slug").eq("id", cursoId).maybeSingle();
+    if (cursoRow?.slug === "pmto") {
+      const { data: legacy } = await supabase
+        .from("discipline_legal_texts").select("content").eq("disciplina", disciplina).is("curso_id", null).limit(5);
+      rows = legacy ?? [];
+    }
+  }
+  return (rows.map((r: any) => r.content).join("\n\n").slice(0, 18000)) || null;
+}
+
 function buildAuditPrompt(q: Questao, legalText: string | null): string {
   const letras = altLettersOf(q);
   const alts = letras.map(
@@ -1218,13 +1245,7 @@ async function repairQuestion(
   const questao = q as Questao;
 
   // 2) Carrega texto legal da disciplina
-  const { data: legalRows } = await supabase
-    .from("discipline_legal_texts")
-    .select("content")
-    .eq("disciplina", questao.disciplina)
-    .or(cursoOrExpr((questao as any).curso_id ?? null, (questao as any).curso_id ? null : "pmto") ?? "curso_id.is.null,curso_id.not.is.null")
-    .limit(5);
-  const legalText = (legalRows ?? []).map((r: any) => r.content).join("\n\n").slice(0, 18000);
+  const legalText = (await loadLegalTextForQuestion(supabase, questao.disciplina, (questao as any).curso_id ?? null)) ?? "";
   if (!legalText || legalText.trim().length < 500) {
     const { data: audIns } = await supabase.from("question_audits").insert({
       questao_id: questionId,
@@ -1383,15 +1404,11 @@ async function processQuestion(
   const flagStatus = keepPending ? Q_STATUS.PENDING : Q_STATUS.MANUAL;
   const correctedStatus = keepPending ? Q_STATUS.PENDING : Q_STATUS.AUTO_CORRECTED;
   // Busca texto legal por disciplina (cache)
-  let legal = legalCache.get(q.disciplina);
+  const legalKey = `${(q as any).curso_id ?? "legacy"}::${q.disciplina}`;
+  let legal = legalCache.get(legalKey);
   if (legal === undefined) {
-    const { data } = await supabase
-      .from("discipline_legal_texts")
-      .select("content")
-      .eq("disciplina", q.disciplina)
-      .limit(5);
-    legal = (data ?? []).map((r: any) => r.content).join("\n\n").slice(0, 18000) || null;
-    legalCache.set(q.disciplina, legal);
+    legal = await loadLegalTextForQuestion(supabase, q.disciplina, (q as any).curso_id ?? null);
+    legalCache.set(legalKey, legal);
   }
 
   // BLOQUEIO OPERACIONAL: sem texto legal cadastrado suficiente, NÃO usar conhecimento geral.
