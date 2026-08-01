@@ -433,11 +433,11 @@ Se a questão estiver perfeita: confidence alta, issues=[], proposed_patch=null,
 
 /** Detecta distrator com mais de DISTRATOR_LEN_RATIO× o tamanho médio dos demais (incluindo a correta). */
 function detectOversizedDistractors(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_e"|"gabarito">): Array<{ field: string; len: number; mean: number }> {
-  const keys = ["alt_a","alt_b","alt_c","alt_d","alt_e"];
+  const keys = altKeysOf(q);
   const lens = keys.map((k) => String((q as any)[k] ?? "").trim().length);
   const g = q.gabarito;
   const out: Array<{ field: string; len: number; mean: number }> = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < keys.length; i++) {
     if (i === g) continue;
     const others = lens.filter((_, j) => j !== i);
     const mean = others.reduce((a, b) => a + b, 0) / others.length;
@@ -450,9 +450,10 @@ function detectOversizedDistractors(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"al
 
 /** Verifica se o gabarito é a alternativa mais longa OU mais curta do conjunto. */
 function detectLengthBias(q: Pick<Questao, "alt_a"|"alt_b"|"alt_c"|"alt_d"|"alt_e"|"gabarito">): boolean {
-  const lens = ["alt_a","alt_b","alt_c","alt_d","alt_e"].map((k) => String((q as any)[k] ?? "").trim().length);
+  const keys = altKeysOf(q);
+  const lens = keys.map((k) => String((q as any)[k] ?? "").trim().length);
   const g = q.gabarito;
-  if (g < 0 || g > 4) return false;
+  if (g < 0 || g >= keys.length) return false;
   const max = Math.max(...lens);
   const min = Math.min(...lens);
   // Se há empate no extremo, não é viés (não é única).
@@ -484,14 +485,15 @@ function detectArticleNumberCobranca(
     return { hit: true, reason: "enunciado cobra a localização/número do dispositivo como objeto central" };
   }
   // Alternativas formadas apenas por referência seca (Art. N, inciso, §) — sem conteúdo jurídico.
-  const alts = [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].map((a) => String(a ?? "").trim());
+  const altKeys = altKeysOf(q);
+  const alts = altKeys.map((k) => String((q as any)[k] ?? "").trim());
   const isBareRef = (s: string) =>
     s.length > 0 && /^(?:art(?:igo|\.)?\s*\d+[ºo°a]?\s*)+(?:[,;e/]+\s*(?:inciso|§|paragrafo|alinea|item)?\s*[ivxlcdm\d]*\.?\s*)*$/i.test(
       s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
     );
   const bare = alts.filter(isBareRef).length;
-  if (bare >= 4) {
-    return { hit: true, reason: `${bare} de 5 alternativas são apenas referências de artigo/inciso sem conteúdo` };
+  if (bare >= altKeys.length - 1) {
+    return { hit: true, reason: `${bare} de ${altKeys.length} alternativas são apenas referências de artigo/inciso sem conteúdo` };
   }
   return { hit: false, reason: "" };
 }
@@ -515,7 +517,7 @@ function detectRedacaoForaDeEscopo(
   if (!isRedacaoOficial(q.disciplina)) return { hit: false, reason: "" };
   const norm = (s: unknown) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const enun = norm(q.enunciado);
-  const alts = [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].map(norm).join(" \u2022 ");
+  const alts = altKeysOf(q).map((k) => norm((q as any)[k])).join(" \u2022 ");
   const haystack = `${enun} \u2022 ${alts}`;
 
   // Termos que caracterizam cobrança de estrutura/formatação (fora do escopo conceitual).
@@ -762,7 +764,7 @@ async function auditOne(q: Questao, legalText: string | null, userReports: strin
 
   // ── Detecções determinísticas que complementam o DeepSeek ──
   if (detectLengthBias(q) && !issues.some((i: any) => i?.type === "length_bias")) {
-    const lens = ["alt_a","alt_b","alt_c","alt_d","alt_e"].map((k) => String((q as any)[k] ?? "").length);
+    const lens = altKeysOf(q).map((k) => String((q as any)[k] ?? "").length);
     const isMax = lens[q.gabarito] === Math.max(...lens);
     issues.push({
       type: "length_bias",
@@ -994,7 +996,7 @@ Retorne JSON ESTRITO:
     return { patch: null, unrecoverable: true, summary: String(parsed.summary ?? "IA classificou como irrecuperável") };
   }
   const newPatch: any = {};
-  for (const k of ["alt_a","alt_b","alt_c","alt_d","alt_e"]) {
+  for (const k of altKeysOf(q)) {
     if (typeof parsed[k] === "string" && parsed[k].trim()) newPatch[k] = parsed[k].trim();
   }
   // Preserva a correta literalmente
@@ -1220,6 +1222,7 @@ async function repairQuestion(
     .from("discipline_legal_texts")
     .select("content")
     .eq("disciplina", questao.disciplina)
+    .or(cursoOrExpr((questao as any).curso_id ?? null, (questao as any).curso_id ? null : "pmto") ?? "curso_id.is.null,curso_id.not.is.null")
     .limit(5);
   const legalText = (legalRows ?? []).map((r: any) => r.content).join("\n\n").slice(0, 18000);
   if (!legalText || legalText.trim().length < 500) {
