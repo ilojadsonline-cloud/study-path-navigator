@@ -278,8 +278,9 @@ const Assinatura = () => {
               Pagamento único <Barcode className="w-3.5 h-3.5" />
             </p>
             <p className="text-sm text-foreground mb-4">
-              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 9999)} uma única vez</strong> e tenha acesso por
-              <strong> {planoAtual?.dias_acesso ?? 90} dias</strong>. Sem renovação automática.
+              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 8999)} uma única vez</strong> e tenha acesso por
+              <strong> {planoAtual?.dias_acesso ?? 30} dias</strong>. Sem renovação automática.
+
             </p>
             <ul className="space-y-2 text-xs text-foreground/80 mb-5">
               <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-success" /> Pix com confirmação em minutos</li>
