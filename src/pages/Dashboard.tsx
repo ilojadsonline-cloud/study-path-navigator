@@ -854,6 +854,11 @@ const Dashboard = () => {
                   Ver todas <ArrowUpRight className="w-3 h-3" />
                 </Link>
               </div>
+              {bizuAulas.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  BizuAulas em breve para o {cursoAtivo?.nome ?? "curso"}.
+                </p>
+              ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {bizuAulas.map((b) => (
                   <Link
