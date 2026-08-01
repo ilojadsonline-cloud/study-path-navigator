@@ -15,7 +15,8 @@ export const DISCIPLINAS_FONTE_PMTO: DisciplinaFonte[] = [
 ];
 
 export const DISCIPLINAS_FONTE_CBMTO: DisciplinaFonte[] = [
-  { disciplina: "Direito Penal Militar e Processual Penal Militar", lei_nome: "CPM e CPPM — recortes do Anexo III do Edital nº 1/2026/GABCOM" },
+  { disciplina: "CPM — Código Penal Militar", lei_nome: "Decreto-Lei nº 1.001/1969 — recortes do Anexo III do Edital nº 1/2026/GABCOM" },
+  { disciplina: "CPPM — Código de Processo Penal Militar", lei_nome: "Decreto-Lei nº 1.002/1969 — recortes do Anexo III do Edital nº 1/2026/GABCOM" },
   { disciplina: "Redação Oficial", lei_nome: "Manual de Redação Oficial aplicável ao CBMTO" },
   { disciplina: "Combate a Incêndio Urbano", lei_nome: "Manual de Combate a Incêndio Urbano do CBMTO" },
   { disciplina: "NPCE", lei_nome: "Normas de Procedimentos Contra Emergências (NPCE) do CBMTO" },
@@ -24,7 +25,10 @@ export const DISCIPLINAS_FONTE_CBMTO: DisciplinaFonte[] = [
   { disciplina: "Salvamento em Altura", lei_nome: "Manual de Salvamento em Altura do CBMTO" },
   { disciplina: "Salvamento Aquático", lei_nome: "Manual de Salvamento Aquático do CBMTO" },
   { disciplina: "Salvamento Terrestre", lei_nome: "Manual de Salvamento Terrestre / Veicular do CBMTO" },
-  { disciplina: "Legislação Específica", lei_nome: "Legislação específica do CBMTO (organização, estatuto, disciplina e promoções)" },
+  { disciplina: "Lei nº 2.578/2012 — Estatuto dos Militares do TO", lei_nome: "Lei nº 2.578/2012 — Estatuto dos Militares Estaduais do Tocantins" },
+  { disciplina: "LC nº 131/2021 — Organização Básica do CBMTO", lei_nome: "Lei Complementar nº 131/2021 — Organização Básica do CBMTO" },
+  { disciplina: "Lei nº 2.665/2012 — Promoções no CBMTO", lei_nome: "Lei nº 2.665/2012 — Promoções de praças do CBMTO" },
+  { disciplina: "Lei nº 3.798/2021 — Segurança Contra Incêndio", lei_nome: "Lei nº 3.798/2021 — Código de Segurança Contra Incêndio e Emergência do TO" },
 ];
 
 export function getDisciplinasFonte(cursoSlug?: string | null): DisciplinaFonte[] {
