@@ -11,6 +11,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useCurso } from "@/contexts/CursoContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Copy, Loader2, Search, Trash2 } from "lucide-react";
@@ -25,6 +26,7 @@ type Pair = {
 };
 
 export function DedupQuestoesCard() {
+  const { cursoId, cursoSlug } = useCurso();
   const [disciplinas, setDisciplinas] = useState<string[]>([]);
   const [disciplina, setDisciplina] = useState<string>("");
   const [pairs, setPairs] = useState<Pair[] | null>(null);
@@ -35,7 +37,7 @@ export function DedupQuestoesCard() {
   // Carrega a lista de disciplinas uma vez
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.rpc("list_disciplinas");
+      const { data, error } = await supabase.rpc("list_disciplinas", { p_curso_id: cursoId });
       if (error) {
         toast.error("Erro ao carregar disciplinas", { description: error.message });
         return;
@@ -43,10 +45,10 @@ export function DedupQuestoesCard() {
       const list = ((data as { disciplina: string }[]) || [])
         .map((d) => d.disciplina)
         .filter(Boolean);
-      const listWithPop = list.includes("POP") ? list : [...list, "POP"];
+      const listWithPop = cursoSlug === "pmto" && !list.includes("POP") ? [...list, "POP"] : list;
       setDisciplinas(listWithPop);
     })();
-  }, []);
+  }, [cursoId, cursoSlug]);
 
   const analisar = async () => {
     if (!disciplina) {
@@ -61,6 +63,7 @@ export function DedupQuestoesCard() {
         p_disciplina: disciplina,
         p_threshold_enun: 0.82,
         p_threshold_alts: 0.78,
+        p_curso_id: cursoId,
       });
       if (error) throw error;
       const result = (data as Pair[]) || [];

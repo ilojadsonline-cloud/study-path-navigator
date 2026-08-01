@@ -147,7 +147,7 @@ const Questoes = () => {
 
   useEffect(() => {
     const fetchDisciplinas = async () => {
-      const { data, error } = await supabase.rpc("list_disciplinas");
+      const { data, error } = await supabase.rpc("list_disciplinas", { p_curso_id: cursoId });
       if (!error && data) {
         const unique = (data as { disciplina: string }[])
           .map(d => d.disciplina)

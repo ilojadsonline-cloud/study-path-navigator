@@ -71,10 +71,10 @@ export function AdminQuestoesTab() {
   }, [cursoId]);
 
   const loadDisciplinas = async () => {
-    const { data } = await supabase.rpc("list_disciplinas");
+    const { data } = await supabase.rpc("list_disciplinas", { p_curso_id: cursoId });
     if (data) {
       const list = (data as { disciplina: string }[]).map(d => d.disciplina);
-      setDisciplinas(list.includes("POP") ? list : [...list, "POP"]);
+      setDisciplinas(cursoSlug === "pmto" && !list.includes("POP") ? [...list, "POP"] : list);
     }
   };
 

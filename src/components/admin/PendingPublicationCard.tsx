@@ -9,6 +9,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, CheckCircle2, Trash2, Eye, Clock, CheckCheck, ShieldCheck, AlertTriangle, Pencil } from "lucide-react";
@@ -96,6 +97,7 @@ export function PendingPublicationCard() {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  const { cursoId, cursoSlug } = useCurso();
   const load = useCallback(async (p: number, disc: string) => {
     setLoading(true);
     try {
@@ -107,6 +109,8 @@ export function PendingPublicationCard() {
         .order("id", { ascending: false })
         .range(from, from + PAGE_SIZE - 1);
       if (disc !== "all") q = q.eq("disciplina", disc);
+      const cf = cursoOrFilter(cursoId, cursoSlug);
+      if (cf) q = q.or(cf);
       const { data, error, count } = await q;
       if (error) throw error;
       const list = (data as PendingQuestao[]) || [];
@@ -118,19 +122,19 @@ export function PendingPublicationCard() {
       toast.error("Erro ao carregar pendentes", { description: e.message });
     }
     setLoading(false);
-  }, [loadAudits]);
+  }, [loadAudits, cursoId, cursoSlug]);
 
   useEffect(() => {
     load(0, "all");
-    supabase.rpc("list_disciplinas").then(({ data }) => {
+    supabase.rpc("list_disciplinas", { p_curso_id: cursoId }).then(({ data }) => {
       if (data) {
         const list = (data as { disciplina: string }[]).map((d) => d.disciplina);
-        // list_disciplinas() oculta POP dos alunos; admin precisa filtrar POP aqui.
-        if (!list.includes("POP")) list.push("POP");
+        // POP é exclusivo do CHOA PMTO (sigiloso) — o admin precisa filtrá-lo lá.
+        if (cursoSlug === "pmto" && !list.includes("POP")) list.push("POP");
         setDisciplinas(list);
       }
     });
-  }, [load]);
+  }, [load, cursoId, cursoSlug]);
 
   const onDiscChange = (v: string) => {
     setFilterDisc(v);
@@ -175,6 +179,8 @@ export function PendingPublicationCard() {
           .order("id", { ascending: false })
           .range(offset, offset + STEP - 1);
         if (filterDisc !== "all") q = q.eq("disciplina", filterDisc);
+        const cf = cursoOrFilter(cursoId, cursoSlug);
+        if (cf) q = q.or(cf);
         const { data, error } = await q;
         if (error) throw error;
         if (!data || data.length === 0) break;
