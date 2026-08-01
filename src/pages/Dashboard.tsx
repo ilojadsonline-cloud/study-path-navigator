@@ -89,22 +89,25 @@ function calculateStudyMetrics(sessions: StudySession[]) {
   return { totalSec, todaySec, monthSec, byHour };
 }
 
-async function fetchAllRespostas(userId: string) {
+async function fetchAllRespostas(userId: string, cursoFilter: string | null) {
   const PAGE = 1000;
   let all: { id: number; correta: boolean; created_at: string; questao_id: number }[] = [];
   let from = 0;
   while (true) {
-    const { data } = await supabase.from("respostas_usuario")
-      .select("id, correta, created_at, questao_id")
+    let q = supabase.from("respostas_usuario")
+      .select("id, correta, created_at, questao_id, questoes!inner(curso_id)")
       .eq("user_id", userId).order("id", { ascending: true })
       .range(from, from + PAGE - 1);
+    if (cursoFilter) q = q.or(cursoFilter, { referencedTable: "questoes" });
+    const { data } = await q;
     if (!data || data.length === 0) break;
-    all = all.concat(data);
+    all = all.concat(data as unknown as typeof all);
     if (data.length < PAGE) break;
     from += PAGE;
   }
   return all;
 }
+
 
 const COLORS = {
   success: "hsl(142, 71%, 45%)",
