@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, Loader2, ChevronDown, Save } from "lucide-react";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { sanitizeRichHtml, htmlToPlainText } from "@/lib/sanitize-html";
+import { useCurso } from "@/contexts/CursoContext";
+import { getQtdAlternativas } from "@/lib/edital-distribuicao";
 
 const ALT_LETTERS = ["A", "B", "C", "D", "E"] as const;
 const DIFICULDADES = ["Fácil", "Médio", "Difícil"];
