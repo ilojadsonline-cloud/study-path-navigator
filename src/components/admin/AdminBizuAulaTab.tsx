@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Plus, Trash2, Save, Youtube, ArrowUp, ArrowDown, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { getYoutubeId } from "@/pages/BizuAula";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 
 type VideoRow = {
   id: string;
@@ -17,6 +18,7 @@ type VideoRow = {
 };
 
 export function AdminBizuAulaTab() {
+  const { cursoId } = useCurso();
   const [rows, setRows] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [discId, setDiscId] = useState<string>(bizuAulaDisciplinas[0].id);
@@ -30,17 +32,21 @@ export function AdminBizuAulaTab() {
 
   const fetchRows = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("bizuaulas_videos")
       .select("*")
       .order("disciplina_id", { ascending: true })
       .order("ordem", { ascending: true });
+    const filter = cursoOrFilter(cursoId);
+    if (filter) query = query.or(filter);
+    const { data, error } = await query;
     if (error) toast.error("Erro ao carregar vídeos");
     setRows((data as VideoRow[]) || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchRows(); }, []);
+  useEffect(() => { fetchRows(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [cursoId]);
+
 
   const byDisc = useMemo(() => {
     const m = new Map<string, VideoRow[]>();
@@ -64,6 +70,7 @@ export function AdminBizuAulaTab() {
         titulo: titulo.trim(),
         url_youtube: url.trim(),
         ordem: nextOrdem,
+        curso_id: cursoId,
       });
       if (error) throw error;
       toast.success("Vídeo adicionado");

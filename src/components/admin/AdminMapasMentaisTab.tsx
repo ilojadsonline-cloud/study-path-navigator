@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Loader2, Upload, Trash2, FileDown, Brain, Pencil, X, Check } from "lucide-react";
 import { toast } from "sonner";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 
 type MapaRow = {
   id: string;
@@ -17,6 +18,7 @@ type MapaRow = {
 };
 
 export function AdminMapasMentaisTab() {
+  const { cursoId, cursoAtivo } = useCurso();
   const [rows, setRows] = useState<MapaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [discId, setDiscId] = useState<string>(disciplinasSelecionaveis[0].id);
@@ -33,17 +35,21 @@ export function AdminMapasMentaisTab() {
 
   const fetchRows = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("mapas_mentais")
       .select("*")
       .order("disciplina_id", { ascending: true })
       .order("created_at", { ascending: true });
+    const filter = cursoOrFilter(cursoId);
+    if (filter) query = query.or(filter);
+    const { data, error } = await query;
     if (error) toast.error("Erro ao carregar mapas mentais");
     setRows((data as MapaRow[]) || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchRows(); }, []);
+  useEffect(() => { fetchRows(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [cursoId]);
+
 
   const handleUpload = async () => {
     if (!titulo.trim()) { toast.error("Informe o título do mapa mental"); return; }
@@ -61,7 +67,7 @@ export function AdminMapasMentaisTab() {
 
       const { error: insErr } = await supabase
         .from("mapas_mentais")
-        .insert({ disciplina_id: discId, topico: titulo.trim(), nome_arquivo: file.name, storage_path: path });
+        .insert({ disciplina_id: discId, topico: titulo.trim(), nome_arquivo: file.name, storage_path: path, curso_id: cursoId });
       if (insErr) throw insErr;
 
       toast.success("Mapa mental adicionado");

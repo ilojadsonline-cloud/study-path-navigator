@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FileUp, Loader2, ChevronDown, CheckCircle2, AlertTriangle, Upload } from "lucide-react";
 import { parseMarkdownQuestoes, MODELO_MARKDOWN, type ParseResult } from "@/lib/markdown-questoes-parser";
+import { useCurso } from "@/contexts/CursoContext";
 
 interface Props {
   onCreated?: () => void;
@@ -12,6 +13,7 @@ interface Props {
 
 export function MarkdownImportCard({ onCreated }: Props) {
   const { toast } = useToast();
+  const { cursoId, cursoAtivo } = useCurso();
   const [open, setOpen] = useState(false);
   const [texto, setTexto] = useState("");
   const [parsed, setParsed] = useState<ParseResult | null>(null);
@@ -53,6 +55,7 @@ export function MarkdownImportCard({ onCreated }: Props) {
       comentario: q.comentario,
       origem: "manual",
       audit_status: "approved",
+      curso_id: cursoId,
     }));
     const { error } = await supabase.from("questoes").insert(rows as any);
     setSaving(false);
@@ -91,6 +94,10 @@ export function MarkdownImportCard({ onCreated }: Props) {
             Questões fora do padrão são automaticamente ignoradas. Campos: Disciplina, Assunto, Dificuldade, Banca, Ano, Prova,
             Enunciado, alternativas A) a E), Gabarito (A–E) e Comentário.
           </p>
+          <p className="text-xs text-muted-foreground">
+            Curso de destino: <span className="font-semibold text-primary">{cursoAtivo?.nome ?? "—"}</span>
+          </p>
+
 
           <div className="flex flex-wrap gap-2">
             <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium cursor-pointer hover:bg-secondary/70">

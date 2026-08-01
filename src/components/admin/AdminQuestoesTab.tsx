@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { QuestionViewDialog } from "./QuestionViewDialog";
 import { QuestionEditDialog } from "./QuestionEditDialog";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 
 export interface Questao {
   id: number; disciplina: string; assunto: string; dificuldade: string; enunciado: string;
@@ -60,12 +61,14 @@ export function AdminQuestoesTab() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkAction, setBulkAction] = useState<null | "restore" | "soft_delete" | "hard_delete">(null);
 
+  const { cursoId } = useCurso();
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   useEffect(() => {
     loadDisciplinas();
     loadQuestoes(0);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursoId]);
 
   const loadDisciplinas = async () => {
     const { data } = await supabase.rpc("list_disciplinas");
@@ -81,6 +84,8 @@ export function AdminQuestoesTab() {
     const from = p * PAGE_SIZE;
     let countQuery = supabase.from("questoes").select("*", { count: "exact", head: true });
     let query = supabase.from("questoes").select("*").order("id", { ascending: false }).range(from, from + PAGE_SIZE - 1);
+    const cFilter = cursoOrFilter(cursoId);
+    if (cFilter) { countQuery = countQuery.or(cFilter); query = query.or(cFilter); }
     if (disciplinaFilter !== "todas") { countQuery = countQuery.eq("disciplina", disciplinaFilter); query = query.eq("disciplina", disciplinaFilter); }
     if (status === "publicaveis") {
       countQuery = countQuery.in("audit_status", PUBLISHABLE); query = query.in("audit_status", PUBLISHABLE);

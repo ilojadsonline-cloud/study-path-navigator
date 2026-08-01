@@ -8,6 +8,7 @@ import { Loader2, CheckCircle, AlertCircle, Zap, AlertTriangle, StopCircle, Rota
 import { useAuth } from "@/contexts/AuthContext";
 import { ManualQuestaoForm } from "@/components/admin/ManualQuestaoForm";
 import { MarkdownImportCard } from "@/components/admin/MarkdownImportCard";
+import { useCurso } from "@/contexts/CursoContext";
 
 const DISCIPLINES = [
   "Lei nº 2.578/2012", "LC nº 128/2021", "Lei nº 2.575/2012",
@@ -46,6 +47,7 @@ function getRetryDelay(attempt: number): number {
 export function AdminGerarTab() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { cursoId, cursoAtivo } = useCurso();
   const [results, setResults] = useState<BatchResult[]>([]);
   const [running, setRunning] = useState(false);
   const [totalGeradas, setTotalGeradas] = useState(0);
@@ -113,13 +115,13 @@ export function AdminGerarTab() {
     try {
       let usedBatchSize = batchSize;
       let { data, error } = await supabase.functions.invoke("generate-questions-batch", {
-        body: { disciplina_index: discIndex, batch_size: batchSize },
+        body: { disciplina_index: discIndex, batch_size: batchSize, curso_id: cursoId },
       });
 
       if (error && shouldFallback(error.message) && batchSize > 1) {
         usedBatchSize = 1;
         ({ data, error } = await supabase.functions.invoke("generate-questions-batch", {
-          body: { disciplina_index: discIndex, batch_size: 1 },
+          body: { disciplina_index: discIndex, batch_size: 1, curso_id: cursoId },
         }));
       }
 
@@ -350,7 +352,12 @@ export function AdminGerarTab() {
         <p className="text-sm text-muted-foreground">
           Gera questões com alvo em artigos menos explorados, menor desperdício de créditos e resposta mais rápida.
         </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          As questões geradas/importadas serão vinculadas ao curso ativo:{" "}
+          <span className="font-semibold text-primary">{cursoAtivo?.nome ?? "—"}</span>
+        </p>
       </div>
+
 
       <ManualQuestaoForm disciplinas={DISCIPLINES} />
 
