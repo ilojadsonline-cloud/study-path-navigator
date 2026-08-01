@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurso } from "@/contexts/CursoContext";
 import {
   CheckCircle, Target, BookOpen, Clock, TrendingUp, TrendingDown,
   Trophy, Calendar, Flame, Shield, Loader2, FileText, PlayCircle,
@@ -167,6 +168,7 @@ const Dashboard = () => {
   const [incompleteSimulado, setIncompleteSimulado] = useState<{disciplina: string; respondidas: number; total: number} | null>(null);
   const [bizuAulas, setBizuAulas] = useState<BizuAulaItem[]>([]);
   const [diagnostico, setDiagnostico] = useState<DesempenhoItem[]>([]);
+  const { cursoId } = useCurso();
 
   useEffect(() => {
     if (!user) return;
