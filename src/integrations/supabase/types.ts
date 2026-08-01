@@ -1393,21 +1393,38 @@ export type Database = {
     Functions: {
       check_cpf_exists: { Args: { p_cpf: string }; Returns: boolean }
       curso_pmto_id: { Args: never; Returns: string }
-      dedup_disciplina_preview: {
-        Args: {
-          p_disciplina: string
-          p_threshold_alts?: number
-          p_threshold_enun?: number
-        }
-        Returns: {
-          dup_enun: string
-          dup_id: number
-          keep_enun: string
-          keep_id: number
-          sim_alts: number
-          sim_enun: number
-        }[]
-      }
+      dedup_disciplina_preview:
+        | {
+            Args: {
+              p_disciplina: string
+              p_threshold_alts?: number
+              p_threshold_enun?: number
+            }
+            Returns: {
+              dup_enun: string
+              dup_id: number
+              keep_enun: string
+              keep_id: number
+              sim_alts: number
+              sim_enun: number
+            }[]
+          }
+        | {
+            Args: {
+              p_curso_id?: string
+              p_disciplina: string
+              p_threshold_alts?: number
+              p_threshold_enun?: number
+            }
+            Returns: {
+              dup_enun: string
+              dup_id: number
+              keep_enun: string
+              keep_id: number
+              sim_alts: number
+              sim_enun: number
+            }[]
+          }
       dedup_questoes: {
         Args: {
           p_dry_run?: boolean
@@ -1502,7 +1519,7 @@ export type Database = {
         Returns: boolean
       }
       list_disciplinas: {
-        Args: never
+        Args: { p_curso_id?: string }
         Returns: {
           disciplina: string
         }[]
