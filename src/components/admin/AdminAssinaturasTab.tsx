@@ -346,6 +346,7 @@ export function AdminAssinaturasTab() {
                       <TableHead>Usuário</TableHead>
                       <TableHead>E-mail</TableHead>
                       <TableHead>CPF</TableHead>
+                      <TableHead>Curso assinado</TableHead>
                       <TableHead>Bloqueado até</TableHead>
                       <TableHead>Último login</TableHead>
                       <TableHead>Motivo</TableHead>
@@ -354,7 +355,7 @@ export function AdminAssinaturasTab() {
                   </TableHeader>
                   <TableBody>
                     {filteredBlocked.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Nenhum usuário bloqueado.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Nenhum usuário bloqueado.</TableCell></TableRow>
                     ) : filteredBlocked.map((u) => {
                       const expired = u.access_expires_at && new Date(u.access_expires_at) < new Date();
                       const reason = u.block_reason === "acesso_expirado_90_dias"
@@ -367,6 +368,7 @@ export function AdminAssinaturasTab() {
                           <TableCell className="font-medium">{u.nome}</TableCell>
                           <TableCell className="text-xs">{u.email || "—"}</TableCell>
                           <TableCell className="text-xs">{u.cpf}</TableCell>
+                          <TableCell>{renderCursos(u.user_id)}</TableCell>
                           <TableCell className="text-xs">{fmtDate(u.banned_until)}</TableCell>
                           <TableCell className="text-xs">{fmtDate(u.last_sign_in_at)}</TableCell>
                           <TableCell><Badge variant="secondary">{reason}</Badge></TableCell>
