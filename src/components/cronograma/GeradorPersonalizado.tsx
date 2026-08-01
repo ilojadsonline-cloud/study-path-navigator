@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CronogramaData, DIAS_SEMANA_ORDER, getDiaLabel, gerarCronograma } from "@/lib/cronograma-generator";
+import { CronogramaData, DIAS_SEMANA_ORDER, getDiaLabel, gerarCronograma, getDistribuicaoPadrao } from "@/lib/cronograma-generator";
 import { useCurso } from "@/contexts/CursoContext";
 import { ArrowLeft, Sparkles } from "lucide-react";
 
