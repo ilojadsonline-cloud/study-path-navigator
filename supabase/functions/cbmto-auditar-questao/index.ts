@@ -173,7 +173,7 @@ Só proponha correção quando houver suporte expresso no trecho fornecido; caso
               { role: "system", content: PROMPT_SISTEMA_CBMTO },
               { role: "user", content: prompt },
             ],
-            { jsonResponse: true, maxOutputTokensOverride: 4096, complexity: "high", metadata: { modulo: "cbmto_auditoria" } },
+            { jsonResponse: true, maxOutputTokensOverride: 4096, complexity: "high", preferProvider: "deepseek", metadata: { modulo: "cbmto_auditoria" } },
           );
           ia = extrairJson(res.content);
         } catch (e) {
