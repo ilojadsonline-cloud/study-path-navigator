@@ -705,7 +705,8 @@ const CBMTO_DIRETRIZES_PADRAO =
   "critérios de decisão e identificação de conduta conforme/desconforme ao manual.";
 
 const DISCIPLINES_CBMTO = [
-  { disciplina: "Direito Penal Militar e Processual Penal Militar", assuntos: ["Crimes militares em espécie", "Aplicação da lei penal militar", "Inquérito Policial Militar", "Prisão em flagrante e providências"] },
+  { disciplina: "CPM — Código Penal Militar", assuntos: ["Aplicação da lei penal militar", "Do crime e da culpabilidade", "Crimes contra a autoridade e disciplina militar", "Crimes contra o serviço e o dever militar", "Crimes contra a administração militar"] },
+  { disciplina: "CPPM — Código de Processo Penal Militar", assuntos: ["Aplicação da lei processual penal militar", "Polícia Judiciária Militar", "Inquérito Policial Militar", "Prisão em flagrante e providências", "Processos de deserção"] },
   { disciplina: "Redação Oficial", assuntos: ["Atos de correspondência", "Atos normativos", "Atos ordinatórios", "Atos enunciativos", "Atos comprobatórios"] },
   { disciplina: "Combate a Incêndio Urbano", assuntos: ["Teoria do fogo", "Agentes extintores", "Técnicas e táticas de combate", "Ventilação tática", "Equipamentos de proteção respiratória"] },
   { disciplina: "NPCE", assuntos: ["Exigências de segurança contra incêndio", "Saídas de emergência", "Sistemas preventivos", "Análise de projetos", "Vistorias"] },
