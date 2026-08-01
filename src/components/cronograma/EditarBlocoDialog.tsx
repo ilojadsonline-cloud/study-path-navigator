@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { AtividadeBloco, DISCIPLINAS, DisciplinaNome, TipoAtividade, TIPO_LABELS } from "@/lib/cronograma-generator";
+import { AtividadeBloco, getDisciplinasCronograma, DisciplinaNome, TipoAtividade, TIPO_LABELS } from "@/lib/cronograma-generator";
+import { useCurso } from "@/contexts/CursoContext";
 import { Trash2 } from "lucide-react";
 
 interface Props {
@@ -48,7 +49,7 @@ export function EditarBlocoDialog({ bloco, open, onClose, onSave, onDelete }: Pr
             <Select value={form.disciplina} onValueChange={v => setForm({ ...form, disciplina: v as DisciplinaNome })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {DISCIPLINAS.map(d => (
+                {getDisciplinasCronograma(cursoSlug).map(d => (
                   <SelectItem key={d.nome} value={d.nome}>{d.nome}</SelectItem>
                 ))}
               </SelectContent>

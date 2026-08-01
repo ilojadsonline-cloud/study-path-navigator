@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurso } from "@/contexts/CursoContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -37,6 +38,7 @@ type View = "list" | "view" | "custom";
 
 export default function Cronograma() {
   const { user } = useAuth();
+  const { cursoId, cursoSlug } = useCurso();
   const [view, setView] = useState<View>("list");
   const [cronogramas, setCronogramas] = useState<CronogramaDB[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +62,7 @@ export default function Cronograma() {
   useEffect(() => { fetchCronogramas(); }, [user]);
 
   const handleGerarPadrao = () => {
-    const padrao = gerarCronogramaPadrao();
+    const padrao = gerarCronogramaPadrao(cursoSlug);
     setActiveCronograma(padrao);
     setActiveId(undefined);
     setView("view");

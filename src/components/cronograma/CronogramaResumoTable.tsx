@@ -2,7 +2,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from "@/components/ui/table";
 import {
-  AtividadeBloco, calcularResumo, formatMinutes, DISCIPLINAS, getCorDisciplina,
+  AtividadeBloco, calcularResumo, formatMinutes, getDisciplinasCronograma, getCorDisciplina,
 } from "@/lib/cronograma-generator";
 
 interface Props {
@@ -10,7 +10,9 @@ interface Props {
 }
 
 export function CronogramaResumoTable({ atividades }: Props) {
-  const { porDisciplina, totais } = calcularResumo(atividades);
+  const { cursoSlug } = useCurso();
+  const disciplinas = getDisciplinasCronograma(cursoSlug);
+  const { porDisciplina, totais } = calcularResumo(atividades, cursoSlug);
 
   return (
     <div className="rounded-lg border overflow-hidden">
@@ -25,7 +27,7 @@ export function CronogramaResumoTable({ atividades }: Props) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {DISCIPLINAS.map(d => (
+          {disciplinas.map(d => (
             <TableRow key={d.nome}>
               <TableCell>
                 <div className="flex items-center gap-2">
