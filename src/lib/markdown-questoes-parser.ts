@@ -198,7 +198,8 @@ export function parseMarkdownQuestoes(markdown: string, cursoSlug?: string | nul
         alts[1]!.trim(),
         alts[2]!.trim(),
         alts[3]!.trim(),
-        (alts[4] || "").trim(),
+        // Provas de 4 alternativas (CHOA CBMTO): a alternativa E é descartada.
+        qtdAlternativas === 4 ? "" : (alts[4] || "").trim(),
       ],
       gabarito,
       comentario,
