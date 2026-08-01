@@ -92,6 +92,7 @@ export function ManualQuestaoForm({ disciplinas, onCreated }: Props) {
       gabarito,
       comentario: sanitizeRichHtml(comentario),
       audit_status: "approved",
+      curso_id: cursoId,
     } as any);
     setSaving(false);
 
