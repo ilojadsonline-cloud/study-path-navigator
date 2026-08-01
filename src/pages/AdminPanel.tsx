@@ -80,7 +80,7 @@ const AdminPanel = () => {
               <TabsTrigger value="mapas" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Brain className="w-3.5 h-3.5" />Mapas Mentais</TabsTrigger>
               <TabsTrigger value="bizuaula" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Youtube className="w-3.5 h-3.5" />BizuAula</TabsTrigger>
               <TabsTrigger value="edital" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><FileText className="w-3.5 h-3.5" />Edital</TabsTrigger>
-              <TabsTrigger value="pop" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Lock className="w-3.5 h-3.5" />POP (Sigiloso)</TabsTrigger>
+              {isPmto && <TabsTrigger value="pop" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Lock className="w-3.5 h-3.5" />POP (Sigiloso)</TabsTrigger>}
             </TabsList>
           </div>
 
