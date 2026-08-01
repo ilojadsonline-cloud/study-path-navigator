@@ -1,6 +1,9 @@
 // Schedule generation logic
 
-export const DISCIPLINAS = [
+export type DisciplinaCronograma = { nome: string; cor: string };
+
+// CHOA PMTO — Edital nº 001/2026
+export const DISCIPLINAS_PMTO: DisciplinaCronograma[] = [
   { nome: "RDMETO", cor: "#22C55E" },
   { nome: "Lei 2.578", cor: "#F97316" },
   { nome: "LC 128", cor: "#3B82F6" },
@@ -9,10 +12,36 @@ export const DISCIPLINAS = [
   { nome: "POP", cor: "#A855F7" },
   { nome: "Português", cor: "#EC4899" },
   { nome: "Redação Oficial", cor: "#14B8A6" },
-] as const;
+];
+
+// CHOA BM CBMTO — Edital nº 1/2026/GABCOM
+export const DISCIPLINAS_CBMTO: DisciplinaCronograma[] = [
+  { nome: "Direito Penal Militar e Processual Penal Militar", cor: "#EF4444" },
+  { nome: "Redação Oficial", cor: "#14B8A6" },
+  { nome: "Combate a Incêndio Urbano", cor: "#F97316" },
+  { nome: "NPCE", cor: "#3B82F6" },
+  { nome: "Sistema de Comando de Incidentes", cor: "#06B6D4" },
+  { nome: "Atendimento Pré-Hospitalar", cor: "#F43F5E" },
+  { nome: "Salvamento em Altura", cor: "#8B5CF6" },
+  { nome: "Salvamento Aquático", cor: "#0EA5E9" },
+  { nome: "Salvamento Terrestre", cor: "#22C55E" },
+  { nome: "Legislação Específica", cor: "#EAB308" },
+];
+
+const DISCIPLINAS_POR_CURSO: Record<string, DisciplinaCronograma[]> = {
+  pmto: DISCIPLINAS_PMTO,
+  cbmto: DISCIPLINAS_CBMTO,
+};
+
+export function getDisciplinasCronograma(cursoSlug?: string | null): DisciplinaCronograma[] {
+  return DISCIPLINAS_POR_CURSO[(cursoSlug || "pmto").toLowerCase()] ?? DISCIPLINAS_PMTO;
+}
+
+/** Compatibilidade: lista padrão (PMTO). */
+export const DISCIPLINAS = DISCIPLINAS_PMTO;
 
 export type TipoAtividade = "videoaula" | "lei" | "questoes";
-export type DisciplinaNome = typeof DISCIPLINAS[number]["nome"];
+export type DisciplinaNome = string;
 
 export interface AtividadeBloco {
   id: string;
