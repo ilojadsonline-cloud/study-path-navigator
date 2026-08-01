@@ -1188,25 +1188,15 @@ ${alts}
 
 Gabarito atual: ${correctaLetra} (índice ${q.gabarito})
 
-Comentário atual:
-${q.comentario}
-
-${diagnosis ? `DIAGNÓSTICO DO AUDITOR — RESUMO: ${diagnosis.ai_summary ?? "(sem resumo)"}\nISSUES IDENTIFICADAS:\n${issuesTxt || "(nenhuma)"}\n` : ""}
-
-MODO: REPAIR ESTRUTURADO. Você é um REESCRITOR jurídico de elite (concursos militares + CESPE/FGV). Produza um PATCH que corrija TODOS os defeitos E uma PROOF_MATRIX literal obrigatória.
-
-REGRAS DE REESCRITA:
-1. Corrija EXATAMENTE os campos apontados em "field" do diagnóstico (quando houver). Preserve o restante quando possível.
-2. ANTI-LENGTH-BIAS: a alternativa correta NUNCA pode ser a única mais longa nem a única mais curta. Paridade ±25%.
-3. CADA distrator usa uma técnica DIFERENTE de erro (≥2 técnicas no conjunto). Encurte distratores longos preservando o erro típico.
-4. PROIBIDO "todas/nenhuma das anteriores", "n.d.a.", duplicatas, alternativa que contradiz o enunciado.
-5. Gabarito = inteiro 0-4. Se trocar a correta, ajuste o gabarito coerentemente.
+${altStructureNote(q)}
+...
+5. Gabarito = inteiro ${isFourAlt(q) ? "0-3" : "0-4"}. Se trocar a correta, ajuste o gabarito coerentemente.
 6. HIERARQUIA militar fiel à lei. Cite lei externa por extenso quando inevitável.
 7. COMENTÁRIO em 4 movimentos OBRIGATÓRIOS, parágrafos fluidos, 600-1500 chars.
 
-PROOF_MATRIX (OBRIGATÓRIA, 5 entradas — uma por alternativa A,B,C,D,E na ordem):
+PROOF_MATRIX (OBRIGATÓRIA, ${letras.length} entradas — uma por alternativa ${letras.join(",")} na ordem):
 Cada entrada DEVE conter:
-- letter: "A" | "B" | "C" | "D" | "E"
+- letter: ${letras.map((l) => `"${l}"`).join(" | ")}
 - text: o texto FINAL da alternativa após o patch (idêntico ao patch.alt_X correspondente)
 - verdict: true se for a alternativa CORRETA; false se for distrator. EXATAMENTE UMA entrada deve ter verdict=true.
 - literal_evidence: trecho LITERAL (≥40 chars) copiado do TEXTO LEGAL acima que prove o verdict (para a correta, prove por que é correta; para distrator, prove por que está errado/contradiz a lei). PROIBIDO parafrasear — deve ser cópia literal verificável.
