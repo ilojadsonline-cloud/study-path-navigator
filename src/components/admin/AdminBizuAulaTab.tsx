@@ -18,7 +18,7 @@ type VideoRow = {
 };
 
 export function AdminBizuAulaTab() {
-  const { cursoId } = useCurso();
+  const { cursoId, cursoSlug } = useCurso();
   const [rows, setRows] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [discId, setDiscId] = useState<string>(bizuAulaDisciplinas[0].id);
@@ -37,7 +37,7 @@ export function AdminBizuAulaTab() {
       .select("*")
       .order("disciplina_id", { ascending: true })
       .order("ordem", { ascending: true });
-    const filter = cursoOrFilter(cursoId);
+    const filter = cursoOrFilter(cursoId, cursoSlug);
     if (filter) query = query.or(filter);
     const { data, error } = await query;
     if (error) toast.error("Erro ao carregar vídeos");

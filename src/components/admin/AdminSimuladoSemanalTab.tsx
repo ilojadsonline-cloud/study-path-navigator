@@ -40,7 +40,7 @@ function toLocalInput(d: Date) {
 
 export function AdminSimuladoSemanalTab() {
   const { user } = useAuth();
-  const { cursoId } = useCurso();
+  const { cursoId, cursoSlug } = useCurso();
   const { toast } = useToast();
 
   const [titulo, setTitulo] = useState("");
@@ -71,7 +71,7 @@ export function AdminSimuladoSemanalTab() {
       .from("simulados_semanais")
       .select("*")
       .order("created_at", { ascending: false });
-    const filter = cursoOrFilter(cursoId);
+    const filter = cursoOrFilter(cursoId, cursoSlug);
     if (filter) query = query.or(filter);
     const { data } = await query;
     setLista((data as SimuladoRow[]) || []);

@@ -25,7 +25,7 @@ const DISCIPLINES = [
 ];
 
 export default function AdminTextosLegaisContent() {
-  const { cursoId, cursoAtivo } = useCurso();
+  const { cursoId, cursoSlug, cursoAtivo } = useCurso();
   const [texts, setTexts] = useState<LegalText[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export default function AdminTextosLegaisContent() {
       .from("discipline_legal_texts")
       .select("*")
       .order("disciplina");
-    const filter = cursoOrFilter(cursoId);
+    const filter = cursoOrFilter(cursoId, cursoSlug);
     if (filter) query = query.or(filter);
     const { data, error } = await query;
     if (!error && data) setTexts(data as LegalText[]);
@@ -72,7 +72,7 @@ export default function AdminTextosLegaisContent() {
 
   const deleteText = async (disciplina: string) => {
     let delQuery = supabase.from("discipline_legal_texts").delete().eq("disciplina", disciplina);
-    const delFilter = cursoOrFilter(cursoId);
+    const delFilter = cursoOrFilter(cursoId, cursoSlug);
     if (delFilter) delQuery = delQuery.or(delFilter);
     const { error } = await delQuery;
     if (error) {
