@@ -1048,6 +1048,7 @@ export default function Edital() {
               open={openIds.has(d.id)}
               onToggle={() => toggle(d.id)}
               materials={materials[d.id] ?? []}
+              restrictedUnlocked={popAccess}
             />
           ))}
         </div>
