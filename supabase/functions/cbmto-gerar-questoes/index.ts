@@ -209,7 +209,7 @@ Responda SOMENTE com JSON válido:
             { role: "system", content: PROMPT_SISTEMA_CBMTO },
             { role: "user", content: prompt },
           ],
-          { jsonResponse: true, maxTokens: 4096, metadata: { modulo: "cbmto", lote: loteId } },
+          { jsonResponse: true, maxOutputTokensOverride: 4096, complexity: "high", metadata: { modulo: "cbmto", lote: loteId } },
         );
         parsed = extrairJson(res.content);
       } catch (e) {
