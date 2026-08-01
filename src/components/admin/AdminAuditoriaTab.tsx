@@ -11,6 +11,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
+import { getDisciplinasGeracao } from "@/lib/disciplinas-geracao";
 import { toast } from "sonner";
 import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Undo2, Save, Pencil, Trash2, X, ShieldCheck, Wand2 } from "lucide-react";
 import { DedupQuestoesCard } from "./DedupQuestoesCard";
@@ -114,6 +116,7 @@ type QuestaoForm = {
 const LETRAS = ["A", "B", "C", "D", "E"];
 
 export function AdminAuditoriaTab() {
+  const { cursoId, cursoSlug, cursoAtivo } = useCurso();
   const [selDisc, setSelDisc] = useState<string[]>([]);
   const [scopeMode, setScopeMode] = useState<"all" | "discipline" | "unaudited" | "reported">("all");
   const [limit, setLimit] = useState(100000);
@@ -141,16 +144,18 @@ export function AdminAuditoriaTab() {
   useEffect(() => { filterStatusRef.current = filterStatus; }, [filterStatus]);
 
   async function loadDisciplinas() {
-    const { data, error } = await supabase.rpc("list_disciplinas");
-    if (error) {
-      toast.error("Erro ao carregar disciplinas: " + error.message);
-      return;
-    }
-    const list = (data ?? []).map((r: any) => r.disciplina).filter(Boolean);
-    // list_disciplinas() oculta POP (sigiloso) dos alunos, mas o admin precisa
-    // poder auditar/corrigir POP especificamente na aba de Validação.
-    if (!list.includes("POP")) list.push("POP");
-    setDisciplinas(list);
+    // Disciplinas do curso ativo (cada curso tem seu próprio edital) + as que
+    // efetivamente existem no banco daquele curso.
+    const base = getDisciplinasGeracao(cursoSlug);
+    let q = supabase.from("questoes").select("disciplina").limit(10000);
+    const filter = cursoOrFilter(cursoId, cursoSlug);
+    if (filter) q = q.or(filter);
+    const { data } = await q;
+    const doBanco = Array.from(new Set(((data ?? []) as any[]).map((r) => String(r.disciplina ?? "").trim()).filter(Boolean)));
+    const list = Array.from(new Set([...base, ...doBanco]));
+    // POP é exclusivo do CHOA PMTO (conteúdo sigiloso).
+    if (cursoSlug === "pmto" && !list.includes("POP")) list.push("POP");
+    setDisciplinas(list.filter((d) => cursoSlug === "pmto" || d !== "POP"));
   }
 
   async function loadLatestRunningJob() {
@@ -173,14 +178,38 @@ export function AdminAuditoriaTab() {
     else if (statusOverride === "session") q = q.in("status", SESSION_AUDIT_STATUSES).gte("created_at", activeJob?.created_at ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
     else q = q.eq("status", statusOverride);
     const { data, error } = await q;
-    if (error) toast.error(error.message);
-    else setAudits((data ?? []) as AuditRow[]);
+    if (error) {
+      toast.error(error.message);
+      setAudits([]);
+      setSelectedIds(new Set());
+      setLoading(false);
+      return;
+    }
+    let rows = (data ?? []) as AuditRow[];
+    // Escopo por curso: só mostra auditorias de questões do curso ativo.
+    const filter = cursoOrFilter(cursoId, cursoSlug);
+    if (filter && rows.length) {
+      const ids = Array.from(new Set(rows.map((r) => r.questao_id)));
+      const allowed = new Set<number>();
+      const CHUNK = 500;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const { data: qs } = await supabase
+          .from("questoes")
+          .select("id")
+          .in("id", ids.slice(i, i + CHUNK))
+          .or(filter);
+        for (const r of (qs ?? []) as any[]) allowed.add(r.id);
+      }
+      rows = rows.filter((r) => allowed.has(r.questao_id));
+    }
+    setAudits(rows);
     setSelectedIds(new Set());
     setLoading(false);
   }
 
-  useEffect(() => { loadDisciplinas(); loadLatestRunningJob(); }, []);
-  useEffect(() => { loadAudits(); }, [filterStatus, job?.id]);
+  useEffect(() => { loadDisciplinas(); loadLatestRunningJob(); }, [cursoId, cursoSlug]);
+  useEffect(() => { setSelDisc([]); }, [cursoId]);
+  useEffect(() => { loadAudits(); }, [filterStatus, job?.id, cursoId, cursoSlug]);
 
   async function startJob(override?: { mode?: typeof scopeMode; disciplinas?: string[]; limit?: number }) {
     const mode = override?.mode ?? scopeMode;
@@ -200,6 +229,8 @@ export function AdminAuditoriaTab() {
           mode,
           disciplinas: mode === "discipline" ? disc : (disc.length ? disc : null),
           limit: lim,
+          curso_id: cursoId,
+          curso_slug: cursoSlug,
         },
       });
       if (error) throw error;
