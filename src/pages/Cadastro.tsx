@@ -148,10 +148,8 @@ const Cadastro = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!paymentVerified) {
-      toast({ title: "Pagamento não verificado", description: "Efetue o pagamento antes de criar sua conta.", variant: "destructive" });
-      return;
-    }
+
+
 
     if (!nome || !email || !cpf || !telefone || !password || !confirmPassword) {
       toast({ title: "Preencha todos os campos", variant: "destructive" });
