@@ -113,13 +113,13 @@ export function AdminGerarTab() {
     try {
       let usedBatchSize = batchSize;
       let { data, error } = await supabase.functions.invoke("generate-questions-batch", {
-        body: { disciplina_index: discIndex, batch_size: batchSize },
+        body: { disciplina_index: discIndex, batch_size: batchSize, curso_id: cursoId },
       });
 
       if (error && shouldFallback(error.message) && batchSize > 1) {
         usedBatchSize = 1;
         ({ data, error } = await supabase.functions.invoke("generate-questions-batch", {
-          body: { disciplina_index: discIndex, batch_size: 1 },
+          body: { disciplina_index: discIndex, batch_size: 1, curso_id: cursoId },
         }));
       }
 
