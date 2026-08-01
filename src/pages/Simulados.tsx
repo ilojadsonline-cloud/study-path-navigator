@@ -213,7 +213,7 @@ const Simulados = () => {
         assunto: q.assunto,
         dificuldade: q.dificuldade,
         enunciado: q.enunciado,
-        alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e],
+        alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].filter((a) => (a || "").trim().length > 0),
         gabaritoShuffled: q.gabarito,
         comentario: q.comentario,
       }));
@@ -361,7 +361,7 @@ const Simulados = () => {
       assunto: q.assunto,
       dificuldade: q.dificuldade,
       enunciado: q.enunciado,
-      alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e],
+      alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].filter((a) => (a || "").trim().length > 0),
       gabaritoShuffled: q.gabarito,
       comentario: q.comentario,
     }));

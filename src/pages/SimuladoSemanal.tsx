@@ -53,7 +53,8 @@ function fmtTime(s: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
-const alts = (q: QuestaoTaking) => [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e];
+const alts = (q: QuestaoTaking) =>
+  [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].filter((a) => (a || "").trim().length > 0);
 
 const SimuladoSemanal = () => {
   const { user } = useAuth();

@@ -218,7 +218,7 @@ const PopQuestoes = () => {
 
     const mapped: QuestaoMapped[] = ordered.map((q) => ({
       ...q,
-      alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e],
+      alternativas: [q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e].filter((a) => (a || "").trim().length > 0),
       gabaritoShuffled: q.gabarito,
     }));
 
