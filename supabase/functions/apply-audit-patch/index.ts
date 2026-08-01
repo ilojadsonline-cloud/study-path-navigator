@@ -150,7 +150,7 @@ serve(async (req) => {
     const cleanedSource = rawPatch && typeof rawPatch === "object"
       ? Object.fromEntries(Object.entries(rawPatch).filter(([k]) => !k.startsWith("__")))
       : null;
-    const patch = sanitizePatch(cleanedSource);
+    const patch = sanitizePatch(cleanedSource, questao);
     if (!Object.keys(patch).length) {
       return new Response(JSON.stringify({ error: "patch vazio após sanitização" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
