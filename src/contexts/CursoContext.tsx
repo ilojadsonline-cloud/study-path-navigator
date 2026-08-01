@@ -50,7 +50,7 @@ export const cursoOrFilter = (cursoId: string | null) =>
   cursoId ? `curso_id.eq.${cursoId},curso_id.is.null` : null;
 
 export function CursoProvider({ children }: { children: ReactNode }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, subscribed } = useAuth();
   const [todos, setTodos] = useState<Curso[]>([]);
   const [acessos, setAcessos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
