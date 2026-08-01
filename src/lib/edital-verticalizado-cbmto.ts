@@ -55,12 +55,12 @@ export const navLabelsCbmto: Record<string, string> = {
 
 export const disciplinasCbmto: DisciplinaEditalData[] = [
   {
-    id: "direito-militar",
+    id: "cpm",
     iconKey: "gavel",
-    title: "Direito Penal Militar e Processual Penal Militar",
-    subtitle: "DL nº 1.001/1969 e DL nº 1.002/1969 • 4 questões",
+    title: "CPM — Código Penal Militar",
+    subtitle: "Decreto-Lei nº 1.001/1969 • 2 questões",
     color: "from-red-500/20 to-red-600/20",
-    disciplinaFilter: "Direito Penal Militar e Processual Penal Militar",
+    disciplinaFilter: "CPM — Código Penal Militar",
     leiSecaUrl: "https://www.planalto.gov.br/ccivil_03/decreto-lei/del1001.htm",
     leiSecaLabel: "CPM — Decreto-Lei nº 1.001/1969",
     videoAulaUrl: "",
