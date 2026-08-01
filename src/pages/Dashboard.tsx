@@ -544,7 +544,7 @@ const Dashboard = () => {
                   Fique por dentro de todas as novidades, atualizações do edital, novas questões, simulados e conteúdos exclusivos em primeira mão. <span className="text-emerald-400 font-semibold">Não perca nada da sua preparação!</span>
                 </p>
                 <a
-                  href={cursoSlug === "cbmto" ? "https://chat.whatsapp.com/IULXiiK2vhHBgroDKbJsZO" : "https://chat.whatsapp.com/Djve82S6zXM2TvmcmDalK9"}
+                  href={cursoSlug === "cbmto" ? "https://chat.whatsapp.com/GrYNgzf87qjGPVLKEPCL4b" : "https://chat.whatsapp.com/Djve82S6zXM2TvmcmDalK9"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-3 inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-colors shadow-lg shadow-emerald-500/20"
