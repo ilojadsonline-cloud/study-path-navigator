@@ -895,6 +895,7 @@ function DisciplinaBlock({
 
 export default function Edital() {
   const { cursoSlug } = useCurso();
+  const isCbmto = (cursoSlug || "pmto").toLowerCase() === "cbmto";
   const [popAccess, setPopAccess] = useState(false);
 
   useEffect(() => {
