@@ -985,7 +985,7 @@ export default function Edital() {
         </header>
 
         {/* Análise do Edital — material em destaque, fora dos blocos de disciplinas */}
-        {(materials[ANALISE_EDITAL_DISC.id] ?? []).length > 0 && (
+        {!isCbmto && (materials[ANALISE_EDITAL_DISC.id] ?? []).length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
