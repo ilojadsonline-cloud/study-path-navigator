@@ -984,29 +984,33 @@ export default function Edital() {
         </header>
 
         {/* Análise do Edital — material em destaque, fora dos blocos de disciplinas */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-2xl border border-gold/30 bg-gold/5 p-5 sm:p-6"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3 min-w-0">
-              <div className="p-2.5 rounded-xl bg-gold/15 text-gold shrink-0">
-                <Target className="w-5 h-5" />
+        {(materials[ANALISE_EDITAL_DISC.id] ?? []).length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card rounded-2xl border border-gold/30 bg-gold/5 p-5 sm:p-6"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="p-2.5 rounded-xl bg-gold/15 text-gold shrink-0">
+                  <Target className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base sm:text-lg font-bold text-foreground">Análise do Edital</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 max-w-xl">
+                    Visão geral e estratégia de estudo do{" "}
+                    {isCbmto ? "CHOA/2026 CBMTO" : "CHOA/2026 PMTO"}. Material consolidado para você
+                    entender pesos, recortes e como priorizar cada disciplina.
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h2 className="text-base sm:text-lg font-bold text-foreground">Análise do Edital</h2>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 max-w-xl">
-                  Visão geral e estratégia de estudo do CHOA/2026 PMTO. Material consolidado para você
-                  entender pesos, recortes e como priorizar cada disciplina.
-                </p>
+              <div className="shrink-0 w-full sm:w-auto sm:min-w-[240px]">
+                <MaterialList entries={materials[ANALISE_EDITAL_DISC.id] ?? []} />
               </div>
             </div>
-            <div className="shrink-0 w-full sm:w-auto sm:min-w-[240px]">
-              <MaterialList entries={materials[ANALISE_EDITAL_DISC.id] ?? []} />
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
+
 
 
 
