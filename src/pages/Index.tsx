@@ -147,7 +147,7 @@ const Index = () => {
               <span className="text-base font-normal text-muted-foreground ml-2">/ mês</span>
             </h2>
             <p className="text-sm text-muted-foreground mb-2">CHOA PMTO mensal R$ 69,99 · anual R$ 749,99</p>
-            <p className="text-sm text-muted-foreground mb-6">CHOA CBMTO mensal R$ 299,99</p>
+            <p className="text-sm text-muted-foreground mb-6">CHOA CBMTO mensal R$ 199,99</p>
 
             <Link
               to="/assinatura"
