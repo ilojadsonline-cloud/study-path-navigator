@@ -716,7 +716,7 @@ export function AdminAuditoriaTab() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border border-primary/40 bg-gradient-to-r from-primary/10 to-transparent">
             <div className="flex-1">
               <p className="text-sm font-semibold flex items-center gap-1">
-                <Wand2 className="w-4 h-4 text-primary" /> Auditoria recomendada (Edital CHOA/2026)
+                <Wand2 className="w-4 h-4 text-primary" /> Auditoria recomendada (Edital CHOA/2026 {cursoSlug === "cbmto" ? "CBMTO" : "PMTO"})
               </p>
               <p className="text-xs text-muted-foreground">
                 Roda em todo o banco aplicando a matriz do edital, roteamento por disciplina,

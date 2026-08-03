@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { runAiStage, type ChatMessage } from "../_shared/aiRouter.ts";
+import { ESCOPO_CBMTO, DATA_CORTE_CBMTO, DIFICULDADE_CBMTO } from "../_shared/escopo-cbmto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -307,6 +308,50 @@ const CHOA_EDITAL_AUDIT_RULES = `### MATRIZ OFICIAL DO EDITAL CHOA/2026 PMTO (8 
 
 `;
 
+/**
+ * Matriz oficial do CHOA CBMTO 2026 — gerada a partir do escopo vinculante
+ * (`_shared/escopo-cbmto.ts`), para que a auditoria do CBMTO nunca use as
+ * disciplinas/recortes do PMTO.
+ */
+const CBMTO_EDITAL_AUDIT_RULES = `### MATRIZ OFICIAL DO EDITAL CHOA/2026 CBMTO (${ESCOPO_CBMTO.length} disciplinas) — use para identificar a disciplina REAL e o recorte permitido:
+${ESCOPO_CBMTO.map((e, i) => {
+  const caps = e.capitulosAutorizados.length ? `capítulos autorizados: ${e.capitulosAutorizados.join(", ")}` : "sem limitação capitular expressa";
+  const exc = e.capitulosExcluidos.length ? `; capítulos EXCLUÍDOS (proibidos): ${e.capitulosExcluidos.join(", ")}` : "";
+  const arts = e.artigosAutorizados.length ? `; artigos autorizados: ${e.artigosAutorizados.map((f) => `${f.de}–${f.ate}`).join("; ")}` : "";
+  const secs = e.secoesExcluidas?.length ? `; seções excluídas: ${e.secoesExcluidas.join(", ")}` : "";
+  return `${String(i + 1).padStart(2, "0")} ${e.disciplina} — ${caps}${exc}${arts}${secs}. ${e.observacao ?? ""} (Autorização: ${e.editalAutorizador}.)`;
+}).join("\n")}
+
+### ESTRUTURA DA PROVA CBMTO: 4 alternativas (A–D), gabarito inteiro 0–3, alternativa E PROIBIDA. Dificuldade obrigatória: ${DIFICULDADE_CBMTO}. Data de corte de vigência: ${DATA_CORTE_CBMTO} — norma alterada/revogada após essa data não pode ser cobrada.
+
+### REGRA ZERO (roteamento): identifique a disciplina REAL pelo conteúdo cobrado, mesmo que o campo "Disciplina" esteja errado. Divergência com conteúdo juridicamente correto → issue type='disciplina_incorreta' (severity='medium', sugerindo a disciplina certa da matriz CBMTO acima). Mistura indevida de duas disciplinas sem base para correção → revisão manual.
+
+### RECORTE DO EDITAL: conteúdo fora dos capítulos/artigos autorizados da disciplina (ou dentro de capítulo expressamente excluído) → issue type='fora_do_edital' (severity='high'). É PROIBIDO trazer doutrina externa, outros manuais, legislação da PMTO ou conteúdo do CHOA PMTO.
+
+### PROIBIÇÃO DE COBRANÇA DE NÚMERO DE ARTIGO: questões cujo OBJETO central é decorar número de artigo/inciso/§/alínea devem ser sinalizadas type='cobranca_numero_artigo' (severity='high'). Citar o dispositivo na base normativa/comentário é desejável — proibido é cobrar o NÚMERO como resposta.
+
+### FILOSOFIA: CORRIGIR ANTES DE EXCLUIR. Só classifique como irrecuperável (AUTO_DELETE) quando totalmente fora do edital CBMTO, incoerente a ponto de impedir reescrita ou duplicata literal sem ganho pedagógico. Havendo dúvida técnica/jurídica → needs_human_review=true, NUNCA exclusão automática.
+
+`;
+
+/**
+ * Curso ativo da execução corrente (definido pelo body/scope do job). Registros
+ * legados sem curso pertencem ao CHOA PMTO.
+ */
+let CURSO_ATIVO_SLUG = "pmto";
+function setCursoAtivo(slug: string | null | undefined) {
+  CURSO_ATIVO_SLUG = (slug ?? "pmto").toLowerCase();
+}
+/** Bloco-mestre de auditoria conforme o curso ativo. */
+function editalAuditRules(q?: any): string {
+  if (CURSO_ATIVO_SLUG === "cbmto") return CBMTO_EDITAL_AUDIT_RULES;
+  // Segurança extra: questão de 4 alternativas nunca é do CHOA PMTO.
+  if (q && isFourAlt(q)) return CBMTO_EDITAL_AUDIT_RULES;
+  return CHOA_EDITAL_AUDIT_RULES;
+}
+
+
+
 // ── Suporte multi-curso: CHOA PMTO usa 5 alternativas (A–E) e CHOA CBMTO usa 4 (A–D).
 // A estrutura é detectada pela própria questão (alt_e vazio = 4 alternativas).
 const ALL_ALT_KEYS = ["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"];
@@ -396,7 +441,7 @@ function buildAuditPrompt(q: Questao, legalText: string | null): string {
     ? `${articleIndex}${relevantBlock}TEXTO LEGAL DE REFERÊNCIA (FONTE ÚNICA E EXCLUSIVA de verdade; pode estar truncado por limite técnico, então o ÍNDICE acima prevalece para EXISTÊNCIA de artigo). PROIBIDO usar PDFs, anexos, sites, memória do modelo, conhecimento jurídico geral ou outras leis fora deste texto:\n"""${legalText.slice(0, 9000)}"""\n`
     : "BLOQUEIO OPERACIONAL: Não há texto legal oficial cadastrado em discipline_legal_texts para esta disciplina. NÃO use conhecimento geral, PDFs, anexos ou memória do modelo. Sinalize NO_LEGAL_TEXT e marque para revisão manual.\n";
 
-  return `${CHOA_EDITAL_AUDIT_RULES}${legalBlock}
+  return `${editalAuditRules(q)}${legalBlock}
 QUESTÃO #${q.id}
 Disciplina: ${q.disciplina}
 Assunto: ${q.assunto}
@@ -1705,6 +1750,7 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const action = body.action ?? "run";
+    setCursoAtivo(body.curso_slug ?? null);
 
     // Ações: start (cria job), run (processa lote), status, cancel, clear_resolved, summary
     if (action === "clear_resolved") {
@@ -1900,6 +1946,9 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // Cada lote do job roda com a matriz do edital do curso daquele job.
+    setCursoAtivo(job.scope?.curso_slug ?? null);
+
 
     // Paginação por cursor persistido no job: evita recomeçar do ID 0 a cada chamada.
     const pending: any[] = [];
