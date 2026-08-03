@@ -1946,6 +1946,9 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // Cada lote do job roda com a matriz do edital do curso daquele job.
+    setCursoAtivo(job.scope?.curso_slug ?? null);
+
 
     // Paginação por cursor persistido no job: evita recomeçar do ID 0 a cada chamada.
     const pending: any[] = [];
