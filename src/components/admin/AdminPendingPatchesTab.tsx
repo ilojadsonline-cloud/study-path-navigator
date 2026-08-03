@@ -166,7 +166,7 @@ export function AdminPendingPatchesTab() {
     setRepairingId(questaoId);
     try {
       const { data, error } = await supabase.functions.invoke("audit-questions", {
-        body: { action: "repair", question_id: questaoId },
+        body: { action: "repair", question_id: questaoId, curso_slug: cursoSlug },
       });
       if (error) throw error;
       const summary = (data as any)?.summary ?? "Repair concluído";
