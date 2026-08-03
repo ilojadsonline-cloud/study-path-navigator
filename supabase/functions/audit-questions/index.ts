@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { runAiStage, type ChatMessage } from "../_shared/aiRouter.ts";
+import { ESCOPO_CBMTO, DATA_CORTE_CBMTO, DIFICULDADE_CBMTO } from "../_shared/escopo-cbmto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -440,7 +441,7 @@ function buildAuditPrompt(q: Questao, legalText: string | null): string {
     ? `${articleIndex}${relevantBlock}TEXTO LEGAL DE REFERÊNCIA (FONTE ÚNICA E EXCLUSIVA de verdade; pode estar truncado por limite técnico, então o ÍNDICE acima prevalece para EXISTÊNCIA de artigo). PROIBIDO usar PDFs, anexos, sites, memória do modelo, conhecimento jurídico geral ou outras leis fora deste texto:\n"""${legalText.slice(0, 9000)}"""\n`
     : "BLOQUEIO OPERACIONAL: Não há texto legal oficial cadastrado em discipline_legal_texts para esta disciplina. NÃO use conhecimento geral, PDFs, anexos ou memória do modelo. Sinalize NO_LEGAL_TEXT e marque para revisão manual.\n";
 
-  return `${CHOA_EDITAL_AUDIT_RULES}${legalBlock}
+  return `${editalAuditRules(q)}${legalBlock}
 QUESTÃO #${q.id}
 Disciplina: ${q.disciplina}
 Assunto: ${q.assunto}
@@ -1749,6 +1750,7 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const action = body.action ?? "run";
+    setCursoAtivo(body.curso_slug ?? null);
 
     // Ações: start (cria job), run (processa lote), status, cancel, clear_resolved, summary
     if (action === "clear_resolved") {
