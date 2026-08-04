@@ -281,7 +281,7 @@ export function AdminUsersTab() {
       ) : (
         <div className="glass-card rounded-xl overflow-hidden">
           <div className="max-h-[65vh] overflow-y-auto overflow-x-auto">
-          <Table>
+          <Table className="min-w-[1200px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
