@@ -132,32 +132,122 @@ const Index = () => {
           </div>
         </section>
 
-        <section className="max-w-3xl mx-auto px-4 pb-20 text-center">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="glass-card rounded-2xl p-8 glow-primary border-primary/20"
-          >
+        {/* Como funciona */}
+        <section className="max-w-5xl mx-auto px-4 pb-16">
+          <h2 className="text-2xl font-black text-center mb-2">Como começar</h2>
+          <p className="text-sm text-muted-foreground text-center mb-8">
+            Três passos simples para iniciar sua preparação.
+          </p>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { n: "1", title: "Crie sua conta", desc: "Cadastro gratuito com CPF e e-mail. Leva menos de 1 minuto." },
+              { n: "2", title: "Escolha seu curso", desc: "CHOA PMTO ou CHOA CBMTO — conteúdo, questões e ranking separados." },
+              { n: "3", title: "Escolha o pagamento", desc: "Cartão com renovação automática, Pix ou boleto pelo Mercado Pago." },
+            ].map((s, i) => (
+              <motion.div
+                key={s.n}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 + i * 0.08 }}
+                className="glass-card rounded-xl p-5"
+              >
+                <div className="w-9 h-9 rounded-lg gradient-primary text-primary-foreground font-black flex items-center justify-center mb-3">
+                  {s.n}
+                </div>
+                <h3 className="font-bold text-sm mb-1">{s.title}</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">{s.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* Planos por curso */}
+        <section id="planos" className="max-w-5xl mx-auto px-4 pb-20">
+          <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-3">
               PLANOS DISPONÍVEIS
             </div>
-            <h2 className="text-2xl font-black mb-2">
-              <span className="text-gradient-gold">A partir de R$ 69,99</span>
-              <span className="text-base font-normal text-muted-foreground ml-2">/ mês</span>
-            </h2>
-            <p className="text-sm text-muted-foreground mb-2">CHOA PMTO mensal R$ 69,99 · anual R$ 749,99</p>
-            <p className="text-sm text-muted-foreground mb-6">CHOA CBMTO mensal R$ 199,99</p>
+            <h2 className="text-2xl font-black">Escolha o seu curso</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Cada curso tem seu próprio edital verticalizado, banco de questões, simulados e ranking.
+            </p>
+          </div>
 
-            <Link
-              to="/assinatura"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl gradient-gold text-gold-foreground font-bold text-sm hover:opacity-90 transition-opacity glow-gold"
+          <div className="grid md:grid-cols-2 gap-5">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="glass-card rounded-2xl p-6 border-primary/30 glow-primary flex flex-col"
             >
-              Assinar Agora
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </motion.div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2.5 py-1 rounded-md bg-primary/15 text-primary text-[11px] font-black">CHOA PMTO</span>
+                <span className="text-[11px] text-muted-foreground">Polícia Militar do Tocantins</span>
+              </div>
+              <h3 className="text-xl font-black mb-1">
+                <span className="text-gradient-primary">R$ 69,99</span>
+                <span className="text-sm font-normal text-muted-foreground"> / mês</span>
+              </h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                ou <strong className="text-foreground">R$ 749,99</strong> no plano anual (economize mais de 10%).
+              </p>
+              <ul className="space-y-2 text-xs text-muted-foreground mb-6 flex-1">
+                <li>• Edital verticalizado CHOA/2026 PMTO</li>
+                <li>• Banco de questões (5 alternativas) com comentários</li>
+                <li>• Simulados inteligentes e Simulado Semanal com ranking</li>
+                <li>• BizuAulas, mapas mentais e cronograma de estudos</li>
+              </ul>
+              <Link
+                to="/assinatura?curso=pmto"
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity"
+              >
+                Assinar CHOA PMTO
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.28 }}
+              className="glass-card rounded-2xl p-6 border-destructive/30 flex flex-col"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2.5 py-1 rounded-md bg-destructive/15 text-destructive text-[11px] font-black">CHOA CBMTO</span>
+                <span className="text-[11px] text-muted-foreground">Corpo de Bombeiros Militar do TO</span>
+              </div>
+              <h3 className="text-xl font-black mb-1">
+                <span className="text-gradient-gold">R$ 199,99</span>
+                <span className="text-sm font-normal text-muted-foreground"> / 30 dias</span>
+              </h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Acesso completo ao conteúdo exclusivo do certame do CBMTO.
+              </p>
+              <ul className="space-y-2 text-xs text-muted-foreground mb-6 flex-1">
+                <li>• Edital verticalizado CHOA/2026 CBMTO (14 disciplinas)</li>
+                <li>• Questões no padrão do certame (4 alternativas A–D)</li>
+                <li>• Simulados e Simulado Semanal com ranking próprio</li>
+                <li>• Cronograma focado em lei seca + resolução de questões</li>
+              </ul>
+              <Link
+                to="/assinatura?curso=cbmto"
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm hover:opacity-90 transition-opacity"
+              >
+                Assinar CHOA CBMTO
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            Prefere se cadastrar antes?{" "}
+            <Link to="/cadastro" className="text-primary font-semibold hover:underline">
+              Crie sua conta gratuita
+            </Link>{" "}
+            e escolha o curso depois do login.
+          </p>
         </section>
+
 
         <footer className="border-t border-border/30 py-6 text-center">
           <p className="text-xs text-muted-foreground">© 2026 Método CHOA – Todos os direitos reservados</p>
