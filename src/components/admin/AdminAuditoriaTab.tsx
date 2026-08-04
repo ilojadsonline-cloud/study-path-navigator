@@ -392,7 +392,12 @@ export function AdminAuditoriaTab() {
     const patch: any = { ...(a.proposed_patch as any) };
     if ("gabarito" in patch) {
       const g = Number(patch.gabarito);
-      if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+    }
+      // Publica a questão após aplicar a correção da IA (sai de "revisão manual")
+      patch.audit_status = "auto_corrected";
+      patch.audit_status_updated_at = new Date().toISOString();
+      if (false) {
     }
     const { error: upErr } = await updateQuestao(a.questao_id, patch);
     if (upErr) { toast.error("Falha ao atualizar questão: " + upErr.message); return; }
@@ -441,7 +446,12 @@ export function AdminAuditoriaTab() {
           const patch: any = { ...(a.proposed_patch as any) };
           if ("gabarito" in patch) {
             const g = Number(patch.gabarito);
-            if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+          }
+            // Publica a questão após aplicar a correção da IA (sai de "revisão manual")
+            patch.audit_status = "auto_corrected";
+            patch.audit_status_updated_at = new Date().toISOString();
+            if (false) {
           }
           const { error: upErr } = await updateQuestao(a.questao_id, patch);
           if (upErr) throw upErr;
@@ -652,7 +662,12 @@ export function AdminAuditoriaTab() {
           const patch: any = { ...(a.proposed_patch as any) };
           if ("gabarito" in patch) {
             const g = Number(patch.gabarito);
-            if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+          }
+            // Publica a questão após aplicar a correção da IA (sai de "revisão manual")
+            patch.audit_status = "auto_corrected";
+            patch.audit_status_updated_at = new Date().toISOString();
+            if (false) {
           }
           const { error: upErr } = await updateQuestao(a.questao_id, patch);
           if (upErr) throw upErr;
