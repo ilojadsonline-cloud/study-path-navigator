@@ -65,8 +65,8 @@ const AdminPanel = () => {
         </div>
 
         <Tabs value={(!isPmto && activeTab === "pop") || (!isCbmto && activeTab === "cbmto-editorial") ? "stats" : activeTab} onValueChange={handleChange}>
-          <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-            <TabsList className="flex w-max sm:w-auto sm:flex-wrap gap-1 h-auto sm:max-w-3xl">
+          <div className="overflow-x-auto overflow-y-hidden -mx-3 sm:mx-0 px-3 sm:px-0 pb-2 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
+            <TabsList className="flex w-max flex-nowrap gap-1 h-auto">
               <TabsTrigger value="stats" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><BarChart3 className="w-3.5 h-3.5" />Estatísticas</TabsTrigger>
               <TabsTrigger value="users" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Users className="w-3.5 h-3.5" />Usuários</TabsTrigger>
               <TabsTrigger value="questoes" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><HelpCircle className="w-3.5 h-3.5" />Questões</TabsTrigger>
