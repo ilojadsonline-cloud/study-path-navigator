@@ -280,6 +280,7 @@ export function AdminUsersTab() {
         <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
       ) : (
         <div className="glass-card rounded-xl overflow-hidden">
+          <div className="max-h-[65vh] overflow-y-auto overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -367,6 +368,7 @@ export function AdminUsersTab() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 
