@@ -368,6 +368,7 @@ export function AdminUsersTab() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 
