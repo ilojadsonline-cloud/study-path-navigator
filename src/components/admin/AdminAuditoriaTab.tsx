@@ -392,13 +392,11 @@ export function AdminAuditoriaTab() {
     const patch: any = { ...(a.proposed_patch as any) };
     if ("gabarito" in patch) {
       const g = Number(patch.gabarito);
-if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+      if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
     }
-      // Publica a questão após aplicar a correção da IA (sai de "revisão manual")
-      patch.audit_status = "auto_corrected";
-      patch.audit_status_updated_at = new Date().toISOString();
-      if (false) {
-    }
+    // Publica a questão após aplicar a correção da IA (sai de "revisão manual")
+    patch.audit_status = "auto_corrected";
+    patch.audit_status_updated_at = new Date().toISOString();
     const { error: upErr } = await updateQuestao(a.questao_id, patch);
     if (upErr) { toast.error("Falha ao atualizar questão: " + upErr.message); return; }
     await supabase.from("question_audits").update({
@@ -446,13 +444,11 @@ if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
           const patch: any = { ...(a.proposed_patch as any) };
           if ("gabarito" in patch) {
             const g = Number(patch.gabarito);
-if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+            if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
           }
-            // Publica a questão após aplicar a correção da IA (sai de "revisão manual")
-            patch.audit_status = "auto_corrected";
-            patch.audit_status_updated_at = new Date().toISOString();
-            if (false) {
-          }
+          // Publica a questão após aplicar a correção da IA (sai de "revisão manual")
+          patch.audit_status = "auto_corrected";
+          patch.audit_status_updated_at = new Date().toISOString();
           const { error: upErr } = await updateQuestao(a.questao_id, patch);
           if (upErr) throw upErr;
           await supabase.from("question_audits").update({
@@ -662,13 +658,11 @@ if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
           const patch: any = { ...(a.proposed_patch as any) };
           if ("gabarito" in patch) {
             const g = Number(patch.gabarito);
-if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+            if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
           }
-            // Publica a questão após aplicar a correção da IA (sai de "revisão manual")
-            patch.audit_status = "auto_corrected";
-            patch.audit_status_updated_at = new Date().toISOString();
-            if (false) {
-          }
+          // Publica a questão após aplicar a correção da IA (sai de "revisão manual")
+          patch.audit_status = "auto_corrected";
+          patch.audit_status_updated_at = new Date().toISOString();
           const { error: upErr } = await updateQuestao(a.questao_id, patch);
           if (upErr) throw upErr;
           await supabase.from("question_audits").update({ status: "auto_fixed", applied_patch: patch }).eq("id", a.id);
