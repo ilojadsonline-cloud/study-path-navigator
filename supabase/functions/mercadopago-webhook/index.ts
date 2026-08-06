@@ -322,8 +322,10 @@ serve(async (req) => {
         }
 
         const user = await findUserByEmail(admin, email);
-        const planDays = Number(payment?.metadata?.days) > 0
-          ? Number(payment.metadata.days) : ACCESS_WINDOW_DAYS;
+        const planoSlugForDays = (payment?.metadata?.plano_slug as string | undefined)
+          || (payment?.metadata?.plan as string | undefined)
+          || extractPlanoFromExternalRef(payment?.external_reference);
+        const planDays = await resolvePlanDays(admin, planoSlugForDays ?? null, payment?.metadata?.days);
         const expiresAt = new Date(Date.now() + planDays * 24 * 3600 * 1000).toISOString();
         const isAvulso = payment?.metadata?.payment_type === "avulso";
         const source = isAvulso ? "mercadopago_avulso" : "mercadopago";
