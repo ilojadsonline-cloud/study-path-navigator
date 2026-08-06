@@ -106,6 +106,9 @@ serve(async (req) => {
         .in("slug", plano.cursos_slugs);
 
       for (const curso of cursos ?? []) {
+        // Os eventos vêm do mais recente para o mais antigo; não permita que
+        // uma compra antiga encurte um acesso já reconciliado nesta execução.
+        if (grants.includes(curso.slug)) continue;
         const { error: accessError } = await admin.from("acessos_curso").upsert({
           user_id: user.id,
           curso_id: curso.id,
