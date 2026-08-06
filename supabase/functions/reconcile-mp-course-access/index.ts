@@ -99,7 +99,7 @@ serve(async (req) => {
 
 
     const grants: string[] = [];
-    for (const event of events ?? []) {
+    for (const event of allEvents) {
       const raw = event.raw_payload as Record<string, unknown> | null;
       const planoSlug = extractPlanoSlug(raw?.external_reference)
         ?? (typeof raw?.metadata === "object" && raw.metadata !== null
