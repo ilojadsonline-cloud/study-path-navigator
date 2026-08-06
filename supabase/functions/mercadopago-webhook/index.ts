@@ -16,7 +16,7 @@ const corsHeaders = {
 };
 
 const ACCESS_WINDOW_DAYS = 30;
-const PLAN_AMOUNT = 99.99;
+const PLAN_AMOUNT = 49.99; // menor plano ativo é R$ 69,99 (mensal PMTO)
 
 // Duração do acesso conforme o plano comprado (planos.dias_acesso: mensal=30, anual=365)
 async function resolvePlanDays(
