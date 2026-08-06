@@ -333,13 +333,13 @@ serve(async (req) => {
 
         if (user) {
           await reactivateUser(admin, user, expiresAt, source, typeLabel);
-          const planoSlug = (payment?.metadata?.plano_slug as string | undefined)
-            || (payment?.metadata?.plan as string | undefined)
-            || extractPlanoFromExternalRef(payment?.external_reference);
-          await grantCursoAccess(admin, user.id, planoSlug ?? null, expiresAt, source);
+          await grantCursoAccess(admin, user.id, planoSlugForDays ?? null, expiresAt, source);
           try {
             await admin.from("trial_usage").upsert(
-              { email, user_id: user.id, provider: "mercadopago", converted_to_paid: true },
+              {
+                email, user_id: user.id, provider: "mercadopago",
+                converted_to_paid: true, trial_ends_at: expiresAt,
+              },
               { onConflict: "email" },
             );
           } catch { /* ignore */ }
