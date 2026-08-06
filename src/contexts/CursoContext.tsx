@@ -74,6 +74,15 @@ export function CursoProvider({ children }: { children: ReactNode }) {
     setTodos(((cursosData as Curso[]) || []).filter((c) => c.ativo));
 
     if (user) {
+      // O pagamento pode acontecer antes do cadastro. Nesse caso o webhook não
+      // encontra o usuário; ao primeiro login reconciliamos o plano pago com o
+      // curso correto antes de carregar os acessos.
+      const { error: reconciliationError } = await supabase.functions.invoke("reconcile-mp-course-access", {
+        body: {},
+      });
+      if (reconciliationError) {
+        console.warn("Falha ao reconciliar acesso do Mercado Pago", reconciliationError);
+      }
       const { data } = await supabase
         .from("acessos_curso")
         .select("curso_id, ativo, expires_at")
