@@ -153,6 +153,9 @@ function parseComentario(raw: string): Section[] {
 }
 
 export function QuestaoComentario({ comentario }: { comentario: string }) {
+  const { cursoSlug } = useCurso();
+  const qtdAlternativas = getQtdAlternativas(cursoSlug);
+
   // Comentários criados pelo editor de texto rico são HTML — renderiza sanitizado.
   if (isHtmlContent(comentario)) {
     return (
@@ -163,7 +166,14 @@ export function QuestaoComentario({ comentario }: { comentario: string }) {
     );
   }
 
-  const sections = parseComentario(comentario);
+  let sections = parseComentario(comentario);
+
+  // Cursos com 4 alternativas (CHOA CBMTO): nunca exibir análise da alternativa "E".
+  if (qtdAlternativas <= 4) {
+    sections = sections.filter(
+      (s) => !((s.type === "alt" || s.type === "incorrect") && s.letter === "E")
+    );
+  }
 
   if (sections.length === 0) return null;
 
