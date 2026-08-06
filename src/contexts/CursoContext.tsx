@@ -62,6 +62,9 @@ export function CursoProvider({ children }: { children: ReactNode }) {
   const { user, isAdmin, subscribed } = useAuth();
   const [todos, setTodos] = useState<Curso[]>([]);
   const [acessos, setAcessos] = useState<string[]>([]);
+  // true quando o usuário NÃO possui nenhum registro em acessos_curso.
+  // Só nesse caso aplicamos o fallback legado (assinantes antigos do PMTO).
+  const [semRegistroAcesso, setSemRegistroAcesso] = useState(false);
   const [loading, setLoading] = useState(true);
   const [slug, setSlug] = useState<string>(() => localStorage.getItem(STORAGE_KEY) || DEFAULT_SLUG);
 
@@ -87,14 +90,17 @@ export function CursoProvider({ children }: { children: ReactNode }) {
         .from("acessos_curso")
         .select("curso_id, ativo, expires_at")
         .eq("user_id", user.id);
+      const rows = (data as any[]) || [];
       const now = Date.now();
+      setSemRegistroAcesso(rows.length === 0);
       setAcessos(
-        ((data as any[]) || [])
+        rows
           .filter((a) => a.ativo && (!a.expires_at || new Date(a.expires_at).getTime() > now))
           .map((a) => a.curso_id as string),
       );
     } else {
       setAcessos([]);
+      setSemRegistroAcesso(false);
     }
     setLoading(false);
   }, [user]);
@@ -103,11 +109,26 @@ export function CursoProvider({ children }: { children: ReactNode }) {
     void load();
   }, [load]);
 
+  const temAcesso = useCallback(
+    (curso: Curso | null) => {
+      if (!curso) return false;
+      if (isAdmin) return true;
+      // REGRA: o acesso é SEMPRE individualizado por curso comprado.
+      if (acessos.includes(curso.id)) return true;
+      // Legado: assinantes antigos, sem NENHUM registro em acessos_curso,
+      // mantêm o CHOA PMTO. Quem já tem registro (ex.: comprou o CBMTO)
+      // nunca herda o PMTO por este fallback.
+      if (subscribed && semRegistroAcesso && curso.slug === DEFAULT_SLUG) return true;
+      return false;
+    },
+    [acessos, isAdmin, subscribed, semRegistroAcesso],
+  );
+
   const cursos = useMemo(() => {
     if (isAdmin) return todos;
-    // Curso visível (aberto a todos os assinantes) OU com acesso explícito concedido
-    return todos.filter((c) => c.visivel || acessos.includes(c.id));
-  }, [todos, acessos, isAdmin]);
+    // Somente cursos efetivamente liberados para o usuário.
+    return todos.filter((c) => temAcesso(c));
+  }, [todos, isAdmin, temAcesso]);
 
   const cursoAtivo = useMemo(() => {
     if (cursos.length === 0) return null;
@@ -119,17 +140,6 @@ export function CursoProvider({ children }: { children: ReactNode }) {
     setSlug(s);
   }, []);
 
-  const temAcesso = useCallback(
-    (curso: Curso | null) => {
-      if (!curso) return false;
-      if (isAdmin) return true;
-      if (acessos.includes(curso.id)) return true;
-      // Legado: assinantes antigos (sem registro em acessos_curso) mantêm o CHOA PMTO
-      if (subscribed && curso.slug === DEFAULT_SLUG) return true;
-      return false;
-    },
-    [acessos, isAdmin, subscribed],
-  );
 
   return (
     <CursoContext.Provider
