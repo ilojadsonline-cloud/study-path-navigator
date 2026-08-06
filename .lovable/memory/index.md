@@ -11,6 +11,7 @@
 - **Multi-curso**: conteúdo filtrado por `curso_id` via `CursoContext`; PMTO é o curso padrão/legado.
 
 ## Memories
+- [Acesso individualizado por curso](mem://features/acesso-individualizado-por-curso) — PMTO x CBMTO: acesso só via acessos_curso; cursos.visivel não libera; fallback legado PMTO só p/ quem não tem nenhum registro; duração pelo plano (30/90/365)
 - [Multi-curso Fase 2](mem://features/multi-curso-fase2-contexto-filtros) — CursoContext/CursoSwitcher (oculto com 1 curso), filtro curso_id em Questoes/Simulados/Mapas/BizuAula, coluna Cursos no AdminUsersTab
 - [Multi-curso Fase 4](mem://features/multi-curso-fase4-conteudo-admin) — conteúdo do admin por curso: geração IA, import Markdown, mapas, bizu aulas, textos legais, banco de questões admin, simulado semanal (edge aceita curso_id)
 - [Acesso por Registro Local (resiliência)](mem://features/acesso-por-registro-local-resiliencia) — check-subscription confia em app_metadata.access_expires_at / trial_usage.converted_to_paid ANTES de consultar Stripe/MP
