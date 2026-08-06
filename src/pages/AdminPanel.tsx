@@ -23,7 +23,7 @@ const AdminAssinaturasTab = lazy(() => import("@/components/admin/AdminAssinatur
 const AdminMapasMentaisTab = lazy(() => import("@/components/admin/AdminMapasMentaisTab").then(m => ({ default: m.AdminMapasMentaisTab })));
 const AdminBizuAulaTab = lazy(() => import("@/components/admin/AdminBizuAulaTab").then(m => ({ default: m.AdminBizuAulaTab })));
 const AdminEditalTab = lazy(() => import("@/components/admin/AdminEditalTab"));
-const AdminCbmtoEditorialTab = lazy(() => import("@/components/admin/AdminCbmtoEditorialTab").then(m => ({ default: m.AdminCbmtoEditorialTab })));
+
 const AdminPopAccessTab = lazy(() => import("@/components/admin/AdminPopAccessTab").then(m => ({ default: m.AdminPopAccessTab })));
 
 const Fallback = () => (
@@ -36,7 +36,7 @@ const AdminPanel = () => {
   const { isAdmin, loading } = useAuth();
   const { cursoSlug } = useCurso();
   const isPmto = (cursoSlug || "pmto").toLowerCase() === "pmto";
-  const isCbmto = (cursoSlug || "").toLowerCase() === "cbmto";
+  
   const [activeTab, setActiveTab] = useState("stats");
   // Mantém abas já visitadas montadas (preserva estado entre trocas)
   const [visited, setVisited] = useState<Set<string>>(new Set(["stats"]));
@@ -64,7 +64,7 @@ const AdminPanel = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-gradient-primary">Painel Administrativo</h1>
         </div>
 
-        <Tabs value={(!isPmto && activeTab === "pop") || (!isCbmto && activeTab === "cbmto-editorial") ? "stats" : activeTab} onValueChange={handleChange}>
+        <Tabs value={!isPmto && activeTab === "pop" ? "stats" : activeTab} onValueChange={handleChange}>
           <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
             <TabsList className="flex w-max sm:w-auto sm:flex-wrap gap-1 h-auto sm:max-w-3xl">
               <TabsTrigger value="stats" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><BarChart3 className="w-3.5 h-3.5" />Estatísticas</TabsTrigger>
@@ -82,7 +82,7 @@ const AdminPanel = () => {
               <TabsTrigger value="mapas" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Brain className="w-3.5 h-3.5" />Mapas Mentais</TabsTrigger>
               <TabsTrigger value="bizuaula" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Youtube className="w-3.5 h-3.5" />BizuAula</TabsTrigger>
               <TabsTrigger value="edital" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><FileText className="w-3.5 h-3.5" />Edital</TabsTrigger>
-              {isCbmto && <TabsTrigger value="cbmto-editorial" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><ShieldCheck className="w-3.5 h-3.5" />Gerador/Auditor CBMTO</TabsTrigger>}
+              
               {isPmto && <TabsTrigger value="pop" className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Lock className="w-3.5 h-3.5" />POP (Sigiloso)</TabsTrigger>}
             </TabsList>
           </div>
@@ -103,7 +103,7 @@ const AdminPanel = () => {
           <TabsContent value="mapas" className="mt-6" forceMount={visited.has("mapas") ? true : undefined} hidden={activeTab !== "mapas"}>{renderTab("mapas", AdminMapasMentaisTab)}</TabsContent>
           <TabsContent value="bizuaula" className="mt-6" forceMount={visited.has("bizuaula") ? true : undefined} hidden={activeTab !== "bizuaula"}>{renderTab("bizuaula", AdminBizuAulaTab)}</TabsContent>
           <TabsContent value="edital" className="mt-6" forceMount={visited.has("edital") ? true : undefined} hidden={activeTab !== "edital"}>{renderTab("edital", AdminEditalTab)}</TabsContent>
-          {isCbmto && <TabsContent value="cbmto-editorial" className="mt-6" forceMount={visited.has("cbmto-editorial") ? true : undefined} hidden={activeTab !== "cbmto-editorial"}>{renderTab("cbmto-editorial", AdminCbmtoEditorialTab)}</TabsContent>}
+          
           {isPmto && <TabsContent value="pop" className="mt-6" forceMount={visited.has("pop") ? true : undefined} hidden={activeTab !== "pop"}>{renderTab("pop", AdminPopAccessTab)}</TabsContent>}
         </Tabs>
       </div>
