@@ -1,7 +1,24 @@
 const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const FULL_EMAIL_REGEX = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
 
-export const MP_ACCESS_DAYS = 90;
+// Duração padrão do acesso quando o pagamento não traz o plano (mensal = 30 dias).
+export const MP_DEFAULT_ACCESS_DAYS = 30;
+// Janela de busca de pagamentos no Mercado Pago (precisa cobrir o plano anual).
+export const MP_LOOKBACK_DAYS = 400;
+
+// Extrai a duração real do acesso a partir do pagamento (metadata.days ou slug do plano)
+export function resolveAccessDays(payment: any): number {
+  const metaDays = Number(payment?.metadata?.days);
+  if (Number.isFinite(metaDays) && metaDays > 0) return metaDays;
+
+  const slug = String(
+    payment?.metadata?.plano_slug ?? payment?.metadata?.plan ?? payment?.external_reference ?? "",
+  ).toLowerCase();
+  if (slug.includes("anual")) return 365;
+  if (slug.includes("trimestral")) return 90;
+  if (slug.includes("mensal")) return 30;
+  return MP_DEFAULT_ACCESS_DAYS;
+}
 
 const SEARCH_LIMIT = 100;
 const MAX_SEARCH_PAGES = 10;
