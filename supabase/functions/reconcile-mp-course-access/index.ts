@@ -130,6 +130,21 @@ serve(async (req) => {
         // Os eventos vêm do mais recente para o mais antigo; não permita que
         // uma compra antiga encurte um acesso já reconciliado nesta execução.
         if (grants.includes(curso.slug)) continue;
+
+        // Nunca encurtar um acesso já existente (ex.: concedido manualmente
+        // pelo admin ou por um plano mais longo).
+        const { data: existente } = await admin
+          .from("acessos_curso")
+          .select("expires_at, ativo")
+          .eq("user_id", user.id)
+          .eq("curso_id", curso.id)
+          .maybeSingle();
+        const existenteMs = existente?.expires_at ? new Date(existente.expires_at).getTime() : null;
+        if (existente?.ativo && (existente.expires_at === null || (existenteMs ?? 0) >= expiresAt.getTime())) {
+          grants.push(curso.slug);
+          continue;
+        }
+
         const { error: accessError } = await admin.from("acessos_curso").upsert({
           user_id: user.id,
           curso_id: curso.id,
@@ -142,6 +157,7 @@ serve(async (req) => {
         if (accessError) throw accessError;
         grants.push(curso.slug);
       }
+
     }
 
     return new Response(JSON.stringify({ reconciled: grants.length > 0, cursos: [...new Set(grants)] }), {
