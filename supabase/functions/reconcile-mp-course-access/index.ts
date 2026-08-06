@@ -77,6 +77,27 @@ serve(async (req) => {
       .limit(20);
     if (eventsError) throw eventsError;
 
+    // Alguns eventos chegam sem a coluna `email` preenchida (ex.: preapproval).
+    // Nesses casos o e-mail está embutido no external_reference do pagamento.
+    const extraEvents: any[] = [];
+    for (const email of emails) {
+      const { data: byRef } = await admin
+        .from("payment_events")
+        .select("id, email, status, processed_at, raw_payload")
+        .eq("gateway", "mercadopago")
+        .in("status", ["approved", "authorized"])
+        .is("email", null)
+        .ilike("raw_payload->>external_reference", `%${email}%`)
+        .order("processed_at", { ascending: false })
+        .limit(10);
+      if (byRef?.length) extraEvents.push(...byRef);
+    }
+
+    const allEvents = [...(events ?? []), ...extraEvents].sort(
+      (a, b) => new Date(String(b.processed_at)).getTime() - new Date(String(a.processed_at)).getTime(),
+    );
+
+
     const grants: string[] = [];
     for (const event of events ?? []) {
       const raw = event.raw_payload as Record<string, unknown> | null;
