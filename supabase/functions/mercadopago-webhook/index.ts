@@ -18,6 +18,26 @@ const corsHeaders = {
 const ACCESS_WINDOW_DAYS = 30;
 const PLAN_AMOUNT = 99.99;
 
+// Duração do acesso conforme o plano comprado (planos.dias_acesso: mensal=30, anual=365)
+async function resolvePlanDays(
+  admin: any, planoSlug: string | null, metaDays?: unknown,
+): Promise<number> {
+  if (planoSlug) {
+    try {
+      const { data } = await admin
+        .from("planos").select("dias_acesso").eq("slug", planoSlug).maybeSingle();
+      const dias = Number(data?.dias_acesso);
+      if (Number.isFinite(dias) && dias > 0) return dias;
+    } catch { /* ignore */ }
+    const s = planoSlug.toLowerCase();
+    if (s.includes("anual")) return 365;
+    if (s.includes("trimestral")) return 90;
+    if (s.includes("mensal")) return 30;
+  }
+  const n = Number(metaDays);
+  return Number.isFinite(n) && n > 0 ? n : ACCESS_WINDOW_DAYS;
+}
+
 const log = (step: string, details?: any) => {
   const d = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[MP-WEBHOOK] ${step}${d}`);
