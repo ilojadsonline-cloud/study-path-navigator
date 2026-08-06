@@ -83,14 +83,23 @@ async function grantCursoAccess(
   admin: any, userId: string, planoSlug: string | null, expiresAtIso: string, origem: string,
 ): Promise<void> {
   try {
-    const slug = planoSlug || "pmto-mensal";
-    const { data: plano } = await admin
+    if (!planoSlug) {
+      throw new Error("plano_slug ausente no pagamento; acesso não concedido");
+    }
+    const slug = planoSlug;
+    const { data: plano, error: planoError } = await admin
       .from("planos").select("slug, cursos_slugs").eq("slug", slug).maybeSingle();
-    const cursosSlugs: string[] = plano?.cursos_slugs?.length ? plano.cursos_slugs : ["pmto"];
-    const { data: cursos } = await admin
+    if (planoError) throw planoError;
+    if (!plano?.cursos_slugs?.length) {
+      throw new Error(`plano inválido ou sem curso vinculado: ${slug}`);
+    }
+    const cursosSlugs: string[] = plano.cursos_slugs;
+    const { data: cursos, error: cursosError } = await admin
       .from("cursos").select("id, slug").in("slug", cursosSlugs);
+    if (cursosError) throw cursosError;
+    if (!cursos?.length) throw new Error(`nenhum curso encontrado para o plano: ${slug}`);
     for (const c of cursos || []) {
-      await admin.from("acessos_curso").upsert({
+      const { error: accessError } = await admin.from("acessos_curso").upsert({
         user_id: userId,
         curso_id: c.id,
         plano_slug: slug,
@@ -99,6 +108,7 @@ async function grantCursoAccess(
         expires_at: expiresAtIso,
         ativo: true,
       }, { onConflict: "user_id,curso_id" });
+      if (accessError) throw accessError;
     }
     log("curso access granted", { userId, slug, cursos: (cursos || []).map((c: any) => c.slug) });
   } catch (e) {
