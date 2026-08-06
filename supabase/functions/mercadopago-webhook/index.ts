@@ -236,7 +236,9 @@ serve(async (req) => {
         .select("id")
         .eq("payment_id", String(dataId))
         .eq("gateway", "mercadopago")
-        .in("action_taken", ["access_reactivated", "user_not_found"])
+        // `user_not_found` não é conclusão: o pagamento pode ter ocorrido antes
+        // do cadastro e um reenvio posterior precisa tentar conceder o acesso.
+        .eq("action_taken", "access_reactivated")
         .limit(1)
         .maybeSingle();
       if (existing) {
