@@ -1,5 +1,7 @@
 import { CheckCircle2, AlertTriangle, XCircle, Lightbulb, BookOpen, GraduationCap } from "lucide-react";
 import { isHtmlContent, sanitizeRichHtml } from "@/lib/sanitize-html";
+import { useCurso } from "@/contexts/CursoContext";
+import { getQtdAlternativas } from "@/lib/edital-distribuicao";
 
 type Section =
   | { type: "professor"; text: string }
