@@ -16,7 +16,27 @@ const corsHeaders = {
 };
 
 const ACCESS_WINDOW_DAYS = 30;
-const PLAN_AMOUNT = 99.99;
+const PLAN_AMOUNT = 49.99; // menor plano ativo é R$ 69,99 (mensal PMTO)
+
+// Duração do acesso conforme o plano comprado (planos.dias_acesso: mensal=30, anual=365)
+async function resolvePlanDays(
+  admin: any, planoSlug: string | null, metaDays?: unknown,
+): Promise<number> {
+  if (planoSlug) {
+    try {
+      const { data } = await admin
+        .from("planos").select("dias_acesso").eq("slug", planoSlug).maybeSingle();
+      const dias = Number(data?.dias_acesso);
+      if (Number.isFinite(dias) && dias > 0) return dias;
+    } catch { /* ignore */ }
+    const s = planoSlug.toLowerCase();
+    if (s.includes("anual")) return 365;
+    if (s.includes("trimestral")) return 90;
+    if (s.includes("mensal")) return 30;
+  }
+  const n = Number(metaDays);
+  return Number.isFinite(n) && n > 0 ? n : ACCESS_WINDOW_DAYS;
+}
 
 const log = (step: string, details?: any) => {
   const d = details ? ` - ${JSON.stringify(details)}` : "";
@@ -322,8 +342,10 @@ serve(async (req) => {
         }
 
         const user = await findUserByEmail(admin, email);
-        const planDays = Number(payment?.metadata?.days) > 0
-          ? Number(payment.metadata.days) : ACCESS_WINDOW_DAYS;
+        const planoSlugForDays = (payment?.metadata?.plano_slug as string | undefined)
+          || (payment?.metadata?.plan as string | undefined)
+          || extractPlanoFromExternalRef(payment?.external_reference);
+        const planDays = await resolvePlanDays(admin, planoSlugForDays ?? null, payment?.metadata?.days);
         const expiresAt = new Date(Date.now() + planDays * 24 * 3600 * 1000).toISOString();
         const isAvulso = payment?.metadata?.payment_type === "avulso";
         const source = isAvulso ? "mercadopago_avulso" : "mercadopago";
@@ -331,13 +353,13 @@ serve(async (req) => {
 
         if (user) {
           await reactivateUser(admin, user, expiresAt, source, typeLabel);
-          const planoSlug = (payment?.metadata?.plano_slug as string | undefined)
-            || (payment?.metadata?.plan as string | undefined)
-            || extractPlanoFromExternalRef(payment?.external_reference);
-          await grantCursoAccess(admin, user.id, planoSlug ?? null, expiresAt, source);
+          await grantCursoAccess(admin, user.id, planoSlugForDays ?? null, expiresAt, source);
           try {
             await admin.from("trial_usage").upsert(
-              { email, user_id: user.id, provider: "mercadopago", converted_to_paid: true },
+              {
+                email, user_id: user.id, provider: "mercadopago",
+                converted_to_paid: true, trial_ends_at: expiresAt,
+              },
               { onConflict: "email" },
             );
           } catch { /* ignore */ }

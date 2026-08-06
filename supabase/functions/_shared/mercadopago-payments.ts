@@ -1,7 +1,24 @@
 const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const FULL_EMAIL_REGEX = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
 
-export const MP_ACCESS_DAYS = 90;
+// Duração padrão do acesso quando o pagamento não traz o plano (mensal = 30 dias).
+export const MP_DEFAULT_ACCESS_DAYS = 30;
+// Janela de busca de pagamentos no Mercado Pago (precisa cobrir o plano anual).
+export const MP_LOOKBACK_DAYS = 400;
+
+// Extrai a duração real do acesso a partir do pagamento (metadata.days ou slug do plano)
+export function resolveAccessDays(payment: any): number {
+  const metaDays = Number(payment?.metadata?.days);
+  if (Number.isFinite(metaDays) && metaDays > 0) return metaDays;
+
+  const slug = String(
+    payment?.metadata?.plano_slug ?? payment?.metadata?.plan ?? payment?.external_reference ?? "",
+  ).toLowerCase();
+  if (slug.includes("anual")) return 365;
+  if (slug.includes("trimestral")) return 90;
+  if (slug.includes("mensal")) return 30;
+  return MP_DEFAULT_ACCESS_DAYS;
+}
 
 const SEARCH_LIMIT = 100;
 const MAX_SEARCH_PAGES = 10;
@@ -106,7 +123,7 @@ function extractEmailsFromExternalReference(value?: string | null): string[] {
 }
 
 async function fetchRecentMercadoPagoPayments(accessToken: string, nowMs = Date.now()): Promise<any[]> {
-  const sinceMs = nowMs - MP_ACCESS_DAYS * 24 * 60 * 60 * 1000;
+  const sinceMs = nowMs - MP_LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
   const payments: any[] = [];
 
   for (let page = 0; page < MAX_SEARCH_PAGES; page += 1) {
@@ -170,7 +187,7 @@ function buildSubscriptionMatch(payment: any): MercadoPagoSubscriptionMatch | nu
   if (!paidAtMs) return null;
 
   const endDate = new Date(paidAtMs);
-  endDate.setDate(endDate.getDate() + MP_ACCESS_DAYS);
+  endDate.setDate(endDate.getDate() + resolveAccessDays(payment));
 
   return {
     provider: "mercadopago",
@@ -191,7 +208,7 @@ export async function findApprovedMercadoPagoPayment(
   );
   if (normalizedEmails.size === 0) return null;
 
-  const sinceMs = nowMs - MP_ACCESS_DAYS * 24 * 60 * 60 * 1000;
+  const sinceMs = nowMs - MP_LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
   const payments = await fetchRecentMercadoPagoPayments(accessToken, nowMs);
 
   for (const payment of payments) {
@@ -225,7 +242,7 @@ export async function getMercadoPagoSubscriptionsByEmail(
 
   if (emailSet.size === 0) return matches;
 
-  const sinceMs = nowMs - MP_ACCESS_DAYS * 24 * 60 * 60 * 1000;
+  const sinceMs = nowMs - MP_LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
   const payments = await fetchRecentMercadoPagoPayments(accessToken, nowMs);
 
   for (const payment of payments) {
