@@ -40,6 +40,67 @@ function getAlternativas(q: Questao) {
   };
 }
 
+// ---- Aleatorização ----
+// Números aleatórios de melhor qualidade que Math.random (quando disponível)
+function randomInt(maxExclusive: number) {
+  if (maxExclusive <= 1) return 0;
+  const c = typeof crypto !== "undefined" ? crypto : undefined;
+  if (c?.getRandomValues) {
+    const limit = Math.floor(0xffffffff / maxExclusive) * maxExclusive;
+    const buf = new Uint32Array(1);
+    let v = 0;
+    do {
+      c.getRandomValues(buf);
+      v = buf[0];
+    } while (v >= limit);
+    return v % maxExclusive;
+  }
+  return Math.floor(Math.random() * maxExclusive);
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+// Embaralha e distribui: evita sequências longas da mesma disciplina/assunto,
+// intercalando os grupos proporcionalmente ao tamanho de cada um.
+function shuffleSpread(questoes: Questao[]): Questao[] {
+  if (questoes.length < 3) return shuffle(questoes);
+  const groups = new Map<string, Questao[]>();
+  for (const q of shuffle(questoes)) {
+    const key = `${(q.disciplina || "").trim()}::${(q.assunto || "").trim()}`;
+    const g = groups.get(key);
+    if (g) g.push(q);
+    else groups.set(key, [q]);
+  }
+  // ordem inicial dos grupos aleatória; a cada passo escolhe o grupo com maior "déficit"
+  const buckets = shuffle([...groups.values()]).map((items) => ({
+    items,
+    step: questoes.length / items.length,
+    next: 0,
+  }));
+  buckets.forEach((b) => (b.next = randomInt(1000) / 1000 * b.step));
+
+  const result: Questao[] = [];
+  while (result.length < questoes.length) {
+    let best = -1;
+    for (let i = 0; i < buckets.length; i++) {
+      if (buckets[i].items.length === 0) continue;
+      if (best === -1 || buckets[i].next < buckets[best].next) best = i;
+    }
+    if (best === -1) break;
+    const b = buckets[best];
+    result.push(b.items.shift() as Questao);
+    b.next += b.step;
+  }
+  return result;
+}
+
 const PAGE_SIZE = 20;
 const STORAGE_KEY = "choa_questoes_state_v2";
 
