@@ -328,22 +328,15 @@ const Questoes = () => {
           byId.delete(id);
         }
       }
-      // Append any new questions that weren't in the saved order (shuffled).
-      const extras = [...byId.values()];
-      for (let i = extras.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [extras[i], extras[j]] = [extras[j], extras[i]];
-      }
+      // Anexa questões novas (que não estavam na ordem salva), já distribuídas.
+      const extras = shuffleSpread([...byId.values()]);
       orderedSource = [...ordered, ...extras];
       restoredPage = persisted.currentPage || 1;
       restoredSelected = persisted.selectedAnswer || {};
       restoredRevealed = persisted.revealed || {};
     } else {
-      // Fisher-Yates shuffle on fresh filter change
-      for (let i = orderedSource.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [orderedSource[i], orderedSource[j]] = [orderedSource[j], orderedSource[i]];
-      }
+      // Nova combinação de filtros: embaralha com distribuição por disciplina/assunto
+      orderedSource = shuffleSpread(orderedSource);
     }
 
     const mapped: QuestaoMapped[] = orderedSource.map((q) => {
