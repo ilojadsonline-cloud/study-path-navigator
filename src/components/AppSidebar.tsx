@@ -86,7 +86,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
+              {items.map((item) => {
                 const link = (
                   <NavLink
                     to={item.url}
