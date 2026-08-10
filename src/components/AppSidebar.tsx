@@ -1,8 +1,11 @@
 import {
   LayoutDashboard, BookOpen, HelpCircle, Shuffle, CalendarDays,
   CreditCard, LogOut, Shield, MessageSquare, Flag,
-  Brain, Youtube, Trophy, CalendarClock,
+  Brain, Youtube, Trophy, CalendarClock, Lock,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurso } from "@/contexts/CursoContext";
 import {
   Tooltip,
   TooltipTrigger,
