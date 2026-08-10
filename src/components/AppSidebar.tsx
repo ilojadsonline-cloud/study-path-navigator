@@ -1,8 +1,11 @@
 import {
   LayoutDashboard, BookOpen, HelpCircle, Shuffle, CalendarDays,
   CreditCard, LogOut, Shield, MessageSquare, Flag,
-  Brain, Youtube, Trophy, CalendarClock,
+  Brain, Youtube, Trophy, CalendarClock, Lock,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurso } from "@/contexts/CursoContext";
 import {
   Tooltip,
   TooltipTrigger,
@@ -39,12 +42,29 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { signOut, profile, isAdmin } = useAuth();
+  const { cursoSlug } = useCurso();
+  const isPmto = (cursoSlug || "pmto").toLowerCase() === "pmto";
+  const [hasPop, setHasPop] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let active = true;
+    if (!isPmto) { setHasPop(false); return; }
+    supabase.rpc("has_pop_access").then(({ data }) => {
+      if (active) setHasPop(data === true);
+    });
+    return () => { active = false; };
+  }, [isPmto]);
+
+  const items = isPmto && hasPop
+    ? [...menuItems, { title: "Questões POP", url: "/pop-questoes", icon: Lock }]
+    : menuItems;
 
   const handleLogout = async () => {
     await signOut();
     navigate("/login");
   };
+
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 gradient-sidebar">
@@ -66,7 +86,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
+              {items.map((item) => {
                 const link = (
                   <NavLink
                     to={item.url}
