@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurso, cursoOrFilter } from "@/contexts/CursoContext";
 import { getDisciplinasGeracao } from "@/lib/disciplinas-geracao";
+import { getQtdAlternativas } from "@/lib/edital-distribuicao";
 import { toast } from "sonner";
 import { Loader2, Play, Square, RefreshCw, AlertTriangle, CheckCircle2, Eye, Undo2, Save, Pencil, Trash2, X, ShieldCheck, Wand2 } from "lucide-react";
 import { DedupQuestoesCard } from "./DedupQuestoesCard";
@@ -117,6 +118,7 @@ const LETRAS = ["A", "B", "C", "D", "E"];
 
 export function AdminAuditoriaTab() {
   const { cursoId, cursoSlug, cursoAtivo } = useCurso();
+  const qtdAlternativas = getQtdAlternativas(cursoSlug);
   const [selDisc, setSelDisc] = useState<string[]>([]);
   const [scopeMode, setScopeMode] = useState<"all" | "discipline" | "unaudited" | "reported">("all");
   const [limit, setLimit] = useState(100000);
@@ -388,11 +390,12 @@ export function AdminAuditoriaTab() {
         audit_id: a.id,
       } as any);
     }
-    // Sanitiza patch (gabarito 0-4)
+    // Sanitiza conforme a estrutura oficial do curso ativo.
     const patch: any = { ...(a.proposed_patch as any) };
+    if (q && qtdAlternativas === 4) patch.alt_e = "";
     if ("gabarito" in patch) {
       const g = Number(patch.gabarito);
-      if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+      if (!Number.isInteger(g) || g < 0 || g >= qtdAlternativas) delete patch.gabarito;
     }
     // Publica a questão após aplicar a correção da IA (sai de "revisão manual")
     patch.audit_status = "auto_corrected";
@@ -440,11 +443,12 @@ export function AdminAuditoriaTab() {
               audit_id: a.id,
             } as any);
           }
-          // Sanitiza patch (gabarito 0-4)
+          // Sanitiza conforme a estrutura oficial do curso ativo.
           const patch: any = { ...(a.proposed_patch as any) };
+          if (q && qtdAlternativas === 4) patch.alt_e = "";
           if ("gabarito" in patch) {
             const g = Number(patch.gabarito);
-            if (!Number.isInteger(g) || g < 0 || g > 4) delete patch.gabarito;
+            if (!Number.isInteger(g) || g < 0 || g >= qtdAlternativas) delete patch.gabarito;
           }
           // Publica a questão após aplicar a correção da IA (sai de "revisão manual")
           patch.audit_status = "auto_corrected";
@@ -527,7 +531,7 @@ export function AdminAuditoriaTab() {
         alt_b: patch.alt_b ?? data.alt_b ?? "",
         alt_c: patch.alt_c ?? data.alt_c ?? "",
         alt_d: patch.alt_d ?? data.alt_d ?? "",
-        alt_e: patch.alt_e ?? data.alt_e ?? "",
+        alt_e: qtdAlternativas === 4 ? "" : (patch.alt_e ?? data.alt_e ?? ""),
         gabarito: typeof patch.gabarito === "number" ? patch.gabarito : data.gabarito ?? 0,
         comentario: patch.comentario ?? data.comentario ?? "",
         disciplina: data.disciplina ?? "",
@@ -554,8 +558,8 @@ export function AdminAuditoriaTab() {
         alt_b: form.alt_b,
         alt_c: form.alt_c,
         alt_d: form.alt_d,
-        alt_e: form.alt_e,
-        gabarito: Math.max(0, Math.min(4, Number(form.gabarito) || 0)),
+        alt_e: qtdAlternativas === 4 ? "" : form.alt_e,
+        gabarito: Math.max(0, Math.min(qtdAlternativas - 1, Number(form.gabarito) || 0)),
         comentario: form.comentario,
         disciplina: form.disciplina,
         assunto: form.assunto,
@@ -1111,7 +1115,7 @@ export function AdminAuditoriaTab() {
 
                   <div className="space-y-2">
                     <Label className="text-xs">Alternativas (clique no círculo para marcar a correta)</Label>
-                    {(["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const).map((key, idx) => (
+                    {(["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"] as const).slice(0, qtdAlternativas).map((key, idx) => (
                       <div key={key} className="flex items-start gap-2">
                         <button
                           type="button"

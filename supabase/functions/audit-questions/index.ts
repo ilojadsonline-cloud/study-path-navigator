@@ -356,6 +356,9 @@ function editalAuditRules(q?: any): string {
 // A estrutura é detectada pela própria questão (alt_e vazio = 4 alternativas).
 const ALL_ALT_KEYS = ["alt_a", "alt_b", "alt_c", "alt_d", "alt_e"];
 function altKeysOf(q: any): string[] {
+  // O curso é a fonte de verdade. Uma alt_e preenchida por uma auditoria antiga
+  // não pode transformar uma questão CBMTO em questão de cinco alternativas.
+  if (CURSO_ATIVO_SLUG === "cbmto") return ALL_ALT_KEYS.slice(0, 4);
   return String(q?.alt_e ?? "").trim() ? ALL_ALT_KEYS : ALL_ALT_KEYS.slice(0, 4);
 }
 function altLettersOf(q: any): string[] {
@@ -375,7 +378,8 @@ function altStructureNote(q: any): string {
 /** Remove alt_e e clampa gabarito em provas de 4 alternativas. */
 function enforceAltStructure(q: any, patch: any): any {
   if (!patch || !isFourAlt(q)) return patch;
-  if ("alt_e" in patch) delete patch.alt_e;
+  // Limpa também dados legados: omitir alt_e deixaria o valor antigo no banco.
+  patch.alt_e = "";
   if ("gabarito" in patch) {
     const g = Number(patch.gabarito);
     if (!Number.isInteger(g) || g < 0 || g > 3) delete patch.gabarito;
@@ -693,8 +697,10 @@ async function rewriteWithMaritaca(
   diagnosis: { issues: any[]; ai_summary: string },
   legalText: string | null,
 ): Promise<{ patch: any | null; unrecoverable: boolean; summary: string }> {
-  const alts = ["A","B","C","D","E"].map((l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
-  const correctaLetra = ["A","B","C","D","E"][q.gabarito] ?? "?";
+  const letras = altLettersOf(q);
+  const alts = letras.map((l) => `${l}) ${(q as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
+  const correctaLetra = letras[q.gabarito] ?? "?";
+  const maxGabarito = letras.length - 1;
   const blocks = legalText ? parseArticleBlocks(legalText) : [];
   const cited = extractArticleNumbers([q.enunciado, q.alt_a, q.alt_b, q.alt_c, q.alt_d, q.alt_e, q.comentario, q.artigo_principal].join("\n"));
   const relevantBlocks = cited.map((num) => blocks.find((b) => b.artNum === num)).filter(Boolean) as ArticleBlock[];
@@ -720,6 +726,8 @@ ${alts}
 
 Gabarito atual: ${correctaLetra} (índice ${q.gabarito})
 
+${altStructureNote(q)}
+
 Comentário atual:
 ${q.comentario}
 
@@ -735,12 +743,12 @@ REGRAS DE REESCRITA:
 3. DISTRATORES LONGOS: encurte mantendo o erro típico (troca de prazo, autoridade, conectivo, regra/exceção).
 4. CADA DISTRATOR usa uma técnica DIFERENTE de erro (≥2 técnicas no conjunto).
 5. PROIBIDO "todas/nenhuma das anteriores", "n.d.a.", duplicatas, alternativa que contradiz o enunciado.
-6. Gabarito = inteiro 0-4. Se trocar a alternativa correta, ajuste o gabarito.
+6. Gabarito = inteiro 0-${maxGabarito}. Se trocar a alternativa correta, ajuste o gabarito.
 7. HIERARQUIA militar: cargos/postos/competências fiéis à lei. Cite lei externa por extenso ("art. 9º do CPM").
 8. COMENTÁRIO em 4 movimentos OBRIGATÓRIOS, parágrafos fluidos, 600-1500 chars:
    (i) "A alternativa correta é a [X], pois..." + citação literal curta do dispositivo.
    (ii) "A pegadinha desta questão está em..." + nomeia a técnica.
-   (iii) Análise INDIVIDUAL de cada alternativa errada: "Alternativa [Y]: incorreta porque ... Vide [art. Z]". NUNCA "as demais estão erradas".
+    (iii) Análise INDIVIDUAL de cada alternativa de ${letras[0]} a ${letras[letras.length - 1]}: "Alternativa [Y]: incorreta porque ... Vide [art. Z]". NUNCA analise alternativa inexistente e NUNCA escreva "as demais estão erradas".
    (iv) "Lembre-se: segundo o [art. X da Lei Y], [regra geral]".
 9. Se a questão for IRRECUPERÁVEL juridicamente (ex.: nenhuma alternativa pode ser correta à luz da lei, ou diagnóstico AUTO_DELETE), devolva unrecoverable=true e patch=null.
 
@@ -748,8 +756,8 @@ Retorne JSON ESTRITO:
 {
   "patch": {
     "enunciado"?: "...",
-    "alt_a"?: "...", "alt_b"?: "...", "alt_c"?: "...", "alt_d"?: "...", "alt_e"?: "...",
-    "gabarito"?: 0-4,
+    "alt_a"?: "...", "alt_b"?: "...", "alt_c"?: "...", "alt_d"?: "..."${letras.length === 5 ? ', "alt_e"?: "..."' : ""},
+    "gabarito"?: 0-${maxGabarito},
     "comentario"?: "..."
   } | null,
   "techniques_used": ["..."],
@@ -1042,7 +1050,7 @@ async function rewriteDistractorsForLengthBias(
     gabarito: typeof currentPatch?.gabarito === "number" ? currentPatch.gabarito : q.gabarito,
     comentario: currentPatch?.comentario ?? q.comentario,
   };
-  const letras = ["A","B","C","D","E"];
+  const letras = altLettersOf(q);
   const altsTxt = letras.map((l,i) => `${l}) ${(merged as any)[`alt_${l.toLowerCase()}`]}`).join("\n");
   const correctaLetra = letras[merged.gabarito] ?? "?";
   const correctaTxt = (merged as any)[`alt_${correctaLetra.toLowerCase()}`] ?? "";
@@ -1068,7 +1076,7 @@ Alternativa correta (NÃO ALTERE seu sentido nem sua posição): "${correctaTxt}
 Tamanho-alvo: ${targetLen} caracteres. Cada distrator deve ter entre ${minLen} e ${maxLen} caracteres.
 
 TAREFA:
-1. Reescreva APENAS as 4 alternativas INCORRETAS para que TODAS as 5 fiquem com tamanho similar (±25% da correta) e mesmo registro técnico-jurídico.
+1. Reescreva APENAS as ${letras.length - 1} alternativas INCORRETAS para que TODAS as ${letras.length} fiquem com tamanho similar (±25% da correta) e mesmo registro técnico-jurídico.
 2. Cada distrator deve permanecer juridicamente plausível mas claramente incorreto frente ao texto legal acima (use técnicas: troca de prazo, troca de autoridade, inversão regra/exceção, troca de conectivo, posto/cargo trocado, etc.).
 3. Mantenha o gabarito ${correctaLetra}. Mantenha a alternativa correta EXATAMENTE como está.
 4. NÃO mexa em enunciado nem comentário.
@@ -1076,7 +1084,7 @@ TAREFA:
 
 Retorne JSON ESTRITO:
 {
-  "alt_a": "...", "alt_b": "...", "alt_c": "...", "alt_d": "...", "alt_e": "...",
+  "alt_a": "...", "alt_b": "...", "alt_c": "...", "alt_d": "..."${letras.length === 5 ? ', "alt_e": "..."' : ""},
   "unrecoverable": true|false,
   "summary": "1 frase sobre o que foi reescrito ou por que é irrecuperável"
 }`;
