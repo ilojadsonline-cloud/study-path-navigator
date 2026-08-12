@@ -483,8 +483,31 @@ serve(async (req) => {
 
       if (Object.keys(safeUpdates).length === 0) throw new Error("Nenhum campo válido para atualizar");
 
-      const { error } = await supabaseAdmin.from("questoes").update(safeUpdates).in("id", ids);
-      if (error) throw new Error(`Erro ao atualizar questão: ${error.message}`);
+      // Proteção central: nenhuma tela ou patch de auditoria pode inserir E no CBMTO.
+      const { data: rows, error: rowsError } = await supabaseAdmin
+        .from("questoes").select("id, curso_id").in("id", ids);
+      if (rowsError) throw new Error(`Erro ao identificar curso da questão: ${rowsError.message}`);
+      const cursoIds = [...new Set((rows ?? []).map((row: any) => row.curso_id).filter(Boolean))];
+      const { data: cursos } = cursoIds.length
+        ? await supabaseAdmin.from("cursos").select("id, slug").in("id", cursoIds)
+        : { data: [] };
+      const cbmtoCursoIds = new Set((cursos ?? []).filter((c: any) => c.slug === "cbmto").map((c: any) => c.id));
+      const cbmtoIds = (rows ?? []).filter((row: any) => cbmtoCursoIds.has(row.curso_id)).map((row: any) => row.id);
+      const otherIds = (rows ?? []).filter((row: any) => !cbmtoCursoIds.has(row.curso_id)).map((row: any) => row.id);
+
+      if (otherIds.length) {
+        const { error } = await supabaseAdmin.from("questoes").update(safeUpdates).in("id", otherIds);
+        if (error) throw new Error(`Erro ao atualizar questão: ${error.message}`);
+      }
+      if (cbmtoIds.length) {
+        const cbmtoUpdates = { ...safeUpdates, alt_e: "" };
+        if ("gabarito" in cbmtoUpdates) {
+          const g = Number(cbmtoUpdates.gabarito);
+          if (!Number.isInteger(g) || g < 0 || g > 3) delete cbmtoUpdates.gabarito;
+        }
+        const { error } = await supabaseAdmin.from("questoes").update(cbmtoUpdates).in("id", cbmtoIds);
+        if (error) throw new Error(`Erro ao atualizar questão CBMTO: ${error.message}`);
+      }
 
       return new Response(JSON.stringify({ success: true, updated: ids.length }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

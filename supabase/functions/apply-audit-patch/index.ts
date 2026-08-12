@@ -17,19 +17,19 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const ALLOWED_PATCH_FIELDS = ["enunciado","alt_a","alt_b","alt_c","alt_d","alt_e","gabarito","comentario","assunto","dificuldade"];
 
-/** Provas de 4 alternativas (CHOA CBMTO): a questão original tem alt_e vazia. */
-function isFourAlt(questao: any): boolean {
-  return !String(questao?.alt_e ?? "").trim();
+/** O curso, e não o conteúdo legado de alt_e, define a estrutura da prova. */
+function isFourAlt(questao: any, cursoSlug?: string | null): boolean {
+  return cursoSlug === "cbmto" || !String(questao?.alt_e ?? "").trim();
 }
 
-function sanitizePatch(p: any, questao?: any): Record<string, unknown> {
+function sanitizePatch(p: any, questao?: any, cursoSlug?: string | null): Record<string, unknown> {
   if (!p || typeof p !== "object") return {};
   const out: Record<string, unknown> = {};
   for (const k of ALLOWED_PATCH_FIELDS) {
     if (k in p) out[k] = (p as any)[k];
   }
-  const fourAlt = questao ? isFourAlt(questao) : false;
-  if (fourAlt) delete out.alt_e;
+  const fourAlt = questao ? isFourAlt(questao, cursoSlug) : false;
+  if (fourAlt) out.alt_e = "";
   if ("gabarito" in out) {
     const g = Number(out.gabarito);
     if (!Number.isInteger(g) || g < 0 || g > (fourAlt ? 3 : 4)) delete out.gabarito;
@@ -96,6 +96,11 @@ serve(async (req) => {
       });
     }
 
+    const { data: curso } = questao.curso_id
+      ? await supabase.from("cursos").select("slug").eq("id", questao.curso_id).maybeSingle()
+      : { data: null };
+    const cursoSlug = curso?.slug ?? "pmto";
+
     // REJECT — descarta sugestão
     if (action === "reject") {
       await supabase.from("question_audits").update({
@@ -150,7 +155,7 @@ serve(async (req) => {
     const cleanedSource = rawPatch && typeof rawPatch === "object"
       ? Object.fromEntries(Object.entries(rawPatch).filter(([k]) => !k.startsWith("__")))
       : null;
-    const patch = sanitizePatch(cleanedSource, questao);
+    const patch = sanitizePatch(cleanedSource, questao, cursoSlug);
     if (!Object.keys(patch).length) {
       return new Response(JSON.stringify({ error: "patch vazio após sanitização" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
