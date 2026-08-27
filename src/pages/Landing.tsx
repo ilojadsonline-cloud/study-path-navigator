@@ -12,30 +12,32 @@ import mockupQuestoes from "@/assets/mockup-questoes.jpg";
 import mockupEdital from "@/assets/mockup-edital.jpg";
 
 const features = [
-  { icon: <BookOpen className="w-6 h-6" />, title: "Edital Verticalizado", desc: "Trilha de estudos completa baseada no edital CHOA/CHOM com 7 disciplinas e links diretos para legislação." },
-  { icon: <HelpCircle className="w-6 h-6" />, title: "+1.000 Questões", desc: "Mais de mil questões no estilo PMTO com correção automática, comentários fundamentados na lei seca e filtros por disciplina." },
-  { icon: <Shuffle className="w-6 h-6" />, title: "Simulados Inteligentes", desc: "Gerador de simulados com randomização de questões e alternativas. Simule a prova real quantas vezes quiser." },
-  { icon: <Trophy className="w-6 h-6" />, title: "Ranking Top 10", desc: "Acompanhe sua posição entre os melhores guerreiros. Medalhas para os 3 primeiros e atualização em tempo real." },
-  { icon: <Zap className="w-6 h-6" />, title: "Legislação do Tocantins", desc: "Acesso rápido às leis 2.578, 2.575, LC 128, CPPM e RDMETO com links para lei seca e videoaulas." },
-  { icon: <Lock className="w-6 h-6" />, title: "Anti-compartilhamento", desc: "Sistema seguro com controle de sessão, proteção de conteúdo e login por CPF exclusivo." },
+  { icon: <BookOpen className="w-6 h-6" />, title: "Edital Verticalizado", desc: "Trilha completa e separada por curso: CHOA PMTO e CHOA CBMTO, com links diretos para a legislação de cada certame." },
+  { icon: <HelpCircle className="w-6 h-6" />, title: "Banco de Questões", desc: "Milhares de questões no estilo da banca, com correção automática, comentários na lei seca e filtros por disciplina e assunto." },
+  { icon: <Shuffle className="w-6 h-6" />, title: "Simulados Inteligentes", desc: "Gerador de simulados com randomização de questões e alternativas, no formato de cada edital (5 alternativas na PMTO, 4 no CBMTO)." },
+  { icon: <Clock className="w-6 h-6" />, title: "Simulado Semanal Online", desc: "Prova semanal cronometrada com tentativa única, correção, recursos e ranking geral — simulando o dia da prova." },
+  { icon: <Trophy className="w-6 h-6" />, title: "Ranking e Desempenho", desc: "Ranking dos melhores guerreiros por curso, diagnóstico por disciplina e assunto e cronômetro de estudo integrado." },
+  { icon: <BarChart3 className="w-6 h-6" />, title: "Cronograma de Estudos", desc: "Gerador de cronograma personalizado conforme suas horas disponíveis, com exportação em PDF." },
+  { icon: <Zap className="w-6 h-6" />, title: "Legislação do Tocantins", desc: "Acesso rápido às leis exigidas em cada edital, com material de apoio e videoaulas (BizuAulas) para o CHOA PMTO." },
+  { icon: <Lock className="w-6 h-6" />, title: "Conta Individual e Segura", desc: "Login por CPF, controle de sessão, conteúdo protegido e acesso liberado somente para o curso adquirido." },
 ];
 
 const benefits = [
-  "Acesso ilimitado a todas as disciplinas",
-  "+1.000 questões com gabarito comentado",
+  "Acesso completo ao curso escolhido (PMTO ou CBMTO)",
+  "Banco de questões com gabarito comentado",
   "Simulados ilimitados com randomização",
-  "Ranking Top 10 Guerreiros 🏆",
-  "Meu Desempenho completo",
+  "Simulado Semanal com ranking 🏆",
+  "Cronograma de estudos personalizado em PDF",
+  "Meu Desempenho e diagnóstico por disciplina",
   "Cronômetro de estudo integrado",
-  "Suporte via e-mail",
-  "Acesso por 90 dias corridos",
+  "Suporte via e-mail e grupo de avisos no WhatsApp",
 ];
 
 const stats = [
-  { icon: <HelpCircle className="w-5 h-5" />, value: "1.000+", label: "Questões" },
-  { icon: <BookOpen className="w-5 h-5" />, value: "7", label: "Disciplinas" },
-  { icon: <Trophy className="w-5 h-5" />, value: "Top 10", label: "Ranking" },
-  { icon: <Target className="w-5 h-5" />, value: "90", label: "Dias de acesso" },
+  { icon: <HelpCircle className="w-5 h-5" />, value: "Milhares", label: "Questões" },
+  { icon: <Shield className="w-5 h-5" />, value: "2", label: "Cursos (PMTO e CBMTO)" },
+  { icon: <Trophy className="w-5 h-5" />, value: "Semanal", label: "Simulado com ranking" },
+  { icon: <Target className="w-5 h-5" />, value: "30/365", label: "Dias de acesso" },
 ];
 
 // Questões reais extraídas diretamente do banco da plataforma
@@ -141,7 +143,7 @@ const platformPreviews = [
   },
   {
     title: "Banco de Questões",
-    desc: "Mais de 1.000 questões com interface intuitiva, alternativas claras, correção automática e comentários na lei seca.",
+    desc: "Milhares de questões com interface intuitiva, alternativas claras, correção automática e comentários na lei seca.",
     image: mockupQuestoes,
   },
   {
@@ -209,7 +211,7 @@ const Landing = () => {
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs font-semibold mb-6 glow-gold">
               <Star className="w-3.5 h-3.5" />
-              Complemento ideal para sua preparação PMTO
+              Agora com dois cursos: CHOA PMTO e CHOA CBMTO
             </div>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-[1.1] mb-6">
               Pratique com
@@ -222,8 +224,9 @@ const Landing = () => {
               {" "}<strong className="text-foreground">fixar o conteúdo praticando</strong>.
             </p>
             <p className="text-muted-foreground max-w-xl mx-auto mb-10 text-sm">
-              +1.000 questões baseadas na legislação do Tocantins, com gabarito comentado na lei seca.
-              Ideal para complementar seu cursinho, grupo de estudos ou preparação individual.
+              Questões baseadas na legislação do Tocantins, com gabarito comentado na lei seca,
+              simulado semanal com ranking e cronograma de estudos — em trilhas separadas para o
+              {" "}<strong className="text-foreground">CHOA PMTO</strong> e o <strong className="text-foreground">CHOA CBMTO</strong>.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
@@ -237,11 +240,11 @@ const Landing = () => {
                 to="/assinatura"
                 className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
               >
-                Assinar por R$ 39,99
+                Assinar a partir de R$ 39,99/mês
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">Pague com <strong className="text-foreground">Cartão</strong>, <strong className="text-foreground">Pix</strong> ou <strong className="text-foreground">Boleto</strong> via Mercado Pago • 90 dias de acesso completo</p>
+            <p className="text-xs text-muted-foreground mt-3">Pague com <strong className="text-foreground">Cartão</strong>, <strong className="text-foreground">Pix</strong> ou <strong className="text-foreground">Boleto</strong> via Mercado Pago • planos mensais (30 dias) ou anuais (365 dias)</p>
           </motion.div>
         </section>
 
@@ -493,12 +496,12 @@ const Landing = () => {
 
           {/* CTA after question */}
           <div className="text-center mt-6">
-            <p className="text-sm text-muted-foreground mb-3">Gostou? Temos mais de 1.000 questões como estas — assine e libere o banco completo.</p>
+            <p className="text-sm text-muted-foreground mb-3">Gostou? O banco tem milhares de questões como estas — assine e libere o curso completo.</p>
             <Link
               to="/assinatura"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity glow-primary"
             >
-              Assinar por R$ 39,99
+              Assinar agora
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -646,8 +649,8 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* Plano Único */}
-        <section className="max-w-3xl mx-auto px-4 pb-20">
+        {/* Planos por curso */}
+        <section className="max-w-5xl mx-auto px-4 pb-20">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -655,72 +658,105 @@ const Landing = () => {
             className="text-center mb-12"
           >
             <h2 className="text-3xl md:text-4xl font-black mb-3">
-              Investimento <span className="text-gradient-gold">acessível</span>
+              Escolha o seu <span className="text-gradient-gold">curso</span>
             </h2>
-            <p className="text-muted-foreground text-sm md:text-base">
-              Um único plano com acesso completo. Sem pegadinhas, sem surpresas.
+            <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
+              Conteúdo, questões, simulados e ranking totalmente separados por certame.
+              Planos mensais (30 dias) ou anuais (365 dias). Sem pegadinhas, sem surpresas.
             </p>
           </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            {/* CHOA PMTO */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="glass-card rounded-2xl p-8 border-primary/20 glow-primary relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full blur-3xl" />
+              <div className="relative">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <span className="px-2.5 py-1 rounded-md bg-primary/15 text-primary text-[11px] font-black">CHOA PMTO</span>
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gold/10 text-gold text-[11px] font-semibold">
+                    <Star className="w-3 h-3" /> Mais procurado
+                  </span>
+                </div>
+                <div className="mb-4">
+                  <span className="text-4xl md:text-5xl font-black text-gradient-primary">R$ 39,99</span>
+                  <span className="text-muted-foreground ml-2 text-sm">/ mês</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-6">
+                  ou <strong className="text-foreground">R$ 449,99</strong> no plano anual (365 dias).
+                  Edital verticalizado CHOA/2026 PMTO, banco de questões, BizuAulas e simulado semanal.
+                </p>
+                <Link
+                  to="/assinatura"
+                  className="inline-flex w-full items-center justify-center gap-2 px-8 py-3.5 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity"
+                >
+                  Assinar CHOA PMTO
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* CHOA CBMTO */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="glass-card rounded-2xl p-8 border-destructive/25 relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-40 h-40 bg-destructive/5 rounded-full blur-3xl" />
+              <div className="relative">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <span className="px-2.5 py-1 rounded-md bg-destructive/15 text-destructive text-[11px] font-black">CHOA CBMTO</span>
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-[11px] font-bold">
+                    🔥 Novo
+                  </span>
+                </div>
+                <div className="mb-4">
+                  <span className="text-4xl md:text-5xl font-black text-gradient-gold">R$ 49,99</span>
+                  <span className="text-muted-foreground ml-2 text-sm">/ mês</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-6">
+                  ou <strong className="text-foreground">R$ 549,99</strong> no plano anual (365 dias).
+                  Edital verticalizado CHOA/2026 CBMTO com questões de 4 alternativas, conforme o certame.
+                </p>
+                <Link
+                  to="/assinatura"
+                  className="inline-flex w-full items-center justify-center gap-2 px-8 py-3.5 rounded-xl gradient-gold text-gold-foreground font-bold text-sm hover:opacity-90 transition-opacity"
+                >
+                  Assinar CHOA CBMTO
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </motion.div>
+          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="glass-card rounded-2xl p-8 md:p-10 border-primary/20 glow-primary relative overflow-hidden"
+            className="glass-card rounded-2xl p-6 md:p-8"
           >
-            <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full blur-3xl" />
-            <div className="relative">
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 text-gold text-xs font-semibold">
-                  <Star className="w-3 h-3" />
-                  Plano Único
+            <p className="text-sm font-bold text-foreground mb-4">Incluído em qualquer plano:</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {benefits.map((b, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                  <span className="text-sm text-foreground">{b}</span>
                 </div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-bold animate-pulse">
-                  🔥 OFERTA POR TEMPO LIMITADO
-                </div>
-              </div>
-              <div className="mb-6">
-                <span className="text-2xl text-muted-foreground line-through mr-3">R$ 129,90</span>
-                <span className="text-5xl md:text-6xl font-black text-gradient-gold">R$ 39,99</span>
-                <span className="text-muted-foreground ml-2 text-base">/ 90 dias</span>
-              </div>
-              <p className="text-sm text-muted-foreground mb-8 max-w-md">
-                Acesso completo a toda a plataforma por 90 dias corridos.
-                Complemente sua preparação com questões e simulados ilimitados.
-              </p>
-
-              <div className="grid sm:grid-cols-2 gap-3 mb-8">
-                {benefits.map((b, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-                    <span className="text-sm text-foreground">{b}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  to="/assinatura"
-                  className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-xl gradient-gold text-gold-foreground font-bold text-base hover:opacity-90 transition-opacity glow-gold"
-                >
-                  Assinar Agora
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <a
-                  href="#demonstracao"
-                  className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-xl border border-primary/30 bg-primary/5 text-primary font-semibold text-base hover:bg-primary/10 transition-colors"
-                >
-                  <PlayCircle className="w-5 h-5" />
-                  Ver demonstração
-                </a>
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-3">
-                💳 <strong className="text-foreground">Cartão de crédito</strong> com renovação automática a cada 3 meses, ou{" "}
-                <strong className="text-foreground">Pix / Boleto</strong> com pagamento único de 90 dias (sem renovação).
-              </p>
+              ))}
             </div>
+            <p className="text-[11px] text-muted-foreground mt-4">
+              💳 <strong className="text-foreground">Cartão de crédito</strong> com renovação automática, ou{" "}
+              <strong className="text-foreground">Pix / Boleto</strong> com pagamento único (sem renovação).
+              O acesso é liberado apenas para o curso adquirido.
+            </p>
           </motion.div>
         </section>
+
 
         {/* Formas de pagamento */}
         <section className="max-w-4xl mx-auto px-4 pb-20">
@@ -740,7 +776,7 @@ const Landing = () => {
               </h3>
               <p className="text-sm text-muted-foreground max-w-xl mx-auto">
                 Pagamento processado pelo <strong className="text-foreground">Mercado Pago</strong>: cartão de crédito (renovação automática) ou
-                <strong className="text-foreground"> Pix / Boleto</strong> (pagamento único com 90 dias de acesso).
+                <strong className="text-foreground"> Pix / Boleto</strong> (pagamento único, com 30 ou 365 dias de acesso conforme o plano).
               </p>
 
             </div>
@@ -785,7 +821,7 @@ const Landing = () => {
               <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
                 <Clock className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-foreground">
-                  <strong>90 dias de acesso</strong> liberado após confirmação do pagamento.
+                  <strong>Acesso liberado</strong> logo após a confirmação do pagamento (30 ou 365 dias).
                 </p>
               </div>
             </div>
@@ -815,7 +851,7 @@ const Landing = () => {
                 to="/assinatura"
                 className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
               >
-                Assinar por R$ 39,99
+                Assinar agora
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a
