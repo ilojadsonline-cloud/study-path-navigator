@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 const DEFAULT_PLAN = "pmto-mensal";
-const FALLBACK_AMOUNT = 89.99;
+const FALLBACK_AMOUNT = 39.99;
 const FALLBACK_DAYS = 30;
 const log = (s: string, d?: any) => console.log(`[MP-PIX-BOLETO] ${s}${d ? " - " + JSON.stringify(d) : ""}`);
 

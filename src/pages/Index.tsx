@@ -185,11 +185,11 @@ const Index = () => {
                 <span className="text-[11px] text-muted-foreground">Polícia Militar do Tocantins</span>
               </div>
               <h3 className="text-xl font-black mb-1">
-                <span className="text-gradient-primary">R$ 69,99</span>
+                <span className="text-gradient-primary">R$ 39,99</span>
                 <span className="text-sm font-normal text-muted-foreground"> / mês</span>
               </h3>
               <p className="text-xs text-muted-foreground mb-4">
-                ou <strong className="text-foreground">R$ 749,99</strong> no plano anual (economize mais de 10%).
+                ou <strong className="text-foreground">R$ 449,99</strong> no plano anual (economize mais de 6%).
               </p>
               <ul className="space-y-2 text-xs text-muted-foreground mb-6 flex-1">
                 <li>• Edital verticalizado CHOA/2026 PMTO</li>
@@ -217,11 +217,11 @@ const Index = () => {
                 <span className="text-[11px] text-muted-foreground">Corpo de Bombeiros Militar do TO</span>
               </div>
               <h3 className="text-xl font-black mb-1">
-                <span className="text-gradient-gold">R$ 199,99</span>
-                <span className="text-sm font-normal text-muted-foreground"> / 30 dias</span>
+                <span className="text-gradient-gold">R$ 49,99</span>
+                <span className="text-sm font-normal text-muted-foreground"> / mês</span>
               </h3>
               <p className="text-xs text-muted-foreground mb-4">
-                Acesso completo ao conteúdo exclusivo do certame do CBMTO.
+                ou <strong className="text-foreground">R$ 549,99</strong> no plano anual. Acesso completo ao conteúdo exclusivo do certame do CBMTO.
               </p>
               <ul className="space-y-2 text-xs text-muted-foreground mb-6 flex-1">
                 <li>• Edital verticalizado CHOA/2026 CBMTO (14 disciplinas)</li>
