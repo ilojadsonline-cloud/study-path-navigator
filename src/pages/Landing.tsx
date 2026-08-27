@@ -12,30 +12,32 @@ import mockupQuestoes from "@/assets/mockup-questoes.jpg";
 import mockupEdital from "@/assets/mockup-edital.jpg";
 
 const features = [
-  { icon: <BookOpen className="w-6 h-6" />, title: "Edital Verticalizado", desc: "Trilha de estudos completa baseada no edital CHOA/CHOM com 7 disciplinas e links diretos para legislação." },
-  { icon: <HelpCircle className="w-6 h-6" />, title: "+1.000 Questões", desc: "Mais de mil questões no estilo PMTO com correção automática, comentários fundamentados na lei seca e filtros por disciplina." },
-  { icon: <Shuffle className="w-6 h-6" />, title: "Simulados Inteligentes", desc: "Gerador de simulados com randomização de questões e alternativas. Simule a prova real quantas vezes quiser." },
-  { icon: <Trophy className="w-6 h-6" />, title: "Ranking Top 10", desc: "Acompanhe sua posição entre os melhores guerreiros. Medalhas para os 3 primeiros e atualização em tempo real." },
-  { icon: <Zap className="w-6 h-6" />, title: "Legislação do Tocantins", desc: "Acesso rápido às leis 2.578, 2.575, LC 128, CPPM e RDMETO com links para lei seca e videoaulas." },
-  { icon: <Lock className="w-6 h-6" />, title: "Anti-compartilhamento", desc: "Sistema seguro com controle de sessão, proteção de conteúdo e login por CPF exclusivo." },
+  { icon: <BookOpen className="w-6 h-6" />, title: "Edital Verticalizado", desc: "Trilha completa e separada por curso: CHOA PMTO e CHOA CBMTO, com links diretos para a legislação de cada certame." },
+  { icon: <HelpCircle className="w-6 h-6" />, title: "Banco de Questões", desc: "Milhares de questões no estilo da banca, com correção automática, comentários na lei seca e filtros por disciplina e assunto." },
+  { icon: <Shuffle className="w-6 h-6" />, title: "Simulados Inteligentes", desc: "Gerador de simulados com randomização de questões e alternativas, no formato de cada edital (5 alternativas na PMTO, 4 no CBMTO)." },
+  { icon: <Clock className="w-6 h-6" />, title: "Simulado Semanal Online", desc: "Prova semanal cronometrada com tentativa única, correção, recursos e ranking geral — simulando o dia da prova." },
+  { icon: <Trophy className="w-6 h-6" />, title: "Ranking e Desempenho", desc: "Ranking dos melhores guerreiros por curso, diagnóstico por disciplina e assunto e cronômetro de estudo integrado." },
+  { icon: <BarChart3 className="w-6 h-6" />, title: "Cronograma de Estudos", desc: "Gerador de cronograma personalizado conforme suas horas disponíveis, com exportação em PDF." },
+  { icon: <Zap className="w-6 h-6" />, title: "Legislação do Tocantins", desc: "Acesso rápido às leis exigidas em cada edital, com material de apoio e videoaulas (BizuAulas) para o CHOA PMTO." },
+  { icon: <Lock className="w-6 h-6" />, title: "Conta Individual e Segura", desc: "Login por CPF, controle de sessão, conteúdo protegido e acesso liberado somente para o curso adquirido." },
 ];
 
 const benefits = [
-  "Acesso ilimitado a todas as disciplinas",
-  "+1.000 questões com gabarito comentado",
+  "Acesso completo ao curso escolhido (PMTO ou CBMTO)",
+  "Banco de questões com gabarito comentado",
   "Simulados ilimitados com randomização",
-  "Ranking Top 10 Guerreiros 🏆",
-  "Meu Desempenho completo",
+  "Simulado Semanal com ranking 🏆",
+  "Cronograma de estudos personalizado em PDF",
+  "Meu Desempenho e diagnóstico por disciplina",
   "Cronômetro de estudo integrado",
-  "Suporte via e-mail",
-  "Acesso por 90 dias corridos",
+  "Suporte via e-mail e grupo de avisos no WhatsApp",
 ];
 
 const stats = [
-  { icon: <HelpCircle className="w-5 h-5" />, value: "1.000+", label: "Questões" },
-  { icon: <BookOpen className="w-5 h-5" />, value: "7", label: "Disciplinas" },
-  { icon: <Trophy className="w-5 h-5" />, value: "Top 10", label: "Ranking" },
-  { icon: <Target className="w-5 h-5" />, value: "90", label: "Dias de acesso" },
+  { icon: <HelpCircle className="w-5 h-5" />, value: "Milhares", label: "Questões" },
+  { icon: <Shield className="w-5 h-5" />, value: "2", label: "Cursos (PMTO e CBMTO)" },
+  { icon: <Trophy className="w-5 h-5" />, value: "Semanal", label: "Simulado com ranking" },
+  { icon: <Target className="w-5 h-5" />, value: "30/365", label: "Dias de acesso" },
 ];
 
 // Questões reais extraídas diretamente do banco da plataforma
