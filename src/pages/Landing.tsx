@@ -237,7 +237,7 @@ const Landing = () => {
                 to="/assinatura"
                 className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
               >
-                Assinar por R$ 99,99
+                Assinar por R$ 39,99
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
@@ -498,7 +498,7 @@ const Landing = () => {
               to="/assinatura"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity glow-primary"
             >
-              Assinar por R$ 99,99
+              Assinar por R$ 39,99
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -681,7 +681,7 @@ const Landing = () => {
               </div>
               <div className="mb-6">
                 <span className="text-2xl text-muted-foreground line-through mr-3">R$ 129,90</span>
-                <span className="text-5xl md:text-6xl font-black text-gradient-gold">R$ 99,99</span>
+                <span className="text-5xl md:text-6xl font-black text-gradient-gold">R$ 39,99</span>
                 <span className="text-muted-foreground ml-2 text-base">/ 90 dias</span>
               </div>
               <p className="text-sm text-muted-foreground mb-8 max-w-md">
@@ -815,7 +815,7 @@ const Landing = () => {
                 to="/assinatura"
                 className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
               >
-                Assinar por R$ 99,99
+                Assinar por R$ 39,99
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a

@@ -246,7 +246,7 @@ const Assinatura = () => {
             <h2 className="text-lg font-bold mb-1">Cartão de Crédito</h2>
             <p className="text-xs text-muted-foreground mb-3">Renovação automática</p>
             <p className="text-sm text-foreground mb-4">
-              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 6999)} a cada {planoAtual?.dias_acesso ?? 30} dias</strong>. Cancele quando quiser.
+              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 3999)} a cada {planoAtual?.dias_acesso ?? 30} dias</strong>. Cancele quando quiser.
             </p>
             <ul className="space-y-2 text-xs text-foreground/80 mb-5">
               <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-success" /> Renovação sem dor de cabeça</li>
@@ -278,7 +278,7 @@ const Assinatura = () => {
               Pagamento único <Barcode className="w-3.5 h-3.5" />
             </p>
             <p className="text-sm text-foreground mb-4">
-              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 6999)} uma única vez</strong> e tenha acesso por
+              Pague <strong>{formatPreco(planoAtual?.preco_centavos ?? 3999)} uma única vez</strong> e tenha acesso por
               <strong> {planoAtual?.dias_acesso ?? 30} dias</strong>. Sem renovação automática.
 
             </p>

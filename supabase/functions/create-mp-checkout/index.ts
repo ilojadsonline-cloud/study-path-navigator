@@ -12,7 +12,7 @@ const logStep = (step: string, details?: any) => {
 };
 
 const DEFAULT_PLAN = "pmto-mensal";
-const FALLBACK_AMOUNT = 89.99;
+const FALLBACK_AMOUNT = 39.99;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
