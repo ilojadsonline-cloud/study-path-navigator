@@ -211,7 +211,7 @@ const Landing = () => {
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs font-semibold mb-6 glow-gold">
               <Star className="w-3.5 h-3.5" />
-              Complemento ideal para sua preparação PMTO
+              Agora com dois cursos: CHOA PMTO e CHOA CBMTO
             </div>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-[1.1] mb-6">
               Pratique com
@@ -224,8 +224,9 @@ const Landing = () => {
               {" "}<strong className="text-foreground">fixar o conteúdo praticando</strong>.
             </p>
             <p className="text-muted-foreground max-w-xl mx-auto mb-10 text-sm">
-              +1.000 questões baseadas na legislação do Tocantins, com gabarito comentado na lei seca.
-              Ideal para complementar seu cursinho, grupo de estudos ou preparação individual.
+              Questões baseadas na legislação do Tocantins, com gabarito comentado na lei seca,
+              simulado semanal com ranking e cronograma de estudos — em trilhas separadas para o
+              {" "}<strong className="text-foreground">CHOA PMTO</strong> e o <strong className="text-foreground">CHOA CBMTO</strong>.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
@@ -239,11 +240,11 @@ const Landing = () => {
                 to="/assinatura"
                 className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
               >
-                Assinar por R$ 39,99
+                Assinar a partir de R$ 39,99/mês
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">Pague com <strong className="text-foreground">Cartão</strong>, <strong className="text-foreground">Pix</strong> ou <strong className="text-foreground">Boleto</strong> via Mercado Pago • 90 dias de acesso completo</p>
+            <p className="text-xs text-muted-foreground mt-3">Pague com <strong className="text-foreground">Cartão</strong>, <strong className="text-foreground">Pix</strong> ou <strong className="text-foreground">Boleto</strong> via Mercado Pago • planos mensais (30 dias) ou anuais (365 dias)</p>
           </motion.div>
         </section>
 
