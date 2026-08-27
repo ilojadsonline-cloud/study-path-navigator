@@ -143,7 +143,7 @@ const platformPreviews = [
   },
   {
     title: "Banco de Questões",
-    desc: "Mais de 1.000 questões com interface intuitiva, alternativas claras, correção automática e comentários na lei seca.",
+    desc: "Milhares de questões com interface intuitiva, alternativas claras, correção automática e comentários na lei seca.",
     image: mockupQuestoes,
   },
   {
@@ -496,12 +496,12 @@ const Landing = () => {
 
           {/* CTA after question */}
           <div className="text-center mt-6">
-            <p className="text-sm text-muted-foreground mb-3">Gostou? Temos mais de 1.000 questões como estas — assine e libere o banco completo.</p>
+            <p className="text-sm text-muted-foreground mb-3">Gostou? O banco tem milhares de questões como estas — assine e libere o curso completo.</p>
             <Link
               to="/assinatura"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity glow-primary"
             >
-              Assinar por R$ 39,99
+              Assinar agora
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -776,7 +776,7 @@ const Landing = () => {
               </h3>
               <p className="text-sm text-muted-foreground max-w-xl mx-auto">
                 Pagamento processado pelo <strong className="text-foreground">Mercado Pago</strong>: cartão de crédito (renovação automática) ou
-                <strong className="text-foreground"> Pix / Boleto</strong> (pagamento único com 90 dias de acesso).
+                <strong className="text-foreground"> Pix / Boleto</strong> (pagamento único, com 30 ou 365 dias de acesso conforme o plano).
               </p>
 
             </div>
@@ -821,7 +821,7 @@ const Landing = () => {
               <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
                 <Clock className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-foreground">
-                  <strong>90 dias de acesso</strong> liberado após confirmação do pagamento.
+                  <strong>Acesso liberado</strong> logo após a confirmação do pagamento (30 ou 365 dias).
                 </p>
               </div>
             </div>
@@ -851,7 +851,7 @@ const Landing = () => {
                 to="/assinatura"
                 className="px-10 py-4 rounded-xl gradient-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity glow-primary"
               >
-                Assinar por R$ 39,99
+                Assinar agora
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a
