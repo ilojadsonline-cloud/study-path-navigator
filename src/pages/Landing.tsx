@@ -649,8 +649,8 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* Plano Único */}
-        <section className="max-w-3xl mx-auto px-4 pb-20">
+        {/* Planos por curso */}
+        <section className="max-w-5xl mx-auto px-4 pb-20">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -658,72 +658,105 @@ const Landing = () => {
             className="text-center mb-12"
           >
             <h2 className="text-3xl md:text-4xl font-black mb-3">
-              Investimento <span className="text-gradient-gold">acessível</span>
+              Escolha o seu <span className="text-gradient-gold">curso</span>
             </h2>
-            <p className="text-muted-foreground text-sm md:text-base">
-              Um único plano com acesso completo. Sem pegadinhas, sem surpresas.
+            <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
+              Conteúdo, questões, simulados e ranking totalmente separados por certame.
+              Planos mensais (30 dias) ou anuais (365 dias). Sem pegadinhas, sem surpresas.
             </p>
           </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            {/* CHOA PMTO */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="glass-card rounded-2xl p-8 border-primary/20 glow-primary relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full blur-3xl" />
+              <div className="relative">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <span className="px-2.5 py-1 rounded-md bg-primary/15 text-primary text-[11px] font-black">CHOA PMTO</span>
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gold/10 text-gold text-[11px] font-semibold">
+                    <Star className="w-3 h-3" /> Mais procurado
+                  </span>
+                </div>
+                <div className="mb-4">
+                  <span className="text-4xl md:text-5xl font-black text-gradient-primary">R$ 39,99</span>
+                  <span className="text-muted-foreground ml-2 text-sm">/ mês</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-6">
+                  ou <strong className="text-foreground">R$ 449,99</strong> no plano anual (365 dias).
+                  Edital verticalizado CHOA/2026 PMTO, banco de questões, BizuAulas e simulado semanal.
+                </p>
+                <Link
+                  to="/assinatura"
+                  className="inline-flex w-full items-center justify-center gap-2 px-8 py-3.5 rounded-xl gradient-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity"
+                >
+                  Assinar CHOA PMTO
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* CHOA CBMTO */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="glass-card rounded-2xl p-8 border-destructive/25 relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-40 h-40 bg-destructive/5 rounded-full blur-3xl" />
+              <div className="relative">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <span className="px-2.5 py-1 rounded-md bg-destructive/15 text-destructive text-[11px] font-black">CHOA CBMTO</span>
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-[11px] font-bold">
+                    🔥 Novo
+                  </span>
+                </div>
+                <div className="mb-4">
+                  <span className="text-4xl md:text-5xl font-black text-gradient-gold">R$ 49,99</span>
+                  <span className="text-muted-foreground ml-2 text-sm">/ mês</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-6">
+                  ou <strong className="text-foreground">R$ 549,99</strong> no plano anual (365 dias).
+                  Edital verticalizado CHOA/2026 CBMTO com questões de 4 alternativas, conforme o certame.
+                </p>
+                <Link
+                  to="/assinatura"
+                  className="inline-flex w-full items-center justify-center gap-2 px-8 py-3.5 rounded-xl gradient-gold text-gold-foreground font-bold text-sm hover:opacity-90 transition-opacity"
+                >
+                  Assinar CHOA CBMTO
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </motion.div>
+          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="glass-card rounded-2xl p-8 md:p-10 border-primary/20 glow-primary relative overflow-hidden"
+            className="glass-card rounded-2xl p-6 md:p-8"
           >
-            <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full blur-3xl" />
-            <div className="relative">
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 text-gold text-xs font-semibold">
-                  <Star className="w-3 h-3" />
-                  Plano Único
+            <p className="text-sm font-bold text-foreground mb-4">Incluído em qualquer plano:</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {benefits.map((b, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                  <span className="text-sm text-foreground">{b}</span>
                 </div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-bold animate-pulse">
-                  🔥 OFERTA POR TEMPO LIMITADO
-                </div>
-              </div>
-              <div className="mb-6">
-                <span className="text-2xl text-muted-foreground line-through mr-3">R$ 129,90</span>
-                <span className="text-5xl md:text-6xl font-black text-gradient-gold">R$ 39,99</span>
-                <span className="text-muted-foreground ml-2 text-base">/ 90 dias</span>
-              </div>
-              <p className="text-sm text-muted-foreground mb-8 max-w-md">
-                Acesso completo a toda a plataforma por 90 dias corridos.
-                Complemente sua preparação com questões e simulados ilimitados.
-              </p>
-
-              <div className="grid sm:grid-cols-2 gap-3 mb-8">
-                {benefits.map((b, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-                    <span className="text-sm text-foreground">{b}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  to="/assinatura"
-                  className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-xl gradient-gold text-gold-foreground font-bold text-base hover:opacity-90 transition-opacity glow-gold"
-                >
-                  Assinar Agora
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <a
-                  href="#demonstracao"
-                  className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-xl border border-primary/30 bg-primary/5 text-primary font-semibold text-base hover:bg-primary/10 transition-colors"
-                >
-                  <PlayCircle className="w-5 h-5" />
-                  Ver demonstração
-                </a>
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-3">
-                💳 <strong className="text-foreground">Cartão de crédito</strong> com renovação automática a cada 3 meses, ou{" "}
-                <strong className="text-foreground">Pix / Boleto</strong> com pagamento único de 90 dias (sem renovação).
-              </p>
+              ))}
             </div>
+            <p className="text-[11px] text-muted-foreground mt-4">
+              💳 <strong className="text-foreground">Cartão de crédito</strong> com renovação automática, ou{" "}
+              <strong className="text-foreground">Pix / Boleto</strong> com pagamento único (sem renovação).
+              O acesso é liberado apenas para o curso adquirido.
+            </p>
           </motion.div>
         </section>
+
 
         {/* Formas de pagamento */}
         <section className="max-w-4xl mx-auto px-4 pb-20">
